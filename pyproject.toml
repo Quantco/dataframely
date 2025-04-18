@@ -22,7 +22,8 @@ requires-python = ">=3.11"
 version = "0.0.0"
 
 [project.urls]
-repository = "https://github.com/quantco/dataframely"
+Repository = "https://github.com/quantco/dataframely"
+Documentation = "https://dataframely.readthedocs.io/"
 
 [tool.maturin]
 module-name = "dataframely._extre"
