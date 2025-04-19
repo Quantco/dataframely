@@ -83,7 +83,7 @@ def test_validate_min(
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame(valid)
-    assert_frame_equal(actual.select(expected.columns), expected)
+    assert_frame_equal(actual.select(expected.collect_schema().names()), expected)
 
 
 @pytest.mark.parametrize("column_type", FLOAT_COLUMN_TYPES)
@@ -102,7 +102,7 @@ def test_validate_max(
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame(valid)
-    assert_frame_equal(actual.select(expected.columns), expected)
+    assert_frame_equal(actual.select(expected.collect_schema().names()), expected)
 
 
 @pytest.mark.parametrize("column_type", FLOAT_COLUMN_TYPES)
@@ -157,7 +157,7 @@ def test_validate_range(
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame(valid)
-    assert_frame_equal(actual.select(expected.columns), expected)
+    assert_frame_equal(actual.select(expected.collect_schema().names()), expected)
 
 
 @pytest.mark.parametrize("inf", [np.inf, -np.inf, float("inf"), float("-inf")])
@@ -176,7 +176,9 @@ def test_validate_allow_inf_nan(inf: Any, nan: Any):
     column = dy.Float(allow_inf_nan=True)
     lf = pl.LazyFrame({"a": pl.Series([inf, 2.0, nan, 4.0, 5.0])})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
-    assert len(actual.columns) == 0, "There should be no validation rules"
+    assert len(actual.collect_schema().names()) == 0, (
+        "There should be no validation rules"
+    )
 
 
 def test_sample_unchecked_min_0():
