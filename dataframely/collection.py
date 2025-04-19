@@ -123,7 +123,10 @@ class Collection(BaseCollection, ABC, Generic[SamplingType]):
                         ...
                     }
 
-                _Any_ member/value can be left out and will be sampled automatically.
+                *Any* member/value can be left out and will be sampled automatically.
+                Note that overrides for columns of members that are annotated with
+                ``inline_for_sampling=True`` can be supplied on the top-level instead
+                of in a nested dictionary.
             generator: The (seeded) generator to use for sampling data. If ``None``, a
                 generator with random seed is automatically created.
 
@@ -198,7 +201,11 @@ class Collection(BaseCollection, ABC, Generic[SamplingType]):
                             else _extract_keys_if_exist(sample, primary_keys)
                         ),
                         **_extract_keys_if_exist(
-                            sample[member] if member in sample else {},
+                            (
+                                sample
+                                if member_infos[member].inline_for_sampling
+                                else (sample[member] if member in sample else {})
+                            ),
                             schema.column_names(),
                         ),
                     }
