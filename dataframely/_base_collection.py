@@ -48,6 +48,12 @@ class CollectionMember:
 
     #: Whether the member should be ignored in the filter method.
     ignored_in_filters: bool = False
+    #: Whether the member's non-primary key columns should be inlined for sampling.
+    #: This means that value overrides are supplied on the top-level rather than in
+    #: a subkey with the member's name. Only valid if the member's primary key matches
+    #: the collection's common primary key. Two members that share common column names
+    #: may not both be inlined for sampling.
+    inline_for_sampling: bool = False
 
 
 # --------------------------------------- UTILS -------------------------------------- #
@@ -136,6 +142,30 @@ class CollectionMeta(ABCMeta):
                     f"{len(intersection)} such filters: {sorted(intersection)}."
                 )
 
+        # 3) Check that inlining for sampling is configured correctly.
+        if len(non_ignored_member_schemas) > 0:
+            common_primary_keys = _common_primary_keys(non_ignored_member_schemas)
+            inlined_columns: set[str] = set()
+            for member, info in result.members.items():
+                if info.inline_for_sampling:
+                    if set(info.schema.primary_keys()) != common_primary_keys:
+                        raise ImplementationError(
+                            f"Member '{member}' is inlined for sampling but its primary "
+                            "key is a superset of the common primary key. Such a member "
+                            "must not be inlined to be able to provide multiple values "
+                            "for a single combination of the common primary key."
+                        )
+                    non_primary_key_columns = (
+                        set(info.schema.column_names()) - common_primary_keys
+                    )
+                    if len(inlined_columns & non_primary_key_columns):
+                        raise ImplementationError(
+                            f"At least one column name of member '{member}' clashes "
+                            "with a column name of another member that is inlined for "
+                            "sampling."
+                        )
+                    inlined_columns.update(non_primary_key_columns)
+
         return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
     @staticmethod
@@ -201,6 +231,7 @@ class CollectionMeta(ABCMeta):
                         schema=get_args(kls)[0],
                         is_optional=False,
                         ignored_in_filters=collection_member.ignored_in_filters,
+                        inline_for_sampling=collection_member.inline_for_sampling,
                     )
                 else:
                     # Some other unknown annotation
