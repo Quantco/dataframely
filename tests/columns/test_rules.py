@@ -40,4 +40,4 @@ def test_nullability_rule(column_type: type[Column]):
     lf = pl.LazyFrame({"a": [None]}, schema={"a": column.dtype})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame({"nullability": [False]})
-    assert_frame_equal(actual.select(expected.columns), expected)
+    assert_frame_equal(actual.select(expected.collect_schema().names()), expected)
