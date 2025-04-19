@@ -82,7 +82,7 @@ def data_with_filter_with_rule_violation() -> tuple[pl.LazyFrame, pl.LazyFrame]:
 
 def test_filter_without_filter_without_rule_violation(
     data_without_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     out, failure = SimpleCollection.filter(
         {
             "first": data_without_filter_without_rule_violation[0],
@@ -99,7 +99,7 @@ def test_filter_without_filter_without_rule_violation(
 
 def test_filter_without_filter_with_rule_violation(
     data_without_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     out, failure = SimpleCollection.filter(
         {
             "first": data_without_filter_with_rule_violation[0],
@@ -116,7 +116,7 @@ def test_filter_without_filter_with_rule_violation(
 
 def test_filter_with_filter_without_rule_violation(
     data_with_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     out, failure = MyCollection.filter(
         {
             "first": data_with_filter_without_rule_violation[0],
@@ -139,7 +139,7 @@ def test_filter_with_filter_without_rule_violation(
 
 def test_filter_with_filter_with_rule_violation(
     data_with_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     out, failure = MyCollection.filter(
         {
             "first": data_with_filter_with_rule_violation[0],
@@ -159,7 +159,7 @@ def test_filter_with_filter_with_rule_violation(
 
 def test_validate_without_filter_without_rule_violation(
     data_without_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     data = {
         "first": data_without_filter_without_rule_violation[0],
         "second": data_without_filter_without_rule_violation[1],
@@ -174,7 +174,7 @@ def test_validate_without_filter_without_rule_violation(
 
 def test_validate_without_filter_with_rule_violation(
     data_without_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     data = {
         "first": data_without_filter_with_rule_violation[0],
         "second": data_without_filter_with_rule_violation[1],
@@ -194,7 +194,7 @@ def test_validate_without_filter_with_rule_violation(
 
 def test_validate_with_filter_without_rule_violation(
     data_with_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     data = {
         "first": data_with_filter_without_rule_violation[0],
         "second": data_with_filter_without_rule_violation[1],
@@ -215,7 +215,7 @@ def test_validate_with_filter_without_rule_violation(
 
 def test_validate_with_filter_with_rule_violation(
     data_with_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-):
+) -> None:
     data = {
         "first": data_with_filter_with_rule_violation[0],
         "second": data_with_filter_with_rule_violation[1],

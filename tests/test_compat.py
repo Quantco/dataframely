@@ -6,7 +6,7 @@ import pytest
 from dataframely._compat import _DummyModule
 
 
-def test_dummy_module():
+def test_dummy_module() -> None:
     module = "sqlalchemy"
     dm = _DummyModule(module=module)
     assert dm.module == module

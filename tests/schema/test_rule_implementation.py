@@ -10,7 +10,7 @@ from dataframely.exc import ImplementationError, RuleImplementationError
 from dataframely.testing import create_schema
 
 
-def test_group_rule_group_by_error():
+def test_group_rule_group_by_error() -> None:
     with pytest.raises(
         ImplementationError,
         match=(
@@ -29,7 +29,7 @@ def test_group_rule_group_by_error():
         )
 
 
-def test_rule_implementation_error():
+def test_rule_implementation_error() -> None:
     with pytest.raises(
         RuleImplementationError, match=r"rule 'integer_rule'.*returns dtype 'Int64'"
     ):
@@ -40,7 +40,7 @@ def test_rule_implementation_error():
         )
 
 
-def test_group_rule_implementation_error():
+def test_group_rule_implementation_error() -> None:
     with pytest.raises(
         RuleImplementationError,
         match=(
@@ -55,7 +55,7 @@ def test_group_rule_implementation_error():
         )
 
 
-def test_rule_column_overlap_error():
+def test_rule_column_overlap_error() -> None:
     with pytest.raises(
         ImplementationError,
         match=r"Rules and columns must not be named equally but found 1 overlaps",

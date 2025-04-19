@@ -25,23 +25,23 @@ class Config(contextlib.ContextDecorator):
     #: Singleton stack to track where to go back after exiting a context.
     _stack: list[Options] = []
 
-    def __init__(self, **options: Unpack[Options]):
+    def __init__(self, **options: Unpack[Options]) -> None:
         self._local_options: Options = {**default_options(), **options}
 
     @staticmethod
-    def set_max_sampling_iterations(iterations: int):
+    def set_max_sampling_iterations(iterations: int) -> None:
         """Set the maximum number of sampling iterations to use on
         :meth:`Schema.sample`."""
         Config.options["max_sampling_iterations"] = iterations
 
     @staticmethod
-    def restore_defaults():
+    def restore_defaults() -> None:
         """Restore the defaults of the configuration."""
         Config.options = default_options()
 
     # ------------------------------------ CONTEXT ----------------------------------- #
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         Config._stack.append(Config.options)
         Config.options = self._local_options
 
@@ -50,5 +50,5 @@ class Config(contextlib.ContextDecorator):
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
-    ):
+    ) -> None:
         Config.options = Config._stack.pop()

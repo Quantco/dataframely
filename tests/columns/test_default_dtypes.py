@@ -40,7 +40,7 @@ from dataframely.testing import create_schema
         (dy.Enum(["a", "b"]), pl.Enum(["a", "b"])),
     ],
 )
-def test_default_dtype(column: Column, dtype: pl.DataType):
+def test_default_dtype(column: Column, dtype: pl.DataType) -> None:
     schema = create_schema("test", {"a": column})
     df = schema.create_empty()
     assert df.schema["a"] == dtype

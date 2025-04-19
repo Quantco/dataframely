@@ -32,7 +32,7 @@ class MyComplexSchema(dy.Schema):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_missing_columns(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_missing_columns(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1], "b": [""]})
     with pytest.raises(ValidationError):
         MySchema.validate(df)
@@ -43,7 +43,7 @@ def test_missing_columns(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_invalid_dtype(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_invalid_dtype(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1], "b": [1], "c": [1]})
     try:
         MySchema.validate(df)
@@ -54,7 +54,7 @@ def test_invalid_dtype(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_invalid_dtype_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_invalid_dtype_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1], "b": [1], "c": [1]})
     actual = MySchema.validate(df, cast=True)
     expected = pl.DataFrame({"a": [1], "b": ["1"], "c": ["1"]})
@@ -66,7 +66,9 @@ def test_invalid_dtype_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_invalid_column_contents(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_invalid_column_contents(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+) -> None:
     df = df_type({"a": [1, 2, 3], "b": ["x", "longtext", None], "c": ["1", None, "3"]})
     try:
         MySchema.validate(df)
@@ -78,7 +80,7 @@ def test_invalid_column_contents(df_type: type[pl.DataFrame] | type[pl.LazyFrame
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_invalid_primary_key(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_invalid_primary_key(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1, 1], "b": ["x", "y"], "c": ["1", "2"]})
     try:
         MySchema.validate(df)
@@ -90,7 +92,7 @@ def test_invalid_primary_key(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_violated_custom_rule(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_violated_custom_rule(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1, 1, 2, 3, 3], "b": [2, 2, 2, 4, 5]})
     try:
         MyComplexSchema.validate(df)
@@ -104,7 +106,7 @@ def test_violated_custom_rule(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_success_multi_row_strip_cast(
     df_type: type[pl.DataFrame] | type[pl.LazyFrame],
-):
+) -> None:
     df = df_type(
         {"a": [1, 2, 3], "b": ["x", "y", "z"], "c": [1, None, None], "d": [1, 2, 3]}
     )

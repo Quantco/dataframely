@@ -34,7 +34,7 @@ class IntegerSchema(dy.Schema):
 )
 def test_args_consistency_min_max(
     column_type: type[_BaseFloat], kwargs: dict[str, Any]
-):
+) -> None:
     with pytest.raises(ValueError):
         column_type(**kwargs)
 
@@ -50,19 +50,19 @@ def test_args_consistency_min_max(
         (dy.Float64, dict(max=float("inf"))),
     ],
 )
-def test_invalid_args(column_type: type[_BaseFloat], kwargs: dict[str, Any]):
+def test_invalid_args(column_type: type[_BaseFloat], kwargs: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
         column_type(**kwargs)
 
 
 @pytest.mark.parametrize("dtype", FLOAT_DTYPES)
-def test_any_integer_dtype_passes(dtype: DataTypeClass):
+def test_any_integer_dtype_passes(dtype: DataTypeClass) -> None:
     df = pl.DataFrame(schema={"a": dtype})
     assert IntegerSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("dtype", [pl.Boolean, pl.String] + list(INTEGER_DTYPES))
-def test_non_integer_dtype_fails(dtype: DataTypeClass):
+def test_non_integer_dtype_fails(dtype: DataTypeClass) -> None:
     df = pl.DataFrame(schema={"a": dtype})
     assert not IntegerSchema.is_valid(df)
 
@@ -77,7 +77,7 @@ def test_non_integer_dtype_fails(dtype: DataTypeClass):
 )
 def test_validate_min(
     column_type: type[_BaseFloat], inclusive: bool, valid: dict[str, list[bool]]
-):
+) -> None:
     kwargs = {("min" if inclusive else "min_exclusive"): 3}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
@@ -96,7 +96,7 @@ def test_validate_min(
 )
 def test_validate_max(
     column_type: type[_BaseFloat], inclusive: bool, valid: dict[str, list[bool]]
-):
+) -> None:
     kwargs = {("max" if inclusive else "max_exclusive"): 3}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
@@ -148,7 +148,7 @@ def test_validate_range(
     min_inclusive: bool,
     max_inclusive: bool,
     valid: dict[str, list[bool]],
-):
+) -> None:
     kwargs = {
         ("min" if min_inclusive else "min_exclusive"): 2,
         ("max" if max_inclusive else "max_exclusive"): 4,
@@ -162,7 +162,7 @@ def test_validate_range(
 
 @pytest.mark.parametrize("inf", [np.inf, -np.inf, float("inf"), float("-inf")])
 @pytest.mark.parametrize("nan", [np.nan, float("nan"), float("NaN")])
-def test_validate_inf_nan(inf: Any, nan: Any):
+def test_validate_inf_nan(inf: Any, nan: Any) -> None:
     column = dy.Float(allow_inf_nan=False)
     lf = pl.LazyFrame({"a": pl.Series([inf, 2.0, nan, 4.0, 5.0])})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -172,7 +172,7 @@ def test_validate_inf_nan(inf: Any, nan: Any):
 
 @pytest.mark.parametrize("inf", [np.inf, -np.inf, float("inf"), float("-inf")])
 @pytest.mark.parametrize("nan", [np.nan, float("nan"), float("NaN")])
-def test_validate_allow_inf_nan(inf: Any, nan: Any):
+def test_validate_allow_inf_nan(inf: Any, nan: Any) -> None:
     column = dy.Float(allow_inf_nan=True)
     lf = pl.LazyFrame({"a": pl.Series([inf, 2.0, nan, 4.0, 5.0])})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -181,27 +181,27 @@ def test_validate_allow_inf_nan(inf: Any, nan: Any):
     )
 
 
-def test_sample_unchecked_min_0():
+def test_sample_unchecked_min_0() -> None:
     column = dy.Float(min=0, max=10)
     actual = column._sample_unchecked(dy.random.Generator(), n=10000)
     assert actual.min() >= 0, "There should be no negative values"  # type: ignore
 
 
-def test_sample_unchecked_nan():
+def test_sample_unchecked_nan() -> None:
     column = dy.Float(min=0, max=10, allow_inf_nan=True)
     actual = column._sample_unchecked(dy.random.Generator(), n=10000)
     nan_count = actual.is_nan().sum()
     assert 0.01 * len(actual) < nan_count < 0.1 * len(actual)
 
 
-def test_sample_unchecked_unbounded():
+def test_sample_unchecked_unbounded() -> None:
     column = dy.Float(allow_inf_nan=False)
     actual = column._sample_unchecked(dy.random.Generator(), n=10000)
     assert actual.is_nan().sum() == 0
     assert actual.is_infinite().sum() == 0
 
 
-def test_sample_unchecked_inf():
+def test_sample_unchecked_inf() -> None:
     column = dy.Float(allow_inf_nan=True)
     actual = column._sample_unchecked(dy.random.Generator(), n=10000)
     inf_count = actual.is_infinite().sum()

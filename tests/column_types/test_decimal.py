@@ -29,7 +29,7 @@ class DecimalSchema(dy.Schema):
         {"max": decimal.Decimal(2), "max_exclusive": decimal.Decimal(2)},
     ],
 )
-def test_args_consistency_min_max(kwargs: dict[str, Any]):
+def test_args_consistency_min_max(kwargs: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
         dy.Decimal(**kwargs)
 
@@ -47,7 +47,7 @@ def test_args_consistency_min_max(kwargs: dict[str, Any]):
         dict(precision=2, max=decimal.Decimal("100")),
     ],
 )
-def test_invalid_args(kwargs: dict[str, Any]):
+def test_invalid_args(kwargs: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
         dy.Decimal(**kwargs)
 
@@ -55,7 +55,7 @@ def test_invalid_args(kwargs: dict[str, Any]):
 @pytest.mark.parametrize(
     "dtype", [pl.Decimal, pl.Decimal(12), pl.Decimal(None, 8), pl.Decimal(6, 2)]
 )
-def test_any_decimal_dtype_passes(dtype: DataTypeClass):
+def test_any_decimal_dtype_passes(dtype: DataTypeClass) -> None:
     df = pl.DataFrame(schema={"a": dtype})
     assert DecimalSchema.is_valid(df)
 
@@ -63,7 +63,7 @@ def test_any_decimal_dtype_passes(dtype: DataTypeClass):
 @pytest.mark.parametrize(
     "dtype", [pl.Boolean, pl.String] + list(INTEGER_DTYPES) + list(FLOAT_DTYPES)
 )
-def test_non_decimal_dtype_fails(dtype: DataTypeClass):
+def test_non_decimal_dtype_fails(dtype: DataTypeClass) -> None:
     df = pl.DataFrame(schema={"a": dtype})
     assert not DecimalSchema.is_valid(df)
 
@@ -75,7 +75,7 @@ def test_non_decimal_dtype_fails(dtype: DataTypeClass):
         (False, {"min_exclusive": [False, False, False, True, True]}),
     ],
 )
-def test_validate_min(inclusive: bool, valid: dict[str, list[bool]]):
+def test_validate_min(inclusive: bool, valid: dict[str, list[bool]]) -> None:
     kwargs = {("min" if inclusive else "min_exclusive"): decimal.Decimal(3)}
     column = dy.Decimal(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
@@ -91,7 +91,7 @@ def test_validate_min(inclusive: bool, valid: dict[str, list[bool]]):
         (False, {"max_exclusive": [True, True, False, False, False]}),
     ],
 )
-def test_validate_max(inclusive: bool, valid: dict[str, list[bool]]):
+def test_validate_max(inclusive: bool, valid: dict[str, list[bool]]) -> None:
     kwargs = {("max" if inclusive else "max_exclusive"): decimal.Decimal(3)}
     column = dy.Decimal(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
@@ -141,7 +141,7 @@ def test_validate_range(
     min_inclusive: bool,
     max_inclusive: bool,
     valid: dict[str, list[bool]],
-):
+) -> None:
     kwargs = {
         ("min" if min_inclusive else "min_exclusive"): decimal.Decimal(2),
         ("max" if max_inclusive else "max_exclusive"): decimal.Decimal(4),

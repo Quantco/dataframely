@@ -33,7 +33,7 @@ class Generator:
     seeding.
     """
 
-    def __init__(self, seed: int | None = None):
+    def __init__(self, seed: int | None = None) -> None:
         """
         Args:
             seed: The seed to use for initializing the random number generator used

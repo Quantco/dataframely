@@ -79,7 +79,7 @@ class Metadata:
     members: dict[str, MemberInfo] = field(default_factory=dict)
     filters: dict[str, Filter] = field(default_factory=dict)
 
-    def update(self, other: Self):
+    def update(self, other: Self) -> None:
         self.members.update(other.members)
         self.filters.update(other.filters)
 
@@ -92,7 +92,7 @@ class CollectionMeta(ABCMeta):
         namespace: dict[str, Any],
         *args: Any,
         **kwargs: Any,
-    ):
+    ) -> CollectionMeta:
         result = Metadata()
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))

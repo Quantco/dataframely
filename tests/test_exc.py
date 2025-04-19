@@ -6,13 +6,13 @@ import polars as pl
 from dataframely.exc import DtypeValidationError, RuleValidationError, ValidationError
 
 
-def test_validation_error_str():
+def test_validation_error_str() -> None:
     message = "validation failed"
     exc = ValidationError(message)
     assert str(exc) == message
 
 
-def test_dtype_validation_error_str():
+def test_dtype_validation_error_str() -> None:
     exc = DtypeValidationError(
         errors={"a": (pl.Int64, pl.String), "b": (pl.Boolean, pl.String)}
     )
@@ -23,7 +23,7 @@ def test_dtype_validation_error_str():
     ]
 
 
-def test_rule_validation_error_str():
+def test_rule_validation_error_str() -> None:
     exc = RuleValidationError(
         {
             "b|max_length": 1500,

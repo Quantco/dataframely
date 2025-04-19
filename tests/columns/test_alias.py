@@ -10,15 +10,15 @@ class AliasSchema(dy.Schema):
     a = dy.Int64(alias="hello world: col with space!")
 
 
-def test_column_names():
+def test_column_names() -> None:
     assert AliasSchema.column_names() == ["hello world: col with space!"]
 
 
-def test_validation():
+def test_validation() -> None:
     df = pl.DataFrame({"hello world: col with space!": [1, 2]})
     assert AliasSchema.is_valid(df)
 
 
-def test_create_empty():
+def test_create_empty() -> None:
     df = AliasSchema.create_empty()
     assert AliasSchema.is_valid(df)

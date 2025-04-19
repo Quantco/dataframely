@@ -32,13 +32,13 @@ class IntegerSchema(dy.Schema):
 )
 def test_args_consistency_min_max(
     column_type: type[_BaseInteger], kwargs: dict[str, Any]
-):
+) -> None:
     with pytest.raises(ValueError):
         column_type(**kwargs)
 
 
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
-def test_invalid_args_min_max(column_type: type[_BaseInteger]):
+def test_invalid_args_min_max(column_type: type[_BaseInteger]) -> None:
     with pytest.raises(ValueError):
         column_type(min=column_type.min_value - 1)
     with pytest.raises(ValueError):
@@ -54,26 +54,28 @@ def test_invalid_args_min_max(column_type: type[_BaseInteger]):
         {"min": 1, "max": 5, "is_in": [2, 3, 4]},
     ],
 )
-def test_invalid_args_is_in(column_type: type[_BaseInteger], kwargs: dict[str, Any]):
+def test_invalid_args_is_in(
+    column_type: type[_BaseInteger], kwargs: dict[str, Any]
+) -> None:
     with pytest.raises(ValueError):
         column_type(**kwargs)
 
 
 @pytest.mark.parametrize("dtype", INTEGER_DTYPES)
-def test_any_integer_dtype_passes(dtype: DataTypeClass):
+def test_any_integer_dtype_passes(dtype: DataTypeClass) -> None:
     df = pl.DataFrame(schema={"a": dtype})
     assert IntegerSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("dtype", [pl.Boolean, pl.String] + list(FLOAT_DTYPES))
-def test_non_integer_dtype_fails(dtype: DataTypeClass):
+def test_non_integer_dtype_fails(dtype: DataTypeClass) -> None:
     df = pl.DataFrame(schema={"a": dtype})
     assert not IntegerSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
 @pytest.mark.parametrize("inclusive", [True, False])
-def test_validate_min(column_type: type[_BaseInteger], inclusive: bool):
+def test_validate_min(column_type: type[_BaseInteger], inclusive: bool) -> None:
     kwargs = {("min" if inclusive else "min_exclusive"): 3}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
@@ -85,7 +87,7 @@ def test_validate_min(column_type: type[_BaseInteger], inclusive: bool):
 
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
 @pytest.mark.parametrize("inclusive", [True, False])
-def test_validate_max(column_type: type[_BaseInteger], inclusive: bool):
+def test_validate_max(column_type: type[_BaseInteger], inclusive: bool) -> None:
     kwargs = {("max" if inclusive else "max_exclusive"): 3}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
@@ -100,7 +102,7 @@ def test_validate_max(column_type: type[_BaseInteger], inclusive: bool):
 @pytest.mark.parametrize("max_inclusive", [True, False])
 def test_validate_range(
     column_type: type[_BaseInteger], min_inclusive: bool, max_inclusive: bool
-):
+) -> None:
     kwargs = {
         ("min" if min_inclusive else "min_exclusive"): 2,
         ("max" if max_inclusive else "max_exclusive"): 4,
@@ -120,7 +122,7 @@ def test_validate_range(
 
 
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
-def test_validate_is_in(column_type: type[_BaseInteger]):
+def test_validate_is_in(column_type: type[_BaseInteger]) -> None:
     column = column_type(is_in=[3, 5])
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -142,7 +144,7 @@ def test_validate_is_in(column_type: type[_BaseInteger]):
         (dy.UInt64, 8),
     ],
 )
-def test_num_bytes(column_type: type[_BaseInteger], num_bytes: int):
+def test_num_bytes(column_type: type[_BaseInteger], num_bytes: int) -> None:
     assert column_type.num_bytes == num_bytes
 
 
@@ -160,7 +162,7 @@ def test_num_bytes(column_type: type[_BaseInteger], num_bytes: int):
         (dy.UInt64, True),
     ],
 )
-def test_is_unsigned(column_type: type[_BaseInteger], is_unsigned: bool):
+def test_is_unsigned(column_type: type[_BaseInteger], is_unsigned: bool) -> None:
     assert column_type.is_unsigned == is_unsigned
 
 
@@ -180,6 +182,6 @@ def test_is_unsigned(column_type: type[_BaseInteger], is_unsigned: bool):
 )
 def test_type_min_max_values(
     column_type: type[_BaseInteger], min_value: int, max_value: int
-):
+) -> None:
     assert column_type.min_value == min_value
     assert column_type.max_value == max_value

@@ -26,7 +26,7 @@ def test_valid(
     dy_enum: dy.Enum,
     pl_dtype: pl.Enum,
     valid: bool,
-):
+) -> None:
     schema = create_schema("test", {"a": dy_enum})
     df = df_type({"a": ["x", "y", "x", "x"]}).cast(pl_dtype)
     assert schema.is_valid(df) == valid
@@ -48,7 +48,7 @@ def test_valid_cast(
     data: Any,
     valid: bool,
     df_type: type[pl.DataFrame] | type[pl.LazyFrame],
-):
+) -> None:
     schema = create_schema("test", {"a": enum})
     df = df_type(data)
     assert schema.is_valid(df, cast=True) == valid

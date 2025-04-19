@@ -22,7 +22,7 @@ class Collection(dy.Collection):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_cast_valid(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_cast_valid(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     first = df_type({"a": [3]})
     second = df_type({"a": [1]})
     out = Collection.cast({"first": first, "second": second})  # type: ignore
@@ -32,7 +32,7 @@ def test_cast_valid(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_cast_valid_optional(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_cast_valid_optional(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     first = df_type({"a": [3]})
     out = Collection.cast({"first": first})  # type: ignore
     assert out.first.collect_schema() == FirstSchema.polars_schema()
@@ -40,19 +40,19 @@ def test_cast_valid_optional(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_cast_invalid_members(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_cast_invalid_members(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     first = df_type({"a": [3]})
     with pytest.raises(ValueError):
         Collection.cast({"third": first})  # type: ignore
 
 
-def test_cast_invalid_member_schema_eager():
+def test_cast_invalid_member_schema_eager() -> None:
     first = pl.DataFrame({"b": [3]})
     with pytest.raises(plexc.ColumnNotFoundError):
         Collection.cast({"first": first})
 
 
-def test_cast_invalid_member_schema_lazy():
+def test_cast_invalid_member_schema_lazy() -> None:
     first = pl.LazyFrame({"b": [3]})
     collection = Collection.cast({"first": first})
     with pytest.raises(plexc.ColumnNotFoundError):

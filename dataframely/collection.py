@@ -498,7 +498,7 @@ class Collection(BaseCollection, ABC, Generic[SamplingType]):
 
     # ---------------------------------- PERSISTENCE --------------------------------- #
 
-    def write_parquet(self, directory: Path):
+    def write_parquet(self, directory: Path) -> None:
         """Write the members of this collection to Parquet files in a directory.
 
         This method writes one Parquet file per member into the provided directory.
@@ -590,7 +590,7 @@ class Collection(BaseCollection, ABC, Generic[SamplingType]):
         return out
 
     @classmethod
-    def _validate_input_keys(cls, data: Mapping[str, FrameType], /):
+    def _validate_input_keys(cls, data: Mapping[str, FrameType], /) -> None:
         actual = set(data)
 
         missing = cls.required_members() - actual

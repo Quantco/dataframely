@@ -16,7 +16,7 @@ class MyTestSchema(dy.Schema):
     a = dy.Integer(primary_key=True)
 
 
-def test_annotation_type_failure():
+def test_annotation_type_failure() -> None:
     with pytest.raises(
         AnnotationImplementationError,
     ):
@@ -29,7 +29,7 @@ def test_annotation_type_failure():
         )
 
 
-def test_annotation_union_success():
+def test_annotation_union_success() -> None:
     """When we use a union annotation, it must contain one typed LazyFrame and None."""
     create_collection_raw(
         "test",
@@ -39,7 +39,7 @@ def test_annotation_union_success():
     )
 
 
-def test_annotation_union_with_data_frame():
+def test_annotation_union_with_data_frame() -> None:
     """When we use a union annotation, it must contain one typed LazyFrame and None."""
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
@@ -50,7 +50,7 @@ def test_annotation_union_with_data_frame():
         )
 
 
-def test_annotation_union_too_many_arg_failure():
+def test_annotation_union_too_many_arg_failure() -> None:
     """Unions should have a maximum of two types in them."""
 
     with pytest.raises(AnnotationImplementationError):
@@ -66,7 +66,7 @@ def test_annotation_union_too_many_arg_failure():
         )
 
 
-def test_annotation_union_conflicting_types_failure():
+def test_annotation_union_conflicting_types_failure() -> None:
     """Unions should contain a maximum of one non-None type."""
 
     with pytest.raises(AnnotationImplementationError):
@@ -81,7 +81,7 @@ def test_annotation_union_conflicting_types_failure():
         )
 
 
-def test_annotation_only_none_failure():
+def test_annotation_only_none_failure() -> None:
     """Annotations must not just be None."""
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
@@ -92,7 +92,7 @@ def test_annotation_only_none_failure():
         )
 
 
-def test_annotation_invalid_type_failure():
+def test_annotation_invalid_type_failure() -> None:
     """First argument of union must be a LazyFrame."""
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
@@ -103,7 +103,7 @@ def test_annotation_invalid_type_failure():
         )
 
 
-def test_explicit_annotation_type_failure_no_frame_type():
+def test_explicit_annotation_type_failure_no_frame_type() -> None:
     """First argument of the annotated union must be a LazyFrame."""
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
@@ -114,7 +114,7 @@ def test_explicit_annotation_type_failure_no_frame_type():
         )
 
 
-def test_explicit_annotation_type_failure_too_many_args():
+def test_explicit_annotation_type_failure_too_many_args() -> None:
     """Annotations should have a maximum of two arguments in them."""
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
@@ -129,7 +129,7 @@ def test_explicit_annotation_type_failure_too_many_args():
         )
 
 
-def test_explicit_annotation_type_failure_arg1_type():
+def test_explicit_annotation_type_failure_arg1_type() -> None:
     """The second argument of the annotated union must be a CollectionMember."""
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
@@ -140,7 +140,7 @@ def test_explicit_annotation_type_failure_arg1_type():
         )
 
 
-def test_name_overlap():
+def test_name_overlap() -> None:
     with pytest.raises(
         ImplementationError,
         match=r"Filters defined on the collection must not be named the same",
@@ -155,7 +155,7 @@ def test_name_overlap():
         )
 
 
-def test_collection_no_primary_key_success():
+def test_collection_no_primary_key_success() -> None:
     """It's ok not to have primary keys if there are no filters."""
     create_collection(
         "test",
@@ -165,7 +165,7 @@ def test_collection_no_primary_key_success():
     )
 
 
-def test_collection_no_primary_key_failure():
+def test_collection_no_primary_key_failure() -> None:
     """If you have a filter, you must also have a primary key."""
     with pytest.raises(
         ImplementationError,
@@ -180,7 +180,7 @@ def test_collection_no_primary_key_failure():
         )
 
 
-def test_collection_primary_key_but_not_common():
+def test_collection_primary_key_but_not_common() -> None:
     """If you have a filter, you must also have a common primary key between members."""
     with pytest.raises(
         ImplementationError,

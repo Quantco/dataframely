@@ -25,32 +25,32 @@ class MyCollection(dy.Collection):
     second: dy.LazyFrame[MySecondSchema] | None
 
 
-def test_common_primary_keys():
+def test_common_primary_keys() -> None:
     assert MyCollection.common_primary_keys() == ["a"]
 
 
-def test_members():
+def test_members() -> None:
     members = MyCollection.members()
     assert not members["first"].is_optional
     assert members["second"].is_optional
 
 
-def test_member_schemas():
+def test_member_schemas() -> None:
     schemas = MyCollection.member_schemas()
     assert schemas == {"first": MyFirstSchema, "second": MySecondSchema}
 
 
-def test_required_members():
+def test_required_members() -> None:
     required_members = MyCollection.required_members()
     assert required_members == {"first"}
 
 
-def test_optional_members():
+def test_optional_members() -> None:
     optional_members = MyCollection.optional_members()
     assert optional_members == {"second"}
 
 
-def test_cast():
+def test_cast() -> None:
     collection = MyCollection.cast(
         {
             "first": pl.LazyFrame({"a": [1, 2, 3]}),
@@ -74,7 +74,7 @@ def test_cast():
         {"first": pl.LazyFrame({"a": [1, 2, 3]}, schema={"a": pl.UInt8})},
     ],
 )
-def test_to_dict(expected: dict[str, pl.LazyFrame]):
+def test_to_dict(expected: dict[str, pl.LazyFrame]) -> None:
     collection = MyCollection.validate(expected)
 
     # Check that export looks as expected
@@ -87,7 +87,7 @@ def test_to_dict(expected: dict[str, pl.LazyFrame]):
     assert MyCollection.is_valid(observed)
 
 
-def test_collect_all():
+def test_collect_all() -> None:
     collection = MyCollection.cast(
         {
             "first": pl.LazyFrame({"a": [1, 2, 3]}).filter(pl.col("a") < 3),
@@ -106,7 +106,7 @@ def test_collect_all():
     assert len(out.second.collect()) == 2
 
 
-def test_collect_all_optional():
+def test_collect_all_optional() -> None:
     collection = MyCollection.cast({"first": pl.LazyFrame({"a": [1, 2, 3]})})
     out = collection.collect_all()
 
@@ -118,7 +118,9 @@ def test_collect_all_optional():
 @pytest.mark.parametrize(
     "read_fn", [MyCollection.scan_parquet, MyCollection.read_parquet]
 )
-def test_read_write_parquet(tmp_path: Path, read_fn: Callable[[Path], MyCollection]):
+def test_read_write_parquet(
+    tmp_path: Path, read_fn: Callable[[Path], MyCollection]
+) -> None:
     collection = MyCollection.cast(
         {
             "first": pl.LazyFrame({"a": [1, 2, 3]}),
@@ -139,7 +141,7 @@ def test_read_write_parquet(tmp_path: Path, read_fn: Callable[[Path], MyCollecti
 )
 def test_read_write_parquet_optional(
     tmp_path: Path, read_fn: Callable[[Path], MyCollection]
-):
+) -> None:
     collection = MyCollection.cast({"first": pl.LazyFrame({"a": [1, 2, 3]})})
     collection.write_parquet(tmp_path)
 

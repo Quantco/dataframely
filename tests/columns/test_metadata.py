@@ -9,7 +9,7 @@ class SchemaWithMetadata(dy.Schema):
     b = dy.String()
 
 
-def test_metadata():
+def test_metadata() -> None:
     assert SchemaWithMetadata.a.metadata == {
         "masked": True,
         "comment": "foo",

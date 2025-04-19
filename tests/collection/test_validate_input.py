@@ -16,12 +16,12 @@ class MyCollection(dy.Collection):
     second: dy.LazyFrame[TestSchema] | None
 
 
-def test_collection_missing_required_member():
+def test_collection_missing_required_member() -> None:
     with pytest.raises(ValueError):
         MyCollection.validate({"second": pl.LazyFrame({"a": [1, 2, 3]})})
 
 
-def test_collection_superfluous_member():
+def test_collection_superfluous_member() -> None:
     with pytest.warns(Warning):
         MyCollection.validate(
             {

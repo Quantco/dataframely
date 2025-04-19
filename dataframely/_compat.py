@@ -6,7 +6,7 @@ from typing import Any
 
 
 class _DummyModule:  # pragma: no cover
-    def __init__(self, module: str):
+    def __init__(self, module: str) -> None:
         self.module = module
 
     def __getattr__(self, name: str) -> Any:

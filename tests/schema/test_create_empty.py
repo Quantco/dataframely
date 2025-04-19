@@ -13,7 +13,7 @@ class MySchema(dy.Schema):
 
 
 @pytest.mark.parametrize("with_arg", [True, False])
-def test_create_empty_eager(with_arg: bool):
+def test_create_empty_eager(with_arg: bool) -> None:
     if with_arg:
         df = MySchema.create_empty(lazy=False)
     else:
@@ -25,7 +25,7 @@ def test_create_empty_eager(with_arg: bool):
     assert len(df) == 0
 
 
-def test_create_empty_lazy():
+def test_create_empty_lazy() -> None:
     df = MySchema.create_empty(lazy=True)
     assert isinstance(df, pl.LazyFrame)
     assert df.collect_schema().names() == ["a", "b"]

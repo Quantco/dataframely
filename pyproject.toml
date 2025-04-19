@@ -67,6 +67,7 @@ quote-style = "double"
 
 [tool.mypy]
 check_untyped_defs = true
+disallow_untyped_defs = true
 exclude = ["docs/"]
 explicit_package_bases = true
 no_implicit_optional = true

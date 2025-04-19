@@ -28,7 +28,7 @@ class CarFleet(dy.Collection):
         return self.cars.filter(pl.col("vin") != pl.lit("123"))
 
 
-def test_valid_failure_infos():
+def test_valid_failure_infos() -> None:
     cars = {"vin": ["123", "456"], "manufacturer": ["BMW", "Mercedes"]}
     car_parts: dict[str, list[Any]] = {
         "vin": ["123", "123", "456"],

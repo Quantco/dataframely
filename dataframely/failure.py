@@ -28,7 +28,9 @@ class FailureInfo(Generic[S]):
     #: The schema used to create the input data frame.
     schema: type[S]
 
-    def __init__(self, lf: pl.LazyFrame, rule_columns: list[str], schema: type[S]):
+    def __init__(
+        self, lf: pl.LazyFrame, rule_columns: list[str], schema: type[S]
+    ) -> None:
         self._lf = lf
         self._rule_columns = rule_columns
         self.schema = schema
@@ -71,7 +73,7 @@ class FailureInfo(Generic[S]):
 
     # ---------------------------------- PERSISTENCE --------------------------------- #
 
-    def write_parquet(self, file: str | Path | IO[bytes]):
+    def write_parquet(self, file: str | Path | IO[bytes]) -> None:
         """Write the failure info to a Parquet file.
 
         Args:

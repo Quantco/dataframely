@@ -58,7 +58,7 @@ class Metadata:
     columns: dict[str, Column] = field(default_factory=dict)
     rules: dict[str, Rule] = field(default_factory=dict)
 
-    def update(self, other: Self):
+    def update(self, other: Self) -> None:
         self.columns.update(other.columns)
         self.rules.update(other.rules)
 
@@ -71,7 +71,7 @@ class SchemaMeta(ABCMeta):
         namespace: dict[str, Any],
         *args: Any,
         **kwargs: Any,
-    ):
+    ) -> SchemaMeta:
         result = Metadata()
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))

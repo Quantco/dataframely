@@ -11,7 +11,7 @@ from ._polars import PolarsDataType
 class ValidationError(Exception):
     """Error raised when :mod:`dataframely` validation encounters an issue."""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         super().__init__()
         self.message = message
 
@@ -22,7 +22,9 @@ class ValidationError(Exception):
 class DtypeValidationError(ValidationError):
     """Validation error raised when column dtypes are wrong."""
 
-    def __init__(self, errors: dict[str, tuple[PolarsDataType, PolarsDataType]]):
+    def __init__(
+        self, errors: dict[str, tuple[PolarsDataType, PolarsDataType]]
+    ) -> None:
         super().__init__(f"{len(errors)} columns have an invalid dtype")
         self.errors = errors
 
@@ -37,7 +39,7 @@ class DtypeValidationError(ValidationError):
 class RuleValidationError(ValidationError):
     """Complex validation error raised when rule validation fails."""
 
-    def __init__(self, errors: dict[str, int]):
+    def __init__(self, errors: dict[str, int]) -> None:
         super().__init__(f"{len(errors)} rules failed validation")
 
         # Split into schema errors and column errors
@@ -75,11 +77,11 @@ class RuleValidationError(ValidationError):
 class MemberValidationError(ValidationError):
     """Validation error raised when multiple members of a collection fail validation."""
 
-    def __init__(self, errors: dict[str, ValidationError]):
+    def __init__(self, errors: dict[str, ValidationError]) -> None:
         super().__init__(f"{len(errors)} members failed validation")
         self.errors = errors
 
-    def __str__(self):
+    def __str__(self) -> str:
         details = [
             f" > Member '{name}' failed validation:\n"
             + "\n".join("   " + line for line in str(error).split("\n"))
@@ -95,7 +97,7 @@ class ImplementationError(Exception):
 class AnnotationImplementationError(ImplementationError):
     """Error raised when the annotations of a collection are invalid."""
 
-    def __init__(self, attr: str, kls: type):
+    def __init__(self, attr: str, kls: type) -> None:
         message = (
             "Annotations of a 'dy.Collection' may only be an (optional) "
             f"'dy.LazyFrame', but \"{attr}\" has type '{kls}'."
@@ -106,7 +108,9 @@ class AnnotationImplementationError(ImplementationError):
 class RuleImplementationError(ImplementationError):
     """Error raised when a rule is implemented incorrectly."""
 
-    def __init__(self, name: str, return_dtype: pl.DataType, is_group_rule: bool):
+    def __init__(
+        self, name: str, return_dtype: pl.DataType, is_group_rule: bool
+    ) -> None:
         if is_group_rule:
             details = (
                 " When implementing a group rule (i.e. when using the `group_by` "

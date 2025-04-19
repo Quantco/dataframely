@@ -4,13 +4,13 @@
 import dataframely as dy
 
 
-def test_config_global():
+def test_config_global() -> None:
     dy.Config.set_max_sampling_iterations(50)
     assert dy.Config.options["max_sampling_iterations"] == 50
     dy.Config.restore_defaults()
 
 
-def test_config_local():
+def test_config_local() -> None:
     try:
         with dy.Config(max_sampling_iterations=35):
             assert dy.Config.options["max_sampling_iterations"] == 35
@@ -19,7 +19,7 @@ def test_config_local():
         dy.Config.restore_defaults()
 
 
-def test_config_local_nested():
+def test_config_local_nested() -> None:
     try:
         with dy.Config(max_sampling_iterations=35):
             assert dy.Config.options["max_sampling_iterations"] == 35
@@ -31,7 +31,7 @@ def test_config_local_nested():
         dy.Config.restore_defaults()
 
 
-def test_config_global_local():
+def test_config_global_local() -> None:
     try:
         dy.Config.set_max_sampling_iterations(50)
         assert dy.Config.options["max_sampling_iterations"] == 50

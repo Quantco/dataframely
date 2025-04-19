@@ -48,7 +48,7 @@ from dataframely.testing import COLUMN_TYPES, create_schema
         (dy.Enum(["a", "abc"]), "VARCHAR(3)"),
     ],
 )
-def test_mssql_datatype(column: Column, datatype: str):
+def test_mssql_datatype(column: Column, datatype: str) -> None:
     dialect = MSDialect_pyodbc()
     schema = create_schema("test", {"a": column})
     columns = schema.sql_schema(dialect)
@@ -92,7 +92,7 @@ def test_mssql_datatype(column: Column, datatype: str):
         (dy.Enum(["a", "abc"]), "VARCHAR(3)"),
     ],
 )
-def test_postgres_datatype(column: Column, datatype: str):
+def test_postgres_datatype(column: Column, datatype: str) -> None:
     dialect = PGDialect_psycopg2()
     schema = create_schema("test", {"a": column})
     columns = schema.sql_schema(dialect)
@@ -105,7 +105,7 @@ def test_postgres_datatype(column: Column, datatype: str):
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc()])
 def test_sql_nullability(
     column_type: type[Column], nullable: bool, dialect: sa.Dialect
-):
+) -> None:
     schema = create_schema("test", {"a": column_type(nullable=nullable)})
     columns = schema.sql_schema(dialect)
     assert len(columns) == 1
@@ -117,7 +117,7 @@ def test_sql_nullability(
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
 def test_sql_primary_key(
     column_type: type[Column], primary_key: bool, dialect: sa.Dialect
-):
+) -> None:
     schema = create_schema("test", {"a": column_type(primary_key=primary_key)})
     columns = schema.sql_schema(dialect)
     assert len(columns) == 1
@@ -126,13 +126,13 @@ def test_sql_primary_key(
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_sql_multiple_columns(dialect: sa.Dialect):
+def test_sql_multiple_columns(dialect: sa.Dialect) -> None:
     schema = create_schema("test", {"a": dy.Int32(nullable=False), "b": dy.Integer()})
     assert len(schema.sql_schema(dialect)) == 2
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_raise_for_list_column(dialect: sa.Dialect):
+def test_raise_for_list_column(dialect: sa.Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'List' type."
     ):
@@ -140,7 +140,7 @@ def test_raise_for_list_column(dialect: sa.Dialect):
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_raise_for_struct_column(dialect: sa.Dialect):
+def test_raise_for_struct_column(dialect: sa.Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'Struct' type."
     ):

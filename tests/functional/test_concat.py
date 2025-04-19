@@ -17,7 +17,7 @@ class SimpleCollection(dy.Collection):
     third: dy.LazyFrame[MySchema] | None
 
 
-def test_concat():
+def test_concat() -> None:
     col1 = SimpleCollection.cast({"first": pl.LazyFrame({"a": [1, 2, 3]})})
     col2 = SimpleCollection.cast(
         {
@@ -38,6 +38,6 @@ def test_concat():
     assert concat["third"].collect().get_column("a").to_list() == list(range(7, 10))
 
 
-def test_concat_empty():
+def test_concat_empty() -> None:
     with pytest.raises(ValueError):
         dy.concat_collection_members([])

@@ -50,7 +50,7 @@ TYPED_LAZYFRAME_FULLNAME = "dataframely._typing.LazyFrame"
 # --------------------------------------- RULES -------------------------------------- #
 
 
-def mark_rules_as_staticmethod(ctx: ClassDefContext):
+def mark_rules_as_staticmethod(ctx: ClassDefContext) -> None:
     """Mark all methods decorated with `@rule` as `staticmethod`s."""
     info = ctx.cls.info
     for sym in info.names.values():
@@ -199,7 +199,7 @@ def _convert_dy_column_to_dtype(
 def store_typed_dict_type_for_schema(
     ctx: ClassDefContext,
     schema_registry: dict[str, TypedDictType],
-):
+) -> None:
     """Add `TypedDictType` inferred from the schema's columns to a given registry."""
 
     schema_type = ctx.cls.info
@@ -336,11 +336,13 @@ def alter_dataframe_iter_rows_return_type(
 
 
 class DataframelyPlugin(Plugin):
-    def __init__(self, options: Options):
+    def __init__(self, options: Options) -> None:
         super().__init__(options)
         self.schema_registry: dict[str, TypedDictType] = {}
 
-    def get_base_class_hook(self, fullname: str):
+    def get_base_class_hook(
+        self, fullname: str
+    ) -> Callable[[ClassDefContext], None] | None:
         # Given a class, check whether it is a subclass of `dy.Schema`. If so, mark
         # all methods decorated with `@rule` as staticmethods.
         # Also, store the `TypedDictType` for the schema in a registry to allow downstream
@@ -349,13 +351,12 @@ class DataframelyPlugin(Plugin):
         if sym and isinstance(sym.node, TypeInfo):
             if any(base.fullname == SCHEMA_FULLNAME for base in sym.node.mro):
 
-                def _hook(ctx: ClassDefContext) -> bool:
+                def _hook(ctx: ClassDefContext) -> None:
                     mark_rules_as_staticmethod(ctx)
                     store_typed_dict_type_for_schema(
                         ctx,
                         self.schema_registry,
                     )
-                    return True
 
                 return _hook
         return None

@@ -78,14 +78,14 @@ class ErroneousCollection(dy.Collection):
 
 
 @pytest.mark.parametrize("n", [0, 1000])
-def test_sample_rows(n: int):
+def test_sample_rows(n: int) -> None:
     collection = MyCollection.sample(n)
     assert collection.first.collect()["a"].to_list() == list(range(n))
     assert collection.second is not None
     assert collection.second.collect().is_empty()
 
 
-def test_sample_with_overrides():
+def test_sample_with_overrides() -> None:
     collection = MyCollection.sample(
         overrides=[
             {"first": {"b": 4}, "second": [{"c": 3}, {"c": 4}]},
@@ -101,27 +101,27 @@ def test_sample_with_overrides():
 
 
 @pytest.mark.parametrize("n", [0, 1000])
-def test_sample_without_dependent_members(n: int):
+def test_sample_without_dependent_members(n: int) -> None:
     collection = SmallCollection.sample(n)
     assert collection.first.collect().height == n
 
 
 @pytest.mark.parametrize("n", [0, 1000])
-def test_sample_with_ignored_members(n: int):
+def test_sample_with_ignored_members(n: int) -> None:
     collection = IgnoringCollection.sample(n)
     assert collection.first.collect()["a"].to_list() == list(range(n))
 
 
-def test_sample_num_rows_mismatch():
+def test_sample_num_rows_mismatch() -> None:
     with pytest.raises(ValueError, match=r"`num_rows` mismatches"):
         MyCollection.sample(num_rows=1, overrides=[])
 
 
-def test_sample_no_common_primary_key():
+def test_sample_no_common_primary_key() -> None:
     with pytest.raises(ValueError, match=r"must contain the common primary keys"):
         ErroneousCollection.sample()
 
 
-def test_sample_no_overwrite():
+def test_sample_no_overwrite() -> None:
     with pytest.raises(ValueError, match=r"`_preprocess_sample` must be overwritten"):
         IncompleteCollection.sample()

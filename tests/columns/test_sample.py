@@ -26,7 +26,9 @@ def generator() -> Generator:
 
 
 @pytest.mark.parametrize("column_type", COLUMN_TYPES + SUPERTYPE_COLUMN_TYPES)
-def test_sample_custom_check(column_type: type[dy.Column], generator: Generator):
+def test_sample_custom_check(
+    column_type: type[dy.Column], generator: Generator
+) -> None:
     column = column_type(check=lambda expr: expr)
     with pytest.raises(ValueError):
         column.sample(generator)
@@ -36,7 +38,7 @@ def test_sample_custom_check(column_type: type[dy.Column], generator: Generator)
 @pytest.mark.parametrize("nullable", [True, False])
 def test_sample_valid(
     column_type: type[dy.Column], nullable: bool, generator: Generator
-):
+) -> None:
     if issubclass(column_type, _BaseFloat):
         # let's avoid sampling NaN and Inf by setting min/max
         column: dy.Column = column_type(nullable=nullable, min=-10_000, max=10_000)
@@ -47,7 +49,7 @@ def test_sample_valid(
         assert math.isclose(cast(float, samples.is_null().mean()), 0.1, abs_tol=0.01)
 
 
-def test_sample_any(generator: Generator):
+def test_sample_any(generator: Generator) -> None:
     column = dy.Any()
     samples = sample_and_validate(column, generator, n=100)
     assert samples.is_null().all()
@@ -61,7 +63,7 @@ def test_sample_integer_min_max(
     min_kwargs: dict[str, Any],
     max_kwargs: dict[str, Any],
     generator: Generator,
-):
+) -> None:
     column = column_type(**min_kwargs, **max_kwargs)
     samples = sample_and_validate(column, generator, n=10_000)
     if min_kwargs and max_kwargs:
@@ -78,7 +80,9 @@ def test_sample_integer_min_max(
 
 
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
-def test_sample_integer_is_in(column_type: type[dy.Column], generator: Generator):
+def test_sample_integer_is_in(
+    column_type: type[dy.Column], generator: Generator
+) -> None:
     column = column_type(is_in=[4, 5, 6])  # type: ignore
     samples = sample_and_validate(column, generator, n=10_000)
     assert math.isclose(samples.mean(), 5, abs_tol=0.1)  # type: ignore
@@ -94,7 +98,7 @@ def test_sample_integer_is_in(column_type: type[dy.Column], generator: Generator
         dy.String(regex=".*", min_length=1, max_length=5),
     ],
 )
-def test_sample_string_invalid(column: dy.Column, generator: Generator):
+def test_sample_string_invalid(column: dy.Column, generator: Generator) -> None:
     with pytest.raises(ValueError):
         column.sample(generator)
 
@@ -109,18 +113,18 @@ def test_sample_string_invalid(column: dy.Column, generator: Generator):
         dy.String(regex="[abc]def(ghi)?"),
     ],
 )
-def test_sample_string(column: dy.Column, generator: Generator):
+def test_sample_string(column: dy.Column, generator: Generator) -> None:
     sample_and_validate(column, generator, n=10_000)
 
 
-def test_sample_decimal(generator: Generator):
+def test_sample_decimal(generator: Generator) -> None:
     column = dy.Decimal(precision=3, scale=2, max_exclusive=decimal.Decimal("6.5"))
     samples = sample_and_validate(column, generator, n=100_000)
     assert samples.min() == decimal.Decimal("-9.99")
     assert samples.max() == decimal.Decimal("6.49")
 
 
-def test_sample_date(generator: Generator):
+def test_sample_date(generator: Generator) -> None:
     column = dy.Date(
         min=dt.date(2020, 1, 1), max=dt.date(2021, 12, 1), resolution="1mo"
     )
@@ -129,7 +133,7 @@ def test_sample_date(generator: Generator):
     assert samples.max() == dt.date(2021, 12, 1)
 
 
-def test_sample_date_9999(generator: Generator):
+def test_sample_date_9999(generator: Generator) -> None:
     column = dy.Date(
         min=dt.date(9998, 1, 1), max=dt.date(9999, 12, 1), resolution="1mo"
     )
@@ -138,7 +142,7 @@ def test_sample_date_9999(generator: Generator):
     assert samples.max() == dt.date(9999, 12, 1)
 
 
-def test_sample_datetime(generator: Generator):
+def test_sample_datetime(generator: Generator) -> None:
     column = dy.Datetime(
         min=dt.datetime(2020, 1, 1),
         max_exclusive=dt.datetime(2022, 1, 1),
@@ -149,14 +153,14 @@ def test_sample_datetime(generator: Generator):
     assert samples.max() == dt.datetime(2021, 12, 31)
 
 
-def test_sample_time(generator: Generator):
+def test_sample_time(generator: Generator) -> None:
     column = dy.Time(min=dt.time(), max=dt.time(23, 59), resolution="1m")
     samples = sample_and_validate(column, generator, n=1_000_000)
     assert samples.min() == dt.time()
     assert samples.max() == dt.time(23, 59)
 
 
-def test_sample_duration(generator: Generator):
+def test_sample_duration(generator: Generator) -> None:
     column = dy.Duration(
         min=dt.timedelta(hours=24), max=dt.timedelta(hours=120), resolution="12h"
     )
@@ -165,19 +169,19 @@ def test_sample_duration(generator: Generator):
     assert samples.max() == dt.timedelta(hours=120)
 
 
-def test_sample_enum(generator: Generator):
+def test_sample_enum(generator: Generator) -> None:
     column = dy.Enum(["a", "b", "c"], nullable=False)
     samples = sample_and_validate(column, generator, n=10_000)
     assert set(samples) == {"a", "b", "c"}
 
 
-def test_sample_list(generator: Generator):
+def test_sample_list(generator: Generator) -> None:
     column = dy.List(dy.String(regex="[abc]"), min_length=5, max_length=10)
     samples = sample_and_validate(column, generator, n=10_000)
     assert set(samples.list.len()) == set(range(5, 11))
 
 
-def test_sample_struct(generator: Generator):
+def test_sample_struct(generator: Generator) -> None:
     column = dy.Struct({"a": dy.String(regex="[abc]"), "b": dy.String(regex="[a-z]xx")})
     samples = sample_and_validate(column, generator, n=10_000)
     assert len(samples) == 10_000

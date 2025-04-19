@@ -15,7 +15,7 @@ class MySchema(dy.Schema):
 
 @pytest.mark.parametrize("lazy_in", [True, False])
 @pytest.mark.parametrize("lazy_out", [True, False])
-def test_create_empty_if_none_non_none(lazy_in: bool, lazy_out: bool):
+def test_create_empty_if_none_non_none(lazy_in: bool, lazy_out: bool) -> None:
     # Arrange
     df_raw = MySchema.validate(pl.DataFrame({"a": [1], "b": ["foo"]}))
     df = df_raw.lazy() if lazy_in else df_raw
@@ -32,7 +32,7 @@ def test_create_empty_if_none_non_none(lazy_in: bool, lazy_out: bool):
 
 
 @pytest.mark.parametrize("lazy", [True, False])
-def test_create_empty_if_none_none(lazy: bool):
+def test_create_empty_if_none_none(lazy: bool) -> None:
     # Act
     result = MySchema.create_empty_if_none(None, lazy=lazy)
 

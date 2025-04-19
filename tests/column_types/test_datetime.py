@@ -134,7 +134,9 @@ from dataframely.testing.factory import create_schema
         ),
     ],
 )
-def test_args_consistency_min_max(column_type: type[Column], kwargs: dict[str, Any]):
+def test_args_consistency_min_max(
+    column_type: type[Column], kwargs: dict[str, Any]
+) -> None:
     with pytest.raises(ValueError):
         column_type(**kwargs)
 
@@ -170,7 +172,9 @@ def test_args_consistency_min_max(column_type: type[Column], kwargs: dict[str, A
         (dy.Duration, {"max_exclusive": dt.timedelta(minutes=30), "resolution": "1h"}),
     ],
 )
-def test_args_resolution_invalid(column_type: type[Column], kwargs: dict[str, Any]):
+def test_args_resolution_invalid(
+    column_type: type[Column], kwargs: dict[str, Any]
+) -> None:
     with pytest.raises(ValueError):
         column_type(**kwargs)
 
@@ -200,7 +204,9 @@ def test_args_resolution_invalid(column_type: type[Column], kwargs: dict[str, An
         (dy.Duration, {"max_exclusive": dt.timedelta(hours=3), "resolution": "1h"}),
     ],
 )
-def test_args_resolution_valid(column_type: type[Column], kwargs: dict[str, Any]):
+def test_args_resolution_valid(
+    column_type: type[Column], kwargs: dict[str, Any]
+) -> None:
     column_type(**kwargs)
 
 
@@ -331,7 +337,7 @@ def test_args_resolution_valid(column_type: type[Column], kwargs: dict[str, Any]
 )
 def test_validate_min_max(
     column: Column, values: list[Any], valid: dict[str, list[bool]]
-):
+) -> None:
     lf = pl.LazyFrame({"a": values})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame(valid)
@@ -374,7 +380,7 @@ def test_validate_min_max(
 )
 def test_validate_resolution(
     column: Column, values: list[Any], valid: dict[str, list[bool]]
-):
+) -> None:
     lf = pl.LazyFrame({"a": values})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame(valid)
@@ -389,7 +395,7 @@ def test_validate_resolution(
         )
     ],
 )
-def test_sample_resolution(column: dy.Column):
+def test_sample_resolution(column: dy.Column) -> None:
     generator = Generator(seed=42)
     samples = column.sample(generator, n=10_000)
     schema = create_schema("test", {"a": column})
