@@ -21,7 +21,7 @@ jobs:
           # needed for 'pre-commit-mirrors-insert-license'
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@0f64e482e3d251f735019b1bc7fb0413ead75b2c # v0.8.2
+        uses: prefix-dev/setup-pixi@19eac09b398e3d0c747adc7921926a6d802df4da # v0.8.8
         with:
           environments: default lint
       - name: Install repository
@@ -42,7 +42,7 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v4
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@8eaba7c61d661f73d558b0b477156b7b62667fa4
+        uses: prefix-dev/setup-pixi@19eac09b398e3d0c747adc7921926a6d802df4da
         with:
           environments: ${{ matrix.environment }}
       - name: Install repository
