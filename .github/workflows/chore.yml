@@ -1,6 +1,6 @@
 name: Chore
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
   push:
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   check-pr-title:
     name: Check PR Title
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,16 +51,16 @@ jobs:
           delete: true
 
   release-drafter:
-    name: ${{ github.event_name == 'pull_request' && 'Assign Labels' || 'Draft Release' }}
+    name: ${{ github.event_name == 'pull_request_target' && 'Assign Labels' || 'Draft Release' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: ${{ github.event_name == 'pull_request' && 'Assign labels' || 'Update release draft' }}
+      - name: ${{ github.event_name == 'pull_request_target' && 'Assign labels' || 'Update release draft' }}
         uses: release-drafter/release-drafter@v6
         with:
-          disable-releaser: ${{ github.event_name == 'pull_request' }}
+          disable-releaser: ${{ github.event_name == 'pull_request_target' }}
           disable-autolabeler: ${{ github.event_name == 'push' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
