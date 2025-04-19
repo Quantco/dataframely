@@ -145,7 +145,7 @@ class CollectionMeta(ABCMeta):
         # 3) Check that inlining for sampling is configured correctly.
         if len(non_ignored_member_schemas) > 0:
             common_primary_keys = _common_primary_keys(non_ignored_member_schemas)
-            inlined_columns = set()
+            inlined_columns: set[str] = set()
             for member, info in result.members.items():
                 if info.inline_for_sampling:
                     if set(info.schema.primary_keys()) != common_primary_keys:

@@ -8,7 +8,6 @@ import pytest
 import dataframely as dy
 from dataframely.exc import ImplementationError
 from dataframely.random import Generator
-from dataframely.testing import create_collection
 from dataframely.testing.factory import create_collection_raw
 
 
