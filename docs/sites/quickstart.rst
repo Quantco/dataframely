@@ -197,7 +197,7 @@ In this case, ``good`` remains to be a ``dy.DataFrame[HouseSchema]``, albeit wit
 The ``failure`` object is of type :class:`~dataframely.FailureInfo` and provides means to inspect
 the reasons for validation failures for invalid rows.
 
-Given the example data above and the schema that we defined, we know that rows 2, 3, 4, and 5 are invalid (0-indexed) -> None:
+Given the example data above and the schema that we defined, we know that rows 2, 3, 4, and 5 are invalid (0-indexed):
 
 - Row 2 has a zip code that does not appear at least twice
 - Row 3 has a NULL value for the number of bedrooms
