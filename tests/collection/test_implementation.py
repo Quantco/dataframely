@@ -81,6 +81,24 @@ def test_annotation_union_conflicting_types_failure() -> None:
         )
 
 
+def test_annotation_annotated_success() -> None:
+    """When we use an Annotated type, it must accept a union type."""
+    create_collection_raw(
+        "test",
+        {
+            "first": Annotated[
+                dy.LazyFrame[MyTestSchema] | None, dy.CollectionMember()
+            ],
+        },
+    )
+    create_collection_raw(
+        "test",
+        {
+            "first": dy.LazyFrame[MyTestSchema] | None,
+        },
+    )
+
+
 def test_annotation_only_none_failure() -> None:
     """Annotations must not just be None."""
     with pytest.raises(AnnotationImplementationError):

@@ -7,7 +7,7 @@ import typing
 from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Self, get_args, get_origin
+from typing import Annotated, Any, Self, cast, get_args, get_origin
 
 import polars as pl
 
@@ -183,59 +183,9 @@ class CollectionMeta(ABCMeta):
         # Get all members via the annotations
         if "__annotations__" in source:
             for attr, kls in source["__annotations__"].items():
-                origin = get_origin(kls)
-
-                # optional annotation
-                collection_member = CollectionMember()
-
-                if origin is Annotated:
-                    annotation_args = get_args(kls)
-                    origin_arg0 = get_origin(annotation_args[0])
-                    if not origin_arg0 or not issubclass(origin_arg0, TypedLazyFrame):
-                        raise AnnotationImplementationError(attr, kls)
-                    if len(annotation_args) > 2:
-                        raise AnnotationImplementationError(attr, kls)
-                    if not isinstance(annotation_args[1], CollectionMember):
-                        raise AnnotationImplementationError(attr, kls)
-
-                    # Continue with wrapped FrameType
-                    collection_member = annotation_args[1]
-                    kls = annotation_args[0]
-                    origin = origin_arg0
-
-                if origin is None:
-                    # `None` annotation is not allowed
-                    raise AnnotationImplementationError(attr, kls)
-                elif origin == typing.Union:
-                    # Happy path: optional member
-                    union_args = get_args(kls)
-                    if len(union_args) != 2:
-                        raise AnnotationImplementationError(attr, kls)
-                    if not any(get_origin(arg) is None for arg in union_args):
-                        raise AnnotationImplementationError(attr, kls)
-
-                    [not_none_arg] = [
-                        arg for arg in union_args if get_origin(arg) is not None
-                    ]
-                    if not issubclass(get_origin(not_none_arg), TypedLazyFrame):
-                        raise AnnotationImplementationError(attr, kls)
-
-                    result.members[attr] = MemberInfo(
-                        schema=get_args(not_none_arg)[0],
-                        is_optional=True,
-                        ignored_in_filters=collection_member.ignored_in_filters,
-                    )
-                elif issubclass(origin, TypedLazyFrame):
-                    # Happy path: required member
-                    result.members[attr] = MemberInfo(
-                        schema=get_args(kls)[0],
-                        is_optional=False,
-                        ignored_in_filters=collection_member.ignored_in_filters,
-                        inline_for_sampling=collection_member.inline_for_sampling,
-                    )
-                else:
-                    # Some other unknown annotation
-                    raise AnnotationImplementationError(attr, kls)
+                result.members[attr] = CollectionMeta._derive_member_info(
+                    attr, kls, CollectionMember()
+                )
 
         # Get all filters by traversing the source
         for attr, value in {
@@ -245,6 +195,55 @@ class CollectionMeta(ABCMeta):
                 result.filters[attr] = value
 
         return result
+
+    @staticmethod
+    def _derive_member_info(
+        attr: str, type_annotation: Any, collection_member: CollectionMember
+    ) -> MemberInfo:
+        origin = get_origin(type_annotation)
+
+        if origin is None:
+            # `None` annotation is not allowed
+            raise AnnotationImplementationError(attr, type_annotation)
+        elif origin == Annotated:
+            # Maybe happy path: annotated member, dispatch recursively
+            annotation_args = cast(list[Any], get_args(type_annotation))
+            if len(annotation_args) > 2:
+                raise AnnotationImplementationError(attr, type_annotation)
+            if not isinstance(annotation_args[1], CollectionMember):
+                raise AnnotationImplementationError(attr, type_annotation)
+            return CollectionMeta._derive_member_info(
+                attr, annotation_args[0], annotation_args[1]
+            )
+        elif origin == typing.Union:
+            # Happy path: optional member
+            union_args = get_args(type_annotation)
+            if len(union_args) != 2:
+                raise AnnotationImplementationError(attr, type_annotation)
+            if not any(get_origin(arg) is None for arg in union_args):
+                raise AnnotationImplementationError(attr, type_annotation)
+
+            [not_none_arg] = [arg for arg in union_args if get_origin(arg) is not None]
+            if not issubclass(get_origin(not_none_arg), TypedLazyFrame):
+                raise AnnotationImplementationError(attr, type_annotation)
+
+            return MemberInfo(
+                schema=get_args(not_none_arg)[0],
+                is_optional=True,
+                ignored_in_filters=collection_member.ignored_in_filters,
+                inline_for_sampling=collection_member.inline_for_sampling,
+            )
+        elif issubclass(origin, TypedLazyFrame):
+            # Happy path: required member
+            return MemberInfo(
+                schema=get_args(type_annotation)[0],
+                is_optional=False,
+                ignored_in_filters=collection_member.ignored_in_filters,
+                inline_for_sampling=collection_member.inline_for_sampling,
+            )
+        else:
+            # Some other unknown annotation
+            raise AnnotationImplementationError(attr, type_annotation)
 
 
 class BaseCollection(metaclass=CollectionMeta):

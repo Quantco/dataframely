@@ -54,6 +54,21 @@ class MyInlinedCollection(dy.Collection):
         return sample
 
 
+class MyInlinedCollectionWithOptional(dy.Collection):
+    first: Annotated[
+        dy.LazyFrame[MyFirstSchema] | None,
+        dy.CollectionMember(inline_for_sampling=True),
+    ]
+    second: dy.LazyFrame[MySecondSchema]
+
+    @classmethod
+    def _preprocess_sample(
+        cls, sample: dict[str, Any], index: int, generator: Generator
+    ) -> dict[str, Any]:
+        sample["a"] = index
+        return sample
+
+
 class SmallCollection(dy.Collection):
     first: dy.LazyFrame[MyFirstSchema]
 
@@ -117,13 +132,20 @@ def test_sample_with_overrides() -> None:
     assert collection.second.collect()["c"].to_list() == [3, 4, 6]
 
 
-def test_sample_inline_with_overrides() -> None:
-    collection = MyInlinedCollection.sample(
+@pytest.mark.parametrize(
+    "collection_type", [MyInlinedCollection, MyInlinedCollectionWithOptional]
+)
+def test_sample_inline_with_overrides(
+    collection_type: type[MyInlinedCollection] | type[MyInlinedCollectionWithOptional],
+) -> None:
+    collection = collection_type.sample(
         overrides=[
             {"b": 4, "second": [{"c": 3}, {"c": 4}]},
             {"b": 8, "second": [{"c": 6}]},
         ]
     )
+
+    assert collection.first is not None
     assert collection.first.collect()["a"].to_list() == [0, 1]
     assert collection.first.collect()["b"].to_list() == [4, 8]
 
