@@ -4,7 +4,7 @@
 import sys
 import warnings
 from abc import ABC
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Generic, Self, TypeVar, cast
 
@@ -20,10 +20,10 @@ from .random import Generator
 
 if sys.version_info >= (3, 13):
     SamplingType = TypeVar(
-        "SamplingType", bound=MutableMapping[str, Any], default=dict[str, Any]
+        "SamplingType", bound=Mapping[str, Any], default=dict[str, Any]
     )
 else:  # pragma: no cover
-    SamplingType = TypeVar("SamplingType", bound=MutableMapping[str, Any])
+    SamplingType = TypeVar("SamplingType", bound=Mapping[str, Any])
 
 
 class Collection(BaseCollection, ABC, Generic[SamplingType]):
