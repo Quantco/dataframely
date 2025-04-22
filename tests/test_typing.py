@@ -87,6 +87,12 @@ def test_collection_filter_return_value() -> None:
     assert len(failure["third"]) == 0  # type: ignore[misc]
 
 
+def test_collection_concat() -> None:
+    c1 = MyCollection.create_empty()
+    c2 = MyCollection.create_empty()
+    dy.concat_collection_members([c1, c2])
+
+
 # ------------------------------------------------------------------------------------ #
 #                                       ITER ROWS                                      #
 # ------------------------------------------------------------------------------------ #

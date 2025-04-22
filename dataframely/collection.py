@@ -20,7 +20,7 @@ from .random import Generator
 
 if sys.version_info >= (3, 13):
     SamplingType = TypeVar(
-        "SamplingType", bound=Mapping[str, Any], default=dict[str, Any]
+        "SamplingType", bound=Mapping[str, Any], default=Mapping[str, Any]
     )
 else:  # pragma: no cover
     SamplingType = TypeVar("SamplingType", bound=Mapping[str, Any])
