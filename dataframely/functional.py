@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+from collections.abc import Sequence
 from typing import TypeVar
 
 import polars as pl
@@ -62,7 +63,7 @@ def filter_relationship_one_to_at_least_one(
 # ------------------------------------------------------------------------------------ #
 
 
-def concat_collection_members(collections: list[C], /) -> dict[str, pl.LazyFrame]:
+def concat_collection_members(collections: Sequence[C], /) -> dict[str, pl.LazyFrame]:
     """Concatenate the members of collections with the same type.
 
     Args:
