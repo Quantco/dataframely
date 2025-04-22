@@ -129,6 +129,7 @@ def test_sample_inline_with_overrides():
 
     assert collection.second is not None
     assert collection.second.collect()["a"].to_list() == [0, 0, 1]
+    assert collection.second.collect()["b"].to_list() != [4, 4, 8]
     assert collection.second.collect()["c"].to_list() == [3, 4, 6]
 
 
