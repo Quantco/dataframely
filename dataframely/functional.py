@@ -5,13 +5,16 @@ from typing import TypeVar
 
 import polars as pl
 
+from ._base_collection import BaseCollection
 from ._typing import LazyFrame
-from .collection import Collection
 from .schema import Schema
 
 S = TypeVar("S", bound=Schema)
 T = TypeVar("T", bound=Schema)
-C = TypeVar("C", bound=Collection)
+
+# NOTE: Binding to `BaseCollection` is required here as the TypeVar default for the
+#  sampling type otherwise causes issues for Python 3.13.
+C = TypeVar("C", bound=BaseCollection)
 
 # ------------------------------------------------------------------------------------ #
 #                                        FILTER                                        #
