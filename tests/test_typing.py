@@ -32,17 +32,17 @@ class Schema(dy.Schema):
     a = dy.Int64()
 
 
-def test_data_frame_lazy():
+def test_data_frame_lazy() -> None:
     df = Schema.create_empty()
     df.lazy()
 
 
-def test_lazy_frame_lazy():
+def test_lazy_frame_lazy() -> None:
     df = Schema.create_empty(lazy=True)
     df.lazy()
 
 
-def test_lazy_frame_collect():
+def test_lazy_frame_collect() -> None:
     df = Schema.create_empty(lazy=True)
     df.collect()
 
@@ -66,7 +66,7 @@ class MyCollection(dy.Collection):
     second: dy.LazyFrame[MySecondSchema]
 
 
-def test_collection_filter_return_value():
+def test_collection_filter_return_value() -> None:
     _, failure = MyCollection.filter(
         {"first": pl.LazyFrame(), "second": pl.LazyFrame()},
     )
@@ -121,7 +121,9 @@ def my_schema_df() -> dy.DataFrame[MySchema]:
     )
 
 
-def test_iter_rows_assignment_correct_type(my_schema_df: dy.DataFrame[MySchema]):
+def test_iter_rows_assignment_correct_type(
+    my_schema_df: dy.DataFrame[MySchema],
+) -> None:
     entry = next(my_schema_df.iter_rows(named=True))
 
     a: int = entry["a"]  # noqa: F841
@@ -129,7 +131,7 @@ def test_iter_rows_assignment_correct_type(my_schema_df: dy.DataFrame[MySchema])
     c: list[Any] = entry["custom_col_list"]  # noqa: F841
 
 
-def test_iter_rows_schema_subtypes(my_schema_df: dy.DataFrame[MySchema]):
+def test_iter_rows_schema_subtypes(my_schema_df: dy.DataFrame[MySchema]) -> None:
     class MySubSchema(MySchema):
         i = dy.Int64()
 
@@ -150,32 +152,32 @@ def test_iter_rows_schema_subtypes(my_schema_df: dy.DataFrame[MySchema]):
     j2: int = entry2["j"]  # noqa: F841
 
 
-def test_iter_rows_assignment_wrong_type(my_schema_df: dy.DataFrame[MySchema]):
+def test_iter_rows_assignment_wrong_type(my_schema_df: dy.DataFrame[MySchema]) -> None:
     entry = next(my_schema_df.iter_rows(named=True))
 
     a: int = entry["b"]  # type: ignore[assignment] # noqa: F841
 
 
-def test_iter_rows_read_only(my_schema_df: dy.DataFrame[MySchema]):
+def test_iter_rows_read_only(my_schema_df: dy.DataFrame[MySchema]) -> None:
     entry = next(my_schema_df.iter_rows(named=True))
 
     entry["a"] = 1  # type: ignore[typeddict-readonly-mutated]
 
 
-def test_iter_rows_missing_key(my_schema_df: dy.DataFrame[MySchema]):
+def test_iter_rows_missing_key(my_schema_df: dy.DataFrame[MySchema]) -> None:
     entry = next(my_schema_df.iter_rows(named=True))
 
     _ = entry["i"]  # type: ignore[misc]
 
 
-def test_iter_rows_without_named(my_schema_df: dy.DataFrame[MySchema]):
+def test_iter_rows_without_named(my_schema_df: dy.DataFrame[MySchema]) -> None:
     # Make sure we don't accidentally override the return type of `iter_rows` with `named=False`.
     entry = next(my_schema_df.iter_rows(named=False))
 
     _ = entry["g"]  # type: ignore[call-overload]
 
 
-def test_iter_rows_imported_schema():
+def test_iter_rows_imported_schema() -> None:
     my_imported_schema_df = MyImportedSchema.validate(
         pl.DataFrame(
             {
@@ -200,7 +202,7 @@ def test_iter_rows_imported_schema():
     _ = entry["i"]  # type: ignore[misc]
 
 
-def test_iter_rows_imported_subschema():
+def test_iter_rows_imported_subschema() -> None:
     class MySubFromImportedSchema(MyImportedSchema):
         i = dy.Int64()
 

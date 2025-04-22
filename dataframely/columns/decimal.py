@@ -148,7 +148,9 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
 # --------------------------------------- UTILS -------------------------------------- #
 
 
-def _validate(value: decimal.Decimal, precision: int | None, scale: int, name: str):
+def _validate(
+    value: decimal.Decimal, precision: int | None, scale: int, name: str
+) -> None:
     exponent = value.as_tuple().exponent
     if not isinstance(exponent, int):
         raise ValueError(f"Encountered 'inf' or 'NaN' for `{name}`.")

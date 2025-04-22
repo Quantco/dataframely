@@ -83,7 +83,7 @@ U = TypeVar("U")
 class IsInMixin(Generic[U], Base):
     """Mixin to use for types implementing "is in"."""
 
-    def __init__(self, *, is_in: Sequence[U] | None = None, **kwargs: Any):
+    def __init__(self, *, is_in: Sequence[U] | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.is_in = is_in
 

@@ -10,12 +10,12 @@ from dataframely.testing import create_schema, validation_mask
 
 
 @pytest.mark.parametrize("inner", [dy.Int64(), dy.Integer()])
-def test_integer_list(inner: Column):
+def test_integer_list(inner: Column) -> None:
     schema = create_schema("test", {"a": dy.List(inner)})
     assert schema.is_valid(pl.DataFrame({"a": [[1], [2], [3]]}))
 
 
-def test_invalid_inner_type():
+def test_invalid_inner_type() -> None:
     schema = create_schema("test", {"a": dy.List(dy.Int64())})
     assert not schema.is_valid(pl.DataFrame({"a": [["1"], ["2"], ["3"]]}))
 
@@ -50,16 +50,16 @@ def test_invalid_inner_type():
         ),
     ],
 )
-def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool):
+def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool) -> None:
     assert column.validate_dtype(dtype) == is_valid
 
 
-def test_nested_lists():
+def test_nested_lists() -> None:
     schema = create_schema("test", {"a": dy.List(dy.List(dy.Int64()))})
     assert schema.is_valid(pl.DataFrame({"a": [[[1]], [[2]], [[3]]]}))
 
 
-def test_list_with_pk():
+def test_list_with_pk() -> None:
     schema = create_schema(
         "test",
         {"a": dy.List(dy.String(), primary_key=True)},
@@ -70,7 +70,7 @@ def test_list_with_pk():
     assert failures.counts() == {"primary_key": 2}
 
 
-def test_list_with_rules():
+def test_list_with_rules() -> None:
     schema = create_schema(
         "test", {"a": dy.List(dy.String(min_length=2, nullable=False))}
     )
@@ -80,7 +80,7 @@ def test_list_with_rules():
     assert failures.counts() == {"a|inner_nullability": 1, "a|inner_min_length": 1}
 
 
-def test_nested_list_with_rules():
+def test_nested_list_with_rules() -> None:
     schema = create_schema(
         "test", {"a": dy.List(dy.List(dy.String(min_length=2, nullable=False)))}
     )
@@ -94,7 +94,7 @@ def test_nested_list_with_rules():
     }
 
 
-def test_list_length_rules():
+def test_list_length_rules() -> None:
     schema = create_schema(
         "test",
         {
@@ -111,7 +111,7 @@ def test_list_length_rules():
     assert validation_mask(df, failures).to_list() == [True, False, False, True, False]
 
 
-def test_outer_inner_nullability():
+def test_outer_inner_nullability() -> None:
     schema = create_schema(
         "test",
         {
@@ -125,7 +125,7 @@ def test_outer_inner_nullability():
     schema.validate(df, cast=True)
 
 
-def test_inner_primary_key():
+def test_inner_primary_key() -> None:
     schema = create_schema("test", {"a": dy.List(dy.Integer(primary_key=True))})
     df = pl.DataFrame({"a": [[1, 2, 3], [1, 1, 2], [1, 1], [1, 4]]})
     _, failure = schema.filter(df)
@@ -147,7 +147,7 @@ def test_inner_primary_key_struct(
     second_primary_key: bool,
     failure_count: int,
     mask: list[bool],
-):
+) -> None:
     schema = create_schema(
         "test",
         {

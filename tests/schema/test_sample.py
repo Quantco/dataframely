@@ -60,7 +60,7 @@ class LimitedComplexSchema(dy.Schema):
 
 
 @pytest.mark.parametrize("n", [0, 1000])
-def test_sample_deterministic(n: int):
+def test_sample_deterministic(n: int) -> None:
     with dy.Config(max_sampling_iterations=1):
         df = MySimpleSchema.sample(n)
         MySimpleSchema.validate(df)
@@ -68,27 +68,27 @@ def test_sample_deterministic(n: int):
 
 @pytest.mark.parametrize("schema", [PrimaryKeySchema, CheckSchema, ComplexSchema])
 @pytest.mark.parametrize("n", [0, 1000])
-def test_sample_fuzzy(schema: type[dy.Schema], n: int):
+def test_sample_fuzzy(schema: type[dy.Schema], n: int) -> None:
     df = schema.sample(n, generator=Generator(seed=42))
     assert len(df) == n
     schema.validate(df)
 
 
-def test_sample_fuzzy_failure():
+def test_sample_fuzzy_failure() -> None:
     with pytest.raises(ValueError):
         with dy.Config(max_sampling_iterations=5):
             ComplexSchema.sample(1000, generator=Generator(seed=42))
 
 
 @pytest.mark.parametrize("n", [1, 1000])
-def test_sample_overrides(n: int):
+def test_sample_overrides(n: int) -> None:
     df = CheckSchema.sample(overrides={"b": range(n)})
     CheckSchema.validate(df)
     assert len(df) == n
     assert df.get_column("b").to_list() == list(range(n))
 
 
-def test_sample_overrides_with_removing_groups():
+def test_sample_overrides_with_removing_groups() -> None:
     generator = Generator()
     n = 333  # we cannot use something too large here or we'll never return
     overrides = np.random.randint(100, size=n)
@@ -99,7 +99,7 @@ def test_sample_overrides_with_removing_groups():
 
 
 @pytest.mark.parametrize("n", [1, 1000])
-def test_sample_overrides_allow_no_fuzzy(n: int):
+def test_sample_overrides_allow_no_fuzzy(n: int) -> None:
     with dy.Config(max_sampling_iterations=1):
         df = CheckSchema.sample(n, overrides={"b": [0] * n})
         CheckSchema.validate(df)
@@ -108,29 +108,29 @@ def test_sample_overrides_allow_no_fuzzy(n: int):
 
 
 @pytest.mark.parametrize("n", [1, 1000])
-def test_sample_overrides_full(n: int):
+def test_sample_overrides_full(n: int) -> None:
     df = CheckSchema.sample(n)
     df_override = CheckSchema.sample(n, overrides=df.to_dict())
     assert_frame_equal(df, df_override)
 
 
-def test_sample_overrides_row_layout():
+def test_sample_overrides_row_layout() -> None:
     df = MySimpleSchema.sample(overrides=[{"a": 1}, {"a": 2}, {"a": 3}])
     assert len(df) == 3
     assert df.get_column("a").to_list() == [1, 2, 3]
 
 
-def test_sample_overrides_invalid_column():
+def test_sample_overrides_invalid_column() -> None:
     with pytest.raises(ValueError, match=r"not in the schema"):
         MySimpleSchema.sample(overrides={"foo": []})
 
 
-def test_sample_overrides_invalid_length():
+def test_sample_overrides_invalid_length() -> None:
     with pytest.raises(ValueError, match=r"`num_rows` is different"):
         MySimpleSchema.sample(3, overrides={"a": [1, 2]})
 
 
-def test_sample_no_overrides_no_num_rows():
+def test_sample_no_overrides_no_num_rows() -> None:
     # This case infers `num_rows == 1`
     df = MySimpleSchema.sample()
     MySimpleSchema.validate(df)

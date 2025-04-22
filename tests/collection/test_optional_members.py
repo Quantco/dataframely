@@ -15,17 +15,17 @@ class MyCollection(dy.Collection):
     second: dy.LazyFrame[TestSchema] | None
 
 
-def test_collection_optional_member():
+def test_collection_optional_member() -> None:
     MyCollection.validate({"first": pl.LazyFrame({"a": [1, 2, 3]})})
 
 
-def test_filter_failure_info_keys_only_required():
+def test_filter_failure_info_keys_only_required() -> None:
     out, failure = MyCollection.filter({"first": pl.LazyFrame({"a": [1, 2, 3]})})
     assert out.second is None
     assert set(failure.keys()) == {"first"}
 
 
-def test_filter_failure_info_keys_required_and_optional():
+def test_filter_failure_info_keys_required_and_optional() -> None:
     out, failure = MyCollection.filter(
         {
             "first": pl.LazyFrame({"a": [1, 2, 3]}),

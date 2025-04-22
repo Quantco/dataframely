@@ -31,7 +31,7 @@ def test_success(
     actual: dict[str, pl.DataType],
     expected: dict[str, Column],
     casting: DtypeCasting,
-):
+) -> None:
     df = pl.DataFrame(schema=actual)
     lf = validate_dtypes(
         df.lazy(), actual=df.schema, expected=expected, casting=casting
@@ -63,7 +63,7 @@ def test_failure(
     expected: dict[str, Column],
     error: str,
     fail_columns: set[str],
-):
+) -> None:
     df = pl.DataFrame(schema=actual)
     try:
         validate_dtypes(df.lazy(), actual=df.schema, expected=expected, casting="none")
@@ -73,7 +73,7 @@ def test_failure(
         assert re.match(error, str(exc))
 
 
-def test_lenient_casting():
+def test_lenient_casting() -> None:
     lf = pl.LazyFrame(
         {"a": [1, 2, 3], "b": ["foo", "12", "1313"]},
         schema={"a": pl.Int64(), "b": pl.String()},
@@ -91,7 +91,7 @@ def test_lenient_casting():
     assert_frame_equal(actual, expected)
 
 
-def test_strict_casting():
+def test_strict_casting() -> None:
     lf = pl.LazyFrame(
         {"a": [1, 2, 3], "b": ["foo", "12", "1313"]},
         schema={"a": pl.Int64(), "b": pl.String()},

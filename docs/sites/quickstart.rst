@@ -162,7 +162,7 @@ expectations on the schema of the data frame, e.g.:
 
 ::
 
-    def train_model(df: dy.DataFrame[HouseSchema]):
+    def train_model(df: dy.DataFrame[HouseSchema]) -> None:
         ...
 
 The type checker (typically ``mypy``) then ensures that it is actually a

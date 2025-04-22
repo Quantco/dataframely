@@ -8,7 +8,7 @@ import dataframely as dy
 from dataframely.testing import evaluate_rules, rules_from_exprs
 
 
-def test_validate_min_length():
+def test_validate_min_length() -> None:
     column = dy.String(min_length=2)
     lf = pl.LazyFrame({"a": ["foo", "x"]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -16,7 +16,7 @@ def test_validate_min_length():
     assert_frame_equal(actual, expected)
 
 
-def test_validate_max_length():
+def test_validate_max_length() -> None:
     column = dy.String(max_length=2)
     lf = pl.LazyFrame({"a": ["foo", "x"]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -24,7 +24,7 @@ def test_validate_max_length():
     assert_frame_equal(actual, expected)
 
 
-def test_validate_regex():
+def test_validate_regex() -> None:
     column = dy.String(regex="[0-9][a-z]$")
     lf = pl.LazyFrame({"a": ["33x", "3x", "44"]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -32,7 +32,7 @@ def test_validate_regex():
     assert_frame_equal(actual, expected)
 
 
-def test_validate_all_rules():
+def test_validate_all_rules() -> None:
     column = dy.String(nullable=False, min_length=2, max_length=4)
     lf = pl.LazyFrame({"a": ["foo", "x", "foobar", None]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))

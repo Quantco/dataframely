@@ -16,7 +16,7 @@ class GrandchildSchema(ChildSchema):
     c = dy.Integer()
 
 
-def test_columns():
+def test_columns() -> None:
     assert ParentSchema.column_names() == ["a"]
     assert ChildSchema.column_names() == ["a", "b"]
     assert GrandchildSchema.column_names() == ["a", "b", "c"]

@@ -60,7 +60,7 @@ def employees() -> dy.LazyFrame[EmployeeSchema]:
 def test_one_to_one(
     departments: dy.LazyFrame[DepartmentSchema],
     managers: dy.LazyFrame[ManagerSchema],
-):
+) -> None:
     actual = dy.filter_relationship_one_to_one(
         departments, managers, on="department_id"
     )
@@ -70,7 +70,7 @@ def test_one_to_one(
 def test_one_to_at_least_one(
     departments: dy.LazyFrame[DepartmentSchema],
     employees: dy.LazyFrame[EmployeeSchema],
-):
+) -> None:
     actual = dy.filter_relationship_one_to_at_least_one(
         departments, employees, on="department_id"
     )

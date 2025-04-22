@@ -22,12 +22,12 @@ def generator() -> Generator:
 # -------------------------------- GENERAL PROPERTIES -------------------------------- #
 
 
-def test_seeding_constant():
+def test_seeding_constant() -> None:
     results = {Generator(seed=42).sample_seed() for _ in range(1000)}
     assert len(results) == 1
 
 
-def test_seeding_nonconstant():
+def test_seeding_nonconstant() -> None:
     results = {Generator().sample_seed() for _ in range(1000)}
     assert len(results) > 1
 
@@ -55,7 +55,7 @@ def test_seeding_nonconstant():
 @pytest.mark.parametrize("n", [1, 100])
 def test_sample_correct_n(
     generator: Generator, fn: Callable[[Generator, int], pl.Series], n: int
-):
+) -> None:
     assert len(fn(generator, n)) == n
 
 
@@ -94,7 +94,7 @@ def test_sample_correct_null_probability(
     generator: Generator,
     fn: Callable[[Generator, int, float], pl.Series],
     null_probability: float,
-):
+) -> None:
     n = 100_000
     assert math.isclose(
         fn(generator, n, null_probability).is_null().sum() / n,
@@ -106,7 +106,7 @@ def test_sample_correct_null_probability(
 # ---------------------------- INDIVIDUAL SAMPLING METHODS --------------------------- #
 
 
-def test_sample_int(generator: Generator):
+def test_sample_int(generator: Generator) -> None:
     samples = generator.sample_int(100_000, min=1, max=4)
     assert samples.min() == 1
     assert samples.max() == 3
@@ -114,24 +114,24 @@ def test_sample_int(generator: Generator):
 
 
 @pytest.mark.parametrize("p_true", [0, 0.1, 0.5, None, 0.9, 1.0])
-def test_sample_bool(generator: Generator, p_true: bool | None):
+def test_sample_bool(generator: Generator, p_true: bool | None) -> None:
     samples = generator.sample_bool(100_000, p_true=p_true)
     assert math.isclose(samples.mean(), p_true or 0.5, abs_tol=0.01)  # type: ignore
 
 
-def test_sample_float(generator: Generator):
+def test_sample_float(generator: Generator) -> None:
     samples = generator.sample_float(100_000, min=1, max=3)
     assert samples.min() >= 1  # type: ignore
     assert samples.max() < 3  # type: ignore
     assert math.isclose(samples.mean(), 2, abs_tol=0.01)  # type: ignore
 
 
-def test_sample_string(generator: Generator):
+def test_sample_string(generator: Generator) -> None:
     samples = generator.sample_string(100_000, regex="[abc]d")
     assert (samples.str.len_bytes() == 2).all()
 
 
-def test_sample_choice(generator: Generator):
+def test_sample_choice(generator: Generator) -> None:
     samples = generator.sample_choice(100_000, choices=[1, 2, 3])
     assert np.allclose(
         samples.value_counts().sort("").get_column("count") / 100_000,
@@ -141,7 +141,7 @@ def test_sample_choice(generator: Generator):
 
 
 @pytest.mark.parametrize("weight_factor", [0.01, 1, 1000])
-def test_sample_choice_weights(generator: Generator, weight_factor: float):
+def test_sample_choice_weights(generator: Generator, weight_factor: float) -> None:
     with pytest.raises(ValueError):
         generator.sample_choice(
             100, choices=[1, 2, 3], null_probability=0.1, weights=[1]
@@ -200,7 +200,7 @@ def test_sample_resolutions(
     fn: Callable[[Generator, str], pl.Series],
     column_type: type[dy.Column],
     resolution: str,
-):
+) -> None:
     samples = fn(generator, resolution)
     schema = create_schema("test", {"a": column_type(resolution=resolution)})  # type: ignore
     schema.validate(samples.to_frame("a"))
@@ -247,6 +247,8 @@ def test_sample_resolutions(
         ),
     ],
 )
-def test_sample_invalid_arg(generator: Generator, fn: Callable[[Generator], pl.Series]):
+def test_sample_invalid_arg(
+    generator: Generator, fn: Callable[[Generator], pl.Series]
+) -> None:
     with pytest.raises(ValueError):
         fn(generator)

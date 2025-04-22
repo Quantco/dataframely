@@ -12,7 +12,7 @@ C = TypeVar("C")
 class Filter(Generic[C]):
     """Internal class representing logic for filtering members of a collection."""
 
-    def __init__(self, logic: Callable[[C], pl.LazyFrame]):
+    def __init__(self, logic: Callable[[C], pl.LazyFrame]) -> None:
         self.logic = logic
 
 

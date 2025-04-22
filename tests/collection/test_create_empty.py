@@ -20,7 +20,7 @@ class MyCollection(dy.Collection):
     second: dy.LazyFrame[MySecondSchema] | None
 
 
-def test_create_empty():
+def test_create_empty() -> None:
     collection = MyCollection.create_empty()
     assert collection.first.collect().height == 0
     assert collection.first.collect_schema() == MyFirstSchema.polars_schema()

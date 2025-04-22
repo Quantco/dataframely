@@ -25,20 +25,20 @@ class MySchema(dy.Schema):
 )
 def test_cast_valid(
     df_type: type[pl.DataFrame] | type[pl.LazyFrame], data: dict[str, Any]
-):
+) -> None:
     df = df_type(data)
     out = MySchema.cast(df)
     assert isinstance(out, df_type)
     assert out.lazy().collect_schema() == MySchema.polars_schema()
 
 
-def test_cast_invalid_schema_eager():
+def test_cast_invalid_schema_eager() -> None:
     df = pl.DataFrame({"a": [1]})
     with pytest.raises(plexc.ColumnNotFoundError):
         MySchema.cast(df)
 
 
-def test_cast_invalid_schema_lazy():
+def test_cast_invalid_schema_lazy() -> None:
     lf = pl.LazyFrame({"a": [1]})
     lf = MySchema.cast(lf)
     with pytest.raises(plexc.ColumnNotFoundError):

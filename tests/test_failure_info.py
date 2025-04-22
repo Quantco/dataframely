@@ -14,7 +14,7 @@ class MySchema(dy.Schema):
     b = dy.Integer(nullable=False, is_in=[1, 2, 3, 5, 7, 11])
 
 
-def test_read_write_parquet(tmp_path: Path):
+def test_read_write_parquet(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
             "a": [4, 5, 6, 6, 7, 8],

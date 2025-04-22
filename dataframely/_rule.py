@@ -12,14 +12,14 @@ ValidationFunction = Callable[[], pl.Expr]
 class Rule:
     """Internal class representing validation rules."""
 
-    def __init__(self, expr: pl.Expr):
+    def __init__(self, expr: pl.Expr) -> None:
         self.expr = expr
 
 
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
 
-    def __init__(self, expr: pl.Expr, group_columns: list[str]):
+    def __init__(self, expr: pl.Expr, group_columns: list[str]) -> None:
         super().__init__(expr)
         self.group_columns = group_columns
 

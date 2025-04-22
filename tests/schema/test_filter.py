@@ -28,7 +28,7 @@ class MySchema(dy.Schema):
 )
 def test_filter_extra_columns(
     schema: dict[str, DataTypeClass], expected_columns: list[str] | None
-):
+) -> None:
     df = pl.DataFrame(schema=schema)
     try:
         filtered, _ = MySchema.filter(df)
@@ -47,7 +47,9 @@ def test_filter_extra_columns(
         ({"a": pl.String, "b": pl.String}, True, True),
     ],
 )
-def test_filter_dtypes(schema: dict[str, DataTypeClass], cast: bool, success: bool):
+def test_filter_dtypes(
+    schema: dict[str, DataTypeClass], cast: bool, success: bool
+) -> None:
     df = pl.DataFrame(schema=schema)
     try:
         MySchema.filter(df, cast=cast)
@@ -89,7 +91,7 @@ def test_filter_failure(
     failure_mask: list[bool],
     counts: dict[str, int],
     cooccurrence_counts: dict[frozenset[str], int],
-):
+) -> None:
     df = df_type({"a": data_a, "b": data_b})
     df_valid, failures = MySchema.filter(df)
     assert isinstance(df_valid, pl.DataFrame)
@@ -101,7 +103,7 @@ def test_filter_failure(
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_filter_no_rules(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_filter_no_rules(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     schema = create_schema("test", {"a": dy.Int64()})
     df = df_type({"a": [1, 2, 3]})
     df_valid, failures = schema.filter(df)
@@ -113,7 +115,9 @@ def test_filter_no_rules(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_filter_with_rule_all_valid(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_filter_with_rule_all_valid(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+) -> None:
     schema = create_schema("test", {"a": dy.String(min_length=3)})
     df = df_type({"a": ["foo", "foobar"]})
     df_valid, failures = schema.filter(df)
@@ -125,7 +129,7 @@ def test_filter_with_rule_all_valid(df_type: type[pl.DataFrame] | type[pl.LazyFr
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_filter_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
+def test_filter_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     data = {
         # validation: [true, true, false, false, false, false]
         "a": ["1", "2", "foo", None, "123x", "9223372036854775808"],
@@ -152,7 +156,7 @@ def test_filter_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]):
     }
 
 
-def test_filter_nondeterministic_lazyframe():
+def test_filter_nondeterministic_lazyframe() -> None:
     n = 10_000
     lf = pl.LazyFrame(
         {

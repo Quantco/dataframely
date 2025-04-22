@@ -46,12 +46,12 @@ class MyTestCollection(dy.Collection):
         return used_a_ids
 
 
-def test_collection_ignore_in_filter_meta():
+def test_collection_ignore_in_filter_meta() -> None:
     assert MyTestCollection.non_ignored_members() == {"a", "b"}
     assert MyTestCollection.ignored_members() == {"ignored"}
 
 
-def test_collection_ignore_in_filter():
+def test_collection_ignore_in_filter() -> None:
     success, failure = MyTestCollection.filter(
         {
             "a": pl.LazyFrame({"a_id": [1, 2, 3]}),
@@ -65,7 +65,7 @@ def test_collection_ignore_in_filter():
     assert failure["ignored"].invalid().height == 0
 
 
-def test_collection_ignore_in_filter_failure():
+def test_collection_ignore_in_filter_failure() -> None:
     success, failure = MyTestCollection.filter(
         {
             "a": pl.LazyFrame({"a_id": [1, 2, 3]}),

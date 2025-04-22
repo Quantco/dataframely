@@ -10,7 +10,7 @@ from dataframely.columns._base import Column
 from dataframely.testing import create_schema
 
 
-def test_simple_struct():
+def test_simple_struct() -> None:
     schema = create_schema(
         "test", {"s": dy.Struct({"a": dy.Integer(), "b": dy.String()})}
     )
@@ -74,16 +74,16 @@ def test_simple_struct():
         ),
     ],
 )
-def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool):
+def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool) -> None:
     assert column.validate_dtype(dtype) == is_valid
 
 
-def test_invalid_inner_type():
+def test_invalid_inner_type() -> None:
     schema = create_schema("test", {"a": dy.Struct({"a": dy.Int64()})})
     assert not schema.is_valid(pl.DataFrame({"a": [{"a": "1"}, {"a": "2"}]}))
 
 
-def test_nested_structs():
+def test_nested_structs() -> None:
     schema = create_schema(
         "test",
         {
@@ -100,7 +100,7 @@ def test_nested_structs():
     )
 
 
-def test_struct_with_pk():
+def test_struct_with_pk() -> None:
     schema = create_schema(
         "test",
         {"s": dy.Struct({"a": dy.String(), "b": dy.Integer()}, primary_key=True)},
@@ -115,7 +115,7 @@ def test_struct_with_pk():
     assert failures.counts() == {"primary_key": 2}
 
 
-def test_struct_with_rules():
+def test_struct_with_rules() -> None:
     schema = create_schema(
         "test", {"s": dy.Struct({"a": dy.String(min_length=2, nullable=False)})}
     )
@@ -127,7 +127,7 @@ def test_struct_with_rules():
     assert failures.counts() == {"s|inner_a_nullability": 1, "s|inner_a_min_length": 1}
 
 
-def test_nested_struct_with_rules():
+def test_nested_struct_with_rules() -> None:
     schema = create_schema(
         "test",
         {
@@ -149,7 +149,7 @@ def test_nested_struct_with_rules():
     }
 
 
-def test_outer_inner_nullability():
+def test_outer_inner_nullability() -> None:
     schema = create_schema(
         "test",
         {

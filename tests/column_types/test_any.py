@@ -17,6 +17,6 @@ class AnySchema(dy.Schema):
     "data",
     [{"a": [None]}, {"a": [True, None]}, {"a": ["foo"]}, {"a": [3.5]}],
 )
-def test_any_dtype_passes(data: dict[str, Any]):
+def test_any_dtype_passes(data: dict[str, Any]) -> None:
     df = pl.DataFrame(data)
     assert AnySchema.is_valid(df)
