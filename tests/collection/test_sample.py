@@ -117,7 +117,7 @@ def test_sample_with_overrides() -> None:
     assert collection.second.collect()["c"].to_list() == [3, 4, 6]
 
 
-def test_sample_inline_with_overrides():
+def test_sample_inline_with_overrides() -> None:
     collection = MyInlinedCollection.sample(
         overrides=[
             {"b": 4, "second": [{"c": 3}, {"c": 4}]},
@@ -160,7 +160,7 @@ def test_sample_no_overwrite() -> None:
         IncompleteCollection.sample()
 
 
-def test_invalid_inline_for_sampling():
+def test_invalid_inline_for_sampling() -> None:
     with pytest.raises(ImplementationError, match=r"its primary key is a superset"):
         create_collection_raw(
             "test",
@@ -174,7 +174,7 @@ def test_invalid_inline_for_sampling():
         )
 
 
-def test_duplicate_column_inlined_for_sampling():
+def test_duplicate_column_inlined_for_sampling() -> None:
     with pytest.raises(ImplementationError, match=r"clashes with a column name"):
         create_collection_raw(
             "test",
