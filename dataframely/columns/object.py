@@ -59,4 +59,6 @@ class Object(Column):
         raise NotImplementedError("PyArrow column cannot have 'Object' type.")
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
-        return pl.Series([object() for _ in range(n)])
+        raise NotImplementedError(
+            "Random data sampling not implemented for 'Object' type."
+        )

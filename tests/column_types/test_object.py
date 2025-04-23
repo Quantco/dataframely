@@ -7,6 +7,7 @@ import pytest
 
 import dataframely as dy
 from dataframely.columns._base import Column
+from dataframely.random import Generator
 from dataframely.testing import create_schema
 
 
@@ -40,3 +41,21 @@ def test_simple_object() -> None:
 )
 def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool) -> None:
     assert column.validate_dtype(dtype) == is_valid
+
+
+def test_sqlalchemy_dtype_raises() -> None:
+    column = dy.Object()
+    with pytest.raises(NotImplementedError):
+        column.sqlalchemy_dtype(None)  # type: ignore[arg-type]
+
+
+def test_pyarrow_dtype_raises() -> None:
+    column = dy.Object()
+    with pytest.raises(NotImplementedError):
+        column.pyarrow_dtype()
+
+
+def test_sampling_raises() -> None:
+    column = dy.Object()
+    with pytest.raises(NotImplementedError):
+        column.sample(generator=Generator(), n=10)
