@@ -45,11 +45,16 @@ def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool) -> N
 
 def test_pyarrow_dtype_raises() -> None:
     column = dy.Object()
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        NotImplementedError, match="PyArrow column cannot have 'Object' type."
+    ):
         column.pyarrow_dtype
 
 
 def test_sampling_raises() -> None:
     column = dy.Object()
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        NotImplementedError,
+        match="Random data sampling not implemented for 'Object' type.",
+    ):
         column.sample(generator=Generator(), n=10)

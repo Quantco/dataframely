@@ -51,7 +51,6 @@ class Object(Column):
         return pl.Object()
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's JSON in the future.
         raise NotImplementedError("SQL column cannot have 'Object' type.")
 
     @property
