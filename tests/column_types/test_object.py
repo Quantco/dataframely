@@ -43,16 +43,10 @@ def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool) -> N
     assert column.validate_dtype(dtype) == is_valid
 
 
-def test_sqlalchemy_dtype_raises() -> None:
-    column = dy.Object()
-    with pytest.raises(NotImplementedError):
-        column.sqlalchemy_dtype(None)  # type: ignore[arg-type]
-
-
 def test_pyarrow_dtype_raises() -> None:
     column = dy.Object()
     with pytest.raises(NotImplementedError):
-        column.pyarrow_dtype()
+        column.pyarrow_dtype
 
 
 def test_sampling_raises() -> None:

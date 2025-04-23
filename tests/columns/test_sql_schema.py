@@ -145,3 +145,11 @@ def test_raise_for_struct_column(dialect: sa.Dialect) -> None:
         NotImplementedError, match="SQL column cannot have 'Struct' type."
     ):
         dy.Struct({"a": dy.String()}).sqlalchemy_dtype(dialect)
+
+
+@pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
+def test_raise_for_object_column(dialect: sa.Dialect) -> None:
+    with pytest.raises(
+        NotImplementedError, match="SQL column cannot have 'Object' type."
+    ):
+        dy.Object().sqlalchemy_dtype(dialect)
