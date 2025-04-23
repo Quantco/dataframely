@@ -34,6 +34,7 @@ from .columns import (
     Int64,
     Integer,
     List,
+    Object,
     String,
     Struct,
     Time,
@@ -89,4 +90,5 @@ __all__ = [
     "String",
     "Struct",
     "List",
+    "Object",
 ]
