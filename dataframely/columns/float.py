@@ -40,8 +40,10 @@ class _BaseFloat(OrdinalMixin[float], Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                If `None`, the default behavior is as follows:
+                - If `primary_key` is `True`, `nullable` defaults to `False`.
+                - If `primary_key` is `False`, `nullable` defaults to `True`.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
             allow_inf_nan: Whether this column may contain NaN and infinity values.
             min: The minimum value for floats in this column (inclusive).
             min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``

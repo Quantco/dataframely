@@ -42,8 +42,10 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             precision: Maximum number of digits in each number.
             scale: Number of digits to the right of the decimal point in each number.
             nullable: Whether this column may contain null values.
+                If `None`, the default behavior is as follows:
+                - If `primary_key` is `True`, `nullable` defaults to `False`.
+                - If `primary_key` is `False`, `nullable` defaults to `True`.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum value for decimals in this column (inclusive).
             min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
                 is specified and vice versa.

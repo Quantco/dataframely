@@ -32,8 +32,10 @@ class Enum(Column):
         Args:
             categories: The list of valid categories for the enum.
             nullable: Whether this column may contain null values.
+                If `None`, the default behavior is as follows:
+                - If `primary_key` is `True`, `nullable` defaults to `False`.
+                - If `primary_key` is `False`, `nullable` defaults to `True`.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
             check: A custom check to run for this column. Must return a non-aggregated
                 boolean expression.
             alias: An overwrite for this column's name which allows for using a column
