@@ -10,7 +10,7 @@ from dataframely.exc import DtypeValidationError, RuleValidationError, Validatio
 
 
 class MySchema(dy.Schema):
-    a = dy.Int64(primary_key=True)
+    a = dy.Int64(primary_key=True, nullable=True)
     b = dy.String(nullable=False, max_length=5)
     c = dy.String()
 
@@ -116,3 +116,9 @@ def test_success_multi_row_strip_cast(
     )
     assert_frame_equal(actual, expected)
     assert MySchema.is_valid(df, cast=True)
+
+
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+def test_nullable_primary_key(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
+    df = df_type({"a": [None, 2, 3], "b": ["x", "y", "z"], "c": ["1", None, None]})
+    MySchema.validate(df)

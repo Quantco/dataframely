@@ -24,7 +24,7 @@ class List(Column):
         self,
         inner: Column,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,

@@ -28,7 +28,7 @@ class Column(ABC):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
@@ -37,8 +37,10 @@ class Column(ABC):
         """
         Args:
             nullable: Whether this column may contain null values.
+                If `None`, the default behavior is as follows:
+                - If `primary_key` is `True`, `nullable` defaults to `False`.
+                - If `primary_key` is `False`, `nullable` defaults to `True`.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
             check: A custom check to run for this column. Must return a non-aggregated
                 boolean expression.
             alias: An overwrite for this column's name which allows for using a column
@@ -48,7 +50,7 @@ class Column(ABC):
                 internally sets the alias to the column's name in the parent schema.
             metadata: A dictionary of metadata to attach to the column.
         """
-        self.nullable = nullable and not primary_key
+        self.nullable = nullable if nullable is not None else not primary_key
         self.primary_key = primary_key
         self.check = check
         self.alias = alias

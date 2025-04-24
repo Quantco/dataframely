@@ -23,7 +23,7 @@ class String(Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min_length: int | None = None,
         max_length: int | None = None,
