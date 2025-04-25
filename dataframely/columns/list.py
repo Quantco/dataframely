@@ -26,7 +26,10 @@ class List(Column):
         *,
         nullable: bool = True,
         primary_key: bool = False,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: Callable[[pl.Expr], pl.Expr]
+        | list[Callable[[pl.Expr], pl.Expr]]
+        | dict[str, Callable[[pl.Expr], pl.Expr]]
+        | None = None,
         alias: str | None = None,
         min_length: int | None = None,
         max_length: int | None = None,

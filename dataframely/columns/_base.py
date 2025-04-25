@@ -30,7 +30,10 @@ class Column(ABC):
         *,
         nullable: bool = True,
         primary_key: bool = False,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: Callable[[pl.Expr], pl.Expr]
+        | list[Callable[[pl.Expr], pl.Expr]]
+        | dict[str, Callable[[pl.Expr], pl.Expr]]
+        | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -97,7 +100,17 @@ class Column(ABC):
         if not self.nullable:
             result["nullability"] = expr.is_not_null()
         if self.check is not None:
-            result["check"] = self.check(expr)
+            if isinstance(self.check, dict):
+                for k, v in self.check.items():
+                    result[k] = v(expr)
+
+            elif isinstance(self.check, list):
+                for i in self.check:
+                    result[i.__name__] = i(expr)
+
+            elif callable(self.check):
+                result[self.check.__name__] = self.check(expr)
+
         return result
 
     # -------------------------------------- SQL ------------------------------------- #

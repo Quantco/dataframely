@@ -33,7 +33,10 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         min_exclusive: decimal.Decimal | None = None,
         max: decimal.Decimal | None = None,
         max_exclusive: decimal.Decimal | None = None,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: Callable[[pl.Expr], pl.Expr]
+        | list[Callable[[pl.Expr], pl.Expr]]
+        | dict[str, Callable[[pl.Expr], pl.Expr]]
+        | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
