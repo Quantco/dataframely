@@ -117,12 +117,11 @@ def test_success_multi_row_strip_cast(
     assert_frame_equal(actual, expected)
     assert MySchema.is_valid(df, cast=True)
 
+
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_group_rule_on_nulls(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame]
-):
+def test_group_rule_on_nulls(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     # The schema is violated because we have multiple "b" values for the same "a" value
-    df = df_type({"a" : [None, None],"b" : [1, 2]})
+    df = df_type({"a": [None, None], "b": [1, 2]})
     with pytest.raises(RuleValidationError):
         MyComplexSchema.validate(df, cast=True)
     assert not MyComplexSchema.is_valid(df, cast=True)
