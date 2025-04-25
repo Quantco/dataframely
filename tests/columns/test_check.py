@@ -37,15 +37,19 @@ def test_check_names() -> None:
         name_from_list_of_callables = dy.String(
             check=[str_starts_with_a, str_end_with_z]
         )
+        name_from_lambda = dy.Int64(check=lambda x: x < 2)
 
     df = pl.DataFrame(
         {
             "name_from_dict": [2, 4, 6],
             "name_from_callable": ["abc", "acd", "dca"],
             "name_from_list_of_callables": ["xyz", "xac", "aqq"],
+            "name_from_lambda": [1, 2, 3],
         }
     )
     _, failures = MultiCheckSchema.filter(df)
+
+    print(failures.counts())
 
     assert failures.counts() == {
         "name_from_dict|min_max_check": 1,
@@ -53,4 +57,5 @@ def test_check_names() -> None:
         "name_from_callable|str_starts_with_a": 1,
         "name_from_list_of_callables|str_starts_with_a": 2,
         "name_from_list_of_callables|str_end_with_z": 2,
+        "name_from_lambda|check": 2,
     }
