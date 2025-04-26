@@ -49,7 +49,7 @@ class Enum(Column):
             alias=alias,
             metadata=metadata,
         )
-        self.categories = categories
+        self.categories = list(categories)
 
     @property
     def dtype(self) -> pl.DataType:

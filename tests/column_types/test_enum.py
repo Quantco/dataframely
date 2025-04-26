@@ -52,3 +52,12 @@ def test_valid_cast(
     schema = create_schema("test", {"a": enum})
     df = df_type(data)
     assert schema.is_valid(df, cast=True) == valid
+
+
+@pytest.mark.parametrize("type1", [list, tuple])
+@pytest.mark.parametrize("type2", [list, tuple])
+def test_different_sequences(type1: type, type2: type) -> None:
+    allowed = ["a", "b"]
+    S = create_schema("test", {"x": dy.Enum(type1(allowed))})
+    df = pl.DataFrame({"x": pl.Series(["a", "b"], dtype=pl.Enum(type2(allowed)))})
+    S.validate(df)
