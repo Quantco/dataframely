@@ -8,8 +8,8 @@ from dataframely.testing import validation_mask
 
 
 class CheckSchema(dy.Schema):
-    a = dy.Int64(check={"check": lambda col: (col < 5) | (col > 10)})
-    b = dy.String(min_length=3, check={"check": lambda col: col.str.contains("x")})
+    a = dy.Int64(check=lambda col: (col < 5) | (col > 10))
+    b = dy.String(min_length=3, check=lambda col: col.str.contains("x"))
 
 
 def test_check() -> None:

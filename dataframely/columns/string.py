@@ -28,10 +28,12 @@ class String(Column):
         min_length: int | None = None,
         max_length: int | None = None,
         regex: str | None = None,
-        check: Callable[[pl.Expr], pl.Expr]
-        | list[Callable[[pl.Expr], pl.Expr]]
-        | dict[str, Callable[[pl.Expr], pl.Expr]]
-        | None = None,
+        check: (
+            Callable[[pl.Expr], pl.Expr]
+            | list[Callable[[pl.Expr], pl.Expr]]
+            | dict[str, Callable[[pl.Expr], pl.Expr]]
+            | None
+        ) = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
