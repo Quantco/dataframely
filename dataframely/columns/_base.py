@@ -107,11 +107,11 @@ class Column(ABC):
                     result[k] = v(expr)
 
             elif isinstance(self.check, list):
-                for num, i in enumerate(self.check):
-                    callable_name = i.__name__
+                for i, _callable in enumerate(self.check):
+                    callable_name = _callable.__name__
                     if callable_name == "<lambda>":
-                        callable_name = f"check__{num}"
-                    result[callable_name] = i(expr)
+                        callable_name = f"check__{i}"
+                    result[callable_name] = _callable(expr)
 
             else:
                 callable_name = self.check.__name__
