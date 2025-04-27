@@ -35,7 +35,13 @@ def test_check_names() -> None:
         )
         name_from_callable = dy.String(check=str_starts_with_a)
         name_from_list_of_callables = dy.String(
-            check=[str_starts_with_a, str_end_with_z, lambda x: x.str.contains("x")]
+            check=[
+                str_starts_with_a,
+                str_end_with_z,
+                str_end_with_z,
+                lambda x: x.str.contains("x"),
+                lambda x: x.str.contains("y"),
+            ]
         )
         name_from_lambda = dy.Int64(check=lambda x: x < 2)
 
@@ -54,7 +60,9 @@ def test_check_names() -> None:
         "name_from_dict|summation_check": 3,
         "name_from_callable|str_starts_with_a": 1,
         "name_from_list_of_callables|str_starts_with_a": 2,
-        "name_from_list_of_callables|str_end_with_z": 2,
-        "name_from_list_of_callables|check__2": 1,
+        "name_from_list_of_callables|str_end_with_z__0": 2,
+        "name_from_list_of_callables|str_end_with_z__1": 2,
+        "name_from_list_of_callables|check__0": 1,
+        "name_from_list_of_callables|check__1": 2,
         "name_from_lambda|check": 2,
     }

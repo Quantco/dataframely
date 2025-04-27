@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import Counter
 from collections.abc import Callable
 from typing import Any
 
@@ -44,8 +45,16 @@ class Column(ABC):
             nullable: Whether this column may contain null values.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -84,6 +93,45 @@ class Column(ABC):
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
+    def _get_rule_names(
+        self, rules: list[Callable[[pl.Expr], pl.Expr]], count_separator: str = "__"
+    ) -> list[str]:
+        """Generate unique names for rule callables.
+
+        For callables with the same name, appends a suffix __i where i is the index
+        of occurrence (starting from 0), but only if there are duplicates.
+
+        Args:
+            rules: List of rule callables.
+            count_separator: string separator between the rule_name and the index.
+
+        Returns:
+            List of unique names corresponding to the rule callables.
+        """
+        # Extract base names
+        base_rule_names = []
+        for rule in rules:
+            base_rule_name = rule.__name__
+            if base_rule_name == "<lambda>":
+                base_rule_name = "check"
+            base_rule_names.append(base_rule_name)
+
+        # Count occurrences using Counter
+        name_counts = Counter(base_rule_names)
+
+        # Generate final names where there are duplicates
+        rule_names_with_counts = []
+        dynamic_name_counter: dict[str, int] = {}
+        for base_rule_name in base_rule_names:
+            if name_counts[base_rule_name] > 1:
+                idx = dynamic_name_counter.get(base_rule_name, 0)
+                rule_names_with_counts.append(f"{base_rule_name}{count_separator}{idx}")
+                dynamic_name_counter[base_rule_name] = idx + 1
+            else:
+                rule_names_with_counts.append(base_rule_name)
+
+        return rule_names_with_counts
+
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         """A set of rules evaluating whether a data frame column satisfies the column's
         constraints.
@@ -103,23 +151,26 @@ class Column(ABC):
             result["nullability"] = expr.is_not_null()
         if self.check is not None:
             if isinstance(self.check, dict):
-                for k, v in self.check.items():
-                    result[k] = v(expr)
+                for rule_name, rule_callable in self.check.items():
+                    result[rule_name] = rule_callable(expr)
 
             elif isinstance(self.check, list):
-                for i, _callable in enumerate(self.check):
-                    callable_name = _callable.__name__
-                    if callable_name == "<lambda>":
-                        callable_name = f"check__{i}"
-                    result[callable_name] = _callable(expr)
+                # Get unique names for rules from callables
+                rule_names = self._get_rule_names(
+                    rules=self.check, count_separator="__"
+                )
+
+                # Apply each rule with its corresponding name
+                for rule_name, rule_callable in zip(rule_names, self.check):
+                    result[rule_name] = rule_callable(expr)
 
             else:
-                callable_name = self.check.__name__
+                # Get rule name, default to "check" for lambdas
+                rule_name = self.check.__name__
+                if rule_name == "<lambda>":
+                    rule_name = "check"
 
-                if callable_name == "<lambda>":
-                    callable_name = "check"
-
-                result[callable_name] = self.check(expr)
+                result[rule_name] = self.check(expr)
 
         return result
 

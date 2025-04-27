@@ -54,8 +54,16 @@ class _BaseFloat(OrdinalMixin[float], Column):
             max: The maximum value for floats in this column (inclusive).
             max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
                 is specified and vice versa.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different

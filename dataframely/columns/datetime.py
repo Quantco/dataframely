@@ -63,8 +63,16 @@ class Date(OrdinalMixin[dt.date], Column):
                 formatting language used by :mod:`polars` datetime ``round`` method.
                 For example, a value ``1mo`` expects all dates to be on the first of the
                 month. Note that this setting does *not* affect the storage resolution.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
