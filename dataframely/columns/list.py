@@ -147,4 +147,7 @@ class List(Column):
                 chain([0], element_lengths.cum_sum()), element_lengths
             )
         ]
-        return pl.Series(list_elements)
+        # Finally, apply a null mask
+        return generator._apply_null_mask(
+            pl.Series(list_elements), null_probability=self._null_probability
+        )
