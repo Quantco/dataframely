@@ -12,3 +12,7 @@ pyo3 = { version = "0.24", features = ["abi3-py311", "extension-module"] }
 rand = { version = "0.9", features = ["std_rng"] }
 regex-syntax = "0.8"
 thiserror = "2.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
