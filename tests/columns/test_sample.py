@@ -184,6 +184,7 @@ def test_sample_list(generator: Generator) -> None:
 def test_sample_struct(generator: Generator) -> None:
     column = dy.Struct({"a": dy.String(regex="[abc]"), "b": dy.String(regex="[a-z]xx")})
     samples = sample_and_validate(column, generator, n=10_000)
+    assert samples.is_null().any()
     assert len(samples) == 10_000
 
 
