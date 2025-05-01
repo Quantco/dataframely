@@ -111,6 +111,8 @@ class MySchema(dy.Schema):
     f = dy.Datetime()
     g = dy.Date()
     h = dy.Any()
+    aa = dy.Array(dy.String(), 1)
+    ab = dy.Array(dy.String(), (2, 3))
     some_decimal = dy.Decimal(12, 8)
     custom_col = Flags()
     custom_col_list = dy.List(Flags())

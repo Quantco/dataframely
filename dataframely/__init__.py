@@ -18,6 +18,7 @@ from ._typing import DataFrame, LazyFrame
 from .collection import Collection
 from .columns import (
     Any,
+    Array,
     Bool,
     Column,
     Date,
@@ -90,5 +91,6 @@ __all__ = [
     "String",
     "Struct",
     "List",
+    "Array",
     "Object",
 ]

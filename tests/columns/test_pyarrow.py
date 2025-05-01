@@ -8,6 +8,7 @@ from dataframely.columns import Column
 from dataframely.testing import (
     ALL_COLUMN_TYPES,
     COLUMN_TYPES,
+    NO_VALIDATION_COLUMN_TYPES,
     SUPERTYPE_COLUMN_TYPES,
     create_schema,
 )
@@ -32,6 +33,7 @@ def test_equal_polars_schema_enum() -> None:
     "inner",
     [c() for c in ALL_COLUMN_TYPES]
     + [dy.List(t()) for t in ALL_COLUMN_TYPES]
+    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
     + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES],
 )
 def test_equal_polars_schema_list(inner: Column) -> None:
@@ -43,8 +45,23 @@ def test_equal_polars_schema_list(inner: Column) -> None:
 
 @pytest.mark.parametrize(
     "inner",
+    [c() for c in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.List(t()) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.Struct({"a": t()}) for t in NO_VALIDATION_COLUMN_TYPES],
+)
+def test_equal_polars_schema_array(inner: Column) -> None:
+    schema = create_schema("test", {"a": dy.Array(inner, 1)})
+    actual = schema.pyarrow_schema()
+    expected = schema.create_empty().to_arrow().schema
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "inner",
     [c() for c in ALL_COLUMN_TYPES]
     + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES]
+    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
     + [dy.List(t()) for t in ALL_COLUMN_TYPES],
 )
 def test_equal_polars_schema_struct(inner: Column) -> None:
@@ -71,6 +88,7 @@ def test_nullability_information_enum(nullable: bool) -> None:
     "inner",
     [c() for c in ALL_COLUMN_TYPES]
     + [dy.List(t()) for t in ALL_COLUMN_TYPES]
+    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
     + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES],
 )
 @pytest.mark.parametrize("nullable", [True, False])
@@ -83,6 +101,7 @@ def test_nullability_information_list(inner: Column, nullable: bool) -> None:
     "inner",
     [c() for c in ALL_COLUMN_TYPES]
     + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES]
+    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
     + [dy.List(t()) for t in ALL_COLUMN_TYPES],
 )
 @pytest.mark.parametrize("nullable", [True, False])
