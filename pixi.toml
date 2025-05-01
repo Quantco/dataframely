@@ -13,7 +13,6 @@ rust = "=1.85"
 
 numpy = "*"
 polars = ">=1.12"
-pixi-pycharm = ">=0.0.8,<0.0.9"
 
 [host-dependencies]
 maturin = ">=1.7,<2"
