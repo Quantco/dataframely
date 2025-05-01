@@ -139,6 +139,15 @@ def test_array_with_pk() -> None:
         )
 
 
+def test_array_with_inner_pk() -> None:
+    with pytest.raises(ValueError):
+        column = dy.Array(dy.String(primary_key=True), 2)
+        create_schema(
+            "test",
+            {"a": column},
+        )
+
+
 def test_array_with_rules() -> None:
     with pytest.raises(ValueError):
         create_schema(
