@@ -184,7 +184,8 @@ def test_sample_list(generator: Generator) -> None:
 def test_sample_array(generator: Generator) -> None:
     column = dy.Array(dy.Bool(), (2, 3))
     samples = sample_and_validate(column, generator, n=10_000)
-    assert set(samples.arr.len()) == {2}
+    assert samples.is_null().any()
+    assert set(samples.arr.len()) == {2, None}
 
 
 def test_sample_struct(generator: Generator) -> None:

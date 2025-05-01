@@ -118,7 +118,11 @@ class Array(Column):
             n, *rest = shape
             return [_reshape_recursive(rest) for _ in range(n)]
 
-        return pl.Series(
-            _reshape_recursive((n, *self.shape)),
-            dtype=self.dtype,
+        # Finally, apply a null mask
+        return generator._apply_null_mask(
+            pl.Series(
+                _reshape_recursive((n, *self.shape)),
+                dtype=self.dtype,
+            ),
+            null_probability=self._null_probability,
         )
