@@ -392,8 +392,10 @@ class Generator:
     def _apply_null_mask(self, series: pl.Series, null_probability: float) -> pl.Series:
         if null_probability == 0:
             return series
-        null_mask = self.numpy_generator.random(series.len()) < null_probability
-        return series.scatter(np.where(null_mask)[0], None)
+        null_mask = (
+            pl.Series(self.numpy_generator.random(series.len())) > null_probability
+        )
+        return pl.select(pl.when(null_mask).then(series)).to_series()
 
 
 # --------------------------------------- UTILS -------------------------------------- #
