@@ -112,8 +112,10 @@ class MySchema(dy.Schema):
     g = dy.Date()
     h = dy.Any()
     o = dy.Object()
-    p = dy.Array(dy.String(), 1)
-    q = dy.Array(dy.String(), (2, 3))
+    p = dy.Array(dy.Integer(), 1)
+    q = dy.Array(dy.Integer(), (2, 2))
+    r = dy.Array(dy.Integer(), shape=(2, 2, 1))
+    s = dy.Array(dy.Array(dy.Integer(), 1), 1)
     some_decimal = dy.Decimal(12, 8)
     custom_col = Flags()
     custom_col_list = dy.List(Flags())
@@ -138,7 +140,9 @@ def my_schema_df() -> dy.DataFrame[MySchema]:
                 "h": [1],
                 "o": [object()],
                 "p": [[1]],
-                "q": [[1, 2, 3], [4, 5, 6]],
+                "q": [[[1, 2], [3, 4]]],
+                "r": [[[[1], [2]], [[3], [4]]]],
+                "s": [[[1]]],
                 "some_decimal": [decimal.Decimal("1.5")],
                 "custom_col": [[{"x": "a", "y": "b"}]],
             }
@@ -155,6 +159,11 @@ def test_iter_rows_assignment_correct_type(
     a: int = entry["a"]  # noqa: F841
     b: Any = entry["custom_col"]  # noqa: F841
     c: list[Any] = entry["custom_col_list"]  # noqa: F841
+    o: Any = entry["o"]  # noqa: F841
+    p: list[int] = entry["p"]  # noqa: F841
+    q: list[list[int]] = entry["q"]  # noqa: F841
+    r: list[list[list[int]]] = entry["r"]  # noqa: F841
+    s: list[list[int]] = entry["s"]  # noqa: F841
 
 
 def test_iter_rows_schema_subtypes(my_schema_df: dy.DataFrame[MySchema]) -> None:
@@ -215,9 +224,6 @@ def test_iter_rows_imported_schema() -> None:
                 "f": [datetime.datetime(2022, 1, 1, 0, 0, 0)],
                 "g": [datetime.date(2022, 1, 1)],
                 "h": [1],
-                "o": [object()],
-                "p": [[1]],
-                "q": [[1, 2, 3], [4, 5, 6]],
                 "some_decimal": [decimal.Decimal("1.5")],
             }
         ),

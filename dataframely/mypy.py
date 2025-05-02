@@ -16,6 +16,7 @@ from mypy.nodes import (
     MemberExpr,
     NameExpr,
     StrExpr,
+    TupleExpr,
     TypeInfo,
     Var,
 )
@@ -187,6 +188,27 @@ def _convert_dy_column_to_dtype(
                         api, column_args[0].callee.name, column_args[0].args
                     )
                 ],
+            )
+        return api.named_type("builtins.list")
+    if column_type == "Array":
+        if isinstance(column_args[0], CallExpr) and isinstance(
+            column_args[0].callee, MemberExpr | NameExpr
+        ):
+            inner_type = _convert_dy_column_to_dtype(
+                api,
+                column_args[0].callee.name,
+                column_args[0].args,
+            )
+            # If the array has more than one dimension, return a list of lists of the inner type.
+            if len(column_args) > 1 and isinstance(column_args[1], TupleExpr):
+                for _ in range(len(column_args[1].items) - 1):
+                    inner_type = api.named_type(
+                        "builtins.list",
+                        [inner_type],
+                    )
+            return api.named_type(
+                "builtins.list",
+                [inner_type],
             )
         return api.named_type("builtins.list")
     if column_type == "Any" or column_type == "Object":
