@@ -189,7 +189,7 @@ def _convert_dy_column_to_dtype(
                 ],
             )
         return api.named_type("builtins.list")
-    if column_type == "Any":
+    if column_type == "Any" or column_type == "Object":
         return AnyType(TypeOfAny.explicit)
     # If we can't infer the type, we default to `Any`.
     # This is, for example, the case for self-defined types, e.g., via `functools.partial`.

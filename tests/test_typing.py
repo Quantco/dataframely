@@ -111,6 +111,7 @@ class MySchema(dy.Schema):
     f = dy.Datetime()
     g = dy.Date()
     h = dy.Any()
+    o = dy.Object()
     aa = dy.Array(dy.String(), 1)
     ab = dy.Array(dy.String(), (2, 3))
     some_decimal = dy.Decimal(12, 8)
@@ -135,6 +136,7 @@ def my_schema_df() -> dy.DataFrame[MySchema]:
                 "f": [datetime.datetime(2022, 1, 1, 0, 0, 0)],
                 "g": [datetime.date(2022, 1, 1)],
                 "h": [1],
+                "o": [object()],
                 "some_decimal": [decimal.Decimal("1.5")],
                 "custom_col": [[{"x": "a", "y": "b"}]],
             }
@@ -211,6 +213,7 @@ def test_iter_rows_imported_schema() -> None:
                 "f": [datetime.datetime(2022, 1, 1, 0, 0, 0)],
                 "g": [datetime.date(2022, 1, 1)],
                 "h": [1],
+                "o": [object()],
                 "some_decimal": [decimal.Decimal("1.5")],
             }
         ),
