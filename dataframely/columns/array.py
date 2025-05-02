@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Sequence
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 import polars as pl
 
@@ -25,7 +26,7 @@ class Array(Column):
         *,
         nullable: bool = True,
         # polars doesn't yet support grouping by arrays,
-        # see https://github.com/pola-rs/polars/blob/810df456/crates/polars-core/src/frame/group_by/into_groups.rs#L365
+        # see https://github.com/pola-rs/polars/issues/22574
         primary_key: Literal[False] = False,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
@@ -46,11 +47,6 @@ class Array(Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
-        if primary_key:
-            raise ValueError(
-                "`primary_key=True` is not yet supported for the Array type."
-            )
-
         if inner.primary_key or (
             isinstance(inner, Struct)
             and any(col.primary_key for col in inner.inner.values())
@@ -63,7 +59,7 @@ class Array(Column):
         # to a list and calling .list.eval() is possible, however, since the shape can have multiple axes, the recursive
         # conversion could have significant performance impact. Hence, we simply disallow inner validation rules.
         # Another option would be to allow validation rules only for sampling, but not enforce them.
-        if inner.validation_rules(pl.col(alias or "")):
+        if inner.validation_rules(pl.lit(None)):
             raise ValueError(
                 "Validation rules on the inner type of Array are not yet supported."
             )
@@ -76,17 +72,11 @@ class Array(Column):
             metadata=metadata,
         )
         self.inner = inner
-        self.shape = self._ensure_tuple(shape)
+        self.shape = shape if isinstance(shape, tuple) else (shape,)
 
     @property
     def dtype(self) -> pl.DataType:
         return pl.Array(self.inner.dtype, self.shape)
-
-    @staticmethod
-    def _ensure_tuple(value: int | tuple[int, ...]) -> tuple[int, ...]:
-        if isinstance(value, tuple):
-            return value
-        return (value,)
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
@@ -105,24 +95,11 @@ class Array(Column):
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # Sample the inner elements in a flat series
-        n_elements = n * cast(int, pl.Series(self.shape).product())
+        n_elements = n * math.prod(self.shape)
         all_elements = self.inner.sample(generator, n_elements)
-
-        # Turn the "long" series into a series with arrays
-        it = iter(all_elements)
-
-        def _reshape_recursive(shape: Sequence[int]) -> Any:
-            if not shape:
-                return next(it)
-            rest: list[int]
-            n, *rest = shape
-            return [_reshape_recursive(rest) for _ in range(n)]
 
         # Finally, apply a null mask
         return generator._apply_null_mask(
-            pl.Series(
-                _reshape_recursive((n, *self.shape)),
-                dtype=self.dtype,
-            ),
+            all_elements.reshape((n, *self.shape)),
             null_probability=self._null_probability,
         )

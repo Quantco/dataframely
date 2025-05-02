@@ -50,8 +50,16 @@ def test_equal_polars_schema_list(inner: Column) -> None:
     + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
     + [dy.Struct({"a": t()}) for t in NO_VALIDATION_COLUMN_TYPES],
 )
-def test_equal_polars_schema_array(inner: Column) -> None:
-    schema = create_schema("test", {"a": dy.Array(inner, 1)})
+@pytest.mark.parametrize(
+    "shape",
+    [
+        1,
+        0,
+        (0, 0),
+    ],
+)
+def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) -> None:
+    schema = create_schema("test", {"a": dy.Array(inner, shape)})
     actual = schema.pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected

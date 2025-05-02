@@ -128,17 +128,6 @@ def test_nested_array() -> None:
     )
 
 
-def test_array_with_pk() -> None:
-    with pytest.raises(ValueError):
-        # We suppress mypy's arg-type error, since here we intend to set the `primary_key` argument to a value of
-        # incorrect type
-        column = dy.Array(dy.String(), 2, primary_key=True)  # type: ignore[arg-type]
-        create_schema(
-            "test",
-            {"a": column},
-        )
-
-
 def test_array_with_inner_pk() -> None:
     with pytest.raises(ValueError):
         column = dy.Array(dy.String(primary_key=True), 2)
