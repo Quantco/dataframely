@@ -112,8 +112,8 @@ class MySchema(dy.Schema):
     g = dy.Date()
     h = dy.Any()
     o = dy.Object()
-    aa = dy.Array(dy.String(), 1)
-    ab = dy.Array(dy.String(), (2, 3))
+    p = dy.Array(dy.String(), 1)
+    q = dy.Array(dy.String(), (2, 3))
     some_decimal = dy.Decimal(12, 8)
     custom_col = Flags()
     custom_col_list = dy.List(Flags())
@@ -137,6 +137,8 @@ def my_schema_df() -> dy.DataFrame[MySchema]:
                 "g": [datetime.date(2022, 1, 1)],
                 "h": [1],
                 "o": [object()],
+                "p": [[1]],
+                "q": [[1, 2, 3], [4, 5, 6]],
                 "some_decimal": [decimal.Decimal("1.5")],
                 "custom_col": [[{"x": "a", "y": "b"}]],
             }
@@ -214,6 +216,8 @@ def test_iter_rows_imported_schema() -> None:
                 "g": [datetime.date(2022, 1, 1)],
                 "h": [1],
                 "o": [object()],
+                "p": [[1]],
+                "q": [[1, 2, 3], [4, 5, 6]],
                 "some_decimal": [decimal.Decimal("1.5")],
             }
         ),
