@@ -3,6 +3,7 @@
 
 from ._base import Column
 from .any import Any
+from .array import Array
 from .bool import Bool
 from .datetime import Date, Datetime, Duration, Time
 from .decimal import Decimal
@@ -17,6 +18,7 @@ from .struct import Struct
 __all__ = [
     "Column",
     "Any",
+    "Array",
     "Bool",
     "Date",
     "Datetime",

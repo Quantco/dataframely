@@ -24,6 +24,11 @@ def test_string_representation_list() -> None:
     assert str(column) == dy.List.__name__.lower()
 
 
+def test_string_representation_array() -> None:
+    column = dy.Array(dy.String(), 1)
+    assert str(column) == dy.Array.__name__.lower()
+
+
 def test_string_representation_struct() -> None:
     column = dy.Struct({"a": dy.String()})
     assert str(column) == dy.Struct.__name__.lower()
