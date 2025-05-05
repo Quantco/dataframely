@@ -32,7 +32,7 @@ class Date(OrdinalMixin[dt.date], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.date | None = None,
         min_exclusive: dt.date | None = None,
@@ -46,6 +46,9 @@ class Date(OrdinalMixin[dt.date], Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum date for dates in this column (inclusive).
@@ -142,7 +145,7 @@ class Time(OrdinalMixin[dt.time], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.time | None = None,
         min_exclusive: dt.time | None = None,
@@ -156,6 +159,9 @@ class Time(OrdinalMixin[dt.time], Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum time for times in this column (inclusive).
@@ -258,7 +264,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.datetime | None = None,
         min_exclusive: dt.datetime | None = None,
@@ -272,6 +278,9 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum datetime for datetimes in this column (inclusive).
@@ -364,7 +373,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.timedelta | None = None,
         min_exclusive: dt.timedelta | None = None,
@@ -378,6 +387,9 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum duration for durations in this column (inclusive).

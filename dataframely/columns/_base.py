@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
@@ -28,7 +29,7 @@ class Column(ABC):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
@@ -37,6 +38,9 @@ class Column(ABC):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             check: A custom check to run for this column. Must return a non-aggregated
@@ -48,6 +52,16 @@ class Column(ABC):
                 internally sets the alias to the column's name in the parent schema.
             metadata: A dictionary of metadata to attach to the column.
         """
+        if nullable is None:
+            warnings.warn(
+                "The 'nullable' argument was not explicitly set. In a future release, "
+                "'nullable=False' will be the default if 'nullable' is not specified. "
+                "Explicitly set 'nullable=True' if you want your column to be nullable.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            nullable = True
+
         self.nullable = nullable and not primary_key
         self.primary_key = primary_key
         self.check = check
