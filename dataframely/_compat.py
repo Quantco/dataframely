@@ -18,6 +18,8 @@ class _DummyModule:  # pragma: no cover
 try:
     import sqlalchemy as sa
     import sqlalchemy.dialects.mssql as sa_mssql
+    import sqlalchemy.dialects.oracle as sa_oracle
+    import sqlalchemy.dialects.postgresql as sa_postgresql
     from sqlalchemy.sql.type_api import TypeEngine as sa_TypeEngine
 except ImportError:  # pragma: no cover
     sa = _DummyModule("sqlalchemy")  # type: ignore
@@ -36,4 +38,4 @@ except ImportError:  # pragma: no cover
 
 # ------------------------------------------------------------------------------------ #
 
-__all__ = ["sa", "sa_mssql", "sa_TypeEngine", "pa"]
+__all__ = ["sa", "sa_mssql", "sa_oracle", "sa_postgresql", "sa_TypeEngine", "pa"]

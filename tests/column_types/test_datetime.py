@@ -3,6 +3,7 @@
 
 import datetime as dt
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
@@ -348,14 +349,33 @@ def test_validate_min_max(
     ("column", "values", "valid"),
     [
         (
+            dy.Date(),
+            [dt.date(2020, 1, 1), dt.date(2021, 1, 15), dt.date(2022, 12, 1)],
+            {},
+        ),
+        (
             dy.Date(resolution="1mo"),
             [dt.date(2020, 1, 1), dt.date(2021, 1, 15), dt.date(2022, 12, 1)],
             {"resolution": [True, False, True]},
         ),
         (
+            dy.Time(),
+            [dt.time(12, 0), dt.time(13, 15), dt.time(14, 0, 5)],
+            {},
+        ),
+        (
             dy.Time(resolution="1h"),
             [dt.time(12, 0), dt.time(13, 15), dt.time(14, 0, 5)],
             {"resolution": [True, False, False]},
+        ),
+        (
+            dy.Datetime(),
+            [
+                dt.datetime(2020, 4, 5),
+                dt.datetime(2021, 1, 1, 12),
+                dt.datetime(2022, 7, 10, 0, 0, 1),
+            ],
+            {},
         ),
         (
             dy.Datetime(resolution="1d"),
@@ -382,6 +402,113 @@ def test_validate_resolution(
     column: Column, values: list[Any], valid: dict[str, list[bool]]
 ) -> None:
     lf = pl.LazyFrame({"a": values})
+    actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
+    expected = pl.LazyFrame(valid)
+    assert_frame_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ("column", "values", "schema", "valid"),
+    [
+        (
+            dy.Datetime(),
+            [
+                dt.datetime(2020, 4, 5, tzinfo=dt.UTC),
+                dt.datetime(2021, 1, 1, 12, tzinfo=dt.UTC),
+                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=dt.UTC),
+            ],
+            None,
+            {},
+        ),
+        (
+            dy.Datetime(time_zone="UTC"),
+            [
+                dt.datetime(2020, 4, 5),
+                dt.datetime(2021, 1, 1, 12),
+                dt.datetime(2022, 7, 10, 0, 0, 1),
+            ],
+            None,
+            {"time_zone": [False, False, False]},
+        ),
+        (
+            dy.Datetime(time_zone="UTC"),
+            [
+                dt.datetime(2020, 4, 5, tzinfo=dt.UTC),
+                dt.datetime(2021, 1, 1, 12, tzinfo=dt.UTC),
+                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=dt.UTC),
+            ],
+            None,
+            {"time_zone": [True, True, True]},
+        ),
+        (
+            dy.Datetime(
+                time_zone=dt.timezone(
+                    dt.timedelta(hours=-7), name="America/Los_Angeles"
+                )
+            ),
+            [
+                dt.datetime(2020, 4, 5),
+                dt.datetime(2021, 1, 1, 12),
+                dt.datetime(2022, 7, 10, 0, 0, 1),
+            ],
+            pl.Datetime(time_zone="America/Los_Angeles"),
+            {"time_zone": [True, True, True]},
+        ),
+        (
+            dy.Datetime(
+                time_zone=dt.timezone(
+                    dt.timedelta(hours=-7), name="America/Los_Angeles"
+                )
+            ),
+            [
+                dt.datetime(2020, 4, 5),
+                dt.datetime(2021, 1, 1, 12),
+                dt.datetime(2022, 7, 10, 0, 0, 1),
+            ],
+            None,
+            {"time_zone": [False, False, False]},
+        ),
+        (
+            dy.Datetime(time_zone=dt.timezone(dt.timedelta(hours=-7))),
+            [
+                dt.datetime(2020, 4, 5),
+                dt.datetime(2021, 1, 1, 12),
+                dt.datetime(2022, 7, 10, 0, 0, 1),
+            ],
+            pl.Datetime(time_zone="America/Los_Angeles"),
+            {"time_zone": [False, False, False]},
+        ),
+        (
+            dy.Datetime(time_zone=ZoneInfo("Etc/UTC")),
+            [
+                dt.datetime(2020, 4, 5, tzinfo=ZoneInfo("Etc/UTC")),
+                dt.datetime(2021, 1, 1, 12, tzinfo=ZoneInfo("Etc/UTC")),
+                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=ZoneInfo("Etc/UTC")),
+            ],
+            None,
+            {"time_zone": [True, True, True]},
+        ),
+        (
+            dy.Datetime(time_zone=ZoneInfo("Etc/UTC")),
+            [
+                dt.datetime(2020, 4, 5, tzinfo=ZoneInfo("America/New_York")),
+                dt.datetime(2021, 1, 1, 12, tzinfo=ZoneInfo("America/New_York")),
+                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=ZoneInfo("America/New_York")),
+            ],
+            None,
+            {"time_zone": [False, False, False]},
+        ),
+    ],
+)
+def test_validate_datetime_timezone(
+    column: Column,
+    values: list[Any],
+    schema: pl.Datetime | None,
+    valid: dict[str, list[bool]],
+) -> None:
+    lf = pl.LazyFrame(
+        {"a": values}, schema={"a": schema} if schema is not None else None
+    )
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame(valid)
     assert_frame_equal(actual, expected)

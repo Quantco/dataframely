@@ -4,6 +4,7 @@
 import datetime as dt
 from collections.abc import Sequence
 from typing import TypeVar
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import polars as pl
@@ -293,6 +294,7 @@ class Generator:
         min: dt.datetime,
         max: dt.datetime | None,
         resolution: str | None = None,
+        time_zone: ZoneInfo | str | dt.timezone | None = None,
         null_probability: float = 0.0,
     ) -> pl.Series:
         """Sample a list of datetimes in the provided range.
@@ -303,6 +305,7 @@ class Generator:
             max: The maximum datetime to sample (exclusive). '10000-01-01' when ``None``.
             resolution: The resolution that datetimes in the column must have. This uses
                 the formatting language used by :mod:`polars` datetime ``round`` method.
+            time_zone: The timezone that datetimes in the column must have.
             null_probability: The probability of an element being ``null``.
 
         Returns:
@@ -329,7 +332,7 @@ class Generator:
             )
             # NOTE: polars tracks datetimes relative to epoch
             - _datetime_to_microseconds(EPOCH_DATETIME)
-        ).cast(pl.Datetime)
+        ).cast(pl.Datetime(time_unit="us", time_zone=time_zone))
 
         if resolution is not None:
             return result.dt.truncate(resolution)
