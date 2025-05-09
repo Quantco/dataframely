@@ -22,7 +22,7 @@ class Enum(Column):
         self,
         categories: Sequence[str],
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
@@ -32,6 +32,9 @@ class Enum(Column):
         Args:
             categories: The list of valid categories for the enum.
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             check: A custom check to run for this column. Must return a non-aggregated

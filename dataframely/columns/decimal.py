@@ -27,7 +27,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         precision: int | None = None,
         scale: int = 0,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: decimal.Decimal | None = None,
         min_exclusive: decimal.Decimal | None = None,
@@ -42,6 +42,9 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             precision: Maximum number of digits in each number.
             scale: Number of digits to the right of the decimal point in each number.
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum value for decimals in this column (inclusive).

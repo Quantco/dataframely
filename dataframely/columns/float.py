@@ -26,7 +26,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         allow_inf_nan: bool = False,
         min: float | None = None,
@@ -40,6 +40,9 @@ class _BaseFloat(OrdinalMixin[float], Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             allow_inf_nan: Whether this column may contain NaN and infinity values.

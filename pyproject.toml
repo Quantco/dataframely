@@ -83,6 +83,7 @@ module = ["pyarrow.*"]
 addopts = "--import-mode=importlib"
 filterwarnings = [
   "ignore:datetime.datetime.utcfromtimestamp\\(\\) is deprecated.*:DeprecationWarning",
+  "ignore:The 'nullable' argument was not explicitly set.*:FutureWarning",
 ]
 testpaths = ["tests"]
 

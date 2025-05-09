@@ -22,7 +22,7 @@ class Struct(Column):
         self,
         inner: dict[str, Column],
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
@@ -35,6 +35,9 @@ class Struct(Column):
                 struct is nested inside a list. In this case, the list items must be
                 unique wrt. the struct fields that have ``primary_key=True`` set.
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
             check: A custom check to run for this column. Must return a non-aggregated
                 boolean expression.

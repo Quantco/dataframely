@@ -24,7 +24,7 @@ class List(Column):
         self,
         inner: Column,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
@@ -40,6 +40,9 @@ class List(Column):
                 must be unique across all list items. Note that if the struct itself has
                 ``primary_key=True`` set, the fields' settings do not take effect.
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
             check: A custom check to run for this column. Must return a non-aggregated
                 boolean expression.
