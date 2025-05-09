@@ -98,7 +98,7 @@ class SchemaMeta(ABCMeta):
             )
 
         # 2) Check that the columns referenced in the group rules exist.
-        for name, rule in result.rules.items():
+        for rule_name, rule in result.rules.items():
             if isinstance(rule, GroupRule):
                 missing_columns = set(rule.group_columns) - set(result.columns)
                 if len(missing_columns) > 0:
@@ -106,7 +106,7 @@ class SchemaMeta(ABCMeta):
                         sorted(f"'{col}'" for col in missing_columns)
                     )
                     raise ImplementationError(
-                        f"Group validation rule '{name}' has been implemented "
+                        f"Group validation rule '{rule_name}' has been implemented "
                         f"incorrectly. It references {len(missing_columns)} columns "
                         f"which are not in the schema: {missing_list}."
                     )
@@ -116,16 +116,16 @@ class SchemaMeta(ABCMeta):
         # empty data frame and checking for the evaluated dtypes.
         if len(result.rules) > 0:
             lf_empty = pl.LazyFrame(
-                schema={name: col.dtype for name, col in result.columns.items()}
+                schema={col_name: col.dtype for col_name, col in result.columns.items()}
             )
             # NOTE: For some reason, `polars` does not yield correct dtypes when calling
             #  `collect_schema()`
             schema = with_evaluation_rules(lf_empty, result.rules).collect().schema
-            for name, rule in result.rules.items():
-                dtype = schema[name]
+            for rule_name, rule in result.rules.items():
+                dtype = schema[rule_name]
                 if not isinstance(dtype, pl.Boolean):
                     raise RuleImplementationError(
-                        name, dtype, isinstance(rule, GroupRule)
+                        rule_name, dtype, isinstance(rule, GroupRule)
                     )
 
         return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
