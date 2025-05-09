@@ -18,6 +18,12 @@ class MySchema(dy.Schema):
     d = dy.Any(alias="e")
 
 
+class MySchemaWithRule(MySchema):
+    @dy.rule()
+    def a_greater_than_c() -> pl.Expr:
+        return pl.col("a") > pl.col("c")
+
+
 def test_column_names() -> None:
     assert MySchema.column_names() == ["a", "b", "c", "e"]
 
@@ -75,3 +81,11 @@ def test_col_in_polars_expression() -> None:
         .select(MySchema.a.col)
     )
     assert df.row(0) == (1,)
+
+
+def test_dunder_name() -> None:
+    assert MySchema.__name__ == "MySchema"
+
+
+def test_dunder_name_with_rule() -> None:
+    assert MySchemaWithRule.__name__ == "MySchemaWithRule"

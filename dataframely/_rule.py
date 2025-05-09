@@ -126,5 +126,7 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
     #    preserves the order of the left data frame.
     result = lf
     for group_columns, frame in group_evaluations.items():
-        result = result.join(frame, on=list(group_columns), how="left")
+        result = result.join(
+            frame, on=list(group_columns), how="left", nulls_equal=True
+        )
     return result

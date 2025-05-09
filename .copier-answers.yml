@@ -1,7 +1,7 @@
 # This file is managed by Copier; DO NOT EDIT OR REMOVE.
 _commit: v0.3.0
 _src_path: https://github.com/quantco/copier-template-python-open-source
-add_autobump_workflow: true
+add_autobump_workflow: false
 author_email: oliver.borchert@quantco.com
 author_name: Oliver Borchert
 github_url: https://github.com/quantco/dataframely

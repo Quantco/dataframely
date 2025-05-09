@@ -109,10 +109,14 @@ class Struct(Column):
         return pa.struct({name: col.pyarrow_dtype for name, col in self.inner.items()})
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
-        return (
+        series = (
             pl.DataFrame(
                 {name: col.sample(generator, n) for name, col in self.inner.items()}
             )
             .select(pl.struct(pl.all()))
             .to_series()
+        )
+        # Apply a null mask.
+        return generator._apply_null_mask(
+            series, null_probability=self._null_probability
         )

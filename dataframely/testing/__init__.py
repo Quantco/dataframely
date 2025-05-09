@@ -6,6 +6,7 @@ from .const import (
     COLUMN_TYPES,
     FLOAT_COLUMN_TYPES,
     INTEGER_COLUMN_TYPES,
+    NO_VALIDATION_COLUMN_TYPES,
     SUPERTYPE_COLUMN_TYPES,
 )
 from .factory import create_collection, create_collection_raw, create_schema
@@ -18,6 +19,7 @@ __all__ = [
     "FLOAT_COLUMN_TYPES",
     "INTEGER_COLUMN_TYPES",
     "SUPERTYPE_COLUMN_TYPES",
+    "NO_VALIDATION_COLUMN_TYPES",
     "create_collection",
     "create_collection_raw",
     "create_schema",
