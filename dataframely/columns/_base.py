@@ -18,6 +18,8 @@ from dataframely.random import Generator
 #                                        COLUMNS                                       #
 # ------------------------------------------------------------------------------------ #
 
+RULE_NAME_SUFFIX_SEPARATOR = "__"
+
 
 class Column(ABC):
     """Abstract base class for data frame column definitions.
@@ -93,9 +95,7 @@ class Column(ABC):
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
-    def _get_rule_names(
-        self, rules: list[Callable[[pl.Expr], pl.Expr]], count_separator: str = "__"
-    ) -> list[str]:
+    def _get_rule_names(self, rules: list[Callable[[pl.Expr], pl.Expr]]) -> list[str]:
         """Generate unique names for rule callables.
 
         For callables with the same name, appends a suffix __i where i is the index
@@ -103,34 +103,33 @@ class Column(ABC):
 
         Args:
             rules: List of rule callables.
-            count_separator: string separator between the rule_name and the index.
 
         Returns:
             List of unique names corresponding to the rule callables.
         """
+
         # Extract base names
-        base_rule_names = []
-        for rule in rules:
-            base_rule_name = rule.__name__
-            if base_rule_name == "<lambda>":
-                base_rule_name = "check"
-            base_rule_names.append(base_rule_name)
+        base_names = [
+            rule.__name__ if rule.__name__ != "<lambda>" else "check" for rule in rules
+        ]
 
         # Count occurrences using Counter
-        name_counts = Counter(base_rule_names)
+        name_counts = Counter(base_names)
 
-        # Generate final names where there are duplicates
-        rule_names_with_counts = []
-        dynamic_name_counter: dict[str, int] = {}
-        for base_rule_name in base_rule_names:
-            if name_counts[base_rule_name] > 1:
-                idx = dynamic_name_counter.get(base_rule_name, 0)
-                rule_names_with_counts.append(f"{base_rule_name}{count_separator}{idx}")
-                dynamic_name_counter[base_rule_name] = idx + 1
+        # Append suffixes to names that are duplicated
+        final_names = []
+        duplicate_counter: dict[str, int] = {
+            name: 0 for name in name_counts if name_counts[name] > 1
+        }
+        for name in base_names:
+            if name_counts[name] > 1:
+                postfix = duplicate_counter[name]
+                final_names.append(f"{name}{RULE_NAME_SUFFIX_SEPARATOR}{postfix}")
+                duplicate_counter[name] += 1
             else:
-                rule_names_with_counts.append(base_rule_name)
+                final_names.append(name)
 
-        return rule_names_with_counts
+        return final_names
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         """A set of rules evaluating whether a data frame column satisfies the column's
@@ -156,9 +155,7 @@ class Column(ABC):
 
             elif isinstance(self.check, list):
                 # Get unique names for rules from callables
-                rule_names = self._get_rule_names(
-                    rules=self.check, count_separator="__"
-                )
+                rule_names = self._get_rule_names(rules=self.check)
 
                 # Apply each rule with its corresponding name
                 for rule_name, rule_callable in zip(rule_names, self.check):
