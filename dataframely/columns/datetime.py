@@ -333,7 +333,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
 
     @property
     def dtype(self) -> pl.DataType:
-        return pl.Datetime(time_unit="us", time_zone=self.time_zone)
+        return pl.Datetime(time_zone=self.time_zone)
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         result = super().validation_rules(expr)

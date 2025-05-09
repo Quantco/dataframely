@@ -334,7 +334,7 @@ class Generator:
             )
             # NOTE: polars tracks datetimes relative to epoch
             - _datetime_to_microseconds(EPOCH_DATETIME)
-        ).cast(pl.Datetime(time_unit="us", time_zone=time_zone))
+        ).cast(pl.Datetime(time_zone=time_zone))
 
         if resolution is not None:
             return result.dt.truncate(resolution)
