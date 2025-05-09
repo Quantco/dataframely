@@ -293,7 +293,9 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 the formatting language used by :mod:`polars` datetime ``round`` method.
                 For example, a value ``1h`` expects all datetimes to be full hours. Note
                 that this setting does *not* affect the storage resolution.
-            time_zone: The timezone that datetimes in the column must have.
+            time_zone: The time zone that datetimes in the column must have. The time
+                zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
+                ``America/New_York``.
             check: A custom check to run for this column. Must return a non-aggregated
                 boolean expression.
             alias: An overwrite for this column's name which allows for using a column

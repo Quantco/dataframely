@@ -305,7 +305,9 @@ class Generator:
             max: The maximum datetime to sample (exclusive). '10000-01-01' when ``None``.
             resolution: The resolution that datetimes in the column must have. This uses
                 the formatting language used by :mod:`polars` datetime ``round`` method.
-            time_zone: The timezone that datetimes in the column must have.
+            time_zone: The time zone that datetimes in the column must have. The time
+                zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
+                ``America/New_York``.
             null_probability: The probability of an element being ``null``.
 
         Returns:
