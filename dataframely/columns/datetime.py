@@ -14,7 +14,6 @@ from dataframely._compat import (
     pa,
     sa,
     sa_mssql,
-    sa_oracle,
     sa_postgresql,
     sa_TypeEngine,
 )
@@ -349,8 +348,6 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 return sa_mssql.DATETIME2(6, timezone=timezone_enabled)
             case "postgresql":
                 return sa_postgresql.TIMESTAMP(timezone=timezone_enabled)
-            case "oracle":
-                return sa_oracle.TIMESTAMP(timezone=timezone_enabled)
             case _:
                 return sa.DateTime(timezone=timezone_enabled)
 
