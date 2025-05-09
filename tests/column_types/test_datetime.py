@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
+import re
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
@@ -11,6 +11,7 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely.columns import Column
+from dataframely.exc import DtypeValidationError
 from dataframely.random import Generator
 from dataframely.testing import evaluate_rules, rules_from_exprs
 from dataframely.testing.factory import create_schema
@@ -408,122 +409,46 @@ def test_validate_resolution(
 
 
 @pytest.mark.parametrize(
-    ("column", "values", "schema", "valid"),
-    [
-        (
-            dy.Datetime(),
-            [
-                dt.datetime(2020, 4, 5, tzinfo=dt.UTC),
-                dt.datetime(2021, 1, 1, 12, tzinfo=dt.UTC),
-                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=dt.UTC),
-            ],
-            None,
-            {},
-        ),
-        (
-            dy.Datetime(time_zone="UTC"),
-            [
-                dt.datetime(2020, 4, 5),
-                dt.datetime(2021, 1, 1, 12),
-                dt.datetime(2022, 7, 10, 0, 0, 1),
-            ],
-            None,
-            {"time_zone": [False, False, False]},
-        ),
-        (
-            dy.Datetime(time_zone="UTC"),
-            [
-                dt.datetime(2020, 4, 5, tzinfo=dt.UTC),
-                dt.datetime(2021, 1, 1, 12, tzinfo=dt.UTC),
-                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=dt.UTC),
-            ],
-            None,
-            {"time_zone": [True, True, True]},
-        ),
-        (
-            dy.Datetime(
-                time_zone=dt.timezone(
-                    dt.timedelta(hours=-7), name="America/Los_Angeles"
-                )
-            ),
-            [
-                dt.datetime(2020, 4, 5),
-                dt.datetime(2021, 1, 1, 12),
-                dt.datetime(2022, 7, 10, 0, 0, 1),
-            ],
-            pl.Datetime(time_zone="America/Los_Angeles"),
-            {"time_zone": [True, True, True]},
-        ),
-        (
-            dy.Datetime(
-                time_zone=dt.timezone(
-                    dt.timedelta(hours=-7), name="America/Los_Angeles"
-                )
-            ),
-            [
-                dt.datetime(2020, 4, 5),
-                dt.datetime(2021, 1, 1, 12),
-                dt.datetime(2022, 7, 10, 0, 0, 1),
-            ],
-            None,
-            {"time_zone": [False, False, False]},
-        ),
-        (
-            dy.Datetime(time_zone=dt.timezone(dt.timedelta(hours=-7))),
-            [
-                dt.datetime(2020, 4, 5),
-                dt.datetime(2021, 1, 1, 12),
-                dt.datetime(2022, 7, 10, 0, 0, 1),
-            ],
-            pl.Datetime(time_zone="America/Los_Angeles"),
-            {"time_zone": [False, False, False]},
-        ),
-        (
-            dy.Datetime(time_zone=ZoneInfo("Etc/UTC")),
-            [
-                dt.datetime(2020, 4, 5, tzinfo=ZoneInfo("Etc/UTC")),
-                dt.datetime(2021, 1, 1, 12, tzinfo=ZoneInfo("Etc/UTC")),
-                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=ZoneInfo("Etc/UTC")),
-            ],
-            None,
-            {"time_zone": [True, True, True]},
-        ),
-        (
-            dy.Datetime(time_zone=ZoneInfo("Etc/UTC")),
-            [
-                dt.datetime(2020, 4, 5, tzinfo=ZoneInfo("America/New_York")),
-                dt.datetime(2021, 1, 1, 12, tzinfo=ZoneInfo("America/New_York")),
-                dt.datetime(2022, 7, 10, 0, 0, 1, tzinfo=ZoneInfo("America/New_York")),
-            ],
-            None,
-            {"time_zone": [False, False, False]},
-        ),
-    ],
-)
-def test_validate_datetime_timezone(
-    column: Column,
-    values: list[Any],
-    schema: pl.Datetime | None,
-    valid: dict[str, list[bool]],
-) -> None:
-    lf = pl.LazyFrame(
-        {"a": values}, schema={"a": schema} if schema is not None else None
-    )
-    actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
-    expected = pl.LazyFrame(valid)
-    assert_frame_equal(actual, expected)
-
-
-@pytest.mark.parametrize(
     "column",
     [
         dy.Datetime(
             min=dt.datetime(2020, 1, 1), max=dt.datetime(2021, 1, 1), resolution="1h"
-        )
+        ),
+        dy.Datetime(time_zone="Etc/UTC"),
     ],
 )
-def test_sample_resolution(column: dy.Column) -> None:
+def test_sample(column: dy.Column) -> None:
     generator = Generator(seed=42)
     samples = column.sample(generator, n=10_000)
     schema = create_schema("test", {"a": column})
     schema.validate(samples.to_frame("a"))
+
+
+@pytest.mark.parametrize(
+    ("dtype", "column", "error"),
+    [
+        (
+            pl.Datetime(time_zone="America/New_York"),
+            dy.Datetime(time_zone="Etc/UTC"),
+            r"1 columns have an invalid dtype.*\n.*got dtype 'Datetime\(time_unit='us', time_zone='America/New_York'\)' but expected 'Datetime\(time_unit='us', time_zone='Etc/UTC'\)'",
+        ),
+        (
+            pl.Datetime(time_zone="Etc/UTC"),
+            dy.Datetime(time_zone="Etc/UTC"),
+            None,
+        ),
+    ],
+)
+def test_dtype_validation(
+    dtype: pl.DataType,
+    column: dy.Column,
+    error: str | None,
+) -> None:
+    df = pl.DataFrame(schema={"a": dtype})
+    schema = create_schema("test", {"a": column})
+    if error is None:
+        schema.validate(df)
+    else:
+        with pytest.raises(DtypeValidationError) as exc:
+            schema.validate(df)
+        assert re.match(error, str(exc.value))

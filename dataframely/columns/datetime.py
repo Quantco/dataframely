@@ -273,7 +273,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         max: dt.datetime | None = None,
         max_exclusive: dt.datetime | None = None,
         resolution: str | None = None,
-        time_zone: ZoneInfo | str | dt.timezone | None = None,
+        time_zone: str | dt.tzinfo | None = None,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -339,16 +339,6 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         result = super().validation_rules(expr)
         if self.resolution is not None:
             result["resolution"] = expr.dt.truncate(self.resolution) == expr
-        if self.time_zone is not None:
-            time_zone = (
-                self.time_zone.key
-                if isinstance(self.time_zone, ZoneInfo)
-                else self.time_zone
-            )
-            result["time_zone"] = pl.coalesce(
-                expr == pl.selectors.datetime(time_unit="us", time_zone=time_zone),
-                False,
-            )
         return result
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:

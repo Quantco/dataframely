@@ -4,7 +4,6 @@
 import datetime as dt
 from collections.abc import Sequence
 from typing import TypeVar
-from zoneinfo import ZoneInfo
 
 import numpy as np
 import polars as pl
@@ -294,7 +293,7 @@ class Generator:
         min: dt.datetime,
         max: dt.datetime | None,
         resolution: str | None = None,
-        time_zone: ZoneInfo | str | dt.timezone | None = None,
+        time_zone: str | dt.tzinfo | None = None,
         null_probability: float = 0.0,
     ) -> pl.Series:
         """Sample a list of datetimes in the provided range.
