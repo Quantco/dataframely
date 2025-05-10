@@ -112,7 +112,7 @@ class Column(ABC):
         result = {}
         if not self.nullable:
             result["nullability"] = expr.is_not_null()
-        
+
         if self.check is not None:
             if isinstance(self.check, dict):
                 for rule_name, rule_callable in self.check.items():
