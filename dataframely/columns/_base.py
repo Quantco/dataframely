@@ -95,7 +95,46 @@ class Column(ABC):
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
-    def _get_rule_names(self, rules: list[Callable[[pl.Expr], pl.Expr]]) -> list[str]:
+    def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
+        """A set of rules evaluating whether a data frame column satisfies the column's
+        constraints.
+
+        Args:
+            expr: An expression referencing the column of the data frame, i.e. an
+                expression created by calling :meth:`polars.col`.
+
+        Returns:
+            A mapping from validation rule names to expressions that provide exactly
+            one boolean value per column item indicating whether validation with respect
+            to the rule is successful. A value of ``False`` indicates invalid data, i.e.
+            unsuccessful validation.
+        """
+        result = {}
+        if not self.nullable:
+            result["nullability"] = expr.is_not_null()
+        if self.check is not None:
+            if isinstance(self.check, dict):
+                for rule_name, rule_callable in self.check.items():
+                    result[rule_name] = rule_callable(expr)
+            else:
+                # wrap single callable in a list
+                if isinstance(self.check, list):
+                    list_of_rules = self.check
+                else:
+                    list_of_rules = [self.check]
+
+                # Get unique names for rules from callables
+                rule_names = self._derive_check_rule_names(rules=list_of_rules)
+
+                # Apply each rule with its corresponding name
+                for rule_name, rule_callable in zip(rule_names, list_of_rules):
+                    result[rule_name] = rule_callable(expr)
+
+        return result
+
+    def _derive_check_rule_names(
+        self, rules: list[Callable[[pl.Expr], pl.Expr]]
+    ) -> list[str]:
         """Generate unique names for rule callables.
 
         For callables with the same name, appends a suffix __i where i is the index
@@ -130,46 +169,6 @@ class Column(ABC):
                 final_names.append(name)
 
         return final_names
-
-    def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
-        """A set of rules evaluating whether a data frame column satisfies the column's
-        constraints.
-
-        Args:
-            expr: An expression referencing the column of the data frame, i.e. an
-                expression created by calling :meth:`polars.col`.
-
-        Returns:
-            A mapping from validation rule names to expressions that provide exactly
-            one boolean value per column item indicating whether validation with respect
-            to the rule is successful. A value of ``False`` indicates invalid data, i.e.
-            unsuccessful validation.
-        """
-        result = {}
-        if not self.nullable:
-            result["nullability"] = expr.is_not_null()
-        if self.check is not None:
-            if isinstance(self.check, dict):
-                for rule_name, rule_callable in self.check.items():
-                    result[rule_name] = rule_callable(expr)
-
-            elif isinstance(self.check, list):
-                # Get unique names for rules from callables
-                rule_names = self._get_rule_names(rules=self.check)
-
-                # Apply each rule with its corresponding name
-                for rule_name, rule_callable in zip(rule_names, self.check):
-                    result[rule_name] = rule_callable(expr)
-
-            else:
-                # Get rule name, default to "check" for lambdas
-                rule_name = self.check.__name__
-                if rule_name == "<lambda>":
-                    rule_name = "check"
-
-                result[rule_name] = self.check(expr)
-
-        return result
 
     # -------------------------------------- SQL ------------------------------------- #
 
