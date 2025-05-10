@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
+import re
 from typing import Any
 
 import polars as pl
@@ -10,6 +11,7 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely.columns import Column
+from dataframely.exc import DtypeValidationError
 from dataframely.random import Generator
 from dataframely.testing import evaluate_rules, rules_from_exprs
 from dataframely.testing.factory import create_schema
@@ -348,14 +350,33 @@ def test_validate_min_max(
     ("column", "values", "valid"),
     [
         (
+            dy.Date(),
+            [dt.date(2020, 1, 1), dt.date(2021, 1, 15), dt.date(2022, 12, 1)],
+            {},
+        ),
+        (
             dy.Date(resolution="1mo"),
             [dt.date(2020, 1, 1), dt.date(2021, 1, 15), dt.date(2022, 12, 1)],
             {"resolution": [True, False, True]},
         ),
         (
+            dy.Time(),
+            [dt.time(12, 0), dt.time(13, 15), dt.time(14, 0, 5)],
+            {},
+        ),
+        (
             dy.Time(resolution="1h"),
             [dt.time(12, 0), dt.time(13, 15), dt.time(14, 0, 5)],
             {"resolution": [True, False, False]},
+        ),
+        (
+            dy.Datetime(),
+            [
+                dt.datetime(2020, 4, 5),
+                dt.datetime(2021, 1, 1, 12),
+                dt.datetime(2022, 7, 10, 0, 0, 1),
+            ],
+            {},
         ),
         (
             dy.Datetime(resolution="1d"),
@@ -392,11 +413,42 @@ def test_validate_resolution(
     [
         dy.Datetime(
             min=dt.datetime(2020, 1, 1), max=dt.datetime(2021, 1, 1), resolution="1h"
-        )
+        ),
+        dy.Datetime(time_zone="Etc/UTC"),
     ],
 )
-def test_sample_resolution(column: dy.Column) -> None:
+def test_sample(column: dy.Column) -> None:
     generator = Generator(seed=42)
     samples = column.sample(generator, n=10_000)
     schema = create_schema("test", {"a": column})
     schema.validate(samples.to_frame("a"))
+
+
+@pytest.mark.parametrize(
+    ("dtype", "column", "error"),
+    [
+        (
+            pl.Datetime(time_zone="America/New_York"),
+            dy.Datetime(time_zone="Etc/UTC"),
+            r"1 columns have an invalid dtype.*\n.*got dtype 'Datetime\(time_unit='us', time_zone='America/New_York'\)' but expected 'Datetime\(time_unit='us', time_zone='Etc/UTC'\)'",
+        ),
+        (
+            pl.Datetime(time_zone="Etc/UTC"),
+            dy.Datetime(time_zone="Etc/UTC"),
+            None,
+        ),
+    ],
+)
+def test_dtype_validation(
+    dtype: pl.DataType,
+    column: dy.Column,
+    error: str | None,
+) -> None:
+    df = pl.DataFrame(schema={"a": dtype})
+    schema = create_schema("test", {"a": column})
+    if error is None:
+        schema.validate(df)
+    else:
+        with pytest.raises(DtypeValidationError) as exc:
+            schema.validate(df)
+        assert re.match(error, str(exc.value))
