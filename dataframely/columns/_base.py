@@ -112,20 +112,17 @@ class Column(ABC):
         result = {}
         if not self.nullable:
             result["nullability"] = expr.is_not_null()
+        
         if self.check is not None:
             if isinstance(self.check, dict):
                 for rule_name, rule_callable in self.check.items():
                     result[rule_name] = rule_callable(expr)
             else:
-                # wrap single callable in a list
-                if isinstance(self.check, list):
-                    list_of_rules = self.check
-                else:
-                    list_of_rules = [self.check]
-
+                list_of_rules = (
+                    self.check if isinstance(self.check, list) else [self.check]
+                )
                 # Get unique names for rules from callables
                 rule_names = self._derive_check_rule_names(rules=list_of_rules)
-
                 # Apply each rule with its corresponding name
                 for rule_name, rule_callable in zip(rule_names, list_of_rules):
                     result[rule_name] = rule_callable(expr)
