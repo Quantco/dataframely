@@ -56,12 +56,12 @@ def test_check_names() -> None:
     _, failures = MultiCheckSchema.filter(df)
 
     assert failures.counts() == {
-        "name_from_dict|min_max_check": 1,
-        "name_from_dict|summation_check": 3,
-        "name_from_callable|str_starts_with_a": 1,
-        "name_from_list_of_callables|str_starts_with_a": 2,
-        "name_from_list_of_callables|str_end_with_z__0": 2,
-        "name_from_list_of_callables|str_end_with_z__1": 2,
+        "name_from_dict|check_min_max_check": 1,
+        "name_from_dict|check_summation_check": 3,
+        "name_from_callable|check_str_starts_with_a": 1,
+        "name_from_list_of_callables|check_str_starts_with_a": 2,
+        "name_from_list_of_callables|check_str_end_with_z__0": 2,
+        "name_from_list_of_callables|check_str_end_with_z__1": 2,
         "name_from_list_of_callables|check__0": 1,
         "name_from_list_of_callables|check__1": 2,
         "name_from_lambda|check": 2,

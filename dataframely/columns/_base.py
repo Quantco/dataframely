@@ -57,6 +57,7 @@ class Column(ABC):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
+                All rule names provided here are given the prefix "check_".
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -116,6 +117,7 @@ class Column(ABC):
         if self.check is not None:
             if isinstance(self.check, dict):
                 for rule_name, rule_callable in self.check.items():
+                    rule_name = self._add_check_prefix(rule_name)
                     result[rule_name] = rule_callable(expr)
             else:
                 list_of_rules = (
@@ -125,6 +127,7 @@ class Column(ABC):
                 rule_names = self._derive_check_rule_names(rules=list_of_rules)
                 # Apply each rule with its corresponding name
                 for rule_name, rule_callable in zip(rule_names, list_of_rules):
+                    rule_name = self._add_check_prefix(rule_name)
                     result[rule_name] = rule_callable(expr)
 
         return result
@@ -166,6 +169,10 @@ class Column(ABC):
                 final_names.append(name)
 
         return final_names
+
+    def _add_check_prefix(self, name: str) -> str:
+        """Add a prefix to the rule name to avoid conflicts with other rules."""
+        return f"check_{name}" if not name.startswith("check") else name
 
     # -------------------------------------- SQL ------------------------------------- #
 
