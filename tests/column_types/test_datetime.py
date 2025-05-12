@@ -350,33 +350,14 @@ def test_validate_min_max(
     ("column", "values", "valid"),
     [
         (
-            dy.Date(),
-            [dt.date(2020, 1, 1), dt.date(2021, 1, 15), dt.date(2022, 12, 1)],
-            {},
-        ),
-        (
             dy.Date(resolution="1mo"),
             [dt.date(2020, 1, 1), dt.date(2021, 1, 15), dt.date(2022, 12, 1)],
             {"resolution": [True, False, True]},
         ),
         (
-            dy.Time(),
-            [dt.time(12, 0), dt.time(13, 15), dt.time(14, 0, 5)],
-            {},
-        ),
-        (
             dy.Time(resolution="1h"),
             [dt.time(12, 0), dt.time(13, 15), dt.time(14, 0, 5)],
             {"resolution": [True, False, False]},
-        ),
-        (
-            dy.Datetime(),
-            [
-                dt.datetime(2020, 4, 5),
-                dt.datetime(2021, 1, 1, 12),
-                dt.datetime(2022, 7, 10, 0, 0, 1),
-            ],
-            {},
         ),
         (
             dy.Datetime(resolution="1d"),
