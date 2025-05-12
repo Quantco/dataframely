@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Generic, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Concatenate, Generic, ParamSpec, TypeVar
 
 import polars as pl
 
@@ -46,6 +46,14 @@ class DataFrame(pl.DataFrame, Generic[S]):
 
     @inherit_signature(pl.DataFrame.lazy)
     def lazy(self, *args: Any, **kwargs: Any) -> LazyFrame[S]:
+        raise NotImplementedError  # pragma: no cover
+
+    def pipe(
+        self,
+        function: Callable[Concatenate[DataFrame[S], P], R],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
         raise NotImplementedError  # pragma: no cover
 
     @inherit_signature(pl.DataFrame.rechunk)
@@ -90,6 +98,14 @@ class LazyFrame(pl.LazyFrame, Generic[S]):
 
     @inherit_signature(pl.LazyFrame.lazy)
     def lazy(self, *args: Any, **kwargs: Any) -> LazyFrame[S]:
+        raise NotImplementedError  # pragma: no cover
+
+    def pipe(
+        self,
+        function: Callable[Concatenate[LazyFrame[S], P], R],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
         raise NotImplementedError  # pragma: no cover
 
     @inherit_signature(pl.LazyFrame.set_sorted)

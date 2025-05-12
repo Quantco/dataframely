@@ -32,6 +32,17 @@ class Schema(dy.Schema):
     a = dy.Int64()
 
 
+def pipe_df(df: dy.DataFrame[Schema]) -> pl.DataFrame:
+    return df
+
+
+def pipe_lf(df: dy.LazyFrame[Schema]) -> pl.LazyFrame:
+    return df
+
+
+# ------------------------------------------------------------------------------------ #
+
+
 def test_data_frame_lazy() -> None:
     df = Schema.create_empty()
     df.lazy()
@@ -45,6 +56,14 @@ def test_lazy_frame_lazy() -> None:
 def test_lazy_frame_collect() -> None:
     df = Schema.create_empty(lazy=True)
     df.collect()
+
+
+def test_pipe_df() -> None:
+    Schema.create_empty().pipe(pipe_df)
+
+
+def test_pipe_lf() -> None:
+    Schema.create_empty(lazy=True).pipe(pipe_lf)
 
 
 # ------------------------------------------------------------------------------------ #
