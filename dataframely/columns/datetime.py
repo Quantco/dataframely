@@ -6,7 +6,6 @@ from __future__ import annotations
 import datetime as dt
 from collections.abc import Callable
 from typing import Any, cast
-from zoneinfo import ZoneInfo
 
 import polars as pl
 
@@ -351,9 +350,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         time_zone = (
-            self.time_zone.key
-            if isinstance(self.time_zone, ZoneInfo)
-            else self.time_zone.tzname(None)
+            self.time_zone.tzname(None)
             if isinstance(self.time_zone, dt.timezone)
             else self.time_zone
         )
