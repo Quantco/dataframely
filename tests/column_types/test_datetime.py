@@ -420,7 +420,7 @@ def test_sample(column: dy.Column) -> None:
         ),
     ],
 )
-def test_dtype_validation(
+def test_dtype_time_zone_validation(
     dtype: pl.DataType,
     column: dy.Column,
     error: str | None,
