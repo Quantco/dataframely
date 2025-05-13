@@ -29,7 +29,7 @@ Contents
     Real-world Example <sites/examples/real-world.ipynb>
     FAQ <sites/faq.rst>
     Development Guide <sites/development.rst>
-    Breaking Changes <sites/breaking.rst>
+    Versinoing <sites/versioning.rst>
 
 API Documentation
 =================
