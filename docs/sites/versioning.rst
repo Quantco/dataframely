@@ -1,11 +1,11 @@
 Versioning policy and breaking changes
 ======================================
 
-Dataframely uses `semantic versioning<https://semver.org/>`.
+Dataframely uses `semantic versioning <https://semver.org/>`_.
 This versioning scheme is designed to make it easy for users to anticipate what types of change they can expect from a given version update in their dependencies.
-We generally recommend that users take measures to control dependency versions. For example, we like to use `pixi` as a package manager, which comes with builtin
+We generally recommend that users take measures to control dependency versions. Personally, we like to use ``pixi`` as a package manager, which comes with builtin
 support for lockfiles. Many other package managers support similar functionality. When updating the lockfiles, we recommend to use automated testing
-to ensure that user code still works with newer versions of dependencies such as `dataframely`.
+to ensure that user code still works with newer versions of dependencies such as ``dataframely``.
 
 Most importantly, semantic versioning implies that breaking changes of user-facing functionality are only introduced in **major releases**.
 We therefore recommend that users are particularly vigilant when updating their environments to a newer major release of `dataframely`.
