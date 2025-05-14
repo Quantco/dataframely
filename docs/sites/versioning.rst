@@ -16,5 +16,5 @@ Warnings are the most direct and effective tool at our disposal for reaching use
 We therefore generally recommend that users do not silence such warnings explicitly, but instead migrate their code proactively, whenever possible.
 However, we also understand that the need for migration may catch users at an inconvenient time, and a temporary band aid solution might be required.
 Users can disable ``FutureWarnings`` either through `python builtins <https://docs.python.org/3/library/warnings.html#warnings.filterwarnings>`_,
-builtins from tools `like pytest <https://docs.pytest.org/en/stable/how-to/capture-warnings.html#controlling-warnings>`_ ,
+builtins from tools like `pytest <https://docs.pytest.org/en/stable/how-to/capture-warnings.html#controlling-warnings>`_ ,
 or by setting the ``DATAFRAMELY_NO_FUTURE_WARNINGS`` environment variable to ``true`` or ``1``.
