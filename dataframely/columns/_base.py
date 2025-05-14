@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
@@ -11,6 +10,7 @@ from typing import Any
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._deprecation import warn_nullable_default_change
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -53,13 +53,7 @@ class Column(ABC):
             metadata: A dictionary of metadata to attach to the column.
         """
         if nullable is None:
-            warnings.warn(
-                "The 'nullable' argument was not explicitly set. In a future release, "
-                "'nullable=False' will be the default if 'nullable' is not specified. "
-                "Explicitly set 'nullable=True' if you want your column to be nullable.",
-                FutureWarning,
-                stacklevel=3,
-            )
+            warn_nullable_default_change()
             nullable = True
 
         self.nullable = nullable and not primary_key
