@@ -18,9 +18,6 @@ from dataframely.random import Generator
 #                                        COLUMNS                                       #
 # ------------------------------------------------------------------------------------ #
 
-RULE_NAME_SUFFIX_SEPARATOR = "__"
-
-
 class Column(ABC):
     """Abstract base class for data frame column definitions.
 
@@ -117,17 +114,14 @@ class Column(ABC):
         if self.check is not None:
             if isinstance(self.check, dict):
                 for rule_name, rule_callable in self.check.items():
-                    rule_name = self._add_check_prefix(rule_name)
-                    result[rule_name] = rule_callable(expr)
+                    result[f"check__{rule_name}"] = rule_callable(expr)
             else:
                 list_of_rules = (
                     self.check if isinstance(self.check, list) else [self.check]
                 )
                 # Get unique names for rules from callables
-                rule_names = self._derive_check_rule_names(rules=list_of_rules)
-                # Apply each rule with its corresponding name
+                rule_names = self._derive_check_rule_names(list_of_rules)
                 for rule_name, rule_callable in zip(rule_names, list_of_rules):
-                    rule_name = self._add_check_prefix(rule_name)
                     result[rule_name] = rule_callable(expr)
 
         return result
@@ -146,10 +140,9 @@ class Column(ABC):
         Returns:
             List of unique names corresponding to the rule callables.
         """
-
-        # Extract base names
         base_names = [
-            rule.__name__ if rule.__name__ != "<lambda>" else "check" for rule in rules
+            f"check__{rule.__name__}" if rule.__name__ != "<lambda>" else "check"
+            for rule in rules
         ]
 
         # Count occurrences using Counter
@@ -163,16 +156,12 @@ class Column(ABC):
         for name in base_names:
             if name_counts[name] > 1:
                 postfix = duplicate_counter[name]
-                final_names.append(f"{name}{RULE_NAME_SUFFIX_SEPARATOR}{postfix}")
+                final_names.append(f"{name}__{postfix}")
                 duplicate_counter[name] += 1
             else:
                 final_names.append(name)
 
         return final_names
-
-    def _add_check_prefix(self, name: str) -> str:
-        """Add a prefix to the rule name to avoid conflicts with other rules."""
-        return f"check_{name}" if not name.startswith("check") else name
 
     # -------------------------------------- SQL ------------------------------------- #
 
