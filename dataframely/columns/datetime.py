@@ -9,7 +9,12 @@ from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
+from dataframely._compat import (
+    pa,
+    sa,
+    sa_mssql,
+    sa_TypeEngine,
+)
 from dataframely._polars import (
     EPOCH_DATETIME,
     date_matches_resolution,
@@ -271,6 +276,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         max: dt.datetime | None = None,
         max_exclusive: dt.datetime | None = None,
         resolution: str | None = None,
+        time_zone: str | dt.tzinfo | None = None,
         check: Callable[[pl.Expr], pl.Expr] | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -293,6 +299,9 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 the formatting language used by :mod:`polars` datetime ``round`` method.
                 For example, a value ``1h`` expects all datetimes to be full hours. Note
                 that this setting does *not* affect the storage resolution.
+            time_zone: The time zone that datetimes in the column must have. The time
+                zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
+                ``America/New_York``.
             check: A custom check to run for this column. Must return a non-aggregated
                 boolean expression.
             alias: An overwrite for this column's name which allows for using a column
@@ -326,10 +335,11 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             metadata=metadata,
         )
         self.resolution = resolution
+        self.time_zone = time_zone
 
     @property
     def dtype(self) -> pl.DataType:
-        return pl.Datetime()
+        return pl.Datetime(time_zone=self.time_zone)
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         result = super().validation_rules(expr)
@@ -338,16 +348,22 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         return result
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
+        timezone_enabled = self.time_zone is not None
         match dialect.name:
             case "mssql":
                 # sa.DateTime wrongly maps to DATETIME
-                return sa_mssql.DATETIME2(6)
+                return sa_mssql.DATETIME2(6, timezone=timezone_enabled)
             case _:
-                return sa.DateTime()
+                return sa.DateTime(timezone=timezone_enabled)
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return pa.timestamp("us")
+        time_zone = (
+            self.time_zone.tzname(None)
+            if isinstance(self.time_zone, dt.timezone)
+            else self.time_zone
+        )
+        return pa.timestamp("us", time_zone)
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_datetime(
@@ -363,6 +379,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 allow_null_response=True,
             ),
             resolution=self.resolution,
+            time_zone=self.time_zone,
             null_probability=self._null_probability,
         )
 
