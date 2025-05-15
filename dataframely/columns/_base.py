@@ -18,6 +18,7 @@ from dataframely.random import Generator
 #                                        COLUMNS                                       #
 # ------------------------------------------------------------------------------------ #
 
+
 class Column(ABC):
     """Abstract base class for data frame column definitions.
 
