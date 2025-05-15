@@ -23,7 +23,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: int | None = None,
         min_exclusive: int | None = None,
@@ -37,6 +37,9 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum value for integers in this column (inclusive).

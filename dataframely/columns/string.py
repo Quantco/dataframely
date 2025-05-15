@@ -23,7 +23,7 @@ class String(Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min_length: int | None = None,
         max_length: int | None = None,
@@ -35,6 +35,9 @@ class String(Column):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
             min_length: The minimum byte-length of string values in this column.
             max_length: The maximum byte-length of string values in this column.
