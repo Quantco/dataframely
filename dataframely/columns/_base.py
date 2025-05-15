@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import Counter
 from collections.abc import Callable
 from typing import Any
 
@@ -31,7 +32,12 @@ class Column(ABC):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: (
+            Callable[[pl.Expr], pl.Expr]
+            | list[Callable[[pl.Expr], pl.Expr]]
+            | dict[str, Callable[[pl.Expr], pl.Expr]]
+            | None
+        ) = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -43,8 +49,17 @@ class Column(ABC):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
+                All rule names provided here are given the prefix "check_".
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -104,9 +119,58 @@ class Column(ABC):
         result = {}
         if not self.nullable:
             result["nullability"] = expr.is_not_null()
+
         if self.check is not None:
-            result["check"] = self.check(expr)
+            if isinstance(self.check, dict):
+                for rule_name, rule_callable in self.check.items():
+                    result[f"check__{rule_name}"] = rule_callable(expr)
+            else:
+                list_of_rules = (
+                    self.check if isinstance(self.check, list) else [self.check]
+                )
+                # Get unique names for rules from callables
+                rule_names = self._derive_check_rule_names(list_of_rules)
+                for rule_name, rule_callable in zip(rule_names, list_of_rules):
+                    result[rule_name] = rule_callable(expr)
+
         return result
+
+    def _derive_check_rule_names(
+        self, rules: list[Callable[[pl.Expr], pl.Expr]]
+    ) -> list[str]:
+        """Generate unique names for rule callables.
+
+        For callables with the same name, appends a suffix __i where i is the index
+        of occurrence (starting from 0), but only if there are duplicates.
+
+        Args:
+            rules: List of rule callables.
+
+        Returns:
+            List of unique names corresponding to the rule callables.
+        """
+        base_names = [
+            f"check__{rule.__name__}" if rule.__name__ != "<lambda>" else "check"
+            for rule in rules
+        ]
+
+        # Count occurrences using Counter
+        name_counts = Counter(base_names)
+
+        # Append suffixes to names that are duplicated
+        final_names = []
+        duplicate_counter: dict[str, int] = {
+            name: 0 for name in name_counts if name_counts[name] > 1
+        }
+        for name in base_names:
+            if name_counts[name] > 1:
+                postfix = duplicate_counter[name]
+                final_names.append(f"{name}__{postfix}")
+                duplicate_counter[name] += 1
+            else:
+                final_names.append(name)
+
+        return final_names
 
     # -------------------------------------- SQL ------------------------------------- #
 
