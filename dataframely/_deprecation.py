@@ -19,8 +19,7 @@ def skip_if(env: str) -> Callable:
     def decorator(fun: Callable) -> Callable:
         @wraps(fun)
         def wrapper() -> None:
-            should_skip = os.getenv(env, "").lower() in TRUTHY_VALUES
-            if should_skip:
+            if os.getenv(env, "").lower() in TRUTHY_VALUES:
                 return
             fun()
 
