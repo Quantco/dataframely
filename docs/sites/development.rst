@@ -42,6 +42,7 @@ documentation and then open it in your web browser using the commands below:
 .. code-block:: bash
 
     # Run build
+    pixi run -e docs postinstall
     pixi run docs
 
     # Open documentation

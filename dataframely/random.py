@@ -47,7 +47,7 @@ class Generator:
         Returns:
             A seed of type ``uint32``.
         """
-        return self.numpy_generator.integers(0, 2**32)
+        return self.numpy_generator.integers(0, 2**32, dtype=int)
 
     # ------------------------------------ NUMBERS ----------------------------------- #
 

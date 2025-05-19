@@ -22,9 +22,14 @@ class Enum(Column):
         self,
         categories: Sequence[str],
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: (
+            Callable[[pl.Expr], pl.Expr]
+            | list[Callable[[pl.Expr], pl.Expr]]
+            | dict[str, Callable[[pl.Expr], pl.Expr]]
+            | None
+        ) = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -32,10 +37,22 @@ class Enum(Column):
         Args:
             categories: The list of valid categories for the enum.
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
+                All rule names provided here are given the prefix "check_".
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different

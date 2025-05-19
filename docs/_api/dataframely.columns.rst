@@ -17,6 +17,14 @@ dataframely.columns.any module
    :show-inheritance:
    :undoc-members:
 
+dataframely.columns.array module
+--------------------------------
+
+.. automodule:: dataframely.columns.array
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 dataframely.columns.bool module
 -------------------------------
 
@@ -69,6 +77,14 @@ dataframely.columns.list module
 -------------------------------
 
 .. automodule:: dataframely.columns.list
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+dataframely.columns.object module
+---------------------------------
+
+.. automodule:: dataframely.columns.object
    :members:
    :show-inheritance:
    :undoc-members:

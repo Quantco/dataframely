@@ -32,20 +32,28 @@ class Date(OrdinalMixin[dt.date], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.date | None = None,
         min_exclusive: dt.date | None = None,
         max: dt.date | None = None,
         max_exclusive: dt.date | None = None,
         resolution: str | None = None,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: (
+            Callable[[pl.Expr], pl.Expr]
+            | list[Callable[[pl.Expr], pl.Expr]]
+            | dict[str, Callable[[pl.Expr], pl.Expr]]
+            | None
+        ) = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum date for dates in this column (inclusive).
@@ -58,8 +66,17 @@ class Date(OrdinalMixin[dt.date], Column):
                 formatting language used by :mod:`polars` datetime ``round`` method.
                 For example, a value ``1mo`` expects all dates to be on the first of the
                 month. Note that this setting does *not* affect the storage resolution.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
+                All rule names provided here are given the prefix "check_".
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -142,20 +159,28 @@ class Time(OrdinalMixin[dt.time], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.time | None = None,
         min_exclusive: dt.time | None = None,
         max: dt.time | None = None,
         max_exclusive: dt.time | None = None,
         resolution: str | None = None,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: (
+            Callable[[pl.Expr], pl.Expr]
+            | list[Callable[[pl.Expr], pl.Expr]]
+            | dict[str, Callable[[pl.Expr], pl.Expr]]
+            | None
+        ) = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum time for times in this column (inclusive).
@@ -168,8 +193,17 @@ class Time(OrdinalMixin[dt.time], Column):
                 formatting language used by :mod:`polars` datetime ``round`` method.
                 For example, a value ``1h`` expects all times to be full hours. Note
                 that this setting does *not* affect the storage resolution.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
+                All rule names provided here are given the prefix "check_".
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -258,7 +292,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.datetime | None = None,
         min_exclusive: dt.datetime | None = None,
@@ -266,13 +300,21 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         max_exclusive: dt.datetime | None = None,
         resolution: str | None = None,
         time_zone: str | dt.tzinfo | None = None,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: (
+            Callable[[pl.Expr], pl.Expr]
+            | list[Callable[[pl.Expr], pl.Expr]]
+            | dict[str, Callable[[pl.Expr], pl.Expr]]
+            | None
+        ) = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum datetime for datetimes in this column (inclusive).
@@ -288,8 +330,17 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             time_zone: The time zone that datetimes in the column must have. The time
                 zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
                 ``America/New_York``.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
+                All rule names provided here are given the prefix "check_".
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -376,20 +427,28 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool | None = None,
         primary_key: bool = False,
         min: dt.timedelta | None = None,
         min_exclusive: dt.timedelta | None = None,
         max: dt.timedelta | None = None,
         max_exclusive: dt.timedelta | None = None,
         resolution: str | None = None,
-        check: Callable[[pl.Expr], pl.Expr] | None = None,
+        check: (
+            Callable[[pl.Expr], pl.Expr]
+            | list[Callable[[pl.Expr], pl.Expr]]
+            | dict[str, Callable[[pl.Expr], pl.Expr]]
+            | None
+        ) = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         """
         Args:
             nullable: Whether this column may contain null values.
+                Explicitly set `nullable=True` if you want your column to be nullable.
+                In a future release, `nullable=False` will be the default if `nullable`
+                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             min: The minimum duration for durations in this column (inclusive).
@@ -402,8 +461,17 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 the formatting language used by :mod:`polars` datetime ``round`` method.
                 For example, a value ``1h`` expects all durations to be full hours. Note
                 that this setting does *not* affect the storage resolution.
-            check: A custom check to run for this column. Must return a non-aggregated
-                boolean expression.
+            check: A custom rule or multiple rules to run for this column. This can be:
+                - A single callable that returns a non-aggregated boolean expression.
+                The name of the rule is derived from the callable name, or defaults to
+                "check" for lambdas.
+                - A list of callables, where each callable returns a non-aggregated
+                boolean expression. The name of the rule is derived from the callable
+                name, or defaults to "check" for lambdas. Where multiple rules result
+                in the same name, the suffix __i is appended to the name.
+                - A dictionary mapping rule names to callables, where each callable
+                returns a non-aggregated boolean expression.
+                All rule names provided here are given the prefix "check_".
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
