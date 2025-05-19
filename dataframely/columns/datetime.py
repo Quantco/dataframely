@@ -9,12 +9,7 @@ from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import (
-    pa,
-    sa,
-    sa_mssql,
-    sa_TypeEngine,
-)
+from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import (
     EPOCH_DATETIME,
     date_matches_resolution,
@@ -351,7 +346,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
     def pyarrow_dtype(self) -> pa.DataType:
         time_zone = (
             self.time_zone.tzname(None)
-            if isinstance(self.time_zone, dt.timezone)
+            if isinstance(self.time_zone, dt.tzinfo)
             else self.time_zone
         )
         return pa.timestamp("us", time_zone)
