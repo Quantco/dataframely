@@ -1,5 +1,5 @@
 # This file is managed by Copier; DO NOT EDIT OR REMOVE.
-_commit: v0.3.0
+_commit: v0.4.0
 _src_path: https://github.com/quantco/copier-template-python-open-source
 add_autobump_workflow: false
 author_email: oliver.borchert@quantco.com
