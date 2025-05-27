@@ -396,6 +396,13 @@ def test_validate_resolution(
             min=dt.datetime(2020, 1, 1), max=dt.datetime(2021, 1, 1), resolution="1h"
         ),
         dy.Datetime(time_zone="Etc/UTC"),
+        dy.Datetime(time_unit="ms"),
+        dy.Datetime(
+            min=dt.datetime(2020, 1, 1),
+            max=dt.datetime(2021, 1, 1),
+            resolution="1h",
+            time_unit="us",
+        ),
     ],
 )
 def test_sample(column: dy.Column) -> None:
