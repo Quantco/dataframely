@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import pytest
+from polars._typing import TimeUnit
 
 import dataframely as dy
 from dataframely.columns import Column
@@ -121,3 +122,9 @@ def test_nullability_information_struct(inner: Column, nullable: bool) -> None:
 def test_multiple_columns() -> None:
     schema = create_schema("test", {"a": dy.Int32(nullable=False), "b": dy.Integer()})
     assert str(schema.pyarrow_schema()).split("\n") == ["a: int32 not null", "b: int64"]
+
+
+@pytest.mark.parametrize("time_unit", ["ns", "us", "ms"])
+def test_datetime_time_unit(time_unit: TimeUnit) -> None:
+    schema = create_schema("test", {"a": dy.Datetime(time_unit=time_unit)})
+    assert str(schema.pyarrow_schema()) == f"a: timestamp[{time_unit}]"
