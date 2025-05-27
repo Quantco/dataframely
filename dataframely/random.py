@@ -7,6 +7,7 @@ from typing import TypeVar
 
 import numpy as np
 import polars as pl
+from polars._typing import TimeUnit
 
 from ._extre import sample as extre_sample
 from ._polars import (
@@ -294,6 +295,7 @@ class Generator:
         max: dt.datetime | None,
         resolution: str | None = None,
         time_zone: str | dt.tzinfo | None = None,
+        time_unit: TimeUnit = "us",
         null_probability: float = 0.0,
     ) -> pl.Series:
         """Sample a list of datetimes in the provided range.
@@ -303,7 +305,9 @@ class Generator:
             min: The minimum datetime to sample (inclusive).
             max: The maximum datetime to sample (exclusive). '10000-01-01' when ``None``.
             resolution: The resolution that datetimes in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime ``round`` method.
+                the formatting language used by :mod:`polars` datetime ``round``
+                method.
+            time_unit: The time unit of the datetime column. Defaults to ``us`` (microseconds).
             time_zone: The time zone that datetimes in the column must have. The time
                 zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
                 ``America/New_York``.
@@ -333,7 +337,7 @@ class Generator:
             )
             # NOTE: polars tracks datetimes relative to epoch
             - _datetime_to_microseconds(EPOCH_DATETIME)
-        ).cast(pl.Datetime(time_zone=time_zone))
+        ).cast(pl.Datetime(time_unit=time_unit, time_zone=time_zone))
 
         if resolution is not None:
             return result.dt.truncate(resolution)

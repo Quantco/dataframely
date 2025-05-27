@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import Any, cast
 
 import polars as pl
+from polars._typing import TimeUnit
 
 from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import (
@@ -300,6 +301,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         max_exclusive: dt.datetime | None = None,
         resolution: str | None = None,
         time_zone: str | dt.tzinfo | None = None,
+        time_unit: TimeUnit = "us",
         check: (
             Callable[[pl.Expr], pl.Expr]
             | list[Callable[[pl.Expr], pl.Expr]]
@@ -330,6 +332,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             time_zone: The time zone that datetimes in the column must have. The time
                 zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
                 ``America/New_York``.
+            time_unit: Unit of time. Defaults to ``us`` (microseconds).
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -373,10 +376,11 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         )
         self.resolution = resolution
         self.time_zone = time_zone
+        self.time_unit = time_unit
 
     @property
     def dtype(self) -> pl.DataType:
-        return pl.Datetime(time_zone=self.time_zone)
+        return pl.Datetime(time_zone=self.time_zone, time_unit=self.time_unit)
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         result = super().validation_rules(expr)
@@ -400,7 +404,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             if isinstance(self.time_zone, dt.tzinfo)
             else self.time_zone
         )
-        return pa.timestamp("us", time_zone)
+        return pa.timestamp(self.time_unit, time_zone)
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_datetime(
@@ -416,6 +420,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 allow_null_response=True,
             ),
             resolution=self.resolution,
+            time_unit=self.time_unit,
             time_zone=self.time_zone,
             null_probability=self._null_probability,
         )
