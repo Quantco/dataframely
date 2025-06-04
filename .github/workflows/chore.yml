@@ -21,14 +21,14 @@ jobs:
     steps:
       - name: Check valid conventional commit message
         id: lint
-        uses: amannn/action-semantic-pull-request@v5
+        uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
         with:
           subjectPattern: ^[A-Z].+[^. ]$ # subject must start with uppercase letter and may not end with a dot/space
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Post comment about invalid PR title
         if: failure()
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728 # v2.9.1
         with:
           header: conventional-commit-pr-title
           message: |
@@ -45,7 +45,7 @@ jobs:
             </details>
       - name: Delete comment about invalid PR title
         if: success()
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728 # v2.9.1
         with:
           header: conventional-commit-pr-title
           delete: true
@@ -58,7 +58,7 @@ jobs:
       pull-requests: write
     steps:
       - name: ${{ github.event_name == 'pull_request_target' && 'Assign labels' || 'Update release draft' }}
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6.1.0
         with:
           disable-releaser: ${{ github.event_name == 'pull_request_target' }}
           disable-autolabeler: ${{ github.event_name == 'push' }}
