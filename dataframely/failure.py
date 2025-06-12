@@ -102,15 +102,17 @@ class FailureInfo(Generic[S]):
         # We can read the rule columns either from the metadata of the Parquet file
         # or, to remain backwards-compatible, from the last column of the lazy frame if
         # the parquet file is missing metadata.
+        rule_columns: list[str]
+        schema_name: str
         if (meta := pl.read_parquet_metadata(source).get("dataframely")) is not None:
             metadata = json.loads(meta)
-            rule_columns: list[str] = metadata["rule_columns"]
-            schema_name: str = metadata["schema"]
-        else:  # pragma: no cover
+            rule_columns = metadata["rule_columns"]
+            schema_name = metadata["schema"]
+        else:
             last_column = lf.collect_schema().names()[-1]
             metadata = json.loads(last_column)
             rule_columns = metadata["rule_columns"]
-            schema = metadata["schema"]
+            schema_name = metadata["schema"]
             lf = lf.drop(last_column)
 
         *schema_module_parts, schema_name = schema_name.split(".")
