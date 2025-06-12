@@ -145,8 +145,10 @@ class SchemaMeta(ABCMeta):
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
-                if not value.alias:
-                    value.alias = attr
+                # We must ensure that columns have a valid alias set.
+                # If no alias is set yet, we set it to the attribute name.
+                if not value._alias:
+                    value._alias = attr
                 result.columns[value.alias] = value
             if isinstance(value, Rule):
                 # We must ensure that custom rules do not clash with internal rules.
