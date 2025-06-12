@@ -94,7 +94,7 @@ class SamplingType(TypedDict):
     second: NotRequired[SamplingTypeSecond]
 
 
-class MyCollection(dy.Collection[SamplingType]):
+class MyCollection(dy.Collection):
     first: dy.LazyFrame[MyFirstSchema]
     second: dy.LazyFrame[MySecondSchema]
 
