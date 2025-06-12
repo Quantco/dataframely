@@ -12,7 +12,7 @@ python = ">=3.11"
 rust = "=1.85"
 
 numpy = "*"
-polars = ">=1.12"
+polars = ">=1.30"
 
 [host-dependencies]
 maturin = ">=1.7,<2"

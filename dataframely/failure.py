@@ -79,17 +79,13 @@ class FailureInfo(Generic[S]):
         Args:
             file: The file path or writable file-like object to write to.
         """
-        # NOTE: We add a dummy column with metadata in the column name to allow writing
-        #  the rule columns and schema to the same file.
         metadata_json = json.dumps(
             {
                 "rule_columns": self._rule_columns,
                 "schema": f"{self.schema.__module__}.{self.schema.__name__}",
             }
         )
-        self._df.with_columns(
-            pl.lit(None).alias(metadata_json),
-        ).write_parquet(file)
+        self._df.write_parquet(file, metadata={"dataframely": metadata_json})
 
     @classmethod
     def scan_parquet(cls, source: str | Path | IO[bytes]) -> Self:
@@ -102,15 +98,27 @@ class FailureInfo(Generic[S]):
             The failure info object.
         """
         lf = pl.scan_parquet(source)
-        # NOTE: In `write_parquet`, the rule columns are added as the name of the last
-        #  column.
-        last_column = lf.collect_schema().names()[-1]
-        metadata = json.loads(last_column)
-        rule_columns = metadata["rule_columns"]
-        *schema_module_parts, schema_name = metadata["schema"].split(".")
+
+        # We can read the rule columns either from the metadata of the Parquet file
+        # or, to remain backwards-compatible, from the last column of the lazy frame if
+        # the parquet file is missing metadata.
+        rule_columns: list[str]
+        schema_name: str
+        if (meta := pl.read_parquet_metadata(source).get("dataframely")) is not None:
+            metadata = json.loads(meta)
+            rule_columns = metadata["rule_columns"]
+            schema_name = metadata["schema"]
+        else:
+            last_column = lf.collect_schema().names()[-1]
+            metadata = json.loads(last_column)
+            rule_columns = metadata["rule_columns"]
+            schema_name = metadata["schema"]
+            lf = lf.drop(last_column)
+
+        *schema_module_parts, schema_name = schema_name.split(".")
         module = importlib.import_module(".".join(schema_module_parts))
         schema = cast(type[S], getattr(module, schema_name))
-        return cls(lf.drop(last_column), rule_columns, schema=schema)
+        return cls(lf, rule_columns, schema=schema)
 
 
 # ------------------------------------ COMPUTATION ----------------------------------- #
