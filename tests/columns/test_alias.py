@@ -34,5 +34,5 @@ def test_raise_alias_unset() -> None:
         ValueError,
         match="Cannot obtain unset alias. This can happen if a column definition is used outside of a schema.",
     ):
-        NoAliasColumn = dy.Int32()
-        _ = NoAliasColumn.alias
+        no_alias_col = dy.Int32()
+        _ = no_alias_col.alias
