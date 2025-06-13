@@ -102,6 +102,11 @@ class AnnotationImplementationError(ImplementationError):
             "Annotations of a 'dy.Collection' may only be an (optional) "
             f"'dy.LazyFrame', but \"{attr}\" has type '{kls}'."
         )
+        if type(kls) is str:
+            message += (
+                " Type annotation is a string, make sure to not use "
+                "`from __future__ import annotations` in the file that defines the collection."
+            )
         super().__init__(message)
 
 
