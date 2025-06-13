@@ -69,7 +69,7 @@ def test_col_raise_if_none() -> None:
         a = dy.Integer()
 
     # Manually override alias to be ``None``.
-    InvalidSchema.a.alias = None
+    InvalidSchema.a._alias = None
     with pytest.raises(ValueError):
         InvalidSchema.a.col
 

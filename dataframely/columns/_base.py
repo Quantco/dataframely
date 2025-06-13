@@ -74,7 +74,7 @@ class Column(ABC):
         self.nullable = nullable and not primary_key
         self.primary_key = primary_key
         self.check = check
-        self.alias = alias
+        self._alias = alias
         self.metadata = metadata
 
     # ------------------------------------- DTYPE ------------------------------------ #
@@ -217,10 +217,17 @@ class Column(ABC):
     # ------------------------------------ HELPER ------------------------------------ #
 
     @property
+    def alias(self) -> str:
+        """The alias (i.e., name) of this column."""
+        if self._alias is None:
+            raise ValueError(
+                "Cannot obtain unset alias. This can happen if a column definition is used outside of a schema."
+            )
+        return self._alias
+
+    @property
     def col(self) -> pl.Expr:
         """Obtain a Polars column expression for the column."""
-        if self.alias is None:
-            raise ValueError("Cannot obtain column expression if alias is ``None``.")
         return pl.col(self.alias)
 
     # ----------------------------------- SAMPLING ----------------------------------- #
