@@ -104,7 +104,7 @@ class AnnotationImplementationError(ImplementationError):
         )
         if type(kls) is str:
             message += (
-                " Type annotation is a string, make sure you do not use "
+                " Type annotation is a string, make sure to not use "
                 "`from __future__ import annotations` in the file that defines the collection."
             )
         super().__init__(message)
