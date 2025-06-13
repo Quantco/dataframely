@@ -1,12 +1,11 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-import sys
 import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Generic, Self, TypeVar, cast
+from typing import Any, Self, cast
 
 import polars as pl
 import polars.exceptions as plexc
@@ -18,15 +17,8 @@ from ._polars import FrameType, join_all_inner, join_all_outer
 from .failure import FailureInfo
 from .random import Generator
 
-if sys.version_info >= (3, 13):
-    SamplingType = TypeVar(
-        "SamplingType", bound=Mapping[str, Any], default=Mapping[str, Any]
-    )
-else:  # pragma: no cover
-    SamplingType = TypeVar("SamplingType", bound=Mapping[str, Any])
 
-
-class Collection(BaseCollection, ABC, Generic[SamplingType]):
+class Collection(BaseCollection, ABC):
     """Base class for all collections of data frames with a predefined schema.
 
     A collection is comprised of a set of *members* which are collectively "consistent",
@@ -86,7 +78,7 @@ class Collection(BaseCollection, ABC, Generic[SamplingType]):
         cls,
         num_rows: int | None = None,
         *,
-        overrides: Sequence[SamplingType] | None = None,
+        overrides: Sequence[Mapping[str, Any]] | None = None,
         generator: Generator | None = None,
     ) -> Self:
         """Create a random sample from the members of this collection.
@@ -162,10 +154,11 @@ class Collection(BaseCollection, ABC, Generic[SamplingType]):
         samples = (
             overrides
             if overrides is not None
-            else [cast(SamplingType, {}) for _ in range(cast(int, num_rows))]
+            else [{} for _ in range(cast(int, num_rows))]
         )
         processed_samples = [
-            cls._preprocess_sample(sample, i, g) for i, sample in enumerate(samples)
+            cls._preprocess_sample(dict(sample.items()), i, g)
+            for i, sample in enumerate(samples)
         ]
 
         # 2) Ensure that all samples have primary keys assigned to ensure that we
@@ -234,8 +227,8 @@ class Collection(BaseCollection, ABC, Generic[SamplingType]):
 
     @classmethod
     def _preprocess_sample(
-        cls, sample: SamplingType, index: int, generator: Generator
-    ) -> SamplingType:
+        cls, sample: dict[str, Any], index: int, generator: Generator
+    ) -> dict[str, Any]:
         """Overridable method to preprocess a sample passed to :meth:`sample`.
 
         The purpose of this method is to (1) set the primary key columns to enable
