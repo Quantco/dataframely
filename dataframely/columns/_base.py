@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
+import inspect
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeAlias
 
 import polars as pl
 
@@ -14,6 +15,12 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._deprecation import warn_nullable_default_change
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
+
+Check: TypeAlias = (
+    Callable[[pl.Expr], pl.Expr]
+    | list[Callable[[pl.Expr], pl.Expr]]
+    | dict[str, Callable[[pl.Expr], pl.Expr]]
+)
 
 # ------------------------------------------------------------------------------------ #
 #                                        COLUMNS                                       #
@@ -32,12 +39,7 @@ class Column(ABC):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -261,3 +263,41 @@ class Column(ABC):
 
     def __str__(self) -> str:
         return self.__class__.__name__.lower()
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+
+        attributes = inspect.signature(self.__class__.__init__)
+        return all(
+            (
+                getattr(self, attr) == getattr(other, attr)
+                if attr != "check"
+                else _compare_checks(getattr(self, attr), getattr(other, attr))
+            )
+            for attr in attributes.parameters
+            # NOTE: We do not want to compare the `alias` here as the comparison should
+            #  only evaluate the type and its constraints. Names are checked in
+            #  :meth:`Schema.matches`.
+            if attr not in ("self", "alias")
+        )
+
+
+def _compare_checks(lhs: Check | None, rhs: Check | None) -> bool:
+    match (lhs, rhs):
+        case (None, None):
+            return True
+        case (list(), list()):
+            return len(lhs) == len(rhs) and all(
+                left(pl.element()).meta.eq(right(pl.element()))
+                for left, right in zip(lhs, rhs)
+            )
+        case (dict(), dict()):
+            return lhs.keys() == rhs.keys() and all(
+                lhs[key](pl.element()).meta.eq(rhs[key](pl.element()))
+                for key in lhs.keys()
+            )
+        case _ if callable(lhs) and callable(rhs):
+            return lhs(pl.element()).meta.eq(rhs(pl.element()))
+        case _:
+            return False

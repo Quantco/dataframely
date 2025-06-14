@@ -3,6 +3,7 @@
 
 from collections import defaultdict
 from collections.abc import Callable
+from typing import Any
 
 import polars as pl
 
@@ -15,6 +16,11 @@ class Rule:
     def __init__(self, expr: pl.Expr) -> None:
         self.expr = expr
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Rule):
+            return False
+        return self.expr.meta.eq(other.expr)
+
 
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
@@ -22,6 +28,11 @@ class GroupRule(Rule):
     def __init__(self, expr: pl.Expr, group_columns: list[str]) -> None:
         super().__init__(expr)
         self.group_columns = group_columns
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, GroupRule):
+            return False
+        return super().__eq__(other) and self.group_columns == other.group_columns
 
 
 def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction], Rule]:
