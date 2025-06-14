@@ -8,7 +8,7 @@ from dataframely.testing import create_schema
 
 def test_reflexivity() -> None:
     schema = create_schema("test", columns={"a": dy.Int16()})
-    assert schema == schema
+    assert schema.matches(schema)
 
 
 @pytest.mark.parametrize(
@@ -18,6 +18,11 @@ def test_reflexivity() -> None:
             create_schema("test1", columns={"a": dy.Int16()}),
             create_schema("test2", columns={"a": dy.Int16()}),
             True,
+        ),
+        (
+            create_schema("test1", columns={"a": dy.Int16()}),
+            create_schema("test2", columns={"a": dy.Int16(alias="a with space")}),
+            False,
         ),
         (
             create_schema("test1", columns={"a": dy.Int16()}),
@@ -124,8 +129,8 @@ def test_reflexivity() -> None:
         ),
     ],
 )
-def test_equal(lhs: type[dy.Schema], rhs: type[dy.Schema], expected: bool) -> None:
-    assert (lhs == rhs) == expected
+def test_matches(lhs: type[dy.Schema], rhs: type[dy.Schema], expected: bool) -> None:
+    assert lhs.matches(rhs) == expected
 
 
 def test_rule_inequality_type_mismatch() -> None:

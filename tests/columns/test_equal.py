@@ -10,6 +10,8 @@ import dataframely as dy
         (dy.Integer(), dy.UInt64(), False),
         (dy.Int32(), dy.UInt32(), False),
         (dy.Int32(), dy.Int32(), True),
+        (dy.Int32(), dy.Int32(alias="foo"), True),
+        (dy.Int32(alias="bar"), dy.Int32(alias="foo"), True),
         (dy.String(regex="^a$"), dy.String(regex="^a$"), True),
         (dy.String(regex="^a$"), dy.String(regex="^b$"), False),
         (

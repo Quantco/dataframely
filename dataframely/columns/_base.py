@@ -277,7 +277,10 @@ class Column(ABC):
                 else _compare_checks(getattr(self, attr), getattr(other, attr))
             )
             for attr in attributes.parameters
-            if attr != "self"
+            # NOTE: We do not want to compare the `alias` here as the comparison should
+            #  only evaluate the type and its constraints. Names are checked in
+            #  :meth:`Schema.matches`.
+            if attr not in ("self", "alias")
         )
 
 

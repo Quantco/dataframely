@@ -613,3 +613,22 @@ class Schema(BaseSchema, ABC):
         return pa.schema(
             [col.pyarrow_field(name) for name, col in cls.columns().items()]
         )
+
+    # ----------------------------------- EQUALITY ----------------------------------- #
+
+    @classmethod
+    def matches(cls, other: type[Schema]) -> bool:
+        """Check whether this schema semantically matches another schema.
+
+        This method checks whether the schemas have the same columns (with the same
+        data types and constraints) as well as the same rules.
+
+        Args:
+            other: The schema to compare with.
+
+        Returns:
+            Whether the schemas are semantically equal.
+        """
+        equal_columns = cls.columns() == other.columns()
+        equal_rules = cls._schema_validation_rules() == other._schema_validation_rules()
+        return equal_columns and equal_rules

@@ -157,17 +157,6 @@ class SchemaMeta(ABCMeta):
                 result.rules[attr] = value
         return result
 
-    def __eq__(cls, other: Any) -> bool:
-        if not isinstance(other, type):
-            return False
-
-        equal_columns = getattr(cls, _COLUMN_ATTR) == getattr(other, _COLUMN_ATTR, None)
-        equal_rules = getattr(cls, _RULE_ATTR) == getattr(other, _RULE_ATTR, None)
-        return equal_columns and equal_rules
-
-    def __hash__(cls) -> int:
-        return object.__hash__(cls)
-
 
 class BaseSchema(metaclass=SchemaMeta):
     """Internal utility abstraction to reference schemas without introducing cyclical
