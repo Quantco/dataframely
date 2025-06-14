@@ -259,12 +259,19 @@ class Column(ABC):
         """Private utility for the null probability used during sampling."""
         return 0.1 if self.nullable else 0
 
-    # -------------------------------- DUNDER METHODS -------------------------------- #
+    # ----------------------------------- EQUALITY ----------------------------------- #
 
-    def __str__(self) -> str:
-        return self.__class__.__name__.lower()
+    def matches(self, other: Column, name: str) -> bool:
+        """Check whether this column semantically matches another column.
 
-    def __eq__(self, other: Any) -> bool:
+        Args:
+            other: The column to compare with.
+            name: The name of the column for which the comparison is made. This is
+                required to properly evaluate the equivalence of custom checks.
+
+        Returns:
+            Whether the columns are semantically equal.
+        """
         if not isinstance(other, self.__class__):
             return False
 
@@ -273,7 +280,7 @@ class Column(ABC):
             (
                 getattr(self, attr) == getattr(other, attr)
                 if attr != "check"
-                else _compare_checks(getattr(self, attr), getattr(other, attr))
+                else _compare_checks(getattr(self, attr), getattr(other, attr), name)
             )
             for attr in attributes.parameters
             # NOTE: We do not want to compare the `alias` here as the comparison should
@@ -282,22 +289,27 @@ class Column(ABC):
             if attr not in ("self", "alias")
         )
 
+    # -------------------------------- DUNDER METHODS -------------------------------- #
 
-def _compare_checks(lhs: Check | None, rhs: Check | None) -> bool:
+    def __str__(self) -> str:
+        return self.__class__.__name__.lower()
+
+
+def _compare_checks(lhs: Check | None, rhs: Check | None, name: str) -> bool:
     match (lhs, rhs):
         case (None, None):
             return True
         case (list(), list()):
             return len(lhs) == len(rhs) and all(
-                left(pl.element()).meta.eq(right(pl.element()))
+                left(pl.col(name)).meta.eq(right(pl.col(name)))
                 for left, right in zip(lhs, rhs)
             )
         case (dict(), dict()):
             return lhs.keys() == rhs.keys() and all(
-                lhs[key](pl.element()).meta.eq(rhs[key](pl.element()))
+                lhs[key](pl.col(name)).meta.eq(rhs[key](pl.col(name)))
                 for key in lhs.keys()
             )
         case _ if callable(lhs) and callable(rhs):
-            return lhs(pl.element()).meta.eq(rhs(pl.element()))
+            return lhs(pl.col(name)).meta.eq(rhs(pl.col(name)))
         case _:
             return False

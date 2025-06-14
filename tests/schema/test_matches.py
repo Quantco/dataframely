@@ -136,9 +136,5 @@ def test_matches(lhs: type[dy.Schema], rhs: type[dy.Schema], expected: bool) -> 
     assert lhs.matches(rhs) == expected
 
 
-def test_rule_inequality_type_mismatch() -> None:
-    assert Rule(pl.col("a") > 0) != 0
-
-
 def test_group_rule_inequality_type_mismatch() -> None:
-    assert GroupRule(pl.len() > 2, group_columns=["a"]) != 0
+    assert not GroupRule(pl.len() > 2, group_columns=["a"]).matches(Rule(pl.len() > 2))

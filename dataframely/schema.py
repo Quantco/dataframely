@@ -16,6 +16,7 @@ from ._compat import pa, sa
 from ._rule import Rule, with_evaluation_rules
 from ._typing import DataFrame, LazyFrame
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
+from .columns import Column
 from .config import Config
 from .exc import RuleValidationError, ValidationError
 from .failure import FailureInfo
@@ -629,6 +630,17 @@ class Schema(BaseSchema, ABC):
         Returns:
             Whether the schemas are semantically equal.
         """
-        equal_columns = cls.columns() == other.columns()
-        equal_rules = cls._schema_validation_rules() == other._schema_validation_rules()
-        return equal_columns and equal_rules
+
+        def _columns_match(lhs: dict[str, Column], rhs: dict[str, Column]) -> bool:
+            if lhs.keys() != rhs.keys():
+                return False
+            return all(lhs[name].matches(rhs[name], name) for name in lhs)
+
+        def _rules_match(lhs: dict[str, Rule], rhs: dict[str, Rule]) -> bool:
+            if lhs.keys() != rhs.keys():
+                return False
+            return all(lhs[name].matches(rhs[name]) for name in lhs)
+
+        return _columns_match(cls.columns(), other.columns()) and _rules_match(
+            cls._schema_validation_rules(), other._schema_validation_rules()
+        )

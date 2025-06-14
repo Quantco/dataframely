@@ -44,5 +44,5 @@ import dataframely as dy
         ),
     ],
 )
-def test_equal(lhs: dy.Column, rhs: dy.Column, expected: bool) -> None:
-    assert (lhs == rhs) == expected
+def test_matches(lhs: dy.Column, rhs: dy.Column, expected: bool) -> None:
+    assert lhs.matches(rhs, name="") == expected

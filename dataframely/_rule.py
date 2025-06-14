@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
+
 from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
@@ -16,9 +18,15 @@ class Rule:
     def __init__(self, expr: pl.Expr) -> None:
         self.expr = expr
 
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, Rule):
-            return False
+    def matches(self, other: Rule) -> bool:
+        """Check whether this rule semantically matches another rule.
+
+        Args:
+            other: The rule to compare with.
+
+        Returns:
+            Whether the rules are semantically equal.
+        """
         return self.expr.meta.eq(other.expr)
 
 
@@ -29,10 +37,10 @@ class GroupRule(Rule):
         super().__init__(expr)
         self.group_columns = group_columns
 
-    def __eq__(self, other: Any) -> bool:
+    def matches(self, other: Rule) -> bool:
         if not isinstance(other, GroupRule):
             return False
-        return super().__eq__(other) and self.group_columns == other.group_columns
+        return super().matches(other) and self.group_columns == other.group_columns
 
 
 def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction], Rule]:
