@@ -11,7 +11,7 @@
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/dataframely?logoColor=white&logo=conda-forge&style=flat-square)](https://prefix.dev/channels/conda-forge/packages/dataframely)
 [![pypi-version](https://img.shields.io/pypi/v/dataframely.svg?logo=pypi&logoColor=white&style=flat-square)](https://pypi.org/project/dataframely)
 [![python-version](https://img.shields.io/pypi/pyversions/dataframely?logoColor=white&logo=python&style=flat-square)](https://pypi.org/project/dataframely)
-[![codecov](https://codecov.io/gh/Quantco/dataframely/graph/badge.svg)](https://codecov.io/gh/Quantco/dataframely)
+[![codecov](https://codecov.io/gh/Quantco/dataframely/graph/badge.svg?token=QOvhS7Zri2)](https://codecov.io/gh/Quantco/dataframely)
 
 </div>
 
