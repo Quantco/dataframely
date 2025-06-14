@@ -14,7 +14,7 @@ from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from ._mixins import IsInMixin, OrdinalMixin
 from ._utils import classproperty, first_non_null, map_optional
 
@@ -30,12 +30,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         max: int | None = None,
         max_exclusive: int | None = None,
         is_in: Sequence[int] | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

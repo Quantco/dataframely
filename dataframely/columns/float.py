@@ -17,7 +17,7 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from ._mixins import OrdinalMixin
 from ._utils import classproperty, first_non_null, map_optional
 
@@ -33,12 +33,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         min_exclusive: float | None = None,
         max: float | None = None,
         max_exclusive: float | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

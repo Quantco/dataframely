@@ -13,7 +13,7 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from .struct import Struct
 
 
@@ -26,12 +26,7 @@ class List(Column):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check = None,
         alias: str | None = None,
         min_length: int | None = None,
         max_length: int | None = None,

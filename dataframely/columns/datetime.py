@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Callable
 from typing import Any, cast
 
 import polars as pl
@@ -20,7 +19,7 @@ from dataframely._polars import (
 )
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from ._mixins import OrdinalMixin
 from ._utils import first_non_null, map_optional
 
@@ -40,12 +39,7 @@ class Date(OrdinalMixin[dt.date], Column):
         max: dt.date | None = None,
         max_exclusive: dt.date | None = None,
         resolution: str | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -167,12 +161,7 @@ class Time(OrdinalMixin[dt.time], Column):
         max: dt.time | None = None,
         max_exclusive: dt.time | None = None,
         resolution: str | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -302,12 +291,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         resolution: str | None = None,
         time_zone: str | dt.tzinfo | None = None,
         time_unit: TimeUnit = "us",
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -439,12 +423,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         max: dt.timedelta | None = None,
         max_exclusive: dt.timedelta | None = None,
         resolution: str | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
