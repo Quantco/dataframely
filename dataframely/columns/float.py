@@ -6,7 +6,6 @@ from __future__ import annotations
 import math
 import sys
 from abc import abstractmethod
-from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -33,7 +32,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         min_exclusive: float | None = None,
         max: float | None = None,
         max_exclusive: float | None = None,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

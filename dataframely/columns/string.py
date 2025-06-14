@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
 
 import polars as pl
@@ -28,7 +27,7 @@ class String(Column):
         min_length: int | None = None,
         max_length: int | None = None,
         regex: str | None = None,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

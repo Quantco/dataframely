@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from itertools import chain
 from typing import Any, cast
 
@@ -26,7 +25,7 @@ class List(Column):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         min_length: int | None = None,
         max_length: int | None = None,

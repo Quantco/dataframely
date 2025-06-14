@@ -20,7 +20,6 @@ Check: TypeAlias = (
     Callable[[pl.Expr], pl.Expr]
     | list[Callable[[pl.Expr], pl.Expr]]
     | dict[str, Callable[[pl.Expr], pl.Expr]]
-    | None
 )
 
 # ------------------------------------------------------------------------------------ #
@@ -40,7 +39,7 @@ class Column(ABC):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -284,7 +283,7 @@ class Column(ABC):
         )
 
 
-def _compare_checks(lhs: Check, rhs: Check) -> bool:
+def _compare_checks(lhs: Check | None, rhs: Check | None) -> bool:
     match (lhs, rhs):
         case (None, None):
             return True
@@ -298,7 +297,7 @@ def _compare_checks(lhs: Check, rhs: Check) -> bool:
                 lhs[key](pl.element()).meta.eq(rhs[key](pl.element()))
                 for key in lhs.keys()
             )
-        case (Callable(), Callable()):
+        case _ if callable(lhs) and callable(rhs):
             return lhs(pl.element()).meta.eq(rhs(pl.element()))
         case _:
             return False

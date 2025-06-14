@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
 
 import polars as pl
@@ -22,7 +21,7 @@ class Object(Column):
         *,
         nullable: bool = True,
         primary_key: bool = False,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

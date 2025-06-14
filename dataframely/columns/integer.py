@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 import polars as pl
@@ -30,7 +30,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         max: int | None = None,
         max_exclusive: int | None = None,
         is_in: Sequence[int] | None = None,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

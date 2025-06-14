@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import decimal
 import math
-from collections.abc import Callable
 from typing import Any
 
 import polars as pl
@@ -33,7 +32,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         min_exclusive: decimal.Decimal | None = None,
         max: decimal.Decimal | None = None,
         max_exclusive: decimal.Decimal | None = None,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

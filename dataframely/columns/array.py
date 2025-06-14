@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import Any, Literal
 
 import polars as pl
@@ -28,7 +28,7 @@ class Array(Column):
         # polars doesn't yet support grouping by arrays,
         # see https://github.com/pola-rs/polars/issues/22574
         primary_key: Literal[False] = False,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

@@ -1,3 +1,6 @@
+# Copyright (c) QuantCo 2025-2025
+# SPDX-License-Identifier: BSD-3-Clause
+
 import polars as pl
 import pytest
 

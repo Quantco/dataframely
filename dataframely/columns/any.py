@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
@@ -25,7 +23,7 @@ class Any(Column):
     def __init__(
         self,
         *,
-        check: Check = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
