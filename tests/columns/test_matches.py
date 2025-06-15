@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import polars as pl
 import pytest
 
 import dataframely as dy
@@ -45,4 +46,4 @@ import dataframely as dy
     ],
 )
 def test_matches(lhs: dy.Column, rhs: dy.Column, expected: bool) -> None:
-    assert lhs.matches(rhs, name="") == expected
+    assert lhs.matches(rhs, expr=pl.element()) == expected
