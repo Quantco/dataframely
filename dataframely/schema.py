@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Literal, Self, overload
@@ -13,10 +14,11 @@ import polars.selectors as cs
 
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
-from ._rule import Rule, with_evaluation_rules
+from ._rule import Rule, decode_rule, with_evaluation_rules
+from ._serialization import SchemaJSONDecoder, SchemaJSONEncoder
 from ._typing import DataFrame, LazyFrame
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
-from .columns import Column
+from .columns import Column, decode_column
 from .config import Config
 from .exc import RuleValidationError, ValidationError
 from .failure import FailureInfo
@@ -577,6 +579,54 @@ class Schema(BaseSchema, ABC):
             return lf.collect()  # type: ignore
         return lf  # type: ignore
 
+    # --------------------------------- SERIALIZATION -------------------------------- #
+
+    @classmethod
+    def serialize(cls) -> str:
+        """Serialize this schema to a JSON string.
+
+        Returns:
+            The serialized schema.
+
+        Note:
+            Serialization within dataframely itself will remain backwards-compatible
+            at least within a major version. Until further notice, it will also be
+            backwards-compatible across major versions.
+
+        Attention:
+            Serialization of :mod:`polars` expressions is not guaranteed to be stable
+            across versions of polars. This affects schemas that define custom rules
+            or columns with custom checks: a schema serialized with one version of
+            polars may not be deserializable with another version of polars.
+
+        Attention:
+            This functionality is considered unstable. It may be changed at any time
+            without it being considered a breaking change.
+
+        Raises:
+            TypeError: If any column contains metadata that is not JSON-serializable.
+            ValueError: If any column is not a "native" dataframely column type but
+                a custom subclass.
+        """
+        from dataframely import __version__
+
+        result = {
+            "versions": {
+                "format": "1",
+                "dataframely": __version__,
+                "polars": pl.__version__,
+            },
+            "name": cls.__name__,
+            "columns": {
+                name: col.encode(pl.col(name)) for name, col in cls.columns().items()
+            },
+            "rules": {
+                name: rule.encode()
+                for name, rule in cls._schema_validation_rules().items()
+            },
+        }
+        return json.dumps(result, cls=SchemaJSONEncoder)
+
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
     @classmethod
@@ -644,3 +694,39 @@ class Schema(BaseSchema, ABC):
         return _columns_match(cls.columns(), other.columns()) and _rules_match(
             cls._schema_validation_rules(), other._schema_validation_rules()
         )
+
+
+def load_schema(data: str) -> type[Schema]:
+    """Deserialize a schema from a JSON string.
+
+    This method allows to dynamically load a schema from its serialization, without
+    having to know the schema to load in advance.
+
+    Args:
+        data: The JSON string created via :meth:`Schema.serialize`.
+
+    Returns:
+        The schema loaded from the JSON data.
+
+    Raises:
+        ValueError: If the schema format version is not supported.
+
+    Attention:
+        This functionality is considered unstable. It may be changed at any time
+        without it being considered a breaking change.
+
+    See also:
+        :meth:`Schema.serialize` for additional information on serialization.
+    """
+    decoded = json.loads(data, cls=SchemaJSONDecoder)
+    if (format := decoded["versions"]["format"]) != "1":
+        raise ValueError(f"Unsupported schema format version: {format}")
+
+    return type(
+        f"{decoded['name']}_dynamic",
+        (Schema,),
+        {
+            **{name: decode_column(col) for name, col in decoded["columns"].items()},
+            **{name: decode_rule(rule) for name, rule in decoded["rules"].items()},
+        },
+    )

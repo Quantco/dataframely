@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from typing import Any, Literal, cast
+from typing import Any, Literal, Self, cast
 
 import polars as pl
 
@@ -13,9 +13,11 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
+from ._registry import decode_column, register
 from .struct import Struct
 
 
+@register
 class Array(Column):
     """A fixed-shape array column."""
 
@@ -119,3 +121,13 @@ class Array(Column):
         if name == "inner":
             return cast(Column, lhs).matches(cast(Column, rhs), pl.element())
         return super()._attributes_match(lhs, rhs, name, column_expr)
+
+    def encode(self, expr: pl.Expr) -> dict[str, Any]:
+        result = super().encode(expr)
+        result["inner"] = self.inner.encode(pl.element())
+        return result
+
+    @classmethod
+    def decode(cls, data: dict[str, Any]) -> Self:
+        data["inner"] = decode_column(data["inner"])
+        return super().decode(data)

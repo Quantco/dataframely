@@ -51,7 +51,7 @@ from .functional import (
     filter_relationship_one_to_at_least_one,
     filter_relationship_one_to_one,
 )
-from .schema import Schema
+from .schema import Schema, load_schema
 
 __all__ = [
     "random",
@@ -67,6 +67,7 @@ __all__ = [
     "filter_relationship_one_to_at_least_one",
     "filter_relationship_one_to_one",
     "Schema",
+    "load_schema",
     "Any",
     "Bool",
     "Column",

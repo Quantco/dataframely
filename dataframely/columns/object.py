@@ -11,8 +11,10 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
+from ._registry import register
 
 
+@register
 class Object(Column):
     """A Python Object column."""
 

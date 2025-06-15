@@ -13,8 +13,10 @@ from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
+from ._registry import register
 
 
+@register
 class Enum(Column):
     """A column of enum (string) values."""
 

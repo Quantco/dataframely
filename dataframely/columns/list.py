@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import Any, cast
+from typing import Any, Self, cast
 
 import polars as pl
 
@@ -13,9 +13,11 @@ from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
+from ._registry import decode_column, register
 from .struct import Struct
 
 
+@register
 class List(Column):
     """A list column."""
 
@@ -169,3 +171,13 @@ class List(Column):
         if name == "inner":
             return cast(Column, lhs).matches(cast(Column, rhs), pl.element())
         return super()._attributes_match(lhs, rhs, name, column_expr)
+
+    def encode(self, expr: pl.Expr) -> dict[str, Any]:
+        result = super().encode(expr)
+        result["inner"] = self.inner.encode(pl.element())
+        return result
+
+    @classmethod
+    def decode(cls, data: dict[str, Any]) -> Self:
+        data["inner"] = decode_column(data["inner"])
+        return super().decode(data)
