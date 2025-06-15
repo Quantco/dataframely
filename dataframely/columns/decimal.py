@@ -15,9 +15,11 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._mixins import OrdinalMixin
+from ._registry import register
 from ._utils import first_non_null, map_optional
 
 
+@register
 class Decimal(OrdinalMixin[decimal.Decimal], Column):
     """A column of decimal values with given precision and scale."""
 

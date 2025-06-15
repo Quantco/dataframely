@@ -12,10 +12,10 @@ from dataframely._extre import matching_string_length as extre_matching_string_l
 from dataframely.random import Generator
 
 from ._base import Check, Column
+from ._registry import register
 
-# ------------------------------------------------------------------------------------ #
 
-
+@register
 class String(Column):
     """A column of strings."""
 
