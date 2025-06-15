@@ -261,13 +261,13 @@ class Column(ABC):
 
     # ----------------------------------- EQUALITY ----------------------------------- #
 
-    def matches(self, other: Column, name: str) -> bool:
+    def matches(self, other: Column, expr: pl.Expr) -> bool:
         """Check whether this column semantically matches another column.
 
         Args:
             other: The column to compare with.
-            name: The name of the column for which the comparison is made. This is
-                required to properly evaluate the equivalence of custom checks.
+            expr: An expression referencing the column to encode. This is required to
+                properly evaluate the equivalence of custom checks.
 
         Returns:
             Whether the columns are semantically equal.

@@ -634,7 +634,7 @@ class Schema(BaseSchema, ABC):
         def _columns_match(lhs: dict[str, Column], rhs: dict[str, Column]) -> bool:
             if lhs.keys() != rhs.keys():
                 return False
-            return all(lhs[name].matches(rhs[name], name) for name in lhs)
+            return all(lhs[name].matches(rhs[name], pl.col(name)) for name in lhs)
 
         def _rules_match(lhs: dict[str, Rule], rhs: dict[str, Rule]) -> bool:
             if lhs.keys() != rhs.keys():
