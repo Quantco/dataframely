@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from itertools import chain
 from typing import Any, cast
 
@@ -13,7 +12,7 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from .struct import Struct
 
 
@@ -26,12 +25,7 @@ class List(Column):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         min_length: int | None = None,
         max_length: int | None = None,
@@ -168,3 +162,10 @@ class List(Column):
         return generator._apply_null_mask(
             pl.Series(list_elements), null_probability=self._null_probability
         )
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "inner":
+            return cast(Column, lhs).matches(cast(Column, rhs), pl.element())
+        return super()._attributes_match(lhs, rhs, name, column_expr)
