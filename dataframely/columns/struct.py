@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import Any, cast
 
 import polars as pl
-from numpy import isin
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
