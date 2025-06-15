@@ -280,7 +280,7 @@ class Column(ABC):
             (
                 getattr(self, attr) == getattr(other, attr)
                 if attr != "check"
-                else _compare_checks(getattr(self, attr), getattr(other, attr), name)
+                else _compare_checks(getattr(self, attr), getattr(other, attr), expr)
             )
             for attr in attributes.parameters
             # NOTE: We do not want to compare the `alias` here as the comparison should
@@ -295,21 +295,19 @@ class Column(ABC):
         return self.__class__.__name__.lower()
 
 
-def _compare_checks(lhs: Check | None, rhs: Check | None, name: str) -> bool:
+def _compare_checks(lhs: Check | None, rhs: Check | None, expr: pl.Expr) -> bool:
     match (lhs, rhs):
         case (None, None):
             return True
         case (list(), list()):
             return len(lhs) == len(rhs) and all(
-                left(pl.col(name)).meta.eq(right(pl.col(name)))
-                for left, right in zip(lhs, rhs)
+                left(expr).meta.eq(right(expr)) for left, right in zip(lhs, rhs)
             )
         case (dict(), dict()):
             return lhs.keys() == rhs.keys() and all(
-                lhs[key](pl.col(name)).meta.eq(rhs[key](pl.col(name)))
-                for key in lhs.keys()
+                lhs[key](expr).meta.eq(rhs[key](expr)) for key in lhs.keys()
             )
         case _ if callable(lhs) and callable(rhs):
-            return lhs(pl.col(name)).meta.eq(rhs(pl.col(name)))
+            return lhs(expr).meta.eq(rhs(expr))
         case _:
             return False
