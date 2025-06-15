@@ -61,7 +61,7 @@ def test_simple_serialization() -> None:
 )
 def test_roundtrip_matches(schema: type[dy.Schema]) -> None:
     serialized = schema.serialize()
-    decoded = dy.load_schema(serialized)
+    decoded = dy.deserialize_schema(serialized)
     assert schema.matches(decoded)
 
 
@@ -98,7 +98,7 @@ def test_deserialize_unknown_column_type() -> None:
         }
     """
     with pytest.raises(ValueError):
-        dy.load_schema(serialized)
+        dy.deserialize_schema(serialized)
 
 
 def test_deserialize_unknown_rule_type() -> None:
@@ -111,13 +111,13 @@ def test_deserialize_unknown_rule_type() -> None:
         }
     """
     with pytest.raises(ValueError):
-        dy.load_schema(serialized)
+        dy.deserialize_schema(serialized)
 
 
 def test_deserialize_invalid_type() -> None:
     serialized = '{"__type__": "unknown", "value": "foo"}'
     with pytest.raises(TypeError):
-        dy.load_schema(serialized)
+        dy.deserialize_schema(serialized)
 
 
 # ---------------------------------- OTHER FAILURES ---------------------------------- #
@@ -126,4 +126,4 @@ def test_deserialize_invalid_type() -> None:
 def test_deserialize_unknown_format_version() -> None:
     serialized = '{"versions": {"format": "invalid"}}'
     with pytest.raises(ValueError, match=r"Unsupported schema format version"):
-        dy.load_schema(serialized)
+        dy.deserialize_schema(serialized)

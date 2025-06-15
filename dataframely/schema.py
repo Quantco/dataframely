@@ -696,7 +696,7 @@ class Schema(BaseSchema, ABC):
         )
 
 
-def load_schema(data: str) -> type[Schema]:
+def deserialize_schema(data: str) -> type[Schema]:
     """Deserialize a schema from a JSON string.
 
     This method allows to dynamically load a schema from its serialization, without
