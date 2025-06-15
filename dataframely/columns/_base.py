@@ -277,10 +277,8 @@ class Column(ABC):
 
         attributes = inspect.signature(self.__class__.__init__)
         return all(
-            (
-                getattr(self, attr) == getattr(other, attr)
-                if attr != "check"
-                else _compare_checks(getattr(self, attr), getattr(other, attr), expr)
+            self._attributes_match(
+                getattr(self, attr), getattr(other, attr), attr, expr
             )
             for attr in attributes.parameters
             # NOTE: We do not want to compare the `alias` here as the comparison should
@@ -288,6 +286,13 @@ class Column(ABC):
             #  :meth:`Schema.matches`.
             if attr not in ("self", "alias")
         )
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "check":
+            return _compare_checks(lhs, rhs, column_expr)
+        return lhs == rhs
 
     # -------------------------------- DUNDER METHODS -------------------------------- #
 

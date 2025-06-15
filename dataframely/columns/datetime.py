@@ -409,6 +409,18 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             null_probability=self._null_probability,
         )
 
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if (
+            name == "time_zone"
+            and isinstance(lhs, dt.tzinfo)
+            and isinstance(rhs, dt.tzinfo)
+        ):
+            now = dt.datetime.now()
+            return lhs.utcoffset(now) == rhs.utcoffset(now)
+        return super()._attributes_match(lhs, rhs, name, column_expr)
+
 
 class Duration(OrdinalMixin[dt.timedelta], Column):
     """A column of durations."""

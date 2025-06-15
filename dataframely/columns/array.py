@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import polars as pl
 
@@ -112,3 +112,10 @@ class Array(Column):
             all_elements.reshape((n, *self.shape)),
             null_probability=self._null_probability,
         )
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "inner":
+            return cast(Column, lhs).matches(cast(Column, rhs), pl.element())
+        return super()._attributes_match(lhs, rhs, name, column_expr)

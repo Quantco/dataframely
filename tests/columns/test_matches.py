@@ -1,6 +1,9 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import datetime as dt
+from zoneinfo import ZoneInfo
+
 import polars as pl
 import pytest
 
@@ -42,6 +45,18 @@ import dataframely as dy
             dy.String(check=lambda x: x == "a"),
             dy.String(check=[lambda x: x == "a"]),
             False,
+        ),
+        (dy.Array(dy.Int32(), shape=(2, 2)), dy.Array(dy.Int32(), shape=(2, 2)), True),
+        (dy.List(dy.Int32()), dy.List(dy.Int32()), True),
+        (
+            dy.Struct({"a": dy.Int32(check=lambda expr: expr > 4)}),
+            dy.Struct({"a": dy.Int32(check=lambda expr: expr > 4)}),
+            True,
+        ),
+        (
+            dy.Datetime(time_zone=ZoneInfo("UTC")),
+            dy.Datetime(time_zone=dt.timezone(dt.timedelta(hours=0))),
+            True,
         ),
     ],
 )
