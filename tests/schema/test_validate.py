@@ -28,6 +28,21 @@ class MyComplexSchema(dy.Schema):
         return pl.col("b").n_unique() == 1
 
 
+class MyComplexSchemaWithLazyRules(dy.Schema):
+    a = dy.Int64()
+    b = dy.Int64()
+
+    @dy.lazy_rule()
+    @classmethod
+    def b_greater_a(cls) -> pl.Expr:
+        return cls.b.col > cls.a.col
+
+    @dy.lazy_rule(group_by=["a"])
+    @classmethod
+    def b_unique_within_a(cls) -> pl.Expr:
+        return cls.b.col.n_unique() == 1
+
+
 # -------------------------------------- COLUMNS ------------------------------------- #
 
 
@@ -119,9 +134,13 @@ def test_success_multi_row_strip_cast(
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_group_rule_on_nulls(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
+@pytest.mark.parametrize("schema", [MyComplexSchema, MyComplexSchemaWithLazyRules])
+def test_group_rule_on_nulls(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+    schema: type[MyComplexSchema] | type[MyComplexSchemaWithLazyRules],
+) -> None:
     # The schema is violated because we have multiple "b" values for the same "a" value
     df = df_type({"a": [None, None], "b": [1, 2]})
     with pytest.raises(RuleValidationError):
-        MyComplexSchema.validate(df, cast=True)
-    assert not MyComplexSchema.is_valid(df, cast=True)
+        schema.validate(df, cast=True)
+    assert not schema.is_valid(df, cast=True)

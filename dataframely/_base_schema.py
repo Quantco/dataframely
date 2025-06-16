@@ -120,8 +120,13 @@ class SchemaMeta(ABCMeta):
             )
             # NOTE: For some reason, `polars` does not yield correct dtypes when calling
             #  `collect_schema()`
-            schema = with_evaluation_rules(lf_empty, result.rules).collect().schema
+            schema = (
+                with_evaluation_rules(lf_empty, result.rules, None).collect().schema
+            )
             for rule_name, rule in result.rules.items():
+                if rule_name not in schema:
+                    # Lazy rules will not be evaluated at this point.
+                    continue
                 dtype = schema[rule_name]
                 if not isinstance(dtype, pl.Boolean):
                     raise RuleImplementationError(

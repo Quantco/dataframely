@@ -13,7 +13,7 @@ except importlib.metadata.PackageNotFoundError as e:  # pragma: no cover
 from . import random
 from ._base_collection import CollectionMember
 from ._filter import filter
-from ._rule import rule
+from ._rule import lazy_rule, rule
 from ._typing import DataFrame, LazyFrame
 from .collection import Collection
 from .columns import (
@@ -57,6 +57,7 @@ __all__ = [
     "random",
     "filter",
     "rule",
+    "lazy_rule",
     "DataFrame",
     "LazyFrame",
     "Collection",

@@ -489,7 +489,7 @@ class Schema(BaseSchema, ABC):
             rules.update(dtype_rules)
 
         if len(rules) > 0:
-            lf_with_eval = with_evaluation_rules(lf, rules)
+            lf_with_eval = with_evaluation_rules(lf, rules, cls)
             if cast:
                 # If we cast dtypes, we need to take care of two things:
                 # - There's still a bunch of columns showing the original nullability in the

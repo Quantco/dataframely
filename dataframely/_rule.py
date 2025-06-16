@@ -3,28 +3,41 @@
 
 from collections import defaultdict
 from collections.abc import Callable
+from typing import Any
 
 import polars as pl
 
 ValidationFunction = Callable[[], pl.Expr]
+# For whatever reason, a method annotated with `@classmethod` will have type
+# `Callable[[type[...]], ...]`, but its value will not be callable but
+# an instance of `classmethod`. To make mypy happy we need both types here.
+LazyValidationFunction = (
+    ValidationFunction | Callable[[type[Any]], pl.Expr] | classmethod
+)
 
 
 class Rule:
     """Internal class representing validation rules."""
 
-    def __init__(self, expr: pl.Expr) -> None:
-        self.expr = expr
+    def __init__(self, expr_or_validation_fn: pl.Expr | LazyValidationFunction) -> None:
+        self.expr_or_validation_fn = expr_or_validation_fn
 
 
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
 
-    def __init__(self, expr: pl.Expr, group_columns: list[str]) -> None:
-        super().__init__(expr)
+    def __init__(
+        self,
+        expr_or_validation_fn: pl.Expr | LazyValidationFunction,
+        group_columns: list[str],
+    ) -> None:
+        super().__init__(expr_or_validation_fn)
         self.group_columns = group_columns
 
 
-def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction], Rule]:
+def rule(
+    *, group_by: list[str] | None = None
+) -> Callable[[Callable[[], pl.Expr]], Rule]:
     """Mark a function as a rule to evaluate during validation.
 
     The name of the function will be used as the name of the rule. The function should
@@ -56,8 +69,23 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
 
     def decorator(validation_fn: ValidationFunction) -> Rule:
         if group_by is not None:
-            return GroupRule(expr=validation_fn(), group_columns=group_by)
-        return Rule(expr=validation_fn())
+            return GroupRule(
+                expr_or_validation_fn=validation_fn(), group_columns=group_by
+            )
+        return Rule(expr_or_validation_fn=validation_fn())
+
+    return decorator
+
+
+def lazy_rule(
+    *, group_by: list[str] | None = None
+) -> Callable[[LazyValidationFunction], Rule]:
+    def decorator(validation_fn: LazyValidationFunction) -> Rule:
+        if group_by is not None:
+            return GroupRule(
+                expr_or_validation_fn=validation_fn, group_columns=group_by
+            )
+        return Rule(expr_or_validation_fn=validation_fn)
 
     return decorator
 
@@ -67,14 +95,30 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
 # ------------------------------------------------------------------------------------ #
 
 
-def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFrame:
+def _call_lazy_rule(
+    validation_fn: LazyValidationFunction, schema_class: type
+) -> pl.Expr:
+    if isinstance(validation_fn, classmethod):
+        return validation_fn.__func__(schema_class)
+
+    # As written above, `@classmethod` annotation will make the type (to the type checker)
+    # look like a `Callable[[type[...]], ...]`, but the value will not be callable.
+    # Hence we can ignore the missing argument type error here.
+    return validation_fn()  # type: ignore[call-arg]
+
+
+def with_evaluation_rules(
+    lf: pl.LazyFrame, rules: dict[str, Rule], schema_class: type | None = None
+) -> pl.LazyFrame:
     """Add evaluations of a set of rules on a data frame.
 
     Args:
         lf: The data frame on which to evaluate the rules.
         rules: The rules to evaluate where the key of the dictionary provides the name
             of the rule.
-
+        schema_class: The schema class to use for lazy evaluation of rules. If this is
+            not provided, rules that are not already expressed as `pl.Expr` will not be
+            evaluated.
     Returns:
         The input lazy frame along with one boolean column for each rule with the name
         of the rule. For each rule, a value of ``True`` indicates successful validation
@@ -84,9 +128,15 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
     #  1. Simple rules can simply be selected on the data frame
     #  2. "Group" rules require a `group_by` and a subsequent join
     simple_exprs = {
-        name: rule.expr
+        name: rule.expr_or_validation_fn
+        if isinstance(rule.expr_or_validation_fn, pl.Expr)
+        # Mypy doesnt understand we only call this with schema_class != None
+        else _call_lazy_rule(rule.expr_or_validation_fn, schema_class)  # type: ignore[arg-type]
         for name, rule in rules.items()
         if not isinstance(rule, GroupRule)
+        and (
+            schema_class is not None or isinstance(rule.expr_or_validation_fn, pl.Expr)
+        )
     }
     group_rules = {
         name: rule for name, rule in rules.items() if isinstance(rule, GroupRule)
@@ -97,19 +147,28 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
     return (
         # NOTE: A value of `null` always validates successfully as nullability should
         #  already be checked via dedicated rules.
-        _with_group_rules(lf, group_rules).with_columns(
+        _with_group_rules(lf, group_rules, schema_class).with_columns(
             **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
         )
     )
 
 
-def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyFrame:
+def _with_group_rules(
+    lf: pl.LazyFrame, rules: dict[str, GroupRule], schema_class: type | None
+) -> pl.LazyFrame:
     # First, we partition the rules by group columns. This will minimize the number
     # of `group_by` calls and joins to make.
     grouped_rules: dict[frozenset[str], dict[str, pl.Expr]] = defaultdict(dict)
     for name, rule in rules.items():
+        if schema_class is None and not isinstance(rule.expr_or_validation_fn, pl.Expr):
+            continue
         # NOTE: `null` indicates validity, see note above.
-        grouped_rules[frozenset(rule.group_columns)][name] = rule.expr.fill_null(True)
+        grouped_rules[frozenset(rule.group_columns)][name] = (
+            rule.expr_or_validation_fn
+            if isinstance(rule.expr_or_validation_fn, pl.Expr)
+            # Mypy doesnt understand we only call this with schema_class != None
+            else _call_lazy_rule(rule.expr_or_validation_fn, schema_class)  # type: ignore[arg-type]
+        ).fill_null(True)
 
     # Then, for each `group_by`, we apply the relevant rules and keep all the rule
     # evaluations around
