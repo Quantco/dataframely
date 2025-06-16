@@ -44,6 +44,8 @@ from mypy.types import (
 COLLECTION_FULLNAME = "dataframely.collection.Collection"
 COLUMN_PACKAGE = "dataframely.column"
 RULE_DECORATOR_FULLNAME = "dataframely._rule.rule"
+LAZY_RULE_DECORATOR_FULLNAME = "dataframely._rule.lazy_rule"
+CLASSMETHOD_FULLNAME = "builtins.classmethod"
 SCHEMA_FULLNAME = "dataframely.schema.Schema"
 TYPED_DATAFRAME_FULLNAME = "dataframely._typing.DataFrame"
 TYPED_LAZYFRAME_FULLNAME = "dataframely._typing.LazyFrame"
@@ -52,7 +54,7 @@ TYPED_LAZYFRAME_FULLNAME = "dataframely._typing.LazyFrame"
 
 
 def mark_rules_as_staticmethod(ctx: ClassDefContext) -> None:
-    """Mark all methods decorated with `@rule` as `staticmethod`s."""
+    """Mark all methods decorated with `@rule` as `staticmethod`s/`classmethod`s."""
     info = ctx.cls.info
     for sym in info.names.values():
         if not isinstance(sym.node, Decorator):
@@ -64,6 +66,13 @@ def mark_rules_as_staticmethod(ctx: ClassDefContext) -> None:
             continue
         if decorator.callee.fullname == RULE_DECORATOR_FULLNAME:
             sym.node.func.is_static = True
+        if decorator.callee.fullname == LAZY_RULE_DECORATOR_FULLNAME:
+            sym.node.func.is_class = any(
+                CLASSMETHOD_FULLNAME == dec.fullname
+                for dec in sym.node.original_decorators
+                if isinstance(dec, NameExpr)
+            )
+            sym.node.func.is_static = not sym.node.func.is_class
 
 
 # -------------------------------- FILTER RETURN TYPE -------------------------------- #

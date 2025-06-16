@@ -80,6 +80,26 @@ def rule(
 def lazy_rule(
     *, group_by: list[str] | None = None
 ) -> Callable[[LazyValidationFunction], Rule]:
+    """Mark a function as a rule to evaluate during validation.
+
+    This does the same as `rule`, but allows for lazy evaluation of rules. This means the
+    dtype of the returned expression is not validated to be a boolean expression! Use this
+    method if you need to access the schema class in your rule function, want to use
+    `@classmethod` on the rule or need to access constants defined after the schema.
+
+    Args:
+        group_by: An optional list of columns to group by for rules operating on groups
+            of rows. If this list is provided, the returned expression must return a
+            single boolean value, i.e. some kind of aggregation function must be used
+            (e.g. ``sum``, ``any``, ...).
+
+    Note:
+        You'll need to explicitly handle ``null`` values in your columns when defining
+        rules. By default, any rule that evaluates to ``null`` because one of the
+        columns used in the rule is ``null`` is interpreted as ``true``, i.e. the row
+        is assumed to be valid.
+    """
+
     def decorator(validation_fn: LazyValidationFunction) -> Rule:
         if group_by is not None:
             return GroupRule(

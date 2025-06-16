@@ -33,15 +33,16 @@ class MyComplexSchemaWithLazyRules(dy.Schema):
     b = dy.Int64()
 
     @dy.lazy_rule()
-    @classmethod
-    def b_greater_a(cls) -> pl.Expr:
-        return cls.b.col > cls.a.col
+    def b_greater_a() -> pl.Expr:
+        return MyComplexSchemaWithLazyRules.b.col > MyComplexSchemaWithLazyRules.a.col
 
     @dy.lazy_rule(group_by=["a"])
     @classmethod
     def b_unique_within_a(cls) -> pl.Expr:
-        return cls.b.col.n_unique() == 1
+        return cls.b.col.n_unique() == SOME_CONSTANT_DEFINED_LATER
 
+
+SOME_CONSTANT_DEFINED_LATER = 1
 
 # -------------------------------------- COLUMNS ------------------------------------- #
 
