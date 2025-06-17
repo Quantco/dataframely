@@ -235,6 +235,11 @@ class Collection(BaseCollection, ABC):
 
         Returns:
             Whether the two collections are semantically equal.
+
+        Attention:
+            For custom filters, reliable comparison results are only guaranteed
+            if the filter always returns a static polars expression.
+            Otherwise, this function may falsely indicate a match.
         """
         schemas_lhs = cls.member_schemas()
         schemas_rhs = other.member_schemas()
@@ -260,13 +265,14 @@ class Collection(BaseCollection, ABC):
         empty_left = cls.create_empty()
         empty_right = other.create_empty()
 
-        def filters_match(filter_left: Filter, filter_right: Filter) -> bool:
+        def filter_logic_matches(filter_left: Filter, filter_right: Filter) -> bool:
             lf_left = filter_left.logic(empty_left)
             lf_right = filter_right.logic(empty_right)
             return lf_left.explain() == lf_right.explain()
 
         if not all(
-            filters_match(filters_lhs[name], filters_rhs[name]) for name in filters_lhs
+            filter_logic_matches(filters_lhs[name], filters_rhs[name])
+            for name in filters_lhs
         ):
             return False
 
