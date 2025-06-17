@@ -25,18 +25,19 @@ def test_repr_only_column_rules() -> None:
             a=Integer(nullable=True, min=10, alias='a')""")
 
 
+class SchemaWithRules(dy.Schema):
+    a = dy.Integer(min=10)
+
+    @dy.rule()
+    def my_rule() -> pl.Expr:
+        return pl.col("a") < 100
+
+    @dy.rule(group_by=["a"])
+    def my_group_rule() -> pl.Expr:
+        return pl.col("a").sum() > 50
+
+
 def test_repr_with_rules() -> None:
-    class SchemaWithRules(dy.Schema):
-        a = dy.Integer(min=10)
-
-        @dy.rule()
-        def my_rule() -> pl.Expr:
-            return pl.col("a") < 100
-
-        @dy.rule(group_by=["a"])
-        def my_group_rule() -> pl.Expr:
-            return pl.col("a").sum() > 50
-
     assert (
         repr(SchemaWithRules)
         == textwrap.dedent("""\
