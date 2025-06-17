@@ -7,7 +7,7 @@ import inspect
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
-from typing import Any, TypeAlias
+from typing import Any, Self, TypeAlias, cast
 
 import polars as pl
 
@@ -266,6 +266,71 @@ class Column(ABC):
         """Private utility for the null probability used during sampling."""
         return 0.1 if self.nullable else 0
 
+    # ----------------------------------- SERIALIZE ---------------------------------- #
+
+    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
+        """Turn the column definition into a dictionary.
+
+        If the column definition references other column definitions, they will be
+        turned into dictionaries recursively.
+
+        Args:
+            expr: An expression referencing the column to turn into a dictionary. This
+                is required to properly encode custom checks.
+
+        Returns:
+            The column definition as dictionary.
+
+        Note:
+            This method stores custom checks as expressions rather than callables to
+            allow for serialization.
+
+        Note:
+            Do NOT use the returned object to evaluate semantic equality of two columns.
+            It may yield different results than :meth:`matches`.
+
+        Attention:
+            This method is only intended for internal use.
+        """
+        from ._registry import _TYPE_MAPPING
+
+        if self.__class__.__name__ not in _TYPE_MAPPING:
+            raise ValueError("Cannot serialize non-native dataframely column types.")
+
+        return {
+            "column_type": self.__class__.__name__,
+            **{
+                param: (
+                    _check_to_expr(getattr(self, param), expr)
+                    if param == "check"
+                    else getattr(self, param)
+                )
+                for param in inspect.signature(self.__class__.__init__).parameters
+                if param not in ("self", "alias")
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Read the column definition from a dictionary.
+
+        Args:
+            data: The dictionary that was created via :meth:`as_dict`.
+
+        Returns:
+            The column definition read from the dictionary.
+
+        Attention:
+            This method is only intended for internal use.
+        """
+        return cls(
+            **{
+                k: (cast(Any, _check_from_expr(v)) if k == "check" else v)
+                for k, v in data.items()
+                if k != "column_type"
+            }
+        )
+
     # ----------------------------------- EQUALITY ----------------------------------- #
 
     def matches(self, other: Column, expr: pl.Expr) -> bool:
@@ -273,8 +338,8 @@ class Column(ABC):
 
         Args:
             other: The column to compare with.
-            expr: An expression referencing the column to encode. This is required to
-                properly evaluate the equivalence of custom checks.
+            expr: An expression referencing the column. This is required to properly
+                evaluate the equivalence of custom checks.
 
         Returns:
             Whether the columns are semantically equal.
@@ -323,3 +388,29 @@ def _compare_checks(lhs: Check | None, rhs: Check | None, expr: pl.Expr) -> bool
             return lhs(expr).meta.eq(rhs(expr))
         case _:
             return False
+
+
+def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
+    match check:
+        case None:
+            return None
+        case list():
+            return [c(expr) for c in check]
+        case dict():
+            return {key: c(expr) for key, c in check.items()}
+        case _ if callable(check):
+            return check(expr)
+
+
+def _check_from_expr(value: Any) -> Check | None:
+    match value:
+        case None:
+            return None
+        case list():
+            return [lambda _: c for c in value]
+        case dict():
+            return {key: lambda _: c for key, c in value.items()}
+        case pl.Expr():
+            return lambda _: value
+        case _:  # pragma: no cover
+            raise ValueError(f"Invalid type for check: {type(value)}")

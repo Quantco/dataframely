@@ -10,8 +10,10 @@ from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
+from ._registry import register
 
 
+@register
 class Any(Column):
     """A column with arbitrary type.
 
