@@ -245,6 +245,17 @@ class CollectionMeta(ABCMeta):
             # Some other unknown annotation
             raise AnnotationImplementationError(attr, type_annotation)
 
+    def __repr__(cls) -> str:
+        parts = [f"{cls.__class__.__name__}(dy.Collection):"]
+        for name, member in getattr(cls, _MEMBER_ATTR).items():
+            parts.append(
+                f"    {name}={member.schema.__name__}"
+                f"(optional={member.is_optional}, "
+                f"ignored_in_filters={member.ignored_in_filters}, "
+                f"inline_for_sampling={member.inline_for_sampling})"
+            )
+        return "\n".join(parts)
+
 
 class BaseCollection(metaclass=CollectionMeta):
     """Internal utility abstraction to reference collections without introducing
