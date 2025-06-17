@@ -15,8 +15,15 @@ ValidationFunction = Callable[[], pl.Expr]
 class Rule:
     """Internal class representing validation rules."""
 
-    def __init__(self, expr: pl.Expr) -> None:
-        self.expr = expr
+    def __init__(self, expr: pl.Expr | ValidationFunction) -> None:
+        self._expr = expr
+
+    @property
+    def expr(self) -> pl.Expr:
+        """Get the expression of the rule."""
+        if callable(self._expr):
+            return self._expr()
+        return self._expr
 
     def matches(self, other: Rule) -> bool:
         """Check whether this rule semantically matches another rule.
@@ -46,7 +53,9 @@ class Rule:
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
 
-    def __init__(self, expr: pl.Expr, group_columns: list[str]) -> None:
+    def __init__(
+        self, expr: pl.Expr | ValidationFunction, group_columns: list[str]
+    ) -> None:
         super().__init__(expr)
         self.group_columns = group_columns
 
@@ -95,8 +104,8 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
 
     def decorator(validation_fn: ValidationFunction) -> Rule:
         if group_by is not None:
-            return GroupRule(expr=validation_fn(), group_columns=group_by)
-        return Rule(expr=validation_fn())
+            return GroupRule(expr=validation_fn, group_columns=group_by)
+        return Rule(expr=validation_fn)
 
     return decorator
 
