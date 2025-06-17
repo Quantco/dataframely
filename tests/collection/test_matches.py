@@ -90,6 +90,6 @@ def test_collection_matches_different_filter_logc() -> None:
     class MyCollection2(BaseCollection):
         @dy.filter()
         def test_filter(self) -> pl.LazyFrame:
-            return dy.filter_relationship_one_to_one(self.x, self.x, ["foo"])
+            return dy.filter_relationship_one_to_at_least_one(self.x, self.x, ["foo"])
 
     assert not MyCollection1.matches(MyCollection2)

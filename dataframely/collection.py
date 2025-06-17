@@ -13,6 +13,7 @@ import polars.exceptions as plexc
 from dataframely.exc import MemberValidationError, RuleValidationError, ValidationError
 
 from ._base_collection import BaseCollection
+from ._filter import Filter
 from ._polars import FrameType, join_all_inner, join_all_outer
 from .failure import FailureInfo
 from .random import Generator
@@ -226,7 +227,7 @@ class Collection(BaseCollection, ABC):
         return cls.validate(members)
 
     @classmethod
-    def matches(cls, other: type[BaseCollection]) -> bool:
+    def matches(cls, other: type["Collection"]) -> bool:
         """Check whether this collection semantically matches another.
 
         Args:
@@ -254,7 +255,20 @@ class Collection(BaseCollection, ABC):
         if filters_lhs.keys() != filters_rhs.keys():
             return False
 
-        # Filters must match semantically
+        # Computational graph of filter logic must match
+        # Evaluate on empty dataframes
+        empty_left = cls.create_empty()
+        empty_right = other.create_empty()
+
+        def filters_match(filter_left: Filter, filter_right: Filter) -> bool:
+            lf_left = filter_left.logic(empty_left)
+            lf_right = filter_right.logic(empty_right)
+            return lf_left.explain() == lf_right.explain()
+
+        if not all(
+            filters_match(filters_lhs[name], filters_rhs[name]) for name in filters_lhs
+        ):
+            return False
 
         return True
 
