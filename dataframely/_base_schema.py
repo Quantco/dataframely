@@ -132,6 +132,7 @@ class SchemaMeta(ABCMeta):
 
     def __getattribute__(cls, name: str) -> Any:
         val = super().__getattribute__(name)
+        # Dynamically set the name of the column if it is a `Column` instance.
         if isinstance(val, Column):
             val.name = val.alias or name
         return val
