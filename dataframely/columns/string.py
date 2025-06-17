@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
 
 import polars as pl
@@ -12,7 +11,7 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._extre import matching_string_length as extre_matching_string_length
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 
 # ------------------------------------------------------------------------------------ #
 
@@ -28,12 +27,7 @@ class String(Column):
         min_length: int | None = None,
         max_length: int | None = None,
         regex: str | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

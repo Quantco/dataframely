@@ -3,8 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import polars as pl
 
@@ -12,7 +11,7 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 
 
 class Struct(Column):
@@ -24,12 +23,7 @@ class Struct(Column):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -124,3 +118,15 @@ class Struct(Column):
         return generator._apply_null_mask(
             series, null_probability=self._null_probability
         )
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "inner" and isinstance(lhs, dict) and isinstance(rhs, dict):
+            return lhs.keys() == rhs.keys() and all(
+                cast(Column, lhs[field]).matches(
+                    cast(Column, rhs[field]), column_expr.struct.field(field)
+                )
+                for field in lhs
+            )
+        return super()._attributes_match(lhs, rhs, name, column_expr)

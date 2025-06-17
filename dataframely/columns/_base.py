@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
+import inspect
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeAlias
 
 import polars as pl
 
@@ -17,6 +18,12 @@ from dataframely._deprecation import (
 )
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
+
+Check: TypeAlias = (
+    Callable[[pl.Expr], pl.Expr]
+    | list[Callable[[pl.Expr], pl.Expr]]
+    | dict[str, Callable[[pl.Expr], pl.Expr]]
+)
 
 # ------------------------------------------------------------------------------------ #
 #                                        COLUMNS                                       #
@@ -35,12 +42,7 @@ class Column(ABC):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -264,7 +266,60 @@ class Column(ABC):
         """Private utility for the null probability used during sampling."""
         return 0.1 if self.nullable else 0
 
+    # ----------------------------------- EQUALITY ----------------------------------- #
+
+    def matches(self, other: Column, expr: pl.Expr) -> bool:
+        """Check whether this column semantically matches another column.
+
+        Args:
+            other: The column to compare with.
+            expr: An expression referencing the column to encode. This is required to
+                properly evaluate the equivalence of custom checks.
+
+        Returns:
+            Whether the columns are semantically equal.
+        """
+        if not isinstance(other, self.__class__):
+            return False
+
+        attributes = inspect.signature(self.__class__.__init__)
+        return all(
+            self._attributes_match(
+                getattr(self, attr), getattr(other, attr), attr, expr
+            )
+            for attr in attributes.parameters
+            # NOTE: We do not want to compare the `alias` here as the comparison should
+            #  only evaluate the type and its constraints. Names are checked in
+            #  :meth:`Schema.matches`.
+            if attr not in ("self", "alias")
+        )
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "check":
+            return _compare_checks(lhs, rhs, column_expr)
+        return lhs == rhs
+
     # -------------------------------- DUNDER METHODS -------------------------------- #
 
     def __str__(self) -> str:
         return self.__class__.__name__.lower()
+
+
+def _compare_checks(lhs: Check | None, rhs: Check | None, expr: pl.Expr) -> bool:
+    match (lhs, rhs):
+        case (None, None):
+            return True
+        case (list(), list()):
+            return len(lhs) == len(rhs) and all(
+                left(expr).meta.eq(right(expr)) for left, right in zip(lhs, rhs)
+            )
+        case (dict(), dict()):
+            return lhs.keys() == rhs.keys() and all(
+                lhs[key](expr).meta.eq(rhs[key](expr)) for key in lhs.keys()
+            )
+        case _ if callable(lhs) and callable(rhs):
+            return lhs(expr).meta.eq(rhs(expr))
+        case _:
+            return False

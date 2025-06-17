@@ -16,6 +16,7 @@ from ._compat import pa, sa
 from ._rule import Rule, with_evaluation_rules
 from ._typing import DataFrame, LazyFrame
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
+from .columns import Column
 from .config import Config
 from .exc import RuleValidationError, ValidationError
 from .failure import FailureInfo
@@ -612,4 +613,34 @@ class Schema(BaseSchema, ABC):
         """
         return pa.schema(
             [col.pyarrow_field(name) for name, col in cls.columns().items()]
+        )
+
+    # ----------------------------------- EQUALITY ----------------------------------- #
+
+    @classmethod
+    def matches(cls, other: type[Schema]) -> bool:
+        """Check whether this schema semantically matches another schema.
+
+        This method checks whether the schemas have the same columns (with the same
+        data types and constraints) as well as the same rules.
+
+        Args:
+            other: The schema to compare with.
+
+        Returns:
+            Whether the schemas are semantically equal.
+        """
+
+        def _columns_match(lhs: dict[str, Column], rhs: dict[str, Column]) -> bool:
+            if lhs.keys() != rhs.keys():
+                return False
+            return all(lhs[name].matches(rhs[name], pl.col(name)) for name in lhs)
+
+        def _rules_match(lhs: dict[str, Rule], rhs: dict[str, Rule]) -> bool:
+            if lhs.keys() != rhs.keys():
+                return False
+            return all(lhs[name].matches(rhs[name]) for name in lhs)
+
+        return _columns_match(cls.columns(), other.columns()) and _rules_match(
+            cls._schema_validation_rules(), other._schema_validation_rules()
         )

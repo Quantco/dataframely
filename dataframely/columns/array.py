@@ -4,15 +4,15 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Sequence
-from typing import Any, Literal
+from collections.abc import Sequence
+from typing import Any, Literal, cast
 
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from .struct import Struct
 
 
@@ -28,12 +28,7 @@ class Array(Column):
         # polars doesn't yet support grouping by arrays,
         # see https://github.com/pola-rs/polars/issues/22574
         primary_key: Literal[False] = False,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -117,3 +112,10 @@ class Array(Column):
             all_elements.reshape((n, *self.shape)),
             null_probability=self._null_probability,
         )
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "inner":
+            return cast(Column, lhs).matches(cast(Column, rhs), pl.element())
+        return super()._attributes_match(lhs, rhs, name, column_expr)
