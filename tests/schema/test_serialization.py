@@ -11,6 +11,7 @@ import pytest
 
 import dataframely as dy
 from dataframely._rule import GroupRule, Rule
+from dataframely.schema import SERIALIZATION_FORMAT_VERSION
 from dataframely.testing import create_schema
 
 
@@ -23,7 +24,7 @@ def test_simple_serialization() -> None:
 
     # Assert
     decoded = json.loads(serialized)
-    assert decoded["versions"]["format"] == "1"
+    assert decoded["versions"]["format"] == SERIALIZATION_FORMAT_VERSION
     assert decoded["name"] == "test"
     assert set(decoded["columns"].keys()) == {"a"}
     assert set(decoded["rules"].keys()) == set()

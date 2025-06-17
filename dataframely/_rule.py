@@ -29,13 +29,13 @@ class Rule:
         """
         return self.expr.meta.eq(other.expr)
 
-    def encode(self) -> dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Turn the rule into a dictionary."""
         return {"rule_type": self.__class__.__name__, "expr": self.expr}
 
     @classmethod
-    def decode(cls, data: dict[str, Any]) -> Self:
-        """Deserialize the rule from a dictionary.
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Read the rule from a dictionary.
 
         Args:
             data: The dictionary that was created via :meth:`asdict`.
@@ -55,11 +55,11 @@ class GroupRule(Rule):
             return False
         return super().matches(other) and self.group_columns == other.group_columns
 
-    def encode(self) -> dict[str, Any]:
-        return {**super().encode(), "group_columns": self.group_columns}
+    def as_dict(self) -> dict[str, Any]:
+        return {**super().as_dict(), "group_columns": self.group_columns}
 
     @classmethod
-    def decode(cls, data: dict[str, Any]) -> Self:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(data["expr"], group_columns=data["group_columns"])
 
 
@@ -181,18 +181,18 @@ _TYPE_MAPPING: dict[str, type[Rule]] = {
 }
 
 
-def decode_rule(data: dict[str, Any]) -> Rule:
-    """Dynamically decode a rule object from a dictionary.
+def rule_from_dict(data: dict[str, Any]) -> Rule:
+    """Dynamically read a rule object from a dictionary.
 
     Args:
-        data: The dictionary obtained by calling :meth:`~Rule.ecnode` on a rule object.
+        data: The dictionary obtained by calling :meth:`~Rule.asdict` on a rule object.
             The dictionary must contain a key ``"rule_type"`` that indicates which rule
             type to instantiate.
 
     Returns:
-        The rule object as decoded from ``data``.
+        The rule object as read from ``data``.
     """
     name = data["rule_type"]
     if name not in _TYPE_MAPPING:
         raise ValueError(f"Unknown rule type: {name}")
-    return _TYPE_MAPPING[name].decode(data)
+    return _TYPE_MAPPING[name].from_dict(data)

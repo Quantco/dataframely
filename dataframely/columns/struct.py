@@ -12,7 +12,7 @@ from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import decode_column, register
+from ._registry import column_from_dict, register
 
 
 @register
@@ -133,17 +133,17 @@ class Struct(Column):
             )
         return super()._attributes_match(lhs, rhs, name, column_expr)
 
-    def encode(self, expr: pl.Expr) -> dict[str, Any]:
-        result = super().encode(expr)
+    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
+        result = super().as_dict(expr)
         result["inner"] = {
-            name: col.encode(expr.struct.field(name))
+            name: col.as_dict(expr.struct.field(name))
             for name, col in self.inner.items()
         }
         return result
 
     @classmethod
-    def decode(cls, data: dict[str, Any]) -> Self:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         data["inner"] = {
-            name: decode_column(col) for name, col in data["inner"].items()
+            name: column_from_dict(col) for name, col in data["inner"].items()
         }
-        return super().decode(data)
+        return super().from_dict(data)
