@@ -34,4 +34,5 @@ def test_alias_name() -> None:
 
 def test_alias_unset() -> None:
     no_alias_col = dy.Int32()
-    assert no_alias_col.alias is None, "Alias should be an empty string if not set"
+    assert no_alias_col.alias is None
+    assert no_alias_col.name == ""
