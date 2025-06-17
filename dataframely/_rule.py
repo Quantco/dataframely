@@ -42,6 +42,9 @@ class Rule:
         """
         return cls(data["expr"])
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(expr={self.expr})"
+
 
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""

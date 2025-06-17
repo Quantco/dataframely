@@ -157,6 +157,16 @@ class SchemaMeta(ABCMeta):
                 result.rules[attr] = value
         return result
 
+    def __repr__(cls) -> str:
+        parts = [f"{cls.__name__}(dy.Schema):"]
+        parts.append("    # Columns:")
+        for name, col in getattr(cls, _COLUMN_ATTR).items():
+            parts.append(f"    {name}={col!r}")
+        parts.append("    # Rules:")
+        for name, rule in getattr(cls, _RULE_ATTR).items():
+            parts.append(f"    {name}={rule!r}")
+        return "\n".join(parts)
+
 
 class BaseSchema(metaclass=SchemaMeta):
     """Internal utility abstraction to reference schemas without introducing cyclical

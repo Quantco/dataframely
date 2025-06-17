@@ -368,6 +368,16 @@ class Column(ABC):
 
     # -------------------------------- DUNDER METHODS -------------------------------- #
 
+    def __repr__(self) -> str:
+        parts = [
+            f"nullable={self.nullable}",
+            f"primary_key={self.primary_key}",
+        ] + [
+            f"{attribute}={getattr(self, attribute)}"
+            for attribute in self.validation_rules(pl.lit("")).keys()
+        ]
+        return f"{self.__class__.__name__}({', '.join(parts)})"
+
     def __str__(self) -> str:
         return self.__class__.__name__.lower()
 
