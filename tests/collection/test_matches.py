@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import polars as pl
+
 import dataframely as dy
 
 
@@ -50,6 +52,23 @@ def test_collection_matches_different_schemas() -> None:
 
     class MyCollection2(dy.Collection):
         x: dy.LazyFrame[MyStringSchema]
+
+    # Should not match
+    assert not MyCollection1.matches(MyCollection2)
+
+
+def test_collection_matches_different_filter_names() -> None:
+    class MyIntSchema(dy.Schema):
+        foo = dy.Integer(primary_key=True)
+
+    # Two schemas with different numbers of filters (zero and one)
+    class MyCollection1(dy.Collection):
+        x: dy.LazyFrame[MyIntSchema]
+
+    class MyCollection2(MyCollection1):
+        @dy.filter()
+        def test_filter(self) -> pl.LazyFrame:
+            return dy.filter_relationship_one_to_one(self.x, self.x, ["foo"])
 
     # Should not match
     assert not MyCollection1.matches(MyCollection2)

@@ -248,6 +248,14 @@ class Collection(BaseCollection, ABC):
         ):
             return False
 
+        # Filter names must match
+        filters_lhs = cls._filters()
+        filters_rhs = other._filters()
+        if filters_lhs != filters_rhs:
+            return False
+
+        # Filters must match semantically
+
         return True
 
     @classmethod

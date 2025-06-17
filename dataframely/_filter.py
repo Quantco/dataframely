@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import Generic, Self, TypeVar
 
 import polars as pl
 
@@ -14,6 +14,9 @@ class Filter(Generic[C]):
 
     def __init__(self, logic: Callable[[C], pl.LazyFrame]) -> None:
         self.logic = logic
+
+    def matches(self, other: Self) -> bool:
+        return self.logic == other.logic
 
 
 def filter() -> Callable[[Callable[[C], pl.LazyFrame]], Filter[C]]:
