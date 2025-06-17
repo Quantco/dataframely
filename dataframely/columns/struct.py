@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Self, cast
 
 import polars as pl
 
@@ -12,8 +12,10 @@ from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
+from ._registry import column_from_dict, register
 
 
+@register
 class Struct(Column):
     """A struct column."""
 
@@ -130,3 +132,18 @@ class Struct(Column):
                 for field in lhs
             )
         return super()._attributes_match(lhs, rhs, name, column_expr)
+
+    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
+        result = super().as_dict(expr)
+        result["inner"] = {
+            name: col.as_dict(expr.struct.field(name))
+            for name, col in self.inner.items()
+        }
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        data["inner"] = {
+            name: column_from_dict(col) for name, col in data["inner"].items()
+        }
+        return super().from_dict(data)
