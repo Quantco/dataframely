@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, Literal, Self, overload
+from pathlib import Path
+from typing import IO, Any, Literal, Self, overload
 
 import polars as pl
 import polars.exceptions as plexc
@@ -25,6 +27,7 @@ from .failure import FailureInfo
 from .random import Generator
 
 _ORIGINAL_NULL_SUFFIX = "__orig_null__"
+_METADATA_KEY = "dataframely_schema"
 
 # ------------------------------------------------------------------------------------ #
 #                                   SCHEMA DEFINITION                                  #
@@ -626,6 +629,191 @@ class Schema(BaseSchema, ABC):
             },
         }
         return json.dumps(result, cls=SchemaJSONEncoder)
+
+    # ------------------------------------ PARQUET ----------------------------------- #
+
+    @classmethod
+    def write_parquet(
+        cls, df: DataFrame[Self], /, file: str | Path | IO[bytes], **kwargs: Any
+    ) -> None:
+        """Write a typed data frame with this schema to a parquet file.
+
+        This method automatically adds a serialization of this schema to the parquet
+        file as metadata. This metadata can be leveraged by :meth:`read_parquet` and
+        :meth:`scan_parquet` for more efficient reading, or by external tools.
+
+        Args:
+            df: The data frame to write to the parquet file.
+            file: The file path or writable file-like object to which to write the
+                parquet file. This should be a path to a directory if writing a
+                partitioned dataset.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
+                is a dictionary.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`serialize`.
+        """
+        metadata = kwargs.pop("metadata", {})
+        df.write_parquet(
+            file, metadata={**metadata, _METADATA_KEY: cls.serialize()}, **kwargs
+        )
+
+    @classmethod
+    def sink_parquet(
+        cls, lf: LazyFrame[Self], /, file: str | Path | IO[bytes], **kwargs: Any
+    ) -> None:
+        """Stream a typed lazy frame with this schema to a parquet file.
+
+        This method automatically adds a serialization of this schema to the parquet
+        file as metadata. This metadata can be leveraged by :meth:`read_parquet` and
+        :meth:`scan_parquet` for more efficient reading, or by external tools.
+
+        Args:
+            lf: The lazy frame to write to the parquet file.
+            file: The file path or writable file-like object to which to write the
+                parquet file. This should be a path to a directory if writing a
+                partitioned dataset.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
+                is a dictionary.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`serialize`.
+        """
+        metadata = kwargs.pop("metadata", {})
+        lf.sink_parquet(
+            file, metadata={**metadata, _METADATA_KEY: cls.serialize()}, **kwargs
+        )
+
+    @classmethod
+    def read_parquet(
+        cls,
+        source: str | Path | IO[bytes] | bytes,
+        *,
+        validate: bool | Literal["auto"] = "auto",
+        **kwargs: Any,
+    ) -> DataFrame[Self]:
+        """Read a parquet file into a typed data frame with this schema.
+
+        Compared to :meth:`polars.read_parquet`, this method checks the parquet file's
+        metadata and runs validation if necessary to ensure that the data matches this
+        schema.
+
+        Args:
+            source: Path, directory, or file-like object from which to read the data.
+            validate: The strategy for running validation when reading the data:
+
+                - If set to ``"auto"``, this method tries to read the parquet file's
+                  metadata. If it matches this schema, the data frame is read without
+                  validation. If the stored schema mismatches this schema or no schema
+                  information can be found in the metadata, this method automatically
+                  runs :meth:`validate` with ``cast=True``. However, it prints a
+                  warning that the read introduces additional overhead.
+                - If ``True``, the method behaves similarly to ``"auto"``. However, the
+                  user acknowledges that the read might run validation, and no warning
+                  will be emitted.
+                - If ``False``, validation is never run automatically and an error is
+                  raised if the parquet file does not store schema information or the
+                  stored schema mismatches this schema.
+
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.read_parquet`.
+
+        Returns:
+            The data frame with this schema.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`serialize`.
+        """
+        if not cls._requires_validation_for_reading_parquet(source, validate):
+            return pl.read_parquet(source, **kwargs)  # type: ignore
+        return cls.validate(pl.read_parquet(source, **kwargs), cast=True)
+
+    @classmethod
+    def scan_parquet(
+        cls,
+        source: str | Path | IO[bytes] | bytes,
+        *,
+        validate: bool | Literal["auto"] = "auto",
+        **kwargs: Any,
+    ) -> LazyFrame[Self]:
+        """Lazily read a parquet file into a typed data frame with this schema.
+
+        Compared to :meth:`polars.scan_parquet`, this method checks the parquet file's
+        metadata and runs validation if necessary to ensure that the data matches this
+        schema.
+
+        Args:
+            source: Path, directory, or file-like object from which to read the data.
+            validate: The strategy for running validation when reading the data:
+
+                - If set to ``"auto"``, this method tries to read the parquet file's
+                  metadata. If it matches this schema, the data frame is read without
+                  validation. If the stored schema mismatches this schema or no schema
+                  information can be found in the metadata, this method automatically
+                  runs :meth:`validate` with ``cast=True``. However, it prints a
+                  warning that the read introduces additional overhead.
+                - If ``True``, the method behaves similarly to ``"auto"``. However, the
+                  user acknowledges that the read might run validation, and no warning
+                  will be emitted.
+                - If ``False``, validation is never run automatically and an error is
+                  raised if the parquet file does not store schema information or the
+                  stored schema mismatches this schema.
+
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.scan_parquet`.
+
+        Returns:
+            The data frame with this schema.
+
+        Note:
+            Due to current limitations in dataframely, this method actually reads the
+            parquet file into memory if ``validate`` is ``"auto"`` or ``True`` and
+            validation is required.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`serialize`.
+        """
+        if not cls._requires_validation_for_reading_parquet(source, validate):
+            return pl.scan_parquet(source, **kwargs)  # type: ignore
+        return cls.validate(pl.read_parquet(source, **kwargs), cast=True).lazy()
+
+    @classmethod
+    def _requires_validation_for_reading_parquet(
+        cls,
+        source: str | Path | IO[bytes] | bytes,
+        validate: bool | Literal["auto"] = "auto",
+    ) -> bool:
+        # First, we check whether the source provides the dataframely schema. If it
+        # does, we check whether it matches this schema. If it does, we assume that the
+        # data adheres to the schema and we do not need to run validation.
+        metadata = pl.read_parquet_metadata(source).get(_METADATA_KEY)
+        if metadata is not None:
+            serialized_schema = deserialize_schema(metadata)
+            if cls.matches(serialized_schema):
+                return False
+
+        # Otherwise, we definitely need to run validation. However, we emit different
+        # information to the user depending on the value of `validate`.
+        msg = (
+            "current schema does not match stored schema"
+            if metadata is not None
+            else "no stored schema can be found to check validity"
+        )
+        if not validate:
+            raise ValueError(
+                f"Cannot read parquet file '{source!r}' without validation: {msg}."
+            )
+        if validate == "auto":
+            warnings.warn(
+                f"Reading parquet file from '{source!r}' requires validation: {msg}."
+            )
+        return True
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
