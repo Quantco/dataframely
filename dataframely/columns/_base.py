@@ -380,7 +380,7 @@ class Column(ABC):
                 getattr(self, attribute) == param_details.default
             )
         ]
-        return f"{self.__class__.__name__}({', '.join(parts)})"
+        return f"dy.{self.__class__.__name__}({', '.join(parts)})"
 
     def __str__(self) -> str:
         return self.__class__.__name__.lower()

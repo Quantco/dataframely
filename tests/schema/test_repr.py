@@ -13,7 +13,7 @@ def test_repr_no_rules() -> None:
 
     assert repr(SchemaNoRules) == textwrap.dedent("""\
         SchemaNoRules(dy.Schema):
-            a=Integer(nullable=True, alias='a')""")
+            a=dy.Integer(nullable=True, alias='a')""")
 
 
 def test_repr_only_column_rules() -> None:
@@ -22,11 +22,12 @@ def test_repr_only_column_rules() -> None:
 
     assert repr(SchemaColumnRules) == textwrap.dedent("""\
         SchemaColumnRules(dy.Schema):
-            a=Integer(nullable=True, min=10, alias='a')""")
+            a=dy.Integer(nullable=True, min=10, alias='a')""")
 
 
 class SchemaWithRules(dy.Schema):
     a = dy.Integer(min=10)
+    b = dy.String(primary_key=True, regex=r"^[A-Z]{3}$", alias="b2")
 
     @dy.rule()
     def my_rule() -> pl.Expr:
@@ -42,7 +43,8 @@ def test_repr_with_rules() -> None:
         repr(SchemaWithRules)
         == textwrap.dedent("""\
         SchemaWithRules(dy.Schema):
-            a=Integer(nullable=True, min=10, alias='a')
-            my_rule=Rule(expr=[(col("a")) < (dyn int: 100)])
-            my_group_rule=GroupRule(expr=[(col("a").sum()) > (dyn int: 50)], group_columns=['a'])""")
+            a=dy.Integer(nullable=True, min=10, alias='a')
+            b2=dy.String(nullable=False, primary_key=True, regex='^[A-Z]{3}$', alias='b2')
+            my_rule=dy.Rule(expr=[(col("a")) < (dyn int: 100)])
+            my_group_rule=dy.GroupRule(expr=[(col("a").sum()) > (dyn int: 50)], group_columns=['a'])""")
     )
