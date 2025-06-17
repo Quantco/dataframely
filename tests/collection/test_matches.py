@@ -61,7 +61,7 @@ def test_collection_matches_different_filter_names() -> None:
     class MyIntSchema(dy.Schema):
         foo = dy.Integer(primary_key=True)
 
-    # Two schemas with different numbers of filters (zero and one)
+    # Two collections with different numbers of filters (zero and one)
     class MyCollection1(dy.Collection):
         x: dy.LazyFrame[MyIntSchema]
 
@@ -71,4 +71,25 @@ def test_collection_matches_different_filter_names() -> None:
             return dy.filter_relationship_one_to_one(self.x, self.x, ["foo"])
 
     # Should not match
+    assert not MyCollection1.matches(MyCollection2)
+
+
+def test_collection_matches_different_filter_logc() -> None:
+    class MyIntSchema(dy.Schema):
+        foo = dy.Integer(primary_key=True)
+
+    # Two collections with same filter names but different logic
+    class BaseCollection(dy.Collection):
+        x: dy.LazyFrame[MyIntSchema]
+
+    class MyCollection1(BaseCollection):
+        @dy.filter()
+        def test_filter(self) -> pl.LazyFrame:
+            return dy.filter_relationship_one_to_one(self.x, self.x, ["foo"])
+
+    class MyCollection2(BaseCollection):
+        @dy.filter()
+        def test_filter(self) -> pl.LazyFrame:
+            return dy.filter_relationship_one_to_one(self.x, self.x, ["foo"])
+
     assert not MyCollection1.matches(MyCollection2)

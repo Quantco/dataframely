@@ -251,7 +251,7 @@ class Collection(BaseCollection, ABC):
         # Filter names must match
         filters_lhs = cls._filters()
         filters_rhs = other._filters()
-        if filters_lhs != filters_rhs:
+        if filters_lhs.keys() != filters_rhs.keys():
             return False
 
         # Filters must match semantically
