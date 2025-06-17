@@ -370,11 +370,15 @@ class Column(ABC):
 
     def __repr__(self) -> str:
         parts = [
-            f"nullable={self.nullable}",
-            f"primary_key={self.primary_key}",
-        ] + [
-            f"{attribute}={getattr(self, attribute)}"
-            for attribute in self.validation_rules(pl.lit("")).keys()
+            f"{attribute}={repr(getattr(self, attribute))}"
+            for attribute, param_details in inspect.signature(
+                self.__class__.__init__
+            ).parameters.items()
+            if attribute != "self"
+            and not (
+                # Do not include attributes that are set to their default value
+                getattr(self, attribute) == param_details.default
+            )
         ]
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
