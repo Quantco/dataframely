@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Literal, Self, overload
@@ -13,14 +14,17 @@ import polars.selectors as cs
 
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
-from ._rule import Rule, with_evaluation_rules
+from ._rule import Rule, rule_from_dict, with_evaluation_rules
+from ._serialization import SchemaJSONDecoder, SchemaJSONEncoder
 from ._typing import DataFrame, LazyFrame
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
+from .columns import Column, column_from_dict
 from .config import Config
 from .exc import RuleValidationError, ValidationError
 from .failure import FailureInfo
 from .random import Generator
 
+SERIALIZATION_FORMAT_VERSION = "1"
 _ORIGINAL_NULL_SUFFIX = "__orig_null__"
 
 # ------------------------------------------------------------------------------------ #
@@ -576,6 +580,54 @@ class Schema(BaseSchema, ABC):
             return lf.collect()  # type: ignore
         return lf  # type: ignore
 
+    # --------------------------------- SERIALIZATION -------------------------------- #
+
+    @classmethod
+    def serialize(cls) -> str:
+        """Serialize this schema to a JSON string.
+
+        Returns:
+            The serialized schema.
+
+        Note:
+            Serialization within dataframely itself will remain backwards-compatible
+            at least within a major version. Until further notice, it will also be
+            backwards-compatible across major versions.
+
+        Attention:
+            Serialization of :mod:`polars` expressions is not guaranteed to be stable
+            across versions of polars. This affects schemas that define custom rules
+            or columns with custom checks: a schema serialized with one version of
+            polars may not be deserializable with another version of polars.
+
+        Attention:
+            This functionality is considered unstable. It may be changed at any time
+            without it being considered a breaking change.
+
+        Raises:
+            TypeError: If any column contains metadata that is not JSON-serializable.
+            ValueError: If any column is not a "native" dataframely column type but
+                a custom subclass.
+        """
+        from dataframely import __version__
+
+        result = {
+            "versions": {
+                "format": SERIALIZATION_FORMAT_VERSION,
+                "dataframely": __version__,
+                "polars": pl.__version__,
+            },
+            "name": cls.__name__,
+            "columns": {
+                name: col.as_dict(pl.col(name)) for name, col in cls.columns().items()
+            },
+            "rules": {
+                name: rule.as_dict()
+                for name, rule in cls._schema_validation_rules().items()
+            },
+        }
+        return json.dumps(result, cls=SchemaJSONEncoder)
+
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
     @classmethod
@@ -613,3 +665,69 @@ class Schema(BaseSchema, ABC):
         return pa.schema(
             [col.pyarrow_field(name) for name, col in cls.columns().items()]
         )
+
+    # ----------------------------------- EQUALITY ----------------------------------- #
+
+    @classmethod
+    def matches(cls, other: type[Schema]) -> bool:
+        """Check whether this schema semantically matches another schema.
+
+        This method checks whether the schemas have the same columns (with the same
+        data types and constraints) as well as the same rules.
+
+        Args:
+            other: The schema to compare with.
+
+        Returns:
+            Whether the schemas are semantically equal.
+        """
+
+        def _columns_match(lhs: dict[str, Column], rhs: dict[str, Column]) -> bool:
+            if lhs.keys() != rhs.keys():
+                return False
+            return all(lhs[name].matches(rhs[name], pl.col(name)) for name in lhs)
+
+        def _rules_match(lhs: dict[str, Rule], rhs: dict[str, Rule]) -> bool:
+            if lhs.keys() != rhs.keys():
+                return False
+            return all(lhs[name].matches(rhs[name]) for name in lhs)
+
+        return _columns_match(cls.columns(), other.columns()) and _rules_match(
+            cls._schema_validation_rules(), other._schema_validation_rules()
+        )
+
+
+def deserialize_schema(data: str) -> type[Schema]:
+    """Deserialize a schema from a JSON string.
+
+    This method allows to dynamically load a schema from its serialization, without
+    having to know the schema to load in advance.
+
+    Args:
+        data: The JSON string created via :meth:`Schema.serialize`.
+
+    Returns:
+        The schema loaded from the JSON data.
+
+    Raises:
+        ValueError: If the schema format version is not supported.
+
+    Attention:
+        This functionality is considered unstable. It may be changed at any time
+        without it being considered a breaking change.
+
+    See also:
+        :meth:`Schema.serialize` for additional information on serialization.
+    """
+    decoded = json.loads(data, cls=SchemaJSONDecoder)
+    if (format := decoded["versions"]["format"]) != "1":
+        raise ValueError(f"Unsupported schema format version: {format}")
+
+    return type(
+        f"{decoded['name']}_dynamic",
+        (Schema,),
+        {
+            **{name: column_from_dict(col) for name, col in decoded["columns"].items()},
+            **{name: rule_from_dict(rule) for name, rule in decoded["rules"].items()},
+        },
+    )

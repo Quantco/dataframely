@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Callable
 from typing import Any, cast
 
 import polars as pl
@@ -20,13 +19,15 @@ from dataframely._polars import (
 )
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from ._mixins import OrdinalMixin
+from ._registry import register
 from ._utils import first_non_null, map_optional
 
 # ------------------------------------------------------------------------------------ #
 
 
+@register
 class Date(OrdinalMixin[dt.date], Column):
     """A column of dates (without time)."""
 
@@ -40,12 +41,7 @@ class Date(OrdinalMixin[dt.date], Column):
         max: dt.date | None = None,
         max_exclusive: dt.date | None = None,
         resolution: str | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -154,6 +150,7 @@ class Date(OrdinalMixin[dt.date], Column):
         )
 
 
+@register
 class Time(OrdinalMixin[dt.time], Column):
     """A column of times (without date)."""
 
@@ -167,12 +164,7 @@ class Time(OrdinalMixin[dt.time], Column):
         max: dt.time | None = None,
         max_exclusive: dt.time | None = None,
         resolution: str | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -287,6 +279,7 @@ class Time(OrdinalMixin[dt.time], Column):
         )
 
 
+@register
 class Datetime(OrdinalMixin[dt.datetime], Column):
     """A column of datetimes."""
 
@@ -302,12 +295,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         resolution: str | None = None,
         time_zone: str | dt.tzinfo | None = None,
         time_unit: TimeUnit = "us",
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -425,7 +413,20 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             null_probability=self._null_probability,
         )
 
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if (
+            name == "time_zone"
+            and isinstance(lhs, dt.tzinfo)
+            and isinstance(rhs, dt.tzinfo)
+        ):
+            now = dt.datetime.now()
+            return lhs.utcoffset(now) == rhs.utcoffset(now)
+        return super()._attributes_match(lhs, rhs, name, column_expr)
 
+
+@register
 class Duration(OrdinalMixin[dt.timedelta], Column):
     """A column of durations."""
 
@@ -439,12 +440,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         max: dt.timedelta | None = None,
         max_exclusive: dt.timedelta | None = None,
         resolution: str | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

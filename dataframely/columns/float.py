@@ -6,7 +6,6 @@ from __future__ import annotations
 import math
 import sys
 from abc import abstractmethod
-from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -17,8 +16,9 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from ._mixins import OrdinalMixin
+from ._registry import register
 from ._utils import classproperty, first_non_null, map_optional
 
 
@@ -33,12 +33,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         min_exclusive: float | None = None,
         max: float | None = None,
         max_exclusive: float | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -146,6 +141,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
 # ------------------------------------------------------------------------------------ #
 
 
+@register
 class Float(_BaseFloat):
     """A column of floats (with any number of bytes)."""
 
@@ -172,6 +168,7 @@ class Float(_BaseFloat):
         return float(np.finfo(np.float64).min)
 
 
+@register
 class Float32(_BaseFloat):
     """A column of float32 ("float") values."""
 
@@ -195,6 +192,7 @@ class Float32(_BaseFloat):
         return float(np.finfo(np.float32).min)
 
 
+@register
 class Float64(_BaseFloat):
     """A column of float64 ("double") values."""
 

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 import polars as pl
@@ -14,8 +14,9 @@ from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from ._mixins import IsInMixin, OrdinalMixin
+from ._registry import register
 from ._utils import classproperty, first_non_null, map_optional
 
 
@@ -30,12 +31,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         max: int | None = None,
         max_exclusive: int | None = None,
         is_in: Sequence[int] | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -150,6 +146,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
 # ------------------------------------------------------------------------------------ #
 
 
+@register
 class Integer(_BaseInteger):
     """A column of integers (with any number of bytes)."""
 
@@ -176,6 +173,7 @@ class Integer(_BaseInteger):
         return False
 
 
+@register
 class Int8(_BaseInteger):
     """A column of int8 values."""
 
@@ -199,6 +197,7 @@ class Int8(_BaseInteger):
         return False
 
 
+@register
 class Int16(_BaseInteger):
     """A column of int16 values."""
 
@@ -222,6 +221,7 @@ class Int16(_BaseInteger):
         return False
 
 
+@register
 class Int32(_BaseInteger):
     """A column of int32 values."""
 
@@ -245,6 +245,7 @@ class Int32(_BaseInteger):
         return False
 
 
+@register
 class Int64(_BaseInteger):
     """A column of int64 values."""
 
@@ -268,6 +269,7 @@ class Int64(_BaseInteger):
         return False
 
 
+@register
 class UInt8(_BaseInteger):
     """A column of uint8 values."""
 
@@ -297,6 +299,7 @@ class UInt8(_BaseInteger):
         return True
 
 
+@register
 class UInt16(_BaseInteger):
     """A column of uint16 values."""
 
@@ -320,6 +323,7 @@ class UInt16(_BaseInteger):
         return True
 
 
+@register
 class UInt32(_BaseInteger):
     """A column of uint32 values."""
 
@@ -343,6 +347,7 @@ class UInt32(_BaseInteger):
         return True
 
 
+@register
 class UInt64(_BaseInteger):
     """A column of uint64 values."""
 

@@ -3,17 +3,27 @@
 
 from __future__ import annotations
 
+import inspect
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Self, TypeAlias, cast
 
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
-from dataframely._deprecation import warn_nullable_default_change
+from dataframely._deprecation import (
+    warn_no_nullable_primary_keys,
+    warn_nullable_default_change,
+)
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
+
+Check: TypeAlias = (
+    Callable[[pl.Expr], pl.Expr]
+    | list[Callable[[pl.Expr], pl.Expr]]
+    | dict[str, Callable[[pl.Expr], pl.Expr]]
+)
 
 # ------------------------------------------------------------------------------------ #
 #                                        COLUMNS                                       #
@@ -32,12 +42,7 @@ class Column(ABC):
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -67,6 +72,10 @@ class Column(ABC):
                 internally sets the alias to the column's name in the parent schema.
             metadata: A dictionary of metadata to attach to the column.
         """
+
+        if nullable and primary_key:
+            warn_no_nullable_primary_keys()
+
         if nullable is None:
             warn_nullable_default_change()
             nullable = True
@@ -264,7 +273,151 @@ class Column(ABC):
         """Private utility for the null probability used during sampling."""
         return 0.1 if self.nullable else 0
 
+    # ----------------------------------- SERIALIZE ---------------------------------- #
+
+    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
+        """Turn the column definition into a dictionary.
+
+        If the column definition references other column definitions, they will be
+        turned into dictionaries recursively.
+
+        Args:
+            expr: An expression referencing the column to turn into a dictionary. This
+                is required to properly encode custom checks.
+
+        Returns:
+            The column definition as dictionary.
+
+        Note:
+            This method stores custom checks as expressions rather than callables to
+            allow for serialization.
+
+        Note:
+            Do NOT use the returned object to evaluate semantic equality of two columns.
+            It may yield different results than :meth:`matches`.
+
+        Attention:
+            This method is only intended for internal use.
+        """
+        from ._registry import _TYPE_MAPPING
+
+        if self.__class__.__name__ not in _TYPE_MAPPING:
+            raise ValueError("Cannot serialize non-native dataframely column types.")
+
+        return {
+            "column_type": self.__class__.__name__,
+            **{
+                param: (
+                    _check_to_expr(getattr(self, param), expr)
+                    if param == "check"
+                    else getattr(self, param)
+                )
+                for param in inspect.signature(self.__class__.__init__).parameters
+                if param not in ("self", "alias")
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Read the column definition from a dictionary.
+
+        Args:
+            data: The dictionary that was created via :meth:`as_dict`.
+
+        Returns:
+            The column definition read from the dictionary.
+
+        Attention:
+            This method is only intended for internal use.
+        """
+        return cls(
+            **{
+                k: (cast(Any, _check_from_expr(v)) if k == "check" else v)
+                for k, v in data.items()
+                if k != "column_type"
+            }
+        )
+
+    # ----------------------------------- EQUALITY ----------------------------------- #
+
+    def matches(self, other: Column, expr: pl.Expr) -> bool:
+        """Check whether this column semantically matches another column.
+
+        Args:
+            other: The column to compare with.
+            expr: An expression referencing the column. This is required to properly
+                evaluate the equivalence of custom checks.
+
+        Returns:
+            Whether the columns are semantically equal.
+        """
+        if not isinstance(other, self.__class__):
+            return False
+
+        attributes = inspect.signature(self.__class__.__init__)
+        return all(
+            self._attributes_match(
+                getattr(self, attr), getattr(other, attr), attr, expr
+            )
+            for attr in attributes.parameters
+            # NOTE: We do not want to compare the `alias` here as the comparison should
+            #  only evaluate the type and its constraints. Names are checked in
+            #  :meth:`Schema.matches`.
+            if attr not in ("self", "alias")
+        )
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "check":
+            return _compare_checks(lhs, rhs, column_expr)
+        return lhs == rhs
+
     # -------------------------------- DUNDER METHODS -------------------------------- #
 
     def __str__(self) -> str:
         return self.__class__.__name__.lower()
+
+
+def _compare_checks(lhs: Check | None, rhs: Check | None, expr: pl.Expr) -> bool:
+    match (lhs, rhs):
+        case (None, None):
+            return True
+        case (list(), list()):
+            return len(lhs) == len(rhs) and all(
+                left(expr).meta.eq(right(expr)) for left, right in zip(lhs, rhs)
+            )
+        case (dict(), dict()):
+            return lhs.keys() == rhs.keys() and all(
+                lhs[key](expr).meta.eq(rhs[key](expr)) for key in lhs.keys()
+            )
+        case _ if callable(lhs) and callable(rhs):
+            return lhs(expr).meta.eq(rhs(expr))
+        case _:
+            return False
+
+
+def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
+    match check:
+        case None:
+            return None
+        case list():
+            return [c(expr) for c in check]
+        case dict():
+            return {key: c(expr) for key, c in check.items()}
+        case _ if callable(check):
+            return check(expr)
+
+
+def _check_from_expr(value: Any) -> Check | None:
+    match value:
+        case None:
+            return None
+        case list():
+            return [lambda _: c for c in value]
+        case dict():
+            return {key: lambda _: c for key, c in value.items()}
+        case pl.Expr():
+            return lambda _: value
+        case _:  # pragma: no cover
+            raise ValueError(f"Invalid type for check: {type(value)}")

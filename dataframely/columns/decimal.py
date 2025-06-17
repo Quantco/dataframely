@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import decimal
 import math
-from collections.abc import Callable
 from typing import Any
 
 import polars as pl
@@ -14,11 +13,13 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-from ._base import Column
+from ._base import Check, Column
 from ._mixins import OrdinalMixin
+from ._registry import register
 from ._utils import first_non_null, map_optional
 
 
+@register
 class Decimal(OrdinalMixin[decimal.Decimal], Column):
     """A column of decimal values with given precision and scale."""
 
@@ -33,12 +34,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         min_exclusive: decimal.Decimal | None = None,
         max: decimal.Decimal | None = None,
         max_exclusive: decimal.Decimal | None = None,
-        check: (
-            Callable[[pl.Expr], pl.Expr]
-            | list[Callable[[pl.Expr], pl.Expr]]
-            | dict[str, Callable[[pl.Expr], pl.Expr]]
-            | None
-        ) = None,
+        check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):

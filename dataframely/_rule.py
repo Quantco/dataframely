@@ -1,8 +1,11 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
+
 from collections import defaultdict
 from collections.abc import Callable
+from typing import Any, Self
 
 import polars as pl
 
@@ -15,6 +18,30 @@ class Rule:
     def __init__(self, expr: pl.Expr) -> None:
         self.expr = expr
 
+    def matches(self, other: Rule) -> bool:
+        """Check whether this rule semantically matches another rule.
+
+        Args:
+            other: The rule to compare with.
+
+        Returns:
+            Whether the rules are semantically equal.
+        """
+        return self.expr.meta.eq(other.expr)
+
+    def as_dict(self) -> dict[str, Any]:
+        """Turn the rule into a dictionary."""
+        return {"rule_type": self.__class__.__name__, "expr": self.expr}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Read the rule from a dictionary.
+
+        Args:
+            data: The dictionary that was created via :meth:`asdict`.
+        """
+        return cls(data["expr"])
+
 
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
@@ -22,6 +49,18 @@ class GroupRule(Rule):
     def __init__(self, expr: pl.Expr, group_columns: list[str]) -> None:
         super().__init__(expr)
         self.group_columns = group_columns
+
+    def matches(self, other: Rule) -> bool:
+        if not isinstance(other, GroupRule):
+            return False
+        return super().matches(other) and self.group_columns == other.group_columns
+
+    def as_dict(self) -> dict[str, Any]:
+        return {**super().as_dict(), "group_columns": self.group_columns}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        return cls(data["expr"], group_columns=data["group_columns"])
 
 
 def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction], Rule]:
@@ -130,3 +169,30 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
             frame, on=list(group_columns), how="left", nulls_equal=True
         )
     return result
+
+
+# ------------------------------------------------------------------------------------ #
+#                                        FACTORY                                       #
+# ------------------------------------------------------------------------------------ #
+
+_TYPE_MAPPING: dict[str, type[Rule]] = {
+    Rule.__name__: Rule,
+    GroupRule.__name__: GroupRule,
+}
+
+
+def rule_from_dict(data: dict[str, Any]) -> Rule:
+    """Dynamically read a rule object from a dictionary.
+
+    Args:
+        data: The dictionary obtained by calling :meth:`~Rule.asdict` on a rule object.
+            The dictionary must contain a key ``"rule_type"`` that indicates which rule
+            type to instantiate.
+
+    Returns:
+        The rule object as read from ``data``.
+    """
+    name = data["rule_type"]
+    if name not in _TYPE_MAPPING:
+        raise ValueError(f"Unknown rule type: {name}")
+    return _TYPE_MAPPING[name].from_dict(data)
