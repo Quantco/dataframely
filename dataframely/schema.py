@@ -14,16 +14,17 @@ import polars.selectors as cs
 
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
-from ._rule import Rule, decode_rule, with_evaluation_rules
+from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import SchemaJSONDecoder, SchemaJSONEncoder
 from ._typing import DataFrame, LazyFrame
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
-from .columns import Column, decode_column
+from .columns import Column, column_from_dict
 from .config import Config
 from .exc import RuleValidationError, ValidationError
 from .failure import FailureInfo
 from .random import Generator
 
+SERIALIZATION_FORMAT_VERSION = "1"
 _ORIGINAL_NULL_SUFFIX = "__orig_null__"
 
 # ------------------------------------------------------------------------------------ #
@@ -612,16 +613,16 @@ class Schema(BaseSchema, ABC):
 
         result = {
             "versions": {
-                "format": "1",
+                "format": SERIALIZATION_FORMAT_VERSION,
                 "dataframely": __version__,
                 "polars": pl.__version__,
             },
             "name": cls.__name__,
             "columns": {
-                name: col.encode(pl.col(name)) for name, col in cls.columns().items()
+                name: col.as_dict(pl.col(name)) for name, col in cls.columns().items()
             },
             "rules": {
-                name: rule.encode()
+                name: rule.as_dict()
                 for name, rule in cls._schema_validation_rules().items()
             },
         }
@@ -726,7 +727,7 @@ def deserialize_schema(data: str) -> type[Schema]:
         f"{decoded['name']}_dynamic",
         (Schema,),
         {
-            **{name: decode_column(col) for name, col in decoded["columns"].items()},
-            **{name: decode_rule(rule) for name, rule in decoded["rules"].items()},
+            **{name: column_from_dict(col) for name, col in decoded["columns"].items()},
+            **{name: rule_from_dict(rule) for name, rule in decoded["rules"].items()},
         },
     )

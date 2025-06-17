@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from ._base import Column
-from ._registry import decode_column
+from ._registry import column_from_dict
 from .any import Any
 from .array import Array
 from .bool import Bool
@@ -18,7 +18,7 @@ from .struct import Struct
 
 __all__ = [
     "Column",
-    "decode_column",
+    "column_from_dict",
     "Any",
     "Array",
     "Bool",

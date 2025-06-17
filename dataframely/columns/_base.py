@@ -261,18 +261,18 @@ class Column(ABC):
 
     # ----------------------------------- SERIALIZE ---------------------------------- #
 
-    def encode(self, expr: pl.Expr) -> dict[str, Any]:
-        """Encode the column definition into a dictionary.
+    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
+        """Turn the column definition into a dictionary.
 
         If the column definition references other column definitions, they will be
         turned into dictionaries recursively.
 
         Args:
-            expr: An expression referencing the column to encode. This is required to
-                properly encode custom checks.
+            expr: An expression referencing the column to turn into a dictionary. This
+                is required to properly encode custom checks.
 
         Returns:
-            The encoded column definition.
+            The column definition as dictionary.
 
         Note:
             This method stores custom checks as expressions rather than callables to
@@ -304,14 +304,14 @@ class Column(ABC):
         }
 
     @classmethod
-    def decode(cls, data: dict[str, Any]) -> Self:
-        """Decode the column definition from a dictionary.
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Read the column definition from a dictionary.
 
         Args:
-            data: The dictionary that was created via :meth:`asdict`.
+            data: The dictionary that was created via :meth:`as_dict`.
 
         Returns:
-            The decoded column definition.
+            The column definition read from the dictionary.
 
         Attention:
             This method is only intended for internal use.
@@ -331,8 +331,8 @@ class Column(ABC):
 
         Args:
             other: The column to compare with.
-            expr: An expression referencing the column to encode. This is required to
-                properly evaluate the equivalence of custom checks.
+            expr: An expression referencing the column. This is required to properly
+                evaluate the equivalence of custom checks.
 
         Returns:
             Whether the columns are semantically equal.
