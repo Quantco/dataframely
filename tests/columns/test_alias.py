@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
-import pytest
 
 import dataframely as dy
 
@@ -25,14 +24,14 @@ def test_create_empty() -> None:
     assert AliasSchema.is_valid(df)
 
 
-def test_alias_property() -> None:
+def test_alias() -> None:
     assert AliasSchema.a.alias == "hello world: col with space!"
 
 
-def test_raise_alias_unset() -> None:
-    with pytest.raises(
-        ValueError,
-        match="Cannot obtain unset alias. This can happen if a column definition is used outside of a schema.",
-    ):
-        no_alias_col = dy.Int32()
-        _ = no_alias_col.alias
+def test_alias_name() -> None:
+    assert AliasSchema.a.name == "hello world: col with space!"
+
+
+def test_alias_unset() -> None:
+    no_alias_col = dy.Int32()
+    assert no_alias_col.alias is None, "Alias should be an empty string if not set"

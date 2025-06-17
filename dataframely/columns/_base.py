@@ -68,8 +68,7 @@ class Column(ABC):
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
-                names, the specified alias is the only valid name. If unset, dataframely
-                internally sets the alias to the column's name in the parent schema.
+                names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
 
@@ -83,8 +82,10 @@ class Column(ABC):
         self.nullable = nullable and not primary_key
         self.primary_key = primary_key
         self.check = check
-        self._alias = alias
+        self.alias = alias
         self.metadata = metadata
+        # The name may be overridden by the schema on column access.
+        self.name = alias or ""
 
     # ------------------------------------- DTYPE ------------------------------------ #
 
@@ -226,18 +227,9 @@ class Column(ABC):
     # ------------------------------------ HELPER ------------------------------------ #
 
     @property
-    def alias(self) -> str:
-        """The alias (i.e., name) of this column."""
-        if self._alias is None:
-            raise ValueError(
-                "Cannot obtain unset alias. This can happen if a column definition is used outside of a schema."
-            )
-        return self._alias
-
-    @property
     def col(self) -> pl.Expr:
         """Obtain a Polars column expression for the column."""
-        return pl.col(self.alias)
+        return pl.col(self.name)
 
     # ----------------------------------- SAMPLING ----------------------------------- #
 

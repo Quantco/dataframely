@@ -64,14 +64,11 @@ def test_col() -> None:
     assert MySchema.d.col.__dict__ == pl.col("e").__dict__
 
 
-def test_col_raise_if_none() -> None:
-    class InvalidSchema(dy.Schema):
-        a = dy.Integer()
-
-    # Manually override alias to be ``None``.
-    InvalidSchema.a._alias = None
-    with pytest.raises(ValueError):
-        InvalidSchema.a.col
+def test_name() -> None:
+    assert MySchema.a.name == "a"
+    assert MySchema.b.name == "b"
+    assert MySchema.c.name == "c"
+    assert MySchema.d.name == "e"
 
 
 def test_col_in_polars_expression() -> None:
