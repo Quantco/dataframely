@@ -53,7 +53,7 @@ def test_no_rule_named_primary_key() -> None:
         create_schema(
             "test",
             {"a": dy.String()},
-            {"primary_key": Rule(pl.col("a").str.len_bytes() > 1)},
+            {"primary_key": Rule(lambda: pl.col("a").str.len_bytes() > 1)},
         )
 
 

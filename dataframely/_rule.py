@@ -12,15 +12,17 @@ ValidationFunction = Callable[[], pl.Expr]
 class Rule:
     """Internal class representing validation rules."""
 
-    def __init__(self, expr: pl.Expr) -> None:
-        self.expr = expr
+    def __init__(self, validation_fn: ValidationFunction) -> None:
+        self.validation_fn = validation_fn
 
 
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
 
-    def __init__(self, expr: pl.Expr, group_columns: list[str]) -> None:
-        super().__init__(expr)
+    def __init__(
+        self, validation_fn: ValidationFunction, group_columns: list[str]
+    ) -> None:
+        super().__init__(validation_fn)
         self.group_columns = group_columns
 
 
@@ -56,8 +58,8 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
 
     def decorator(validation_fn: ValidationFunction) -> Rule:
         if group_by is not None:
-            return GroupRule(expr=validation_fn(), group_columns=group_by)
-        return Rule(expr=validation_fn())
+            return GroupRule(validation_fn=validation_fn, group_columns=group_by)
+        return Rule(validation_fn=validation_fn)
 
     return decorator
 
@@ -84,7 +86,7 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
     #  1. Simple rules can simply be selected on the data frame
     #  2. "Group" rules require a `group_by` and a subsequent join
     simple_exprs = {
-        name: rule.expr
+        name: rule.validation_fn()
         for name, rule in rules.items()
         if not isinstance(rule, GroupRule)
     }
@@ -109,7 +111,9 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
     grouped_rules: dict[frozenset[str], dict[str, pl.Expr]] = defaultdict(dict)
     for name, rule in rules.items():
         # NOTE: `null` indicates validity, see note above.
-        grouped_rules[frozenset(rule.group_columns)][name] = rule.expr.fill_null(True)
+        grouped_rules[frozenset(rule.group_columns)][name] = (
+            rule.validation_fn().fill_null(True)
+        )
 
     # Then, for each `group_by`, we apply the relevant rules and keep all the rule
     # evaluations around

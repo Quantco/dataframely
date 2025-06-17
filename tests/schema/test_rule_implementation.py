@@ -23,7 +23,7 @@ def test_group_rule_group_by_error() -> None:
             columns={"a": dy.Integer(), "b": dy.Integer()},
             rules={
                 "b_greater_zero": GroupRule(
-                    (pl.col("b") > 0).all(), group_columns=["c"]
+                    lambda: (pl.col("b") > 0).all(), group_columns=["c"]
                 )
             },
         )
@@ -36,7 +36,7 @@ def test_rule_implementation_error() -> None:
         create_schema(
             "test",
             columns={"a": dy.Integer()},
-            rules={"integer_rule": Rule(pl.col("a") + 1)},
+            rules={"integer_rule": Rule(lambda: pl.col("a") + 1)},
         )
 
 
@@ -51,7 +51,11 @@ def test_group_rule_implementation_error() -> None:
         create_schema(
             "test",
             columns={"a": dy.Integer(), "b": dy.Integer()},
-            rules={"b_greater_zero": GroupRule(pl.col("b") > 0, group_columns=["a"])},
+            rules={
+                "b_greater_zero": GroupRule(
+                    lambda: pl.col("b") > 0, group_columns=["a"]
+                )
+            },
         )
 
 
@@ -63,5 +67,5 @@ def test_rule_column_overlap_error() -> None:
         create_schema(
             "test",
             columns={"test": dy.Integer(alias="a")},
-            rules={"a": Rule(pl.col("a") > 0)},
+            rules={"a": Rule(lambda: pl.col("a") > 0)},
         )

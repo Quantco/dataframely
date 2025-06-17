@@ -29,11 +29,11 @@ def _build_rules(
     # Add primary key validation to the list of rules if applicable
     primary_keys = _primary_keys(columns)
     if len(primary_keys) > 0:
-        rules["primary_key"] = Rule(~pl.struct(primary_keys).is_duplicated())
+        rules["primary_key"] = Rule(lambda: ~pl.struct(primary_keys).is_duplicated())
 
     # Add column-specific rules
     column_rules = {
-        f"{col_name}|{rule_name}": Rule(expr)
+        f"{col_name}|{rule_name}": Rule(lambda: expr)
         for col_name, column in columns.items()
         for rule_name, expr in column.validation_rules(pl.col(col_name)).items()
     }
@@ -79,55 +79,6 @@ class SchemaMeta(ABCMeta):
         namespace[_COLUMN_ATTR] = result.columns
         namespace[_RULE_ATTR] = result.rules
 
-        # At this point, we already know all columns and custom rules. We want to run
-        # some checks...
-
-        # 1) Check that the column names clash with none of the rule names. To this end,
-        # we assume that users cast dtypes, i.e. additional rules for dtype casting
-        # are also checked.
-        all_column_names = set(result.columns)
-        all_rule_names = set(_build_rules(result.rules, result.columns).keys()) | set(
-            f"{col}|dtype" for col in result.columns
-        )
-        common_names = all_column_names & all_rule_names
-        if len(common_names) > 0:
-            common_list = ", ".join(sorted(f"'{col}'" for col in common_names))
-            raise ImplementationError(
-                "Rules and columns must not be named equally but found "
-                f"{len(common_names)} overlaps: {common_list}."
-            )
-
-        # 2) Check that the columns referenced in the group rules exist.
-        for rule_name, rule in result.rules.items():
-            if isinstance(rule, GroupRule):
-                missing_columns = set(rule.group_columns) - set(result.columns)
-                if len(missing_columns) > 0:
-                    missing_list = ", ".join(
-                        sorted(f"'{col}'" for col in missing_columns)
-                    )
-                    raise ImplementationError(
-                        f"Group validation rule '{rule_name}' has been implemented "
-                        f"incorrectly. It references {len(missing_columns)} columns "
-                        f"which are not in the schema: {missing_list}."
-                    )
-
-        # 3) Assuming that non-custom rules are implemented correctly, we check that all
-        # custom rules are _also_ implemented correctly by evaluating rules on an
-        # empty data frame and checking for the evaluated dtypes.
-        if len(result.rules) > 0:
-            lf_empty = pl.LazyFrame(
-                schema={col_name: col.dtype for col_name, col in result.columns.items()}
-            )
-            # NOTE: For some reason, `polars` does not yield correct dtypes when calling
-            #  `collect_schema()`
-            schema = with_evaluation_rules(lf_empty, result.rules).collect().schema
-            for rule_name, rule in result.rules.items():
-                dtype = schema[rule_name]
-                if not isinstance(dtype, pl.Boolean):
-                    raise RuleImplementationError(
-                        rule_name, dtype, isinstance(rule, GroupRule)
-                    )
-
         return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
     @staticmethod
@@ -161,6 +112,61 @@ class SchemaMeta(ABCMeta):
 class BaseSchema(metaclass=SchemaMeta):
     """Internal utility abstraction to reference schemas without introducing cyclical
     dependencies."""
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+
+        columns = cls.columns()
+        rules = cls._validation_rules()
+
+        # At this point, we already know all columns and custom rules. We want to run
+        # some checks...
+
+        # 1) Check that the column names clash with none of the rule names. To this end,
+        # we assume that users cast dtypes, i.e. additional rules for dtype casting
+        # are also checked.
+        all_column_names = set(columns)
+        all_rule_names = set(_build_rules(rules, columns).keys()) | set(
+            f"{col}|dtype" for col in columns
+        )
+        common_names = all_column_names & all_rule_names
+        if len(common_names) > 0:
+            common_list = ", ".join(sorted(f"'{col}'" for col in common_names))
+            raise ImplementationError(
+                "Rules and columns must not be named equally but found "
+                f"{len(common_names)} overlaps: {common_list}."
+            )
+
+        # 2) Check that the columns referenced in the group rules exist.
+        for rule_name, rule in rules.items():
+            if isinstance(rule, GroupRule):
+                missing_columns = set(rule.group_columns) - set(columns)
+                if len(missing_columns) > 0:
+                    missing_list = ", ".join(
+                        sorted(f"'{col}'" for col in missing_columns)
+                    )
+                    raise ImplementationError(
+                        f"Group validation rule '{rule_name}' has been implemented "
+                        f"incorrectly. It references {len(missing_columns)} columns "
+                        f"which are not in the schema: {missing_list}."
+                    )
+
+        # 3) Assuming that non-custom rules are implemented correctly, we check that all
+        # custom rules are _also_ implemented correctly by evaluating rules on an
+        # empty data frame and checking for the evaluated dtypes.
+        if len(rules) > 0:
+            lf_empty = pl.LazyFrame(
+                schema={col_name: col.dtype for col_name, col in columns.items()}
+            )
+            # NOTE: For some reason, `polars` does not yield correct dtypes when calling
+            #  `collect_schema()`
+            schema = with_evaluation_rules(lf_empty, rules).collect().schema
+            for rule_name, rule in rules.items():
+                dtype = schema[rule_name]
+                if not isinstance(dtype, pl.Boolean):
+                    raise RuleImplementationError(
+                        rule_name, dtype, isinstance(rule, GroupRule)
+                    )
 
     @classmethod
     def column_names(cls) -> list[str]:

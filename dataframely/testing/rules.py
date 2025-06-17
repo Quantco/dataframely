@@ -15,7 +15,7 @@ def rules_from_exprs(exprs: dict[str, pl.Expr]) -> dict[str, Rule]:
     Returns:
         The rules corresponding to the expressions.
     """
-    return {name: Rule(expr) for name, expr in exprs.items()}
+    return {name: Rule(lambda: expr) for name, expr in exprs.items()}
 
 
 def evaluate_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFrame:

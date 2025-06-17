@@ -482,7 +482,8 @@ class Schema(BaseSchema, ABC):
             # end, `_validate_schema` kept around the original columns.
             dtype_rules = {
                 f"{col}|dtype": Rule(
-                    pl.col(col).is_null() == pl.col(f"{col}{_ORIGINAL_NULL_SUFFIX}")
+                    lambda: pl.col(col).is_null()
+                    == pl.col(f"{col}{_ORIGINAL_NULL_SUFFIX}")
                 )
                 for col in cls.column_names()
             }
