@@ -226,6 +226,31 @@ class Collection(BaseCollection, ABC):
         return cls.validate(members)
 
     @classmethod
+    def matches(cls, other: type[BaseCollection]) -> bool:
+        """Check whether this collection semantically matches another.
+
+        Args:
+            other: The collection to compare with.
+
+        Returns:
+            Whether the two collections are semantically equal.
+        """
+        schemas_lhs = cls.member_schemas()
+        schemas_rhs = other.member_schemas()
+
+        # Member names must match
+        if schemas_lhs.keys() != schemas_rhs.keys():
+            return False
+
+        # Member schemas must match
+        if not all(
+            schemas_lhs[name].matches(schemas_rhs[name]) for name in schemas_lhs
+        ):
+            return False
+
+        return True
+
+    @classmethod
     def _preprocess_sample(
         cls, sample: dict[str, Any], index: int, generator: Generator
     ) -> dict[str, Any]:
