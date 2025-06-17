@@ -12,7 +12,7 @@ def test_repr_no_rules() -> None:
         a = dy.Integer()
 
     assert repr(SchemaNoRules) == textwrap.dedent("""\
-        SchemaNoRules(dy.Schema):
+        class SchemaNoRules(dy.Schema):
             a=dy.Integer(nullable=True, alias='a')""")
 
 
@@ -21,7 +21,7 @@ def test_repr_only_column_rules() -> None:
         a = dy.Integer(min=10)
 
     assert repr(SchemaColumnRules) == textwrap.dedent("""\
-        SchemaColumnRules(dy.Schema):
+        class SchemaColumnRules(dy.Schema):
             a=dy.Integer(nullable=True, min=10, alias='a')""")
 
 
@@ -42,7 +42,7 @@ def test_repr_with_rules() -> None:
     assert (
         repr(SchemaWithRules)
         == textwrap.dedent("""\
-        SchemaWithRules(dy.Schema):
+        class SchemaWithRules(dy.Schema):
             a=dy.Integer(nullable=True, min=10, alias='a')
             b2=dy.String(nullable=False, primary_key=True, regex='^[A-Z]{3}$', alias='b2')
             my_rule=dy.Rule(expr=[(col("a")) < (dyn int: 100)])

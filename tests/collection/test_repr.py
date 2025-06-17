@@ -18,6 +18,6 @@ def test_repr_collection() -> None:
     assert (
         repr(MyCollection)
         == textwrap.dedent("""\
-        CollectionMeta(dy.Collection):
+        class CollectionMeta(dy.Collection):
             my_schema=MySchema(optional=False, ignored_in_filters=False, inline_for_sampling=False)""")
     )

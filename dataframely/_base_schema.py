@@ -158,7 +158,7 @@ class SchemaMeta(ABCMeta):
         return result
 
     def __repr__(cls) -> str:
-        parts = [f"{cls.__name__}(dy.Schema):"]
+        parts = [f"class {cls.__name__}(dy.Schema):"]
         for name, col in getattr(cls, _COLUMN_ATTR).items():
             parts.append(f"    {name}={col!r}")
         for name, rule in getattr(cls, _RULE_ATTR).items():

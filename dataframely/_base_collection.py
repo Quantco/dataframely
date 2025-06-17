@@ -246,7 +246,7 @@ class CollectionMeta(ABCMeta):
             raise AnnotationImplementationError(attr, type_annotation)
 
     def __repr__(cls) -> str:
-        parts = [f"{cls.__class__.__name__}(dy.Collection):"]
+        parts = [f"class {cls.__class__.__name__}(dy.Collection):"]
         for name, member in getattr(cls, _MEMBER_ATTR).items():
             parts.append(
                 f"    {name}={member.schema.__name__}"
