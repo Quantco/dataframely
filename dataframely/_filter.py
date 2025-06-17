@@ -34,6 +34,11 @@ def filter() -> Callable[[Callable[[C], pl.LazyFrame]], Filter[C]]:
     Attention:
         Make sure to provide unique combinations of the primary keys or the filters
         might introduce duplicate rows.
+
+    Attention:
+        The filter logic should return a lazy frame with a static computational graph.
+        Other implementations using arbitrary python logic works for filtering and validation, but
+        may lead to wrong results in Collection comparisons and (de-)serialization.
     """
 
     def decorator(validation_fn: Callable[[C], pl.LazyFrame]) -> Filter[C]:
