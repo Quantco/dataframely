@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
+import pytest
 from polars.testing import assert_frame_equal
 
-from dataframely._rule import GroupRule, Rule
+from dataframely._rule import GroupRule, Rule, rule
 from dataframely.testing import evaluate_rules
 
 
@@ -106,3 +107,16 @@ def test_multiple_group_rules() -> None:
         }
     )
     assert_frame_equal(actual, expected)
+
+
+def test_rule_with_classmethod() -> None:
+    with pytest.raises(
+        ValueError,
+        match="Using `@classmethod` on a rule requires `lazy=True` to be set.",
+    ):
+
+        class _MySchema:
+            @rule()
+            @classmethod
+            def _test_method(cls) -> pl.Expr:
+                return pl.col("a") > 0
