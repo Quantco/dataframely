@@ -36,8 +36,8 @@ class GroupRule(Rule):
 
 
 def rule(
-    *, group_by: list[str] | None = None
-) -> Callable[[Callable[[], pl.Expr]], Rule]:
+    *, group_by: list[str] | None = None, lazy: bool = False
+) -> Callable[[LazyValidationFunction], Rule]:
     """Mark a function as a rule to evaluate during validation.
 
     The name of the function will be used as the name of the rule. The function should
@@ -59,6 +59,11 @@ def rule(
             of rows. If this list is provided, the returned expression must return a
             single boolean value, i.e. some kind of aggregation function must be used
             (e.g. ``sum``, ``any``, ...).
+        lazy: If set to ``True``, the rule will be evaluated lazily. This means that the
+            dtype of the returned expression is not validated to be a boolean expression!
+            Use this if you need to access the schema class in your rule function, want
+            to use `@classmethod` on the rule or need to access constants defined after
+            the schema.
 
     Note:
         You'll need to explicitly handle ``null`` values in your columns when defining
@@ -67,12 +72,19 @@ def rule(
         is assumed to be valid.
     """
 
-    def decorator(validation_fn: ValidationFunction) -> Rule:
-        if group_by is not None:
-            return GroupRule(
-                expr_or_validation_fn=validation_fn(), group_columns=group_by
+    def decorator(validation_fn: LazyValidationFunction) -> Rule:
+        if isinstance(validation_fn, classmethod) and not lazy:
+            raise ValueError(
+                "Using `@classmethod` on a rule requires `lazy=True` to be set."
             )
-        return Rule(expr_or_validation_fn=validation_fn())
+
+        if group_by is not None:
+            # mypy doesnt understand that we only call validation_fn when its not a class method.
+            return GroupRule(
+                expr_or_validation_fn=validation_fn if lazy else validation_fn(),  # type: ignore[call-arg, operator]
+                group_columns=group_by,
+            )
+        return Rule(expr_or_validation_fn=validation_fn if lazy else validation_fn())  # type: ignore[call-arg, operator]
 
     return decorator
 
