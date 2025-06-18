@@ -92,7 +92,6 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
         columns used in the rule is ``null`` is interpreted as ``true``, i.e. the row
         is assumed to be valid.
 
-
     Attention:
         The rule logic should return a static result.
         Other implementations using arbitrary python logic works for filtering and
