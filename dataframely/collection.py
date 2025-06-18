@@ -254,9 +254,7 @@ class Collection(BaseCollection, ABC):
             for name in members_lhs:
                 lhs = asdict(members_lhs[name])
                 rhs = asdict(members_rhs[name])
-                if not lhs.keys() == rhs.keys():
-                    return False
-                for attr in lhs.keys():
+                for attr in lhs.keys() | rhs.keys():
                     if attr == "schema":
                         if not lhs[attr].matches(rhs[attr]):
                             return False
