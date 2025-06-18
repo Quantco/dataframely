@@ -161,12 +161,13 @@ class SchemaMeta(ABCMeta):
     def __repr__(cls) -> str:
         parts = [f'[Schema "{cls.__name__}"]']
         parts.append(textwrap.indent("Columns:", prefix=" " * 2))
-        for name, col in getattr(cls, _COLUMN_ATTR).items():
+        for name, col in cls.columns().items():  # type: ignore
             parts.append(textwrap.indent(f'- "{name}": {col!r}', prefix=" " * 4))
-        if getattr(cls, _RULE_ATTR):
+        if cls._schema_validation_rules():  # type: ignore
             parts.append(textwrap.indent("Rules:", prefix=" " * 2))
-        for name, rule in getattr(cls, _RULE_ATTR).items():
+        for name, rule in cls._schema_validation_rules().items():  # type: ignore
             parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
+        parts.append("")  # Add line break at the end
         return "\n".join(parts)
 
 

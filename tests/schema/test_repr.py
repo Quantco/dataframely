@@ -14,7 +14,8 @@ def test_repr_no_rules() -> None:
     assert repr(SchemaNoRules) == textwrap.dedent("""\
         [Schema "SchemaNoRules"]
           Columns:
-            - "a": Integer(nullable=True)""")
+            - "a": Integer(nullable=True)
+        """)
 
 
 def test_repr_only_column_rules() -> None:
@@ -24,7 +25,8 @@ def test_repr_only_column_rules() -> None:
     assert repr(SchemaColumnRules) == textwrap.dedent("""\
         [Schema "SchemaColumnRules"]
           Columns:
-            - "a": Integer(nullable=True, min=10)""")
+            - "a": Integer(nullable=True, min=10)
+        """)
 
 
 class SchemaWithRules(dy.Schema):
@@ -48,4 +50,5 @@ def test_repr_with_rules() -> None:
             - "b2": String(nullable=False, primary_key=True, regex='^[A-Z]{3}$')
           Rules:
             - "my_rule": [(col("a")) < (dyn int: 100)]
-            - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']""")
+            - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']
+        """)

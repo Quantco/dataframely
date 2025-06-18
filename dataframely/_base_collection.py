@@ -247,9 +247,9 @@ class CollectionMeta(ABCMeta):
             raise AnnotationImplementationError(attr, type_annotation)
 
     def __repr__(cls) -> str:
-        parts = [f'[Collection "{cls.__class__.__name__}(dy.Collection)"]']
+        parts = [f'[Collection "{cls.__class__.__name__}"]']
         parts.append(textwrap.indent("Members:", prefix=" " * 2))
-        for name, member in getattr(cls, _MEMBER_ATTR).items():
+        for name, member in cls.members().items():  # type: ignore
             parts.append(
                 textwrap.indent(
                     f'- "{name}": {member.schema.__name__}'
@@ -259,16 +259,17 @@ class CollectionMeta(ABCMeta):
                     prefix=" " * 4,
                 )
             )
-        if getattr(cls, _FILTER_ATTR):
+        if cls._filters():  # type: ignore
             parts.append(textwrap.indent("Filters:", prefix=" " * 2))
-        for name, member in getattr(cls, _FILTER_ATTR).items():
+        for name, member in cls._filters().items():  # type: ignore
             parts.append(textwrap.indent(f'- "{name}":', prefix=" " * 4))
             parts.append(
                 textwrap.indent(
                     f"{member.logic(cls.create_empty()).explain()}",  # type: ignore
-                    prefix=" " * 6,
+                    prefix=" " * 8,
                 )
             )
+        parts.append("")  # Add line break at the end
         return "\n".join(parts)
 
 
