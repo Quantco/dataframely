@@ -285,7 +285,7 @@ class Collection(BaseCollection, ABC):
                     return False
             return True
 
-        return _filters_match() and _members_match()
+        return _members_match() and _filters_match()
 
     @classmethod
     def _preprocess_sample(
