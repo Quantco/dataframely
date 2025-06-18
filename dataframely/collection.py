@@ -4,6 +4,7 @@
 import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Self, cast
 
@@ -13,7 +14,6 @@ import polars.exceptions as plexc
 from dataframely.exc import MemberValidationError, RuleValidationError, ValidationError
 
 from ._base_collection import BaseCollection
-from ._filter import Filter
 from ._polars import FrameType, join_all_inner, join_all_outer
 from .failure import FailureInfo
 from .random import Generator
@@ -242,52 +242,50 @@ class Collection(BaseCollection, ABC):
             Otherwise, this function may falsely indicate a match.
         """
 
-        members_lhs = cls.members()
-        members_rhs = other.members()
+        def _members_match() -> bool:
+            members_lhs = cls.members()
+            members_rhs = other.members()
 
-        # Member names must match
-        if members_lhs.keys() != members_rhs.keys():
-            return False
-
-        # Other member attributes must match
-        for name in members_lhs:
-            lhs = members_lhs[name]
-            rhs = members_rhs[name]
-            if not lhs.__dict__.keys() == lhs.__dict__.keys():
+            # Member names must match
+            if members_lhs.keys() != members_rhs.keys():
                 return False
-            for attr in lhs.__dict__.keys():
-                attr_left = getattr(lhs, attr)
-                attr_right = getattr(rhs, attr)
-                if attr == "schema":
-                    if not attr_left.matches(attr_right):
-                        return False
-                else:
-                    if not attr_left == attr_right:
-                        return False
 
-        # Filter names must match
-        filters_lhs = cls._filters()
-        filters_rhs = other._filters()
-        if filters_lhs.keys() != filters_rhs.keys():
-            return False
+            # Member attributes must match
+            for name in members_lhs:
+                lhs = asdict(members_lhs[name])
+                rhs = asdict(members_rhs[name])
+                if not lhs.keys() == rhs.keys():
+                    return False
+                for attr in lhs.keys():
+                    if attr == "schema":
+                        if not lhs[attr].matches(rhs[attr]):
+                            return False
+                    else:
+                        if not lhs[attr] == rhs[attr]:
+                            return False
+            return True
 
-        # Computational graph of filter logic must match
-        # Evaluate on empty dataframes
-        empty_left = cls.create_empty()
-        empty_right = other.create_empty()
+        def _filters_match() -> bool:
+            filters_lhs = cls._filters()
+            filters_rhs = other._filters()
 
-        def filter_logic_matches(filter_left: Filter, filter_right: Filter) -> bool:
-            lf_left = filter_left.logic(empty_left)
-            lf_right = filter_right.logic(empty_right)
-            return lf_left.serialize(format="json") == lf_right.serialize(format="json")
+            # Filter names must match
+            if filters_lhs.keys() != filters_rhs.keys():
+                return False
 
-        if not all(
-            filter_logic_matches(filters_lhs[name], filters_rhs[name])
-            for name in filters_lhs
-        ):
-            return False
+            # Computational graph of filter logic must match
+            # Evaluate on empty dataframes
+            empty_left = cls.create_empty()
+            empty_right = other.create_empty()
 
-        return True
+            for name in filters_lhs:
+                lhs = filters_lhs[name].logic(empty_left)
+                rhs = filters_rhs[name].logic(empty_right)
+                if not lhs.serialize(format="json") == rhs.serialize(format="json"):
+                    return False
+            return True
+
+        return _filters_match() and _members_match()
 
     @classmethod
     def _preprocess_sample(
