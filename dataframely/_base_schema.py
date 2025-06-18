@@ -111,24 +111,6 @@ class SchemaMeta(ABCMeta):
                         f"which are not in the schema: {missing_list}."
                     )
 
-        # TODO: Move this check to the polars plugin for lazy validation.
-        # 3) Assuming that non-custom rules are implemented correctly, we check that all
-        # custom rules are _also_ implemented correctly by evaluating rules on an
-        # empty data frame and checking for the evaluated dtypes.
-        # if len(result.rules) > 0:
-        #     lf_empty = pl.LazyFrame(
-        #         schema={col_name: col.dtype for col_name, col in result.columns.items()}
-        #     )
-        #     # NOTE: For some reason, `polars` does not yield correct dtypes when calling
-        #     #  `collect_schema()`
-        #     schema = with_evaluation_rules(lf_empty, result.rules).collect().schema
-        #     for rule_name, rule in result.rules.items():
-        #         dtype = schema[rule_name]
-        #         if not isinstance(dtype, pl.Boolean):
-        #             raise RuleImplementationError(
-        #                 rule_name, dtype, isinstance(rule, GroupRule)
-        #             )
-
         return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
     def __getattribute__(cls, name: str) -> Any:
