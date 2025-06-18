@@ -7,6 +7,8 @@ import dataframely as dy
 
 
 def test_collection_matches_itself() -> None:
+    """Collections should match themselves."""
+
     class MySchema(dy.Schema):
         foo = dy.Integer()
 
@@ -18,15 +20,16 @@ def test_collection_matches_itself() -> None:
 
 
 def test_collection_matches_different_members() -> None:
+    """Collections should count as different if they have members with different
+    names."""
+
     class MySchema(dy.Schema):
         foo = dy.Integer()
 
-    # First collection has one member
     class MyCollection1(dy.Collection):
         x: dy.LazyFrame[MySchema]
 
-    # Second has an additional member
-    class MyCollection2(MyCollection1):
+    class MyCollection2(dy.Collection):
         y: dy.LazyFrame[MySchema]
 
     # Should not match
@@ -34,7 +37,8 @@ def test_collection_matches_different_members() -> None:
 
 
 def test_collection_matches_different_schemas() -> None:
-    # Two schemas that do not match
+    """Collections should count as different if their members have different schemas."""
+
     class MyIntSchema(dy.Schema):
         foo = dy.Integer()
 
@@ -58,10 +62,12 @@ def test_collection_matches_different_schemas() -> None:
 
 
 def test_collection_matches_different_filter_names() -> None:
+    """Collections should count as different if they have the same members but different
+    names."""
+
     class MyIntSchema(dy.Schema):
         foo = dy.Integer(primary_key=True)
 
-    # Two collections with different numbers of filters (zero and one)
     class MyCollection1(dy.Collection):
         x: dy.LazyFrame[MyIntSchema]
 
@@ -75,10 +81,12 @@ def test_collection_matches_different_filter_names() -> None:
 
 
 def test_collection_matches_different_filter_logc() -> None:
+    """Collections should count as different if they have the same members but different
+    filter logic."""
+
     class MyIntSchema(dy.Schema):
         foo = dy.Integer(primary_key=True)
 
-    # Two collections with same filter names but different logic
     class BaseCollection(dy.Collection):
         x: dy.LazyFrame[MyIntSchema]
 
@@ -93,3 +101,19 @@ def test_collection_matches_different_filter_logc() -> None:
             return dy.filter_relationship_one_to_at_least_one(self.x, self.x, ["foo"])
 
     assert not MyCollection1.matches(MyCollection2)
+
+
+def test_collection_matches_different_optional() -> None:
+    """Collections should count as different if their members differ in whether they are
+    optional or not."""
+
+    class FooSchema(dy.Schema):
+        x = dy.Integer()
+
+    class MandatoryFooCollection(dy.Collection):
+        foo: dy.LazyFrame[FooSchema]
+
+    class OptionalFooCollection(dy.Collection):
+        foo: dy.LazyFrame[FooSchema] | None
+
+    assert not MandatoryFooCollection.matches(OptionalFooCollection)

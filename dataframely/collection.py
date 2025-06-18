@@ -241,18 +241,29 @@ class Collection(BaseCollection, ABC):
             if the filter always returns a static polars expression.
             Otherwise, this function may falsely indicate a match.
         """
-        schemas_lhs = cls.member_schemas()
-        schemas_rhs = other.member_schemas()
+
+        members_lhs = cls.members()
+        members_rhs = other.members()
 
         # Member names must match
-        if schemas_lhs.keys() != schemas_rhs.keys():
+        if members_lhs.keys() != members_rhs.keys():
             return False
 
-        # Member schemas must match
-        if not all(
-            schemas_lhs[name].matches(schemas_rhs[name]) for name in schemas_lhs
-        ):
-            return False
+        # Other member attributes must match
+        for name in members_lhs:
+            lhs = members_lhs[name]
+            rhs = members_rhs[name]
+            if not lhs.__dict__.keys() == lhs.__dict__.keys():
+                return False
+            for attr in lhs.__dict__.keys():
+                attr_left = getattr(lhs, attr)
+                attr_right = getattr(rhs, attr)
+                if attr == "schema":
+                    if not attr_left.matches(attr_right):
+                        return False
+                else:
+                    if not attr_left == attr_right:
+                        return False
 
         # Filter names must match
         filters_lhs = cls._filters()
