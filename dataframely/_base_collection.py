@@ -261,14 +261,14 @@ class CollectionMeta(ABCMeta):
             )
         if filters := cls._filters():  # type: ignore
             parts.append(textwrap.indent("Filters:", prefix=" " * 2))
-        for name, member in filters.items():
-            parts.append(textwrap.indent(f'- "{name}":', prefix=" " * 4))
-            parts.append(
-                textwrap.indent(
-                    f"{member.logic(cls.create_empty()).explain()}",  # type: ignore
-                    prefix=" " * 8,
+            for name, member in filters.items():
+                parts.append(textwrap.indent(f'- "{name}":', prefix=" " * 4))
+                parts.append(
+                    textwrap.indent(
+                        f"{member.logic(cls.create_empty()).explain()}",  # type: ignore
+                        prefix=" " * 8,
+                    )
                 )
-            )
         parts.append("")  # Add line break at the end
         return "\n".join(parts)
 

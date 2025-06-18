@@ -165,8 +165,8 @@ class SchemaMeta(ABCMeta):
             parts.append(textwrap.indent(f'- "{name}": {col!r}', prefix=" " * 4))
         if validation_rules := cls._schema_validation_rules():  # type: ignore
             parts.append(textwrap.indent("Rules:", prefix=" " * 2))
-        for name, rule in validation_rules.items():
-            parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
+            for name, rule in validation_rules.items():
+                parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
         parts.append("")  # Add line break at the end
         return "\n".join(parts)
 
