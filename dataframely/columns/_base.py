@@ -374,13 +374,14 @@ class Column(ABC):
             for attribute, param_details in inspect.signature(
                 self.__class__.__init__
             ).parameters.items()
-            if attribute != "self"
+            if attribute
+            not in ["self", "alias"]  # alias is always equal to the column name here
             and not (
                 # Do not include attributes that are set to their default value
                 getattr(self, attribute) == param_details.default
             )
         ]
-        return f"dy.{self.__class__.__name__}({', '.join(parts)})"
+        return f"{self.__class__.__name__}({', '.join(parts)})"
 
     def __str__(self) -> str:
         return self.__class__.__name__.lower()

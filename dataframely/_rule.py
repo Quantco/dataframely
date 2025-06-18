@@ -43,7 +43,7 @@ class Rule:
         return cls(data["expr"])
 
     def __repr__(self) -> str:
-        return f"dy.{self.__class__.__name__}(expr={self.expr})"
+        return str(self.expr)
 
 
 class GroupRule(Rule):
@@ -66,7 +66,7 @@ class GroupRule(Rule):
         return cls(data["expr"], group_columns=data["group_columns"])
 
     def __repr__(self) -> str:
-        return f"dy.{self.__class__.__name__}(expr={self.expr}, group_columns={self.group_columns})"
+        return f"{super().__repr__()} grouped by {self.group_columns}"
 
 
 def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction], Rule]:

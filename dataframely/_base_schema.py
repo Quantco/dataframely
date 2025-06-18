@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
@@ -158,11 +159,14 @@ class SchemaMeta(ABCMeta):
         return result
 
     def __repr__(cls) -> str:
-        parts = [f"class {cls.__name__}(dy.Schema):"]
+        parts = [f'[Schema "{cls.__name__}"]']
+        parts.append(textwrap.indent("Columns:", prefix=" " * 2))
         for name, col in getattr(cls, _COLUMN_ATTR).items():
-            parts.append(f"    {name}={col!r}")
+            parts.append(textwrap.indent(f'- "{name}": {col!r}', prefix=" " * 4))
+        if getattr(cls, _RULE_ATTR):
+            parts.append(textwrap.indent("Rules:", prefix=" " * 2))
         for name, rule in getattr(cls, _RULE_ATTR).items():
-            parts.append(f"    {name}={rule!r}")
+            parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
         return "\n".join(parts)
 
 

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import textwrap
 import typing
 from abc import ABCMeta
 from collections.abc import Iterable
@@ -246,13 +247,27 @@ class CollectionMeta(ABCMeta):
             raise AnnotationImplementationError(attr, type_annotation)
 
     def __repr__(cls) -> str:
-        parts = [f"class {cls.__class__.__name__}(dy.Collection):"]
+        parts = [f'[Collection "{cls.__class__.__name__}(dy.Collection)"]']
+        parts.append(textwrap.indent("Members:", prefix=" " * 2))
         for name, member in getattr(cls, _MEMBER_ATTR).items():
             parts.append(
-                f"    {name}={member.schema.__name__}"
-                f"(optional={member.is_optional}, "
-                f"ignored_in_filters={member.ignored_in_filters}, "
-                f"inline_for_sampling={member.inline_for_sampling})"
+                textwrap.indent(
+                    f'- "{name}": {member.schema.__name__}'
+                    f"(optional={member.is_optional}, "
+                    f"ignored_in_filters={member.ignored_in_filters}, "
+                    f"inline_for_sampling={member.inline_for_sampling})",
+                    prefix=" " * 4,
+                )
+            )
+        if getattr(cls, _FILTER_ATTR):
+            parts.append(textwrap.indent("Filters:", prefix=" " * 2))
+        for name, member in getattr(cls, _FILTER_ATTR).items():
+            parts.append(textwrap.indent(f'- "{name}":', prefix=" " * 4))
+            parts.append(
+                textwrap.indent(
+                    f"{member.logic(cls.create_empty()).explain()}",  # type: ignore
+                    prefix=" " * 6,
+                )
             )
         return "\n".join(parts)
 
