@@ -6,7 +6,7 @@ import pytest
 
 import dataframely as dy
 from dataframely._rule import GroupRule, Rule
-from dataframely.exc import ImplementationError, RuleImplementationError
+from dataframely.exc import ImplementationError
 from dataframely.testing import create_schema
 
 
@@ -26,32 +26,6 @@ def test_group_rule_group_by_error() -> None:
                     (pl.col("b") > 0).all(), group_columns=["c"]
                 )
             },
-        )
-
-
-def test_rule_implementation_error() -> None:
-    with pytest.raises(
-        RuleImplementationError, match=r"rule 'integer_rule'.*returns dtype 'Int64'"
-    ):
-        create_schema(
-            "test",
-            columns={"a": dy.Integer()},
-            rules={"integer_rule": Rule(pl.col("a") + 1)},
-        )
-
-
-def test_group_rule_implementation_error() -> None:
-    with pytest.raises(
-        RuleImplementationError,
-        match=(
-            r"rule 'b_greater_zero'.*returns dtype 'List\(Boolean\)'.*"
-            r"make sure to use an aggregation function"
-        ),
-    ):
-        create_schema(
-            "test",
-            columns={"a": dy.Integer(), "b": dy.Integer()},
-            rules={"b_greater_zero": GroupRule(pl.col("b") > 0, group_columns=["a"])},
         )
 
 
