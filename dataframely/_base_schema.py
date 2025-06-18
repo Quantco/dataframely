@@ -134,7 +134,7 @@ class SchemaMeta(ABCMeta):
         val = super().__getattribute__(name)
         # Dynamically set the name of the column if it is a `Column` instance.
         if isinstance(val, Column):
-            val.name = val.alias or name
+            val._name = val.alias or name
         return val
 
     @staticmethod

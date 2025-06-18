@@ -85,7 +85,7 @@ class Column(ABC):
         self.alias = alias
         self.metadata = metadata
         # The name may be overridden by the schema on column access.
-        self.name = alias or ""
+        self._name = ""
 
     # ------------------------------------- DTYPE ------------------------------------ #
 
@@ -225,6 +225,11 @@ class Column(ABC):
         """The :mod:`pyarrow` dtype equivalent of this column data type."""
 
     # ------------------------------------ HELPER ------------------------------------ #
+
+    @property
+    def name(self) -> str:
+        """Get the name of the column in a schema."""
+        return self._name
 
     @property
     def col(self) -> pl.Expr:
