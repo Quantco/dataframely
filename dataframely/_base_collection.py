@@ -259,9 +259,9 @@ class CollectionMeta(ABCMeta):
                     prefix=" " * 4,
                 )
             )
-        if cls._filters():  # type: ignore
+        if filters := cls._filters():  # type: ignore
             parts.append(textwrap.indent("Filters:", prefix=" " * 2))
-        for name, member in cls._filters().items():  # type: ignore
+        for name, member in filters.items():
             parts.append(textwrap.indent(f'- "{name}":', prefix=" " * 4))
             parts.append(
                 textwrap.indent(
