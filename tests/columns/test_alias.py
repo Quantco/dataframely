@@ -22,3 +22,17 @@ def test_validation() -> None:
 def test_create_empty() -> None:
     df = AliasSchema.create_empty()
     assert AliasSchema.is_valid(df)
+
+
+def test_alias() -> None:
+    assert AliasSchema.a.alias == "hello world: col with space!"
+
+
+def test_alias_name() -> None:
+    assert AliasSchema.a.name == "hello world: col with space!"
+
+
+def test_alias_unset() -> None:
+    no_alias_col = dy.Int32()
+    assert no_alias_col.alias is None
+    assert no_alias_col.name == ""

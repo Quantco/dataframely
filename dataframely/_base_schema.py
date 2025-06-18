@@ -131,6 +131,13 @@ class SchemaMeta(ABCMeta):
 
         return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
+    def __getattribute__(cls, name: str) -> Any:
+        val = super().__getattribute__(name)
+        # Dynamically set the name of the column if it is a `Column` instance.
+        if isinstance(val, Column):
+            val._name = val.alias or name
+        return val
+
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
         result = Metadata()
@@ -146,9 +153,7 @@ class SchemaMeta(ABCMeta):
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
-                if not value.alias:
-                    value.alias = attr
-                result.columns[value.alias] = value
+                result.columns[value.alias or attr] = value
             if isinstance(value, Rule):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
