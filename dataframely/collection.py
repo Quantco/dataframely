@@ -268,7 +268,7 @@ class Collection(BaseCollection, ABC):
         def filter_logic_matches(filter_left: Filter, filter_right: Filter) -> bool:
             lf_left = filter_left.logic(empty_left)
             lf_right = filter_right.logic(empty_right)
-            return lf_left.explain() == lf_right.explain()
+            return lf_left.serialize(format="json") == lf_right.serialize(format="json")
 
         if not all(
             filter_logic_matches(filters_lhs[name], filters_rhs[name])
