@@ -259,7 +259,7 @@ class Collection(BaseCollection, ABC):
                         if not lhs[attr].matches(rhs[attr]):
                             return False
                     else:
-                        if not lhs[attr] == rhs[attr]:
+                        if lhs[attr] != rhs[attr]:
                             return False
             return True
 
@@ -279,7 +279,7 @@ class Collection(BaseCollection, ABC):
             for name in filters_lhs:
                 lhs = filters_lhs[name].logic(empty_left)
                 rhs = filters_rhs[name].logic(empty_right)
-                if not lhs.serialize(format="json") == rhs.serialize(format="json"):
+                if lhs.serialize(format="json") != rhs.serialize(format="json"):
                     return False
             return True
 
