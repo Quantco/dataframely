@@ -4,6 +4,7 @@
 import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Self, cast
 
@@ -224,6 +225,65 @@ class Collection(BaseCollection, ABC):
 
         # 3) Eventually, we initialize the final collection and return
         return cls.validate(members)
+
+    @classmethod
+    def matches(cls, other: type["Collection"]) -> bool:
+        """Check whether this collection semantically matches another.
+
+        Args:
+            other: The collection to compare with.
+
+        Returns:
+            Whether the two collections are semantically equal.
+
+        Attention:
+            For custom filters, reliable comparison results are only guaranteed
+            if the filter always returns a static polars expression.
+            Otherwise, this function may falsely indicate a match.
+        """
+
+        def _members_match() -> bool:
+            members_lhs = cls.members()
+            members_rhs = other.members()
+
+            # Member names must match
+            if members_lhs.keys() != members_rhs.keys():
+                return False
+
+            # Member attributes must match
+            for name in members_lhs:
+                lhs = asdict(members_lhs[name])
+                rhs = asdict(members_rhs[name])
+                for attr in lhs.keys() | rhs.keys():
+                    if attr == "schema":
+                        if not lhs[attr].matches(rhs[attr]):
+                            return False
+                    else:
+                        if lhs[attr] != rhs[attr]:
+                            return False
+            return True
+
+        def _filters_match() -> bool:
+            filters_lhs = cls._filters()
+            filters_rhs = other._filters()
+
+            # Filter names must match
+            if filters_lhs.keys() != filters_rhs.keys():
+                return False
+
+            # Computational graph of filter logic must match
+            # Evaluate on empty dataframes
+            empty_left = cls.create_empty()
+            empty_right = other.create_empty()
+
+            for name in filters_lhs:
+                lhs = filters_lhs[name].logic(empty_left)
+                rhs = filters_rhs[name].logic(empty_right)
+                if lhs.serialize(format="json") != rhs.serialize(format="json"):
+                    return False
+            return True
+
+        return _members_match() and _filters_match()
 
     @classmethod
     def _preprocess_sample(

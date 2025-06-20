@@ -106,6 +106,12 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
         rules. By default, any rule that evaluates to ``null`` because one of the
         columns used in the rule is ``null`` is interpreted as ``true``, i.e. the row
         is assumed to be valid.
+
+    Attention:
+        The rule logic should return a static result.
+        Other implementations using arbitrary python logic works for filtering and
+        validation, but may lead to wrong results in Schema comparisons
+        and (de-)serialization.
     """
 
     def decorator(validation_fn: ValidationFunction) -> Rule:
