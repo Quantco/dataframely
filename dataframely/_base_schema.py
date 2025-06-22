@@ -149,9 +149,9 @@ class SchemaMeta(ABCMeta):
     def __repr__(cls) -> str:
         parts = [f'[Schema "{cls.__name__}"]']
         parts.append(textwrap.indent("Columns:", prefix=" " * 2))
-        for name, col in cls.columns().items():  # type: ignore
+        for name, col in cls.columns().items():
             parts.append(textwrap.indent(f'- "{name}": {col!r}', prefix=" " * 4))
-        if validation_rules := cls._schema_validation_rules():  # type: ignore
+        if validation_rules := cls._schema_validation_rules():
             parts.append(textwrap.indent("Rules:", prefix=" " * 2))
             for name, rule in validation_rules.items():
                 parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
