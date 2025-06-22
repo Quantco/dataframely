@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import textwrap
 import typing
 from abc import ABCMeta
 from collections.abc import Iterable
@@ -244,6 +245,32 @@ class CollectionMeta(ABCMeta):
         else:
             # Some other unknown annotation
             raise AnnotationImplementationError(attr, type_annotation)
+
+    def __repr__(cls) -> str:
+        parts = [f'[Collection "{cls.__class__.__name__}"]']
+        parts.append(textwrap.indent("Members:", prefix=" " * 2))
+        for name, member in cls.members().items():  # type: ignore
+            parts.append(
+                textwrap.indent(
+                    f'- "{name}": {member.schema.__name__}'
+                    f"(optional={member.is_optional}, "
+                    f"ignored_in_filters={member.ignored_in_filters}, "
+                    f"inline_for_sampling={member.inline_for_sampling})",
+                    prefix=" " * 4,
+                )
+            )
+        if filters := cls._filters():  # type: ignore
+            parts.append(textwrap.indent("Filters:", prefix=" " * 2))
+            for name, member in filters.items():
+                parts.append(textwrap.indent(f'- "{name}":', prefix=" " * 4))
+                parts.append(
+                    textwrap.indent(
+                        f"{member.logic(cls.create_empty()).explain()}",  # type: ignore
+                        prefix=" " * 8,
+                    )
+                )
+        parts.append("")  # Add line break at the end
+        return "\n".join(parts)
 
 
 class BaseCollection(metaclass=CollectionMeta):

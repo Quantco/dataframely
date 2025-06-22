@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
@@ -10,9 +11,9 @@ from typing import Any, Self
 
 import polars as pl
 
-from ._rule import GroupRule, Rule, with_evaluation_rules
+from ._rule import GroupRule, Rule
 from .columns import Column
-from .exc import ImplementationError, RuleImplementationError
+from .exc import ImplementationError
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
@@ -111,24 +112,14 @@ class SchemaMeta(ABCMeta):
                         f"which are not in the schema: {missing_list}."
                     )
 
-        # 3) Assuming that non-custom rules are implemented correctly, we check that all
-        # custom rules are _also_ implemented correctly by evaluating rules on an
-        # empty data frame and checking for the evaluated dtypes.
-        if len(result.rules) > 0:
-            lf_empty = pl.LazyFrame(
-                schema={col_name: col.dtype for col_name, col in result.columns.items()}
-            )
-            # NOTE: For some reason, `polars` does not yield correct dtypes when calling
-            #  `collect_schema()`
-            schema = with_evaluation_rules(lf_empty, result.rules).collect().schema
-            for rule_name, rule in result.rules.items():
-                dtype = schema[rule_name]
-                if not isinstance(dtype, pl.Boolean):
-                    raise RuleImplementationError(
-                        rule_name, dtype, isinstance(rule, GroupRule)
-                    )
-
         return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
+
+    def __getattribute__(cls, name: str) -> Any:
+        val = super().__getattribute__(name)
+        # Dynamically set the name of the column if it is a `Column` instance.
+        if isinstance(val, Column):
+            val._name = val.alias or name
+        return val
 
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
@@ -145,9 +136,7 @@ class SchemaMeta(ABCMeta):
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
-                if not value.alias:
-                    value.alias = attr
-                result.columns[value.alias] = value
+                result.columns[value.alias or attr] = value
             if isinstance(value, Rule):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
@@ -156,6 +145,18 @@ class SchemaMeta(ABCMeta):
                     )
                 result.rules[attr] = value
         return result
+
+    def __repr__(cls) -> str:
+        parts = [f'[Schema "{cls.__name__}"]']
+        parts.append(textwrap.indent("Columns:", prefix=" " * 2))
+        for name, col in cls.columns().items():  # type: ignore
+            parts.append(textwrap.indent(f'- "{name}": {col!r}', prefix=" " * 4))
+        if validation_rules := cls._schema_validation_rules():  # type: ignore
+            parts.append(textwrap.indent("Rules:", prefix=" " * 2))
+            for name, rule in validation_rules.items():
+                parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
+        parts.append("")  # Add line break at the end
+        return "\n".join(parts)
 
 
 class BaseSchema(metaclass=SchemaMeta):
