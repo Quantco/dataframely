@@ -23,22 +23,43 @@ C = TypeVar("C", bound=BaseCollection)
 
 # --------------------------------- RELATIONSHIP 1:1 --------------------------------- #
 
+LEN_COLUMN = "__len__"
+
 
 def filter_relationship_one_to_one(
     lhs: LazyFrame[S] | pl.LazyFrame,
     rhs: LazyFrame[T] | pl.LazyFrame,
     /,
     on: str | list[str],
+    *,
+    drop_non_unique: bool = False,
 ) -> pl.LazyFrame:
     """Express a 1:1 mapping between data frames for a collection filter.
 
     Args:
         lhs: The first data frame in the 1:1 mapping.
         rhs: The second data frame in the 1:1 mapping.
-        on: The columns to join the data frames on. If not provided, the join columns
-            are inferred from the mutual primary keys of the provided data frames.
+        on: The columns to join the data frames on.
+        drop_non_unique: If `True`, drop non-unique rows from both data frames.
+            This is useful when the join columns do not already uniquely identify rows.
     """
-    return lhs.join(rhs, on=on)
+    if drop_non_unique:
+        return (
+            lhs.group_by(on)
+            .len(LEN_COLUMN)
+            .filter(pl.col(LEN_COLUMN) == 1)
+            .drop(LEN_COLUMN)
+            .join(
+                rhs.group_by(on)
+                .len(LEN_COLUMN)
+                .filter(pl.col(LEN_COLUMN) == 1)
+                .drop(LEN_COLUMN),
+                on=on,
+                how="inner",
+            )
+        )
+    else:
+        return lhs.join(rhs, on=on)
 
 
 # ------------------------------- RELATIONSHIP 1:{1,N} ------------------------------- #
@@ -55,8 +76,7 @@ def filter_relationship_one_to_at_least_one(
     Args:
         lhs: The data frame with exactly one occurrence for a set of key columns.
         rhs: The data frame with at least one occurrence for a set of key columns.
-        on: The columns to join the data frames on. If not provided, the join columns
-            are inferred from the joint primary keys of the provided data frames.
+        on: The columns to join the data frames on.
     """
     return lhs.join(rhs.unique(on), on=on)
 
