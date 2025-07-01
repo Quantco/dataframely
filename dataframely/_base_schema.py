@@ -171,7 +171,11 @@ class BaseSchema(metaclass=SchemaMeta):
     @classmethod
     def columns(cls) -> dict[str, Column]:
         """The column definitions of this schema."""
-        return getattr(cls, _COLUMN_ATTR)
+        columns: dict[str, Column] = getattr(cls, _COLUMN_ATTR)
+        for name in columns.keys():
+            # Dynamically set the name of the columns.
+            columns[name]._name = columns[name].alias or name
+        return columns
 
     @classmethod
     def primary_keys(cls) -> list[str]:
