@@ -67,7 +67,7 @@ def test_one_to_one(
     assert actual.select("department_id").collect().to_series().to_list() == [1]
 
 
-def test_one_to_one_drop_non_unique(
+def test_one_to_one_keep_only_unique(
     departments: dy.LazyFrame[DepartmentSchema],
     employees: dy.LazyFrame[EmployeeSchema],
 ) -> None:
@@ -75,7 +75,7 @@ def test_one_to_one_drop_non_unique(
         departments,
         employees,
         on="department_id",
-        drop_non_unique=True,
+        keep_only_unique=True,
     )
     assert actual.select("department_id").collect().to_series().to_list() == [3]
 

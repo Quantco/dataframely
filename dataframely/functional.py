@@ -32,7 +32,7 @@ def filter_relationship_one_to_one(
     /,
     on: str | list[str],
     *,
-    drop_non_unique: bool = False,
+    keep_only_unique: bool = False,
 ) -> pl.LazyFrame:
     """Express a 1:1 mapping between data frames for a collection filter.
 
@@ -40,10 +40,10 @@ def filter_relationship_one_to_one(
         lhs: The first data frame in the 1:1 mapping.
         rhs: The second data frame in the 1:1 mapping.
         on: The columns to join the data frames on.
-        drop_non_unique: If `True`, drop non-unique rows from both data frames.
+        keep_only_unique: If `True`, drop non-unique rows from both data frames.
             This is useful when the join columns do not already uniquely identify rows.
     """
-    if drop_non_unique:
+    if keep_only_unique:
         return (
             lhs.group_by(on)
             .len(LEN_COLUMN)
