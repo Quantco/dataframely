@@ -155,7 +155,7 @@ def test_sample_no_overrides_no_num_rows() -> None:
     assert len(df) == 1
 
 
-def test_sample_ordered() -> None:
+def test_sample_ordered_works_with_hook() -> None:
     df = OrderedSchema.sample(1000)
     OrderedSchema.validate(df)
     assert len(df) == 1000
