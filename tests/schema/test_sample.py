@@ -156,6 +156,6 @@ def test_sample_no_overrides_no_num_rows() -> None:
 
 
 def test_sample_ordered() -> None:
-    df = OrderedSchema.sample(1000, generator=Generator(seed=42))
+    df = OrderedSchema.sample(1000)
     OrderedSchema.validate(df)
     assert len(df) == 1000
