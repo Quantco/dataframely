@@ -317,8 +317,8 @@ class Schema(BaseSchema, ABC):
             }
         )
 
-        # Call custom sampling hook to allow for post-processing of the sampled data
-        sampled = cls.cast(cls._sample_postprocess_hook(sampled))
+        # Call custom sampling hook to allow for pre-processing of the sampled data
+        sampled = cls.cast(cls._preprocess_dataframe_hook(sampled))
 
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
@@ -348,19 +348,19 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
-    def _sample_postprocess_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
-        """Hook for post-processing data frames that are generated in a sampling
+    def _preprocess_dataframe_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
+        """Hook for pre-processing a data frame that is generated in a sampling
         iteration before filtering or validation. This method can be overwritten in
-        schemas with complex rules or checks to enabling sampling data frames in a
+        schemas with complex rules or column checks to enable sampling data frames in a
         reasonable number of iterations.
 
         Args:
             df: The data frame to post-process. This data frame is guaranteed to
-                contain all columns defined in the schema and their data types,
-                but not to fulfill custom rules or checks.
+                contain all columns defined in the schema with the correct data types,
+                but does not necessarily fulfill custom rules or column checks.
 
         Returns:
-            The post-processed data frame.
+            The pre-processed data frame.
         """
         return df
 

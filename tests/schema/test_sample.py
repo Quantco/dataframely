@@ -69,7 +69,7 @@ class OrderedSchema(dy.Schema):
         ).all()
 
     @classmethod
-    def _sample_postprocess_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
+    def _preprocess_dataframe_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
         # Ensure that the `iter` column is ordered
         return df.with_columns(iter=pl.struct("a", "b").rank(method="ordinal"))
 
@@ -156,6 +156,7 @@ def test_sample_no_overrides_no_num_rows() -> None:
 
 
 def test_sample_ordered_works_with_hook() -> None:
-    df = OrderedSchema.sample(1000)
-    OrderedSchema.validate(df)
-    assert len(df) == 1000
+    for _ in range(100):
+        df = OrderedSchema.sample(1000)
+        OrderedSchema.validate(df)
+        assert len(df) == 1000
