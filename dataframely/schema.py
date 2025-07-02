@@ -317,6 +317,8 @@ class Schema(BaseSchema, ABC):
             }
         )
 
+        sampled = cls._sample_postprocess_hook(sampled)
+
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
         filtered, evaluated = cls._filter_raw(
@@ -343,6 +345,27 @@ class Schema(BaseSchema, ABC):
             concat_values.filter(evaluated.get_column("__final_valid__")),
             concat_values.filter(~evaluated.get_column("__final_valid__")),
         )
+
+    @classmethod
+    def _sample_postprocess_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
+        """Hook for post-processing data frames that are generated in a sampling
+        iteration before filtering or validation. This method can be overwritten in
+        schemas with complex rules or checks to enabling sampling data frames in a
+        reasonable number of iterations.
+
+        Args:
+            df: The data frame to post-process. This data frame is guaranteed to
+                contain all columns defined in the schema and their data types,
+                but not to fulfill custom rules or checks
+
+        Returns:
+            The post-processed data frame.
+
+        Note: This method does not have to create schema-compliant
+            data frames yet, but the column types must match the
+            schema.
+        """
+        return df
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 

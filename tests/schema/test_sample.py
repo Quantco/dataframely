@@ -56,6 +56,26 @@ class LimitedComplexSchema(dy.Schema):
         return pl.len() <= 3
 
 
+class OrderedSchema(dy.Schema):
+    a = dy.UInt8(primary_key=True)
+    b = dy.UInt8(primary_key=True)
+    iter = dy.Integer()
+
+    @dy.rule()
+    def iter_ordered() -> pl.Expr:
+        return (
+            pl.col("iter").rank(method="ordinal")
+            == pl.struct("a", "b").rank(method="ordinal")
+        ).all()
+
+    @classmethod
+    def _sample_postprocess_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
+        # Ensure that the `iter` column is ordered
+        return df.with_columns(
+            iter=pl.struct("a", "b").rank(method="ordinal").cast(pl.Int64())
+        )
+
+
 # --------------------------------------- TESTS -------------------------------------- #
 
 
@@ -135,3 +155,9 @@ def test_sample_no_overrides_no_num_rows() -> None:
     df = MySimpleSchema.sample()
     MySimpleSchema.validate(df)
     assert len(df) == 1
+
+
+def test_sample_ordered() -> None:
+    df = OrderedSchema.sample(1000, generator=Generator(seed=42))
+    OrderedSchema.validate(df)
+    assert len(df) == 1000
