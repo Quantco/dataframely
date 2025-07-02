@@ -71,9 +71,7 @@ class OrderedSchema(dy.Schema):
     @classmethod
     def _sample_postprocess_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
         # Ensure that the `iter` column is ordered
-        return df.with_columns(
-            iter=pl.struct("a", "b").rank(method="ordinal").cast(pl.Int64())
-        )
+        return df.with_columns(iter=pl.struct("a", "b").rank(method="ordinal"))
 
 
 # --------------------------------------- TESTS -------------------------------------- #

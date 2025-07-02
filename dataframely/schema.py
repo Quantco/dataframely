@@ -317,7 +317,8 @@ class Schema(BaseSchema, ABC):
             }
         )
 
-        sampled = cls._sample_postprocess_hook(sampled)
+        # Call custom sampling hook to allow for post-processing of the sampled data
+        sampled = cls.cast(cls._sample_postprocess_hook(sampled))
 
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
@@ -356,14 +357,10 @@ class Schema(BaseSchema, ABC):
         Args:
             df: The data frame to post-process. This data frame is guaranteed to
                 contain all columns defined in the schema and their data types,
-                but not to fulfill custom rules or checks
+                but not to fulfill custom rules or checks.
 
         Returns:
             The post-processed data frame.
-
-        Note: This method does not have to create schema-compliant
-            data frames yet, but the column types must match the
-            schema.
         """
         return df
 
