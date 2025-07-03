@@ -318,7 +318,13 @@ class Schema(BaseSchema, ABC):
         )
 
         # Call custom sampling hook to allow for pre-processing of the sampled data
-        sampled = cls.cast(cls._preprocess_dataframe_hook(sampled))
+        sampled = cls.cast(
+            sampled.with_columns(
+                expr.alias(col)
+                for col, expr in cls._preprocess_dataframe_hook().items()
+                if col not in remaining_values.columns
+            )
+        )
 
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
@@ -348,7 +354,7 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
-    def _preprocess_dataframe_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
+    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
         """Hook for pre-processing a data frame that is generated in a sampling
         iteration before filtering or validation. This method can be overwritten in
         schemas with complex rules or column checks to enable sampling data frames in a
@@ -362,7 +368,7 @@ class Schema(BaseSchema, ABC):
         Returns:
             The pre-processed data frame.
         """
-        return df
+        return dict()
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 

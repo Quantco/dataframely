@@ -69,9 +69,9 @@ class OrderedSchema(dy.Schema):
         ).all()
 
     @classmethod
-    def _preprocess_dataframe_hook(cls, df: pl.DataFrame) -> pl.DataFrame:
+    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
         # Ensure that the `iter` column is ordered
-        return df.with_columns(iter=pl.struct("a", "b").rank(method="ordinal"))
+        return {"iter": pl.struct("a", "b").rank(method="ordinal")}
 
 
 # --------------------------------------- TESTS -------------------------------------- #
@@ -160,3 +160,16 @@ def test_sample_ordered_works_with_hook() -> None:
         df = OrderedSchema.sample(1000)
         OrderedSchema.validate(df)
         assert len(df) == 1000
+
+
+def test_sample_ordered_works_with_overrides() -> None:
+    df = OrderedSchema.sample(
+        overrides={
+            "a": [1, 4, 2, 5, 5],
+            "b": [1, 2, 3, 4, 0],
+            "iter": [1, 3, 2, 5, 4],
+        }
+    )
+    OrderedSchema.validate(df)
+    assert len(df) == 5
+    assert df.get_column("iter").to_list() == [1, 3, 2, 5, 4]
