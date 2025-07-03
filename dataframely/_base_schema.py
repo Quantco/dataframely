@@ -174,7 +174,7 @@ class BaseSchema(metaclass=SchemaMeta):
         columns: dict[str, Column] = getattr(cls, _COLUMN_ATTR)
         for name in columns.keys():
             # Dynamically set the name of the columns.
-            columns[name]._name = columns[name].alias or name
+            columns[name]._name = name
         return columns
 
     @classmethod
