@@ -167,9 +167,10 @@ def test_sample_ordered_works_with_overrides() -> None:
         overrides={
             "a": [1, 4, 2, 5, 5],
             "b": [1, 2, 3, 4, 0],
-            "iter": [1, 3, 2, 5, 4],
+            "iter": [2, 6, 4, 10, 8],
         }
     )
     OrderedSchema.validate(df)
     assert len(df) == 5
-    assert df.get_column("iter").to_list() == [1, 3, 2, 5, 4]
+    # Assert that the hook is not used (would create 1..5 permutation)
+    assert df.get_column("iter").to_list() == [2, 6, 4, 10, 8]

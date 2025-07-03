@@ -317,11 +317,13 @@ class Schema(BaseSchema, ABC):
             }
         )
 
-        # Call custom sampling hook to allow for pre-processing of the sampled data
-        sampled = cls.cast(
-            sampled.with_columns(
+        combined_dataframe = pl.concat([previous_result, sampled])
+        # Call custom sampling hook to allow for pre-processing of the new data frame
+        combined_dataframe_preprocessed = cls.cast(
+            combined_dataframe.with_columns(
                 expr.alias(col)
                 for col, expr in cls._preprocess_dataframe_hook().items()
+                # Only pre-process columns that were not provided through `overrides`
                 if col not in remaining_values.columns
             )
         )
@@ -329,7 +331,7 @@ class Schema(BaseSchema, ABC):
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
         filtered, evaluated = cls._filter_raw(
-            pl.concat([previous_result, sampled]), rules, cast=False
+            combined_dataframe_preprocessed, rules, cast=False
         )
 
         if evaluated is None:
@@ -338,6 +340,7 @@ class Schema(BaseSchema, ABC):
             return filtered, remaining_values, remaining_values.slice(0, 0)
 
         concat_values = pl.concat([used_values, remaining_values])
+
         if concat_values.height == 0:
             # If we didn't provide any values, we can simply return empty data frames
             # with the right schema for used and remaining values
