@@ -74,6 +74,15 @@ class OrderedSchema(dy.Schema):
         return {"iter": pl.struct("a", "b").rank(method="ordinal")}
 
 
+class SchemaWithTypeChangingOverrides(dy.Schema):
+    a = dy.UInt8()
+    b = dy.String()
+
+    @classmethod
+    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
+        return {"a": pl.col("a").cast(pl.String())}
+
+
 # --------------------------------------- TESTS -------------------------------------- #
 
 
@@ -174,3 +183,10 @@ def test_sample_ordered_works_with_overrides() -> None:
     assert len(df) == 5
     # Assert that the hook is not used (would create 1..5 permutation)
     assert df.get_column("iter").to_list() == [2, 6, 4, 10, 8]
+
+
+def test_sample_overrides_data_type_change() -> None:
+    df = SchemaWithTypeChangingOverrides.sample(100)
+
+    SchemaWithTypeChangingOverrides.validate(df)
+    assert len(df) == 100

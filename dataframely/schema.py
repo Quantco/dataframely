@@ -318,21 +318,23 @@ class Schema(BaseSchema, ABC):
         )
 
         combined_dataframe = pl.concat([previous_result, sampled])
-        # Call custom sampling hook to allow for pre-processing of the new data frame
-        combined_dataframe_preprocessed = cls.cast(
-            combined_dataframe.with_columns(
-                expr.alias(col)
-                for col, expr in cls._preprocess_dataframe_hook().items()
-                # Only pre-process columns that were not provided through `overrides`
-                if col not in remaining_values.columns
+        # If needed, pre-process columns of the new data frame.
+        column_preprocessing_expressions = {
+            col: expr
+            for col, expr in cls._preprocess_dataframe_hook().items()
+            # Only pre-process columns that were not provided through `overrides`
+            if col in combined_dataframe.columns and col not in remaining_values.columns
+        }
+        if column_preprocessing_expressions:
+            combined_dataframe = combined_dataframe.with_columns(
+                # Cast needed as column pre-processing might change the data types of a column
+                expr.alias(col).cast(cls.columns()[col].dtype)
+                for col, expr in column_preprocessing_expressions.items()
             )
-        )
 
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
-        filtered, evaluated = cls._filter_raw(
-            combined_dataframe_preprocessed, rules, cast=False
-        )
+        filtered, evaluated = cls._filter_raw(combined_dataframe, rules, cast=False)
 
         if evaluated is None:
             # When `evaluated` is None, there are no rules and we surely included all
