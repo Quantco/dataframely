@@ -363,7 +363,7 @@ class Schema(BaseSchema, ABC):
         """Generate expressions for columns that need to be pre-processed during
         sampling.
 
-        This method can be overwritten in schemas with complex rules or column checks to
+        This method can be overwritten in schemas with complex rules to
         enable sampling data frames in a reasonable number of iterations.
 
         The provided expressions are applied during sampling after data was generated and
