@@ -317,11 +317,24 @@ class Schema(BaseSchema, ABC):
             }
         )
 
+        combined_dataframe = pl.concat([previous_result, sampled])
+        # If needed, pre-process columns of the new data frame.
+        column_preprocessing_expressions = {
+            col: expr
+            for col, expr in cls._column_preprocessing_expressions().items()
+            # Only pre-process columns that were not provided through `overrides`
+            if col in combined_dataframe.columns and col not in remaining_values.columns
+        }
+        if column_preprocessing_expressions:
+            combined_dataframe = combined_dataframe.with_columns(
+                # Cast needed as column pre-processing might change the data types of a column
+                expr.alias(col).cast(cls.columns()[col].dtype)
+                for col, expr in column_preprocessing_expressions.items()
+            )
+
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
-        filtered, evaluated = cls._filter_raw(
-            pl.concat([previous_result, sampled]), rules, cast=False
-        )
+        filtered, evaluated = cls._filter_raw(combined_dataframe, rules, cast=False)
 
         if evaluated is None:
             # When `evaluated` is None, there are no rules and we surely included all
@@ -329,6 +342,7 @@ class Schema(BaseSchema, ABC):
             return filtered, remaining_values, remaining_values.slice(0, 0)
 
         concat_values = pl.concat([used_values, remaining_values])
+
         if concat_values.height == 0:
             # If we didn't provide any values, we can simply return empty data frames
             # with the right schema for used and remaining values
@@ -343,6 +357,24 @@ class Schema(BaseSchema, ABC):
             concat_values.filter(evaluated.get_column("__final_valid__")),
             concat_values.filter(~evaluated.get_column("__final_valid__")),
         )
+
+    @classmethod
+    def _column_preprocessing_expressions(cls) -> dict[str, pl.Expr]:
+        """Generate expressions for columns that need to be pre-processed during
+        sampling.
+
+        This method can be overwritten in schemas with complex rules to
+        enable sampling data frames in a reasonable number of iterations.
+
+        The provided expressions are applied during sampling after data was generated and
+        before it is filtered. In a sampling iteration, only expressions cor columns
+        that are not defined in the `overrides` argument of that operation.
+
+        Returns:
+            A dict with entries `column_name: expression`.
+        """
+        # Do not pre-process any columns by default.
+        return dict()
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
