@@ -321,7 +321,7 @@ class Schema(BaseSchema, ABC):
         # If needed, pre-process columns of the new data frame.
         column_preprocessing_expressions = {
             col: expr
-            for col, expr in cls._preprocess_dataframe_hook().items()
+            for col, expr in cls._column_preprocessing_expressions().items()
             # Only pre-process columns that were not provided through `overrides`
             if col in combined_dataframe.columns and col not in remaining_values.columns
         }
@@ -359,13 +359,16 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
-    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
-        """Hook for providing column-wise expressions for pre-processing a data frame
-        that is generated in a sampling iteration before filtering or validation. The
-        provided expressions are applied to all columns of a sampled data frame that are
-        not defined in the `overrides` argument of :meth:`sample`. This method can be
-        overwritten in schemas with complex rules or column checks to enable sampling
-        data frames in a reasonable number of iterations.
+    def _column_preprocessing_expressions(cls) -> dict[str, pl.Expr]:
+        """Generate expressions for columns that need to be pre-processed during
+        sampling.
+
+        This method can be overwritten in schemas with complex rules or column checks to
+        enable sampling data frames in a reasonable number of iterations.
+
+        The provided expressions are applied during sampling after data was generated and
+        before it is filtered. In a sampling iteration, only expressions cor columns
+        that are not defined in the `overrides` argument of that operation.
 
         Returns:
             A dict with entries `column_name: expression`.

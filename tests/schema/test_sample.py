@@ -69,7 +69,7 @@ class OrderedSchema(dy.Schema):
         ).all()
 
     @classmethod
-    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
+    def _column_preprocessing_expressions(cls) -> dict[str, pl.Expr]:
         # Ensure that the `iter` column is ordered
         return {"iter": pl.struct("a", "b").rank(method="ordinal")}
 
@@ -79,7 +79,7 @@ class SchemaWithTypeChangingOverrides(dy.Schema):
     b = dy.String()
 
     @classmethod
-    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
+    def _column_preprocessing_expressions(cls) -> dict[str, pl.Expr]:
         return {"a": pl.col("a").cast(pl.String())}
 
 
@@ -87,7 +87,7 @@ class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
     a = dy.UInt8()
 
     @classmethod
-    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
+    def _column_preprocessing_expressions(cls) -> dict[str, pl.Expr]:
         return {"irrelevant_column": pl.col("irrelevant_column").cast(pl.String())}
 
 
