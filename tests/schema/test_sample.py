@@ -83,6 +83,14 @@ class SchemaWithTypeChangingOverrides(dy.Schema):
         return {"a": pl.col("a").cast(pl.String())}
 
 
+class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
+    a = dy.UInt8()
+
+    @classmethod
+    def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
+        return {"irrelevant_column": pl.col("irrelevant_column").cast(pl.String())}
+
+
 # --------------------------------------- TESTS -------------------------------------- #
 
 
@@ -185,8 +193,15 @@ def test_sample_ordered_works_with_overrides() -> None:
     assert df.get_column("iter").to_list() == [2, 6, 4, 10, 8]
 
 
-def test_sample_overrides_data_type_change() -> None:
+def test_sample_preprocessing_data_type_change() -> None:
     df = SchemaWithTypeChangingOverrides.sample(100)
 
     SchemaWithTypeChangingOverrides.validate(df)
+    assert len(df) == 100
+
+
+def test_sample_preprocessing_invalid_column() -> None:
+    df = SchemaWithIrrelevantColumnPreProcessing.sample(100)
+
+    SchemaWithIrrelevantColumnPreProcessing.validate(df)
     assert len(df) == 100
