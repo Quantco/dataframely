@@ -358,19 +358,17 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def _preprocess_dataframe_hook(cls) -> dict[str, pl.Expr]:
-        """Hook for pre-processing a data frame that is generated in a sampling
-        iteration before filtering or validation. This method can be overwritten in
-        schemas with complex rules or column checks to enable sampling data frames in a
-        reasonable number of iterations.
-
-        Args:
-            df: The data frame to post-process. This data frame is guaranteed to
-                contain all columns defined in the schema with the correct data types,
-                but does not necessarily fulfill custom rules or column checks.
+        """Hook for providing column-wise expressions for pre-processing a data frame
+        that is generated in a sampling iteration before filtering or validation. The
+        provided expressions are applied to all columns of a sampled data frame that are
+        not defined in the `overrides` argument of :meth:`sample`. This method can be
+        overwritten in schemas with complex rules or column checks to enable sampling
+        data frames in a reasonable number of iterations.
 
         Returns:
-            The pre-processed data frame.
+            A dict with entries `column_name: expression`.
         """
+        # Do not pre-process any columns by default.
         return dict()
 
     # ---------------------------------- VALIDATION ---------------------------------- #
