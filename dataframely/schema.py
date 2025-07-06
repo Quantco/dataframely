@@ -275,7 +275,8 @@ class Schema(BaseSchema, ABC):
                     "iterations. Consider increasing the maximum number of sampling "
                     "iterations via `dy.Config` or implement your custom sampling "
                     "logic. Alternatively, passing predefined value to `overrides` "
-                    "can also help the sampling procedure find a valid data frame."
+                    "or implementing `_sampling_overrides` for your schema can also "
+                    "help the sampling procedure find a valid data frame."
                 )
             result, used_values, remaining_values = cls._sample_filter(
                 num_rows - len(result),
