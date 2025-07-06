@@ -68,8 +68,7 @@ class Column(ABC):
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
-                names, the specified alias is the only valid name. If unset, dataframely
-                internally sets the alias to the column's name in the parent schema.
+                names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
 
@@ -85,6 +84,8 @@ class Column(ABC):
         self.check = check
         self.alias = alias
         self.metadata = metadata
+        # The name may be overridden by the schema on column access.
+        self._name = ""
 
     # ------------------------------------- DTYPE ------------------------------------ #
 
@@ -226,11 +227,14 @@ class Column(ABC):
     # ------------------------------------ HELPER ------------------------------------ #
 
     @property
+    def name(self) -> str:
+        """Get the name of the column in a schema."""
+        return self._name
+
+    @property
     def col(self) -> pl.Expr:
         """Obtain a Polars column expression for the column."""
-        if self.alias is None:
-            raise ValueError("Cannot obtain column expression if alias is ``None``.")
-        return pl.col(self.alias)
+        return pl.col(self.name)
 
     # ----------------------------------- SAMPLING ----------------------------------- #
 
@@ -367,6 +371,21 @@ class Column(ABC):
         return lhs == rhs
 
     # -------------------------------- DUNDER METHODS -------------------------------- #
+
+    def __repr__(self) -> str:
+        parts = [
+            f"{attribute}={repr(getattr(self, attribute))}"
+            for attribute, param_details in inspect.signature(
+                self.__class__.__init__
+            ).parameters.items()
+            if attribute
+            not in ["self", "alias"]  # alias is always equal to the column name here
+            and not (
+                # Do not include attributes that are set to their default value
+                getattr(self, attribute) == param_details.default
+            )
+        ]
+        return f"{self.__class__.__name__}({', '.join(parts)})"
 
     def __str__(self) -> str:
         return self.__class__.__name__.lower()

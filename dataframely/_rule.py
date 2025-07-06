@@ -15,8 +15,15 @@ ValidationFunction = Callable[[], pl.Expr]
 class Rule:
     """Internal class representing validation rules."""
 
-    def __init__(self, expr: pl.Expr) -> None:
-        self.expr = expr
+    def __init__(self, expr: pl.Expr | ValidationFunction) -> None:
+        self._expr = expr
+
+    @property
+    def expr(self) -> pl.Expr:
+        """Get the expression of the rule."""
+        if callable(self._expr):
+            return self._expr()
+        return self._expr
 
     def matches(self, other: Rule) -> bool:
         """Check whether this rule semantically matches another rule.
@@ -42,11 +49,16 @@ class Rule:
         """
         return cls(data["expr"])
 
+    def __repr__(self) -> str:
+        return str(self.expr)
+
 
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
 
-    def __init__(self, expr: pl.Expr, group_columns: list[str]) -> None:
+    def __init__(
+        self, expr: pl.Expr | ValidationFunction, group_columns: list[str]
+    ) -> None:
         super().__init__(expr)
         self.group_columns = group_columns
 
@@ -61,6 +73,9 @@ class GroupRule(Rule):
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(data["expr"], group_columns=data["group_columns"])
+
+    def __repr__(self) -> str:
+        return f"{super().__repr__()} grouped by {self.group_columns}"
 
 
 def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction], Rule]:
@@ -91,12 +106,18 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
         rules. By default, any rule that evaluates to ``null`` because one of the
         columns used in the rule is ``null`` is interpreted as ``true``, i.e. the row
         is assumed to be valid.
+
+    Attention:
+        The rule logic should return a static result.
+        Other implementations using arbitrary python logic works for filtering and
+        validation, but may lead to wrong results in Schema comparisons
+        and (de-)serialization.
     """
 
     def decorator(validation_fn: ValidationFunction) -> Rule:
         if group_by is not None:
-            return GroupRule(expr=validation_fn(), group_columns=group_by)
-        return Rule(expr=validation_fn())
+            return GroupRule(expr=validation_fn, group_columns=group_by)
+        return Rule(expr=validation_fn)
 
     return decorator
 

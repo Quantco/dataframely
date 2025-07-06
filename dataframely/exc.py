@@ -3,8 +3,6 @@
 
 from collections import defaultdict
 
-import polars as pl
-
 from ._polars import PolarsDataType
 
 
@@ -107,30 +105,6 @@ class AnnotationImplementationError(ImplementationError):
                 " Type annotation is a string, make sure to not use "
                 "`from __future__ import annotations` in the file that defines the collection."
             )
-        super().__init__(message)
-
-
-class RuleImplementationError(ImplementationError):
-    """Error raised when a rule is implemented incorrectly."""
-
-    def __init__(
-        self, name: str, return_dtype: pl.DataType, is_group_rule: bool
-    ) -> None:
-        if is_group_rule:
-            details = (
-                " When implementing a group rule (i.e. when using the `group_by` "
-                "parameter), make sure to use an aggregation function such as `.any()`, "
-                "`.all()`, and others to reduce an expression evaluated on multiple "
-                "rows in the same group to a single boolean value for the group."
-            )
-        else:
-            details = ""
-
-        message = (
-            f"Validation rule '{name}' has not been implemented correctly. It "
-            f"returns dtype '{return_dtype}' but it must return a boolean value."
-            + details
-        )
         super().__init__(message)
 
 
