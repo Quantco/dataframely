@@ -18,7 +18,7 @@ from polars._typing import FileSource, PartitioningScheme
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
-from ._serialization import SchemaJSONDecoder, SchemaJSONEncoder
+from ._serialization import SCHEMA_METADATA_KEY, SchemaJSONDecoder, SchemaJSONEncoder
 from ._typing import DataFrame, LazyFrame
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
@@ -29,7 +29,7 @@ from .random import Generator
 
 SERIALIZATION_FORMAT_VERSION = "1"
 _ORIGINAL_NULL_SUFFIX = "__orig_null__"
-_METADATA_KEY = "dataframely_schema"
+
 
 # ------------------------------------------------------------------------------------ #
 #                                   SCHEMA DEFINITION                                  #
@@ -432,7 +432,7 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def filter(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
-    ) -> tuple[DataFrame[Self], FailureInfo]:
+    ) -> tuple[DataFrame[Self], FailureInfo[Self]]:
         """Filter the data frame by the rules of this schema.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
@@ -659,7 +659,7 @@ class Schema(BaseSchema, ABC):
         """
         metadata = kwargs.pop("metadata", {})
         df.write_parquet(
-            file, metadata={**metadata, _METADATA_KEY: cls.serialize()}, **kwargs
+            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
         )
 
     @classmethod
@@ -690,7 +690,7 @@ class Schema(BaseSchema, ABC):
         """
         metadata = kwargs.pop("metadata", {})
         lf.sink_parquet(
-            file, metadata={**metadata, _METADATA_KEY: cls.serialize()}, **kwargs
+            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
         )
 
     @classmethod
@@ -806,7 +806,7 @@ class Schema(BaseSchema, ABC):
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
         metadata = (
-            pl.read_parquet_metadata(source).get(_METADATA_KEY)
+            pl.read_parquet_metadata(source).get(SCHEMA_METADATA_KEY)
             if not isinstance(source, list)
             else None
         )
@@ -873,7 +873,7 @@ class Schema(BaseSchema, ABC):
     # ----------------------------------- EQUALITY ----------------------------------- #
 
     @classmethod
-    def matches(cls, other: type[Schema]) -> bool:
+    def matches(cls, other: type[BaseSchema]) -> bool:
         """Check whether this schema semantically matches another schema.
 
         This method checks whether the schemas have the same columns (with the same

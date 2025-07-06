@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import polars as pl
+import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
@@ -26,16 +28,14 @@ def test_read_write_parquet(tmp_path: Path) -> None:
     assert failure._df.height == 4
     failure.write_parquet(tmp_path / "failure.parquet")
 
-    read: dy.FailureInfo[MySchema] = dy.FailureInfo.scan_parquet(
-        tmp_path / "failure.parquet"
-    )
+    read = dy.FailureInfo.read_parquet(tmp_path / "failure.parquet")
     assert_frame_equal(failure._lf, read._lf)
     assert failure._rule_columns == read._rule_columns
-    assert failure.schema == read.schema == MySchema
+    assert failure.schema.matches(read.schema)
+    assert MySchema.matches(read.schema)
 
 
-def test_read_write_parquet_legacy(tmp_path: Path) -> None:
-    # Arrange
+def test_scan_sink_parquet(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
             "a": [4, 5, 6, 6, 7, 8],
@@ -44,23 +44,27 @@ def test_read_write_parquet_legacy(tmp_path: Path) -> None:
     )
     _, failure = MySchema.filter(df)
     assert failure._df.height == 4
+    failure.sink_parquet(tmp_path / "failure.parquet")
 
-    # Act
-    metadata_json = json.dumps(
-        {
-            "rule_columns": failure._rule_columns,
-            "schema": f"{failure.schema.__module__}.{failure.schema.__name__}",
-        }
-    )
-    failure._df.with_columns(
-        pl.lit(None).alias(metadata_json),
-    ).write_parquet(tmp_path / "failure.parquet")
-
-    read: dy.FailureInfo[MySchema] = dy.FailureInfo.scan_parquet(
-        tmp_path / "failure.parquet"
-    )
-
-    # Assert
+    read = dy.FailureInfo.scan_parquet(tmp_path / "failure.parquet")
     assert_frame_equal(failure._lf, read._lf)
     assert failure._rule_columns == read._rule_columns
-    assert failure.schema == read.schema == MySchema
+    assert failure.schema.matches(read.schema)
+    assert MySchema.matches(read.schema)
+
+
+@pytest.mark.parametrize(
+    "read_fn",
+    [dy.FailureInfo.read_parquet, dy.FailureInfo.scan_parquet],
+)
+def test_missing_metadata(tmp_path: Path, read_fn: Callable[[Path], None]) -> None:
+    df = pl.DataFrame(
+        {
+            "a": [4, 5, 6, 6, 7, 8],
+            "b": [1, 2, 3, 4, 5, 6],
+        }
+    )
+    df.write_parquet(tmp_path / "failure.parquet")
+
+    with pytest.raises(ValueError, match=r"does not contain the required metadata"):
+        read_fn(tmp_path / "failure.parquet")

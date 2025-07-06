@@ -9,6 +9,8 @@ from typing import Any, cast
 
 import polars as pl
 
+SCHEMA_METADATA_KEY = "dataframely_schema"
+
 
 class SchemaJSONEncoder(JSONEncoder):
     """Custom JSON encoder to properly serialize all types serialized by schemas."""
