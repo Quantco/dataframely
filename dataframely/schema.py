@@ -8,7 +8,6 @@ import warnings
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
-from re import S
 from typing import IO, Any, Literal, Self, overload
 
 import polars as pl

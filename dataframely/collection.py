@@ -763,9 +763,9 @@ def deserialize_collection(data: str) -> type[Collection]:
 
     annotations: dict[str, Any] = {}
     for name, info in decoded["members"].items():
-        lf_type = LazyFrame[_schema_from_dict(info["schema"])]
+        lf_type = LazyFrame[_schema_from_dict(info["schema"])]  # type: ignore
         if info["is_optional"]:
-            lf_type = lf_type | None
+            lf_type = lf_type | None  # type: ignore
         annotations[name] = Annotated[
             lf_type,
             CollectionMember(

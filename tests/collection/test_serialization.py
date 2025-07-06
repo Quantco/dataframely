@@ -13,7 +13,6 @@ from dataframely.testing import create_collection, create_schema
 
 def test_simple_serialization() -> None:
     # Arrange
-    schema = create_schema("test", {"a": dy.Int64()})
     collection = create_collection(
         "test", {"s1": create_schema("schema1", {"a": dy.Int64()})}
     )
@@ -57,7 +56,7 @@ class OptionalCollection(dy.Collection):
                 "s2": create_schema("schema2", {"a": dy.Int64(primary_key=True)}),
             },
             {
-                "filter1": Filter(lambda c: c.s1.join(c.s2, on="a")),  # type: ignore
+                "filter1": Filter(lambda c: c.s1.join(c.s2, on="a")),
             },
         ),
         OptionalCollection,

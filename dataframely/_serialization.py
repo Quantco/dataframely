@@ -4,7 +4,6 @@
 import base64
 import datetime as dt
 import decimal
-from collections.abc import Callable
 from io import BytesIO
 from json import JSONDecoder, JSONEncoder
 from typing import Any, cast
