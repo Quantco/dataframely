@@ -243,6 +243,7 @@ class Schema(BaseSchema, ABC):
                 "The schema defines `_sampling_overrides` for columns that are not in the "
                 f"schema: {superfluous_overrides}."
             )
+
         override_expressions = [
             # Cast needed as column pre-processing might change the data types of a column
             expr.cast(cls.columns()[col].dtype).alias(col)
