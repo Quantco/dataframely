@@ -4,10 +4,8 @@
 from pathlib import Path
 from typing import Any, TypeVar
 
-import polars as pl
 import pytest
 import pytest_mock
-from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely.exc import ValidationRequiredError
@@ -55,7 +53,7 @@ def test_read_write_parquet_if_schema_matches(
 
     # Act
     spy = mocker.spy(collection, "validate")
-    out = read_parquet(collection_type, tmp_path, lazy, validate=validate)
+    read_parquet(collection_type, tmp_path, lazy, validate=validate)
 
     # Assert
     spy.assert_not_called()
