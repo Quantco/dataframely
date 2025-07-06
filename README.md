@@ -51,7 +51,7 @@ class HouseSchema(dy.Schema):
     price = dy.Float64(nullable=False)
 
     @dy.rule()
-    def reasonable_bathroom_to_bedrooom_ratio() -> pl.Expr:
+    def reasonable_bathroom_to_bedroom_ratio() -> pl.Expr:
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 
