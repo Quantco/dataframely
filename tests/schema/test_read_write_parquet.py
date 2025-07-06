@@ -7,8 +7,10 @@ from typing import Any, TypeVar
 import polars as pl
 import pytest
 import pytest_mock
+from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_schema
 
 S = TypeVar("S", bound=dy.Schema)
@@ -54,10 +56,11 @@ def test_read_write_parquet_if_schema_matches(
 
     # Act
     spy = mocker.spy(schema, "validate")
-    read_parquet(schema, tmp_path / "test.parquet", lazy, validate=validate)
+    out = read_parquet(schema, tmp_path / "test.parquet", lazy, validate=validate)
 
     # Assert
     spy.assert_not_called()
+    assert_frame_equal(out, df)
 
 
 # ---------------------------------- VALIDATE "AUTO" --------------------------------- #
@@ -74,7 +77,9 @@ def test_read_write_parquet_validate_auto_no_schema(
 
     # Act
     spy = mocker.spy(schema, "validate")
-    with pytest.warns(UserWarning, match=r"requires validation: no stored schema"):
+    with pytest.warns(
+        UserWarning, match=r"requires validation: no schema to check validity"
+    ):
         read_parquet(schema, tmp_path / "test.parquet", lazy)
 
     # Assert
@@ -157,7 +162,10 @@ def test_read_write_parquet_validate_false_no_schema(
     write_parquet(df, tmp_path / "test.parquet", lazy)
 
     # Act
-    with pytest.raises(ValueError, match=r"without validation: no stored schema"):
+    with pytest.raises(
+        ValidationRequiredError,
+        match=r"without validation: no schema to check validity",
+    ):
         read_parquet(schema, tmp_path / "test.parquet", lazy, validate=False)
 
 
@@ -175,6 +183,7 @@ def test_read_write_parquet_validate_false_invalid_schema(
 
     # Act
     with pytest.raises(
-        ValueError, match=r"without validation: current schema does not match"
+        ValidationRequiredError,
+        match=r"without validation: current schema does not match",
     ):
         read_parquet(schema, tmp_path / "test.parquet", lazy, validate=False)

@@ -13,6 +13,7 @@ from typing import IO, Any, Literal, Self, overload
 import polars as pl
 import polars.exceptions as plexc
 import polars.selectors as cs
+from polars._typing import FileSource, PartitioningScheme
 
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
@@ -22,7 +23,7 @@ from ._typing import DataFrame, LazyFrame
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
 from .config import Config
-from .exc import RuleValidationError, ValidationError
+from .exc import RuleValidationError, ValidationError, ValidationRequiredError
 from .failure import FailureInfo
 from .random import Generator
 
@@ -663,7 +664,11 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def sink_parquet(
-        cls, lf: LazyFrame[Self], /, file: str | Path | IO[bytes], **kwargs: Any
+        cls,
+        lf: LazyFrame[Self],
+        /,
+        file: str | Path | IO[bytes] | PartitioningScheme,
+        **kwargs: Any,
     ) -> None:
         """Stream a typed lazy frame with this schema to a parquet file.
 
@@ -673,9 +678,8 @@ class Schema(BaseSchema, ABC):
 
         Args:
             lf: The lazy frame to write to the parquet file.
-            file: The file path or writable file-like object to which to write the
-                parquet file. This should be a path to a directory if writing a
-                partitioned dataset.
+            file: The file path, writable file-like object, or partitioning scheme to
+                which to write the parquet file.
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
                 is a dictionary.
@@ -692,7 +696,7 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def read_parquet(
         cls,
-        source: str | Path | IO[bytes] | bytes,
+        source: FileSource,
         *,
         validate: bool | Literal["auto"] = "auto",
         **kwargs: Any,
@@ -726,6 +730,10 @@ class Schema(BaseSchema, ABC):
         Returns:
             The data frame with this schema.
 
+        Raises:
+            ValidationRequiredError: If no schema information can be read from the
+                source and ``validate`` is set to ``False``.
+
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
@@ -737,7 +745,7 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def scan_parquet(
         cls,
-        source: str | Path | IO[bytes] | bytes,
+        source: FileSource,
         *,
         validate: bool | Literal["auto"] = "auto",
         **kwargs: Any,
@@ -771,6 +779,10 @@ class Schema(BaseSchema, ABC):
         Returns:
             The data frame with this schema.
 
+        Raises:
+            ValidationRequiredError: If no schema information can be read from the
+                source and ``validate`` is set to ``False``.
+
         Note:
             Due to current limitations in dataframely, this method actually reads the
             parquet file into memory if ``validate`` is ``"auto"`` or ``True`` and
@@ -787,13 +799,17 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def _requires_validation_for_reading_parquet(
         cls,
-        source: str | Path | IO[bytes] | bytes,
+        source: FileSource,
         validate: bool | Literal["auto"] = "auto",
     ) -> bool:
         # First, we check whether the source provides the dataframely schema. If it
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
-        metadata = pl.read_parquet_metadata(source).get(_METADATA_KEY)
+        metadata = (
+            pl.read_parquet_metadata(source).get(_METADATA_KEY)
+            if not isinstance(source, list)
+            else None
+        )
         if metadata is not None:
             serialized_schema = deserialize_schema(metadata)
             if cls.matches(serialized_schema):
@@ -804,11 +820,11 @@ class Schema(BaseSchema, ABC):
         msg = (
             "current schema does not match stored schema"
             if metadata is not None
-            else "no stored schema can be found to check validity"
+            else "no schema to check validity can be read from the source"
         )
         if not validate:
-            raise ValueError(
-                f"Cannot read parquet file '{source!r}' without validation: {msg}."
+            raise ValidationRequiredError(
+                f"Cannot read parquet file from '{source!r}' without validation: {msg}."
             )
         if validate == "auto":
             warnings.warn(

@@ -132,3 +132,7 @@ class RuleImplementationError(ImplementationError):
             + details
         )
         super().__init__(message)
+
+
+class ValidationRequiredError(Exception):
+    """Error raised when validation is when reading a parquet file."""
