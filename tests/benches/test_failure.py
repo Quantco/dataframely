@@ -1,3 +1,6 @@
+# Copyright (c) QuantCo 2025-2025
+# SPDX-License-Identifier: BSD-3-Clause
+
 import numpy as np
 import polars as pl
 import pytest
@@ -19,12 +22,14 @@ def benchmark_df() -> pl.DataFrame:
 
 
 @pytest.mark.benchmark(group="failure-counts")
-def test_failure_counts(benchmark: BenchmarkFixture, benchmark_df: pl.DataFrame):
+def test_failure_counts(
+    benchmark: BenchmarkFixture, benchmark_df: pl.DataFrame
+) -> None:
     benchmark(_compute_counts, benchmark_df, benchmark_df.schema.names())
 
 
 @pytest.mark.benchmark(group="failure-cooccurrence-counts")
 def test_failure_cooccurrence_counts(
     benchmark: BenchmarkFixture, benchmark_df: pl.DataFrame
-):
+) -> None:
     benchmark(_compute_cooccurrence_counts, benchmark_df, benchmark_df.schema.names())

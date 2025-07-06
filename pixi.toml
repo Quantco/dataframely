@@ -41,6 +41,7 @@ readthedocs = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTH
 [feature.test.dependencies]
 mypy = ">=1.13"
 pandas = "*"
+pandas-stubs = "*"
 pyarrow = "*"
 pyodbc = "*"
 pytest = ">=6"

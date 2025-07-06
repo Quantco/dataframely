@@ -77,7 +77,7 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pyarrow.*"]
+module = ["pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --benchmark-skip"

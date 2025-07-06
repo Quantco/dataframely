@@ -1,3 +1,6 @@
+# Copyright (c) QuantCo 2025-2025
+# SPDX-License-Identifier: BSD-3-Clause
+
 import polars as pl
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -60,9 +63,9 @@ def test_single_filter_validate(
 def test_single_filter_filter(
     benchmark: BenchmarkFixture, partitioned_dataset: dict[str, pl.DataFrame]
 ) -> None:
-    def benchmark_fn():
+    def benchmark_fn() -> None:
         _, failure = SingleFilterCollection.filter(partitioned_dataset)
-        _ = [len(f) for f in failure.values()]
+        _ = [len(f) for f in failure.values()]  # type: ignore
 
     benchmark(benchmark_fn)
 
@@ -102,8 +105,8 @@ def test_multi_filter_validate(
 def test_multi_filter_filter(
     benchmark: BenchmarkFixture, partitioned_dataset: dict[str, pl.DataFrame]
 ) -> None:
-    def benchmark_fn():
+    def benchmark_fn() -> None:
         _, failure = MultiFilterCollection.filter(partitioned_dataset)
-        _ = [len(f) for f in failure.values()]
+        _ = [len(f) for f in failure.values()]  # type: ignore
 
     benchmark(benchmark_fn)
