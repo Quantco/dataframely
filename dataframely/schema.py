@@ -328,7 +328,7 @@ class Schema(BaseSchema, ABC):
         if column_preprocessing_expressions:
             combined_dataframe = combined_dataframe.with_columns(
                 # Cast needed as column pre-processing might change the data types of a column
-                expr.alias(col).cast(cls.columns()[col].dtype)
+                expr.cast(cls.columns()[col].dtype).alias(col)
                 for col, expr in column_preprocessing_expressions.items()
             )
 
@@ -374,7 +374,7 @@ class Schema(BaseSchema, ABC):
             A dict with entries `column_name: expression`.
         """
         # Do not pre-process any columns by default.
-        return dict()
+        return {}
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
