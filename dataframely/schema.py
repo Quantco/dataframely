@@ -237,13 +237,20 @@ class Schema(BaseSchema, ABC):
 
         # Prepare expressions for columns that need to be preprocessed during sampling
         # iterations.
-        override_expressions = {
-            col: expr
-            for col, expr in cls._sampling_overrides().items()
+        sampling_overrides = cls._sampling_overrides()
+        if superfluous_overrides := sampling_overrides.keys() - cls.columns():
+            raise ValueError(
+                "The schema defines `_sampling_overrides` for columns that are not in the "
+                f"schema: {superfluous_overrides}."
+            )
+        override_expressions = [
+            # Cast needed as column pre-processing might change the data types of a column
+            expr.cast(cls.columns()[col].dtype).alias(col)
+            for col, expr in sampling_overrides.items()
             # Only pre-process columns that are in the schema and were not provided
             # through `overrides`.
-            if col in cls.columns() and col not in values.columns
-        }
+            if col not in values.columns
+        ]
 
         # During sampling, we need to potentially sample many times if the schema has
         # (complex) rules.
@@ -312,7 +319,7 @@ class Schema(BaseSchema, ABC):
         previous_result: pl.DataFrame,
         used_values: pl.DataFrame,
         remaining_values: pl.DataFrame,
-        override_expressions: dict[str, pl.Expr],
+        override_expressions: list[pl.Expr],
     ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
         """Private method to sample a data frame with the schema including subsequent
         filtering.
@@ -332,13 +339,8 @@ class Schema(BaseSchema, ABC):
         )
 
         combined_dataframe = pl.concat([previous_result, sampled])
-        # If needed, pre-process columns before filtering.
-        if override_expressions:
-            combined_dataframe = combined_dataframe.with_columns(
-                # Cast needed as column pre-processing might change the data types of a column
-                expr.cast(cls.columns()[col].dtype).alias(col)
-                for col, expr in override_expressions.items()
-            )
+        # Pre-process columns before filtering.
+        combined_dataframe = combined_dataframe.with_columns(override_expressions)
 
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()

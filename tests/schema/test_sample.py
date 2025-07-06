@@ -200,8 +200,9 @@ def test_sample_preprocessing_data_type_change() -> None:
     assert len(df) == 100
 
 
-def test_sample_preprocessing_invalid_column() -> None:
-    df = SchemaWithIrrelevantColumnPreProcessing.sample(100)
-
-    SchemaWithIrrelevantColumnPreProcessing.validate(df)
-    assert len(df) == 100
+def test_sample_raises_superfluous_column_override() -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"`_sampling_overrides` for columns that are not in the schema",
+    ):
+        SchemaWithIrrelevantColumnPreProcessing.sample(100)
