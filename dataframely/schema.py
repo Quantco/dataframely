@@ -235,6 +235,16 @@ class Schema(BaseSchema, ABC):
             #  frame.
             values = pl.DataFrame()
 
+        # Prepare expressions for columns that need to be preprocessed during sampling
+        # iterations.
+        column_preprocessing_expressions = {
+            col: expr
+            for col, expr in cls._sampling_overrides().items()
+            # Only pre-process columns that are in the schema and were not provided
+            # through `overrides`.
+            if col in cls.columns() and col not in values.columns
+        }
+
         # During sampling, we need to potentially sample many times if the schema has
         # (complex) rules.
         #
@@ -254,6 +264,7 @@ class Schema(BaseSchema, ABC):
             previous_result=cls.create_empty(),
             used_values=values.slice(0, 0),
             remaining_values=values,
+            column_preprocessing_expressions=column_preprocessing_expressions,
         )
 
         sampling_rounds = 1
@@ -272,6 +283,7 @@ class Schema(BaseSchema, ABC):
                 previous_result=result,
                 used_values=used_values,
                 remaining_values=remaining_values,
+                column_preprocessing_expressions=column_preprocessing_expressions,
             )
             sampling_rounds += 1
 
@@ -299,6 +311,7 @@ class Schema(BaseSchema, ABC):
         previous_result: pl.DataFrame,
         used_values: pl.DataFrame,
         remaining_values: pl.DataFrame,
+        column_preprocessing_expressions: dict[str, pl.Expr],
     ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
         """Private method to sample a data frame with the schema including subsequent
         filtering.
@@ -318,13 +331,7 @@ class Schema(BaseSchema, ABC):
         )
 
         combined_dataframe = pl.concat([previous_result, sampled])
-        # If needed, pre-process columns of the new data frame.
-        column_preprocessing_expressions = {
-            col: expr
-            for col, expr in cls._column_preprocessing_expressions().items()
-            # Only pre-process columns that were not provided through `overrides`
-            if col in combined_dataframe.columns and col not in remaining_values.columns
-        }
+        # If needed, pre-process columns before filtering.
         if column_preprocessing_expressions:
             combined_dataframe = combined_dataframe.with_columns(
                 # Cast needed as column pre-processing might change the data types of a column
@@ -359,16 +366,16 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
-    def _column_preprocessing_expressions(cls) -> dict[str, pl.Expr]:
-        """Generate expressions for columns that need to be pre-processed during
-        sampling.
+    def _sampling_overrides(cls) -> dict[str, pl.Expr]:
+        """Generate expressions to pre-process columns during sampling.
 
         This method can be overwritten in schemas with complex rules to
         enable sampling data frames in a reasonable number of iterations.
 
         The provided expressions are applied during sampling after data was generated and
-        before it is filtered. In a sampling iteration, only expressions cor columns
-        that are not defined in the `overrides` argument of that operation.
+        before it is filtered. In a sampling iteration, only expressions for columns
+        that are not defined in the `overrides` argument of that operation are
+        pre-processed.
 
         Returns:
             A dict with entries `column_name: expression`.
