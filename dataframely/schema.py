@@ -860,13 +860,12 @@ class Schema(BaseSchema, ABC):
         # First, we check whether the source provides the dataframely schema. If it
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
-        metadata = (
-            read_parquet_schema_metadata(source)
+        serialized_schema = (
+            read_parquet_metadata_schema(source)
             if not isinstance(source, list)
             else None
         )
-        if metadata is not None:
-            serialized_schema = deserialize_schema(metadata)
+        if serialized_schema is not None:
             if cls.matches(serialized_schema):
                 return False
 
@@ -874,7 +873,7 @@ class Schema(BaseSchema, ABC):
         # information to the user depending on the value of `validate`.
         msg = (
             "current schema does not match stored schema"
-            if metadata is not None
+            if serialized_schema is not None
             else "no schema to check validity can be read from the source"
         )
         if validation == "forbid":
@@ -956,17 +955,22 @@ class Schema(BaseSchema, ABC):
         )
 
 
-def read_parquet_schema_metadata(source: str | Path | IO[bytes] | bytes) -> str | None:
+def read_parquet_metadata_schema(
+    source: str | Path | IO[bytes] | bytes,
+) -> type[Schema] | None:
     """Read a dataframely schema from the metadata of a parquet file.
 
     Args:
         source: Path to a parquet file or a file-like object that contains the metadata.
 
     Returns:
-        The JSON-serialized schema or ``None`` if no schema metadata is found.
+        The schema that was serialized to the metadata or ``None`` if no schema metadata
+        is found.
     """
     metadata = pl.read_parquet_metadata(source)
-    return metadata.get(SCHEMA_METADATA_KEY)
+    if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
+        return deserialize_schema(schema_metadata)
+    return None
 
 
 def deserialize_schema(data: str) -> type[Schema]:
