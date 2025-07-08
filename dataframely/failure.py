@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from functools import cached_property
 from pathlib import Path
-from typing import IO, Any, Generic, TypeVar
+from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
 
 import polars as pl
 from polars._typing import PartitioningScheme
@@ -14,6 +14,9 @@ from polars._typing import PartitioningScheme
 from dataframely._base_schema import BaseSchema
 
 from ._serialization import SCHEMA_METADATA_KEY
+
+if TYPE_CHECKING:
+    from .schema import Schema
 
 RULE_METADATA_KEY = "dataframely_rule_columns"
 
@@ -94,9 +97,7 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`.
         """
-        metadata = kwargs.pop("metadata", {})
-        metadata[RULE_METADATA_KEY] = json.dumps(self._rule_columns)
-        metadata[SCHEMA_METADATA_KEY] = self.schema.serialize()
+        metadata = self._build_metadata(**kwargs)
         self._df.write_parquet(file, metadata=metadata, **kwargs)
 
     def sink_parquet(
@@ -116,15 +117,19 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`.
         """
+        metadata = self._build_metadata(**kwargs)
+        self._lf.sink_parquet(file, metadata=metadata, **kwargs)
+
+    def _build_metadata(self, **kwargs: Any) -> dict[str, Any]:
         metadata = kwargs.pop("metadata", {})
         metadata[RULE_METADATA_KEY] = json.dumps(self._rule_columns)
         metadata[SCHEMA_METADATA_KEY] = self.schema.serialize()
-        self._lf.sink_parquet(file, metadata=metadata, **kwargs)
+        return metadata
 
     @classmethod
     def read_parquet(
         cls, source: str | Path | IO[bytes], **kwargs: Any
-    ) -> FailureInfo[BaseSchema]:
+    ) -> FailureInfo[Schema]:
         """Read a parquet file with the failure info.
 
         Args:
@@ -142,24 +147,12 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
-        from .schema import deserialize_schema
-
-        metadata = pl.read_parquet_metadata(source)
-        schema_metadata = metadata.get(SCHEMA_METADATA_KEY)
-        rule_metadata = metadata.get(RULE_METADATA_KEY)
-        if schema_metadata is None or rule_metadata is None:
-            raise ValueError("The parquet file does not contain the required metadata.")
-
-        return FailureInfo(
-            pl.read_parquet(source, **kwargs).lazy(),
-            json.loads(rule_metadata),
-            schema=deserialize_schema(schema_metadata),
-        )
+        return cls._from_parquet(source, scan=False, **kwargs)
 
     @classmethod
     def scan_parquet(
         cls, source: str | Path | IO[bytes], **kwargs: Any
-    ) -> FailureInfo[BaseSchema]:
+    ) -> FailureInfo[Schema]:
         """Lazily read a parquet file with the failure info.
 
         Args:
@@ -175,6 +168,12 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
+        return cls._from_parquet(source, scan=True, **kwargs)
+
+    @classmethod
+    def _from_parquet(
+        cls, source: str | Path | IO[bytes], scan: bool, **kwargs: Any
+    ) -> FailureInfo[Schema]:
         from .schema import deserialize_schema
 
         metadata = pl.read_parquet_metadata(source)
@@ -183,8 +182,13 @@ class FailureInfo(Generic[S]):
         if schema_metadata is None or rule_metadata is None:
             raise ValueError("The parquet file does not contain the required metadata.")
 
+        lf = (
+            pl.scan_parquet(source, **kwargs)
+            if scan
+            else pl.read_parquet(source, **kwargs).lazy()
+        )
         return FailureInfo(
-            pl.scan_parquet(source, **kwargs),
+            lf,
             json.loads(rule_metadata),
             schema=deserialize_schema(schema_metadata),
         )

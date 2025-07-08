@@ -928,7 +928,7 @@ class Schema(BaseSchema, ABC):
     # ----------------------------------- EQUALITY ----------------------------------- #
 
     @classmethod
-    def matches(cls, other: type[BaseSchema]) -> bool:
+    def matches(cls, other: type[Schema]) -> bool:
         """Check whether this schema semantically matches another schema.
 
         This method checks whether the schemas have the same columns (with the same
