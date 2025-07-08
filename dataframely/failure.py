@@ -15,7 +15,7 @@ from dataframely._base_schema import BaseSchema
 
 from ._serialization import SCHEMA_METADATA_KEY
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .schema import Schema
 
 RULE_METADATA_KEY = "dataframely_rule_columns"
