@@ -7,7 +7,7 @@ import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Any, Self, cast
+from typing import Any, Self
 
 import polars as pl
 
@@ -86,12 +86,9 @@ class SchemaMeta(ABCMeta):
         # 1) Check that the column names clash with none of the rule names. To this end,
         # we assume that users cast dtypes, i.e. additional rules for dtype casting
         # are also checked.
-        columns = {
-            column.alias or name: column for name, column in result.columns.items()
-        }
-        all_column_names = set(columns)
-        all_rule_names = set(_build_rules(result.rules, columns).keys()) | set(
-            f"{col}|dtype" for col in columns
+        all_column_names = set(result.columns)
+        all_rule_names = set(_build_rules(result.rules, result.columns).keys()) | set(
+            f"{col}|dtype" for col in result.columns
         )
         common_names = all_column_names & all_rule_names
         if len(common_names) > 0:
@@ -104,7 +101,7 @@ class SchemaMeta(ABCMeta):
         # 2) Check that the columns referenced in the group rules exist.
         for rule_name, rule in result.rules.items():
             if isinstance(rule, GroupRule):
-                missing_columns = set(rule.group_columns) - set(columns)
+                missing_columns = set(rule.group_columns) - set(result.columns)
                 if len(missing_columns) > 0:
                     missing_list = ", ".join(
                         sorted(f"'{col}'" for col in missing_columns)
@@ -139,7 +136,7 @@ class SchemaMeta(ABCMeta):
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
-                result.columns[attr] = value
+                result.columns[value.alias or attr] = value
             if isinstance(value, Rule):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
@@ -169,15 +166,15 @@ class BaseSchema(metaclass=SchemaMeta):
     @classmethod
     def column_names(cls) -> list[str]:
         """The column names of this schema."""
-        return list(cls.columns().keys())
+        return list(getattr(cls, _COLUMN_ATTR).keys())
 
     @classmethod
     def columns(cls) -> dict[str, Column]:
         """The column definitions of this schema."""
-        columns: dict[str, Column] = {}
-        for member_name in cast(dict[str, Column], getattr(cls, _COLUMN_ATTR)).keys():
-            column: Column = getattr(cls, member_name)
-            columns[column.name] = column
+        columns: dict[str, Column] = getattr(cls, _COLUMN_ATTR)
+        for name in columns.keys():
+            # Dynamically set the name of the columns.
+            columns[name]._name = name
         return columns
 
     @classmethod
