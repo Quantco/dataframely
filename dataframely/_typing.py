@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Concatenate, Generic, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Concatenate, Generic, Literal, ParamSpec, TypeVar
 
 import polars as pl
 
@@ -14,6 +14,8 @@ S = TypeVar("S", bound=BaseSchema, covariant=True)
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+Validation = Literal["allow", "forbid", "warn", "skip"]
 
 
 def inherit_signature(  # pragma: no cover
