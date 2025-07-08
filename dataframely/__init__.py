@@ -51,7 +51,7 @@ from .functional import (
     filter_relationship_one_to_at_least_one,
     filter_relationship_one_to_one,
 )
-from .schema import Schema, deserialize_schema
+from .schema import Schema, deserialize_schema, read_parquet_schema_metadata
 
 __all__ = [
     "random",
@@ -69,6 +69,7 @@ __all__ = [
     "filter_relationship_one_to_one",
     "Schema",
     "deserialize_schema",
+    "read_parquet_schema_metadata",
     "Any",
     "Bool",
     "Column",

@@ -861,7 +861,7 @@ class Schema(BaseSchema, ABC):
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
         metadata = (
-            pl.read_parquet_metadata(source).get(SCHEMA_METADATA_KEY)
+            read_parquet_schema_metadata(source)
             if not isinstance(source, list)
             else None
         )
@@ -954,6 +954,19 @@ class Schema(BaseSchema, ABC):
         return _columns_match(cls.columns(), other.columns()) and _rules_match(
             cls._schema_validation_rules(), other._schema_validation_rules()
         )
+
+
+def read_parquet_schema_metadata(source: str | Path | IO[bytes] | bytes) -> str | None:
+    """Read a dataframely schema from the metadata of a parquet file.
+
+    Args:
+        source: Path to a parquet file or a file-like object that contains the metadata.
+
+    Returns:
+        The JSON-serialized schema or ``None`` if no schema metadata is found.
+    """
+    metadata = pl.read_parquet_metadata(source)
+    return metadata.get(SCHEMA_METADATA_KEY)
 
 
 def deserialize_schema(data: str) -> type[Schema]:
