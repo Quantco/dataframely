@@ -10,6 +10,7 @@ from typing import Any, cast
 
 import polars as pl
 
+SCHEMA_METADATA_KEY = "dataframely_schema"
 SERIALIZATION_FORMAT_VERSION = "1"
 
 

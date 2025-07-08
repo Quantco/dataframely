@@ -19,6 +19,7 @@ from ._base_schema import BaseSchema
 from ._compat import pa, sa
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
+    SCHEMA_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
@@ -33,7 +34,7 @@ from .failure import FailureInfo
 from .random import Generator
 
 _ORIGINAL_NULL_SUFFIX = "__orig_null__"
-_METADATA_KEY = "dataframely_schema"
+
 
 # ------------------------------------------------------------------------------------ #
 #                                   SCHEMA DEFINITION                                  #
@@ -479,7 +480,7 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def filter(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
-    ) -> tuple[DataFrame[Self], FailureInfo]:
+    ) -> tuple[DataFrame[Self], FailureInfo[Self]]:
         """Filter the data frame by the rules of this schema.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
@@ -708,7 +709,7 @@ class Schema(BaseSchema, ABC):
         """
         metadata = kwargs.pop("metadata", {})
         df.write_parquet(
-            file, metadata={**metadata, _METADATA_KEY: cls.serialize()}, **kwargs
+            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
         )
 
     @classmethod
@@ -739,7 +740,7 @@ class Schema(BaseSchema, ABC):
         """
         metadata = kwargs.pop("metadata", {})
         lf.sink_parquet(
-            file, metadata={**metadata, _METADATA_KEY: cls.serialize()}, **kwargs
+            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
         )
 
     @classmethod
@@ -860,7 +861,7 @@ class Schema(BaseSchema, ABC):
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
         metadata = (
-            pl.read_parquet_metadata(source).get(_METADATA_KEY)
+            pl.read_parquet_metadata(source).get(SCHEMA_METADATA_KEY)
             if not isinstance(source, list)
             else None
         )
