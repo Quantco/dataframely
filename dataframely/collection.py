@@ -1,22 +1,31 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import json
 import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Self, cast
+from typing import Annotated, Any, Self, cast
 
 import polars as pl
 import polars.exceptions as plexc
 
-from dataframely.exc import MemberValidationError, RuleValidationError, ValidationError
-
-from ._base_collection import BaseCollection
+from ._base_collection import BaseCollection, CollectionMember
+from ._filter import Filter
 from ._polars import FrameType, join_all_inner, join_all_outer
+from ._serialization import (
+    SERIALIZATION_FORMAT_VERSION,
+    SchemaJSONDecoder,
+    SchemaJSONEncoder,
+    serialization_versions,
+)
+from ._typing import LazyFrame
+from .exc import MemberValidationError, RuleValidationError, ValidationError
 from .failure import FailureInfo
 from .random import Generator
+from .schema import _schema_from_dict
 
 
 class Collection(BaseCollection, ABC):
@@ -279,7 +288,7 @@ class Collection(BaseCollection, ABC):
             for name in filters_lhs:
                 lhs = filters_lhs[name].logic(empty_left)
                 rhs = filters_rhs[name].logic(empty_right)
-                if lhs.serialize(format="json") != rhs.serialize(format="json"):
+                if lhs.serialize() != rhs.serialize():
                     return False
             return True
 
@@ -556,6 +565,59 @@ class Collection(BaseCollection, ABC):
             {key: dfs[i].lazy() for i, key in enumerate(self.to_dict().keys())}
         )
 
+    # --------------------------------- SERIALIZATION -------------------------------- #
+
+    @classmethod
+    def serialize(cls) -> str:
+        """Serialize this collection to a JSON string.
+
+        This method does NOT serialize any data frames, but only the _structure_ of the
+        collection, similar to :meth:`Schema.serialize`.
+
+        Returns:
+            The serialized collection.
+
+        Note:
+            Serialization within dataframely itself will remain backwards-compatible
+            at least within a major version. Until further notice, it will also be
+            backwards-compatible across major versions.
+
+        Attention:
+            Serialization of :mod:`polars` expressions and lazy frames is not guaranteed
+            to be stable across versions of polars. This affects collections with
+            filters or members that define custom rules or columns with custom checks:
+            a collection serialized with one version of polars may not be deserializable
+            with another version of polars.
+
+        Attention:
+            This functionality is considered unstable. It may be changed at any time
+            without it being considered a breaking change.
+
+        Raises:
+            TypeError: If a column of any member contains metadata that is not
+                JSON-serializable.
+            ValueError: If a column of any member is not a "native" dataframely column
+                type but a custom subclass.
+        """
+        result = {
+            "versions": serialization_versions(),
+            "name": cls.__name__,
+            "members": {
+                name: {
+                    "schema": info.schema._as_dict(),
+                    "is_optional": info.is_optional,
+                    "ignored_in_filters": info.ignored_in_filters,
+                    "inline_for_sampling": info.inline_for_sampling,
+                }
+                for name, info in cls.members().items()
+            },
+            "filters": {
+                name: filter.logic(cls.create_empty())
+                for name, filter in cls._filters().items()
+            },
+        }
+        return json.dumps(result, cls=SchemaJSONEncoder)
+
     # ---------------------------------- PERSISTENCE --------------------------------- #
 
     def write_parquet(self, directory: Path) -> None:
@@ -665,6 +727,64 @@ class Collection(BaseCollection, ABC):
                 f"Input provides {len(superfluous)} superfluous members that are "
                 f"ignored: {', '.join(superfluous)}."
             )
+
+
+def deserialize_collection(data: str) -> type[Collection]:
+    """Deserialize a collection from a JSON string.
+
+    This method allows to dynamically load a collection from its serialization, without
+    having to know the collection to load in advance.
+
+    Args:
+        data: The JSON string created via :meth:`Collection.serialize`.
+
+    Returns:
+        The collection loaded from the JSON data.
+
+    Raises:
+        ValueError: If the schema format version is not supported.
+
+    Attention:
+        The returned collection **cannot** be used to create instances of the
+        collection as filters cannot be correctly recovered from the serialized format
+        as of polars 1.31. Thus, you should only use static information from the
+        returned collection.
+
+    Attention:
+        This functionality is considered unstable. It may be changed at any time
+        without it being considered a breaking change.
+
+    See also:
+        :meth:`Collection.serialize` for additional information on serialization.
+    """
+    decoded = json.loads(data, cls=SchemaJSONDecoder)
+    if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
+        raise ValueError(f"Unsupported schema format version: {format}")
+
+    annotations: dict[str, Any] = {}
+    for name, info in decoded["members"].items():
+        lf_type = LazyFrame[_schema_from_dict(info["schema"])]  # type: ignore
+        if info["is_optional"]:
+            lf_type = lf_type | None  # type: ignore
+        annotations[name] = Annotated[
+            lf_type,
+            CollectionMember(
+                ignored_in_filters=info["ignored_in_filters"],
+                inline_for_sampling=info["inline_for_sampling"],
+            ),
+        ]
+
+    return type(
+        f"{decoded['name']}_dynamic",
+        (Collection,),
+        {
+            "__annotations__": annotations,
+            **{
+                name: Filter(logic=lambda _: logic)
+                for name, logic in decoded["filters"].items()
+            },
+        },
+    )
 
 
 # --------------------------------------- UTILS -------------------------------------- #
