@@ -77,10 +77,10 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pyarrow.*"]
+module = ["pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
 
 [tool.pytest.ini_options]
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib --benchmark-skip"
 filterwarnings = [
   # Almost all tests are oblivious to the value of `nullable`. Let's ignore the warning as long as it exists.
   "ignore:The 'nullable' argument was not explicitly set:FutureWarning",

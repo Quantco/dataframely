@@ -758,20 +758,22 @@ class Schema(BaseSchema, ABC):
 
         Args:
             source: Path, directory, or file-like object from which to read the data.
-            validate: The strategy for running validation when reading the data:
+            validation: The strategy for running validation when reading the data:
 
-                - If set to ``"auto"``, this method tries to read the parquet file's
-                  metadata. If it matches this schema, the data frame is read without
+                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                  the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``. However, it prints a
-                  warning that the read introduces additional overhead.
-                - If ``True``, the method behaves similarly to ``"auto"``. However, the
-                  user acknowledges that the read might run validation, and no warning
-                  will be emitted.
-                - If ``False``, validation is never run automatically and an error is
-                  raised if the parquet file does not store schema information or the
-                  stored schema mismatches this schema.
+                  runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the schema stored in the parquet file's metadata matches
+                  this schema.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. _Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.read_parquet` to convey the purpose better_.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.read_parquet`.
@@ -807,20 +809,22 @@ class Schema(BaseSchema, ABC):
 
         Args:
             source: Path, directory, or file-like object from which to read the data.
-            validate: The strategy for running validation when reading the data:
+            validation: The strategy for running validation when reading the data:
 
-                - If set to ``"auto"``, this method tries to read the parquet file's
-                  metadata. If it matches this schema, the data frame is read without
+                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                  the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``. However, it prints a
-                  warning that the read introduces additional overhead.
-                - If ``True``, the method behaves similarly to ``"auto"``. However, the
-                  user acknowledges that the read might run validation, and no warning
-                  will be emitted.
-                - If ``False``, validation is never run automatically and an error is
-                  raised if the parquet file does not store schema information or the
-                  stored schema mismatches this schema.
+                  runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the schema stored in the parquet file's metadata matches
+                  this schema.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. _Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.read_parquet` to convey the purpose better_.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.scan_parquet`.
