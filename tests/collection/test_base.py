@@ -1,12 +1,8 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-from collections.abc import Callable
-from pathlib import Path
-
 import polars as pl
 import pytest
-from polars.testing import assert_frame_equal
 
 import dataframely as dy
 
@@ -113,39 +109,3 @@ def test_collect_all_optional() -> None:
     assert isinstance(out, MyCollection)
     assert len(out.first.collect()) == 3
     assert out.second is None
-
-
-@pytest.mark.parametrize(
-    "read_fn", [MyCollection.scan_parquet, MyCollection.read_parquet]
-)
-def test_read_write_parquet(
-    tmp_path: Path, read_fn: Callable[[Path], MyCollection]
-) -> None:
-    collection = MyCollection.cast(
-        {
-            "first": pl.LazyFrame({"a": [1, 2, 3]}),
-            "second": pl.LazyFrame({"a": [1, 2], "b": [10, 15]}),
-        }
-    )
-    collection.write_parquet(tmp_path)
-
-    read = read_fn(tmp_path)
-    assert_frame_equal(collection.first, read.first)
-    assert collection.second is not None
-    assert read.second is not None
-    assert_frame_equal(collection.second, read.second)
-
-
-@pytest.mark.parametrize(
-    "read_fn", [MyCollection.scan_parquet, MyCollection.read_parquet]
-)
-def test_read_write_parquet_optional(
-    tmp_path: Path, read_fn: Callable[[Path], MyCollection]
-) -> None:
-    collection = MyCollection.cast({"first": pl.LazyFrame({"a": [1, 2, 3]})})
-    collection.write_parquet(tmp_path)
-
-    read = read_fn(tmp_path)
-    assert_frame_equal(collection.first, read.first)
-    assert collection.second is None
-    assert read.second is None
