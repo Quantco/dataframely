@@ -7,7 +7,7 @@ from abc import ABC
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated, Any, Literal, Self, cast
+from typing import Annotated, Any, Self, cast
 
 import polars as pl
 import polars.exceptions as plexc
@@ -21,7 +21,7 @@ from ._serialization import (
     SchemaJSONEncoder,
     serialization_versions,
 )
-from ._typing import LazyFrame
+from ._typing import LazyFrame, Validation
 from .exc import (
     MemberValidationError,
     RuleValidationError,
@@ -646,19 +646,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        path = Path(directory) if isinstance(directory, str) else directory
-        path.mkdir(parents=True, exist_ok=True)
-
-        with open(path / "schema.json", "w") as f:
-            f.write(self.serialize())
-
-        member_schemas = self.member_schemas()
-        for key, lf in self.to_dict().items():
-            member_schemas[key].write_parquet(
-                lf.collect(),  # type: ignore
-                path / f"{key}.parquet",
-                **kwargs,
-            )
+        self._to_parquet(directory, sink=False, **kwargs)
 
     def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
@@ -681,26 +669,38 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
+        self._to_parquet(directory, sink=True, **kwargs)
+
+    def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
         path = Path(directory) if isinstance(directory, str) else directory
         path.mkdir(parents=True, exist_ok=True)
-
         with open(path / "schema.json", "w") as f:
             f.write(self.serialize())
 
         member_schemas = self.member_schemas()
         for key, lf in self.to_dict().items():
-            member_schemas[key].sink_parquet(
-                lf,  # type: ignore
-                path / f"{key}.parquet",
-                **kwargs,
+            destination = (
+                path / key if "partition_by" in kwargs else path / f"{key}.parquet"
             )
+            if sink:
+                member_schemas[key].sink_parquet(
+                    lf,  # type: ignore
+                    destination,
+                    **kwargs,
+                )
+            else:
+                member_schemas[key].write_parquet(
+                    lf.collect(),  # type: ignore
+                    destination,
+                    **kwargs,
+                )
 
     @classmethod
     def read_parquet(
         cls,
-        directory: Path,
+        directory: str | Path,
         *,
-        validate: bool | Literal["auto"] = "auto",
+        validation: Validation = "warn",
         **kwargs: Any,
     ) -> Self:
         """Read all collection members from parquet files in a directory.
@@ -710,31 +710,33 @@ class Collection(BaseCollection, ABC):
 
         Args:
             directory: The directory where the Parquet files should be read from.
-            validate: The strategy for running validation when reading the data:
+                Parquet files may have been written with Hive partitioning.
+            validation: The strategy for running validation when reading the data:
 
-                - If set to ``"auto"``, this method tries to read a JSON file in the
-                  directory describing the collection's schema. If it matches this
-                  collection, the collection is read without validation. If the stored
-                  collection schema mismatches this collection or no JSON file can be
-                  found in the directory, this method automatically runs
-                  :meth:`validate` with ``cast=True``. However, it prints a warning
-                  that the read introduces additional overhead.
-                - If ``True``, the method behaves similarly to ``"auto"``. However, the
-                  user acknowledges that the read might run validation, and no warning
-                  will be emitted.
-                - If ``False``, validation is never run automatically and an error is
-                  raised if the parquet file does not store schema information or the
-                  stored schema mismatches this schema.
+                - ``"allow"`: The method tries to read the ``schema.json`` file in the
+                  directory. If the stored collection schema matches this collection
+                  schema, the collection is read without validation. If the stored
+                  schema mismatches this schema or no ``schema.json`` can be found in
+                  the directory, this method automatically runs :meth:`validate` with
+                  ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the ``schema.json`` stores a collection schema that matches
+                  this collection.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  data, entrusting the user that the schema is valid. _Use this option
+                  carefully_.
 
             kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.scan_parquet`.
+                :meth:`polars.read_parquet`.
 
         Returns:
             The initialized collection.
 
         Raises:
             ValidationRequiredError: If no collection schema can be read from the
-                directory and ``validate`` is set to ``False``.
+                directory and ``validation`` is set to ``"forbid"``.
             ValueError: If the provided directory does not contain parquet files for
                 all required members.
             ValidationError: If the collection cannot be validate.
@@ -743,12 +745,9 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        data = {
-            key: pl.read_parquet(directory / f"{key}.parquet", **kwargs)
-            for key in cls.members()
-            if (directory / f"{key}.parquet").exists()
-        }
-        if not cls._requires_validation_for_reading_parquets(directory, validate):
+        path = Path(directory)
+        data = cls._from_parquet(path, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(path, validation):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
@@ -756,9 +755,9 @@ class Collection(BaseCollection, ABC):
     @classmethod
     def scan_parquet(
         cls,
-        directory: Path,
+        directory: str | Path,
         *,
-        validate: bool | Literal["auto"] = "auto",
+        validation: Validation = "warn",
         **kwargs: Any,
     ) -> Self:
         """Lazily read all collection members from parquet files in a directory.
@@ -768,21 +767,23 @@ class Collection(BaseCollection, ABC):
 
         Args:
             directory: The directory where the Parquet files should be read from.
-            validate: The strategy for running validation when reading the data:
+                Parquet files may have been written with Hive partitioning.
+            validation: The strategy for running validation when reading the data:
 
-                - If set to ``"auto"``, this method tries to read a JSON file in the
-                  directory describing the collection's schema. If it matches this
-                  collection, the collection is read without validation. If the stored
-                  collection schema mismatches this collection or no JSON file can be
-                  found in the directory, this method automatically runs
-                  :meth:`validate` with ``cast=True``. However, it prints a warning
-                  that the read introduces additional overhead.
-                - If ``True``, the method behaves similarly to ``"auto"``. However, the
-                  user acknowledges that the read might run validation, and no warning
-                  will be emitted.
-                - If ``False``, validation is never run automatically and an error is
-                  raised if the parquet file does not store schema information or the
-                  stored schema mismatches this schema.
+                - ``"allow"`: The method tries to read the ``schema.json`` file in the
+                  directory. If the stored collection schema matches this collection
+                  schema, the collection is read without validation. If the stored
+                  schema mismatches this schema or no ``schema.json`` can be found in
+                  the directory, this method automatically runs :meth:`validate` with
+                  ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the ``schema.json`` stores a collection schema that matches
+                  this collection.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  data, entrusting the user that the schema is valid. _Use this option
+                  carefully_.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.scan_parquet` for all members.
@@ -792,41 +793,64 @@ class Collection(BaseCollection, ABC):
 
         Raises:
             ValidationRequiredError: If no collection schema can be read from the
-                directory and ``validate`` is set to ``False``.
+                directory and ``validation`` is set to ``"forbid"``.
             ValueError: If the provided directory does not contain parquet files for
                 all required members.
 
         Note:
             Due to current limitations in dataframely, this method actually reads the
-            parquet file into memory if ``validate`` is ``"auto"`` or ``True`` and
-            validation is required.
+            parquet file into memory if ``"validation"`` is ``"warn"`` or ``"allow"``
+            and validation is required.
 
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        data = {
-            key: pl.scan_parquet(directory / f"{key}.parquet", **kwargs)
-            for key in cls.members()
-            if (directory / f"{key}.parquet").exists()
-        }
-        if not cls._requires_validation_for_reading_parquets(directory, validate):
+        path = Path(directory)
+        data = cls._from_parquet(path, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(path, validation):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
 
     @classmethod
+    def _from_parquet(
+        cls, path: Path, scan: bool, **kwargs: Any
+    ) -> dict[str, pl.LazyFrame]:
+        data = {}
+        for key in cls.members():
+            if (source_path := cls._member_source_path(path, key)) is not None:
+                data[key] = (
+                    pl.scan_parquet(source_path, **kwargs)
+                    if scan
+                    else pl.read_parquet(source_path, **kwargs).lazy()
+                )
+        return data
+
+    @classmethod
+    def _member_source_path(cls, base_path: Path, name: str) -> Path | None:
+        if (path := base_path / name).exists() and base_path.is_dir():
+            # We assume that the member is stored as a hive-partitioned dataset
+            return path
+        if (path := base_path / f"{name}.parquet").exists():
+            # We assume that the member is stored as a single parquet file
+            return path
+        return None
+
+    @classmethod
     def _requires_validation_for_reading_parquets(
         cls,
         directory: Path,
-        validate: bool | Literal["auto"] = "auto",
+        validation: Validation,
     ) -> bool:
+        if validation == "skip":
+            return False
+
         # First, we check whether the path provides the serialization of the collection.
         # If it does, we check whether it matches this collection. If it does, we assume
         # that the data adheres to the collection and we do not need to run validation.
         if (json_serialization := directory / "schema.json").exists():
-            with json_serialization.open("r") as f:
-                metadata = f.read()
+            metadata = json_serialization.read_text()
             serialized_collection = deserialize_collection(metadata)
             if cls.matches(serialized_collection):
                 return False
@@ -840,11 +864,11 @@ class Collection(BaseCollection, ABC):
             if serialized_collection is not None
             else "no collection schema to check validity can be read from the source"
         )
-        if not validate:
+        if validation == "forbid":
             raise ValidationRequiredError(
                 f"Cannot read collection from '{directory!r}' without validation: {msg}."
             )
-        if validate == "auto":
+        if validation == "warn":
             warnings.warn(
                 f"Reading parquet file from '{directory!r}' requires validation: {msg}."
             )

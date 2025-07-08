@@ -783,7 +783,7 @@ class Schema(BaseSchema, ABC):
 
         Raises:
             ValidationRequiredError: If no schema information can be read from the
-                source and ``validate`` is set to ``False``.
+                source and ``validation`` is set to ``"forbid"``.
 
         Attention:
             Be aware that this method suffers from the same limitations as
@@ -824,7 +824,7 @@ class Schema(BaseSchema, ABC):
                 - ``"skip"``: The method never runs validation and simply reads the
                   parquet file, entrusting the user that the schema is valid. _Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.read_parquet` to convey the purpose better_.
+                  :meth:`polars.scan_parquet` to convey the purpose better_.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.scan_parquet`.
@@ -834,11 +834,11 @@ class Schema(BaseSchema, ABC):
 
         Raises:
             ValidationRequiredError: If no schema information can be read from the
-                source and ``validate`` is set to ``False``.
+                source and ``validation`` is set to ``"forbid"``.
 
         Note:
             Due to current limitations in dataframely, this method actually reads the
-            parquet file into memory if ``validate`` is ``"auto"`` or ``True`` and
+            parquet file into memory if ``validation`` is ``"warn"`` or ``"allow"`` and
             validation is required.
 
         Attention:
