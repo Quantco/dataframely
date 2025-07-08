@@ -24,7 +24,7 @@ from ._serialization import (
     SchemaJSONEncoder,
     serialization_versions,
 )
-from ._typing import DataFrame, LazyFrame
+from ._typing import DataFrame, LazyFrame, Validation
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
 from .config import Config
@@ -704,7 +704,7 @@ class Schema(BaseSchema, ABC):
         cls,
         source: FileSource,
         *,
-        validate: bool | Literal["auto"] = "auto",
+        validation: Validation = "warn",
         **kwargs: Any,
     ) -> DataFrame[Self]:
         """Read a parquet file into a typed data frame with this schema.
@@ -744,7 +744,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        if not cls._requires_validation_for_reading_parquet(source, validate):
+        if not cls._requires_validation_for_reading_parquet(source, validation):
             return pl.read_parquet(source, **kwargs)  # type: ignore
         return cls.validate(pl.read_parquet(source, **kwargs), cast=True)
 
@@ -753,7 +753,7 @@ class Schema(BaseSchema, ABC):
         cls,
         source: FileSource,
         *,
-        validate: bool | Literal["auto"] = "auto",
+        validation: Validation = "warn",
         **kwargs: Any,
     ) -> LazyFrame[Self]:
         """Lazily read a parquet file into a typed data frame with this schema.
@@ -798,16 +798,17 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        if not cls._requires_validation_for_reading_parquet(source, validate):
+        if not cls._requires_validation_for_reading_parquet(source, validation):
             return pl.scan_parquet(source, **kwargs)  # type: ignore
         return cls.validate(pl.read_parquet(source, **kwargs), cast=True).lazy()
 
     @classmethod
     def _requires_validation_for_reading_parquet(
-        cls,
-        source: FileSource,
-        validate: bool | Literal["auto"] = "auto",
+        cls, source: FileSource, validation: Validation
     ) -> bool:
+        if validation == "skip":
+            return False
+
         # First, we check whether the source provides the dataframely schema. If it
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
@@ -828,11 +829,11 @@ class Schema(BaseSchema, ABC):
             if metadata is not None
             else "no schema to check validity can be read from the source"
         )
-        if not validate:
+        if validation == "forbid":
             raise ValidationRequiredError(
                 f"Cannot read parquet file from '{source!r}' without validation: {msg}."
             )
-        if validate == "auto":
+        if validation == "warn":
             warnings.warn(
                 f"Reading parquet file from '{source!r}' requires validation: {msg}."
             )
