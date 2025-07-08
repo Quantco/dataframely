@@ -243,6 +243,24 @@ class Schema(BaseSchema, ABC):
             #  frame.
             values = pl.DataFrame()
 
+        # Prepare expressions for columns that need to be preprocessed during sampling
+        # iterations.
+        sampling_overrides = cls._sampling_overrides()
+        if superfluous_overrides := sampling_overrides.keys() - cls.columns():
+            raise ValueError(
+                "The schema defines `_sampling_overrides` for columns that are not in the "
+                f"schema: {superfluous_overrides}."
+            )
+
+        override_expressions = [
+            # Cast needed as column pre-processing might change the data types of a column
+            expr.cast(cls.columns()[col].dtype).alias(col)
+            for col, expr in sampling_overrides.items()
+            # Only pre-process columns that are in the schema and were not provided
+            # through `overrides`.
+            if col not in values.columns
+        ]
+
         # During sampling, we need to potentially sample many times if the schema has
         # (complex) rules.
         #
@@ -262,6 +280,7 @@ class Schema(BaseSchema, ABC):
             previous_result=cls.create_empty(),
             used_values=values.slice(0, 0),
             remaining_values=values,
+            override_expressions=override_expressions,
         )
 
         sampling_rounds = 1
@@ -272,7 +291,8 @@ class Schema(BaseSchema, ABC):
                     "iterations. Consider increasing the maximum number of sampling "
                     "iterations via `dy.Config` or implement your custom sampling "
                     "logic. Alternatively, passing predefined value to `overrides` "
-                    "can also help the sampling procedure find a valid data frame."
+                    "or implementing `_sampling_overrides` for your schema can also "
+                    "help the sampling procedure find a valid data frame."
                 )
             result, used_values, remaining_values = cls._sample_filter(
                 num_rows - len(result),
@@ -280,6 +300,7 @@ class Schema(BaseSchema, ABC):
                 previous_result=result,
                 used_values=used_values,
                 remaining_values=remaining_values,
+                override_expressions=override_expressions,
             )
             sampling_rounds += 1
 
@@ -307,6 +328,7 @@ class Schema(BaseSchema, ABC):
         previous_result: pl.DataFrame,
         used_values: pl.DataFrame,
         remaining_values: pl.DataFrame,
+        override_expressions: list[pl.Expr],
     ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
         """Private method to sample a data frame with the schema including subsequent
         filtering.
@@ -325,11 +347,13 @@ class Schema(BaseSchema, ABC):
             }
         )
 
+        combined_dataframe = pl.concat([previous_result, sampled])
+        # Pre-process columns before filtering.
+        combined_dataframe = combined_dataframe.with_columns(override_expressions)
+
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules()
-        filtered, evaluated = cls._filter_raw(
-            pl.concat([previous_result, sampled]), rules, cast=False
-        )
+        filtered, evaluated = cls._filter_raw(combined_dataframe, rules, cast=False)
 
         if evaluated is None:
             # When `evaluated` is None, there are no rules and we surely included all
@@ -337,6 +361,7 @@ class Schema(BaseSchema, ABC):
             return filtered, remaining_values, remaining_values.slice(0, 0)
 
         concat_values = pl.concat([used_values, remaining_values])
+
         if concat_values.height == 0:
             # If we didn't provide any values, we can simply return empty data frames
             # with the right schema for used and remaining values
@@ -351,6 +376,24 @@ class Schema(BaseSchema, ABC):
             concat_values.filter(evaluated.get_column("__final_valid__")),
             concat_values.filter(~evaluated.get_column("__final_valid__")),
         )
+
+    @classmethod
+    def _sampling_overrides(cls) -> dict[str, pl.Expr]:
+        """Generate expressions to pre-process columns during sampling.
+
+        This method can be overwritten in schemas with complex rules to
+        enable sampling data frames in a reasonable number of iterations.
+
+        The provided expressions are applied during sampling after data was generated and
+        before it is filtered. In a sampling iteration, only expressions for columns
+        that are not defined in the `overrides` argument of that operation are
+        pre-processed.
+
+        Returns:
+            A dict with entries `column_name: expression`.
+        """
+        # Do not pre-process any columns by default.
+        return {}
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
