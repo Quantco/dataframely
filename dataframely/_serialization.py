@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import base64
 import datetime as dt
 import decimal
 from io import BytesIO
@@ -10,6 +11,18 @@ from typing import Any, cast
 import polars as pl
 
 SCHEMA_METADATA_KEY = "dataframely_schema"
+SERIALIZATION_FORMAT_VERSION = "1"
+
+
+def serialization_versions() -> dict[str, str]:
+    """Return the versions of the serialization format and the libraries used."""
+    from dataframely import __version__
+
+    return {
+        "format": SERIALIZATION_FORMAT_VERSION,
+        "dataframely": __version__,
+        "polars": pl.__version__,
+    }
 
 
 class SchemaJSONEncoder(JSONEncoder):
@@ -33,6 +46,11 @@ class SchemaJSONEncoder(JSONEncoder):
                 return {
                     "__type__": "expression",
                     "value": obj.meta.serialize(format="json"),
+                }
+            case pl.LazyFrame():
+                return {
+                    "__type__": "lazyframe",
+                    "value": base64.b64encode(obj.serialize()).decode("utf-8"),
                 }
             case decimal.Decimal():
                 return {"__type__": "decimal", "value": str(obj)}
@@ -70,6 +88,11 @@ class SchemaJSONDecoder(JSONDecoder):
             case "expression":
                 data = BytesIO(cast(str, dct["value"]).encode("utf-8"))
                 return pl.Expr.deserialize(data, format="json")
+            case "lazyframe":
+                data = BytesIO(
+                    base64.b64decode(cast(str, dct["value"]).encode("utf-8"))
+                )
+                return pl.LazyFrame.deserialize(data)
             case "decimal":
                 return decimal.Decimal(dct["value"])
             case "datetime":

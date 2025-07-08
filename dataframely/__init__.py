@@ -15,7 +15,7 @@ from ._base_collection import CollectionMember
 from ._filter import filter
 from ._rule import rule
 from ._typing import DataFrame, LazyFrame
-from .collection import Collection
+from .collection import Collection, deserialize_collection
 from .columns import (
     Any,
     Array,
@@ -61,6 +61,7 @@ __all__ = [
     "LazyFrame",
     "Collection",
     "CollectionMember",
+    "deserialize_collection",
     "Config",
     "FailureInfo",
     "concat_collection_members",

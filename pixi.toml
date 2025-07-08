@@ -21,8 +21,6 @@ pip = "*"
 
 [feature.dev.dependencies]
 jupyter = "*"
-pandas = "*"
-scikit-learn = "*"
 
 [feature.docs.dependencies]
 furo = "*"
@@ -43,15 +41,20 @@ readthedocs = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTH
 
 [feature.test.dependencies]
 mypy = ">=1.13"
+pandas = "*"
+pandas-stubs = "*"
 pyarrow = "*"
 pyodbc = "*"
 pytest = ">=6"
+pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
+scikit-learn = "*"
 sqlalchemy = ">=2"
 
 [feature.test.tasks]
 test = "pytest"
+test-bench = "pytest tests/benches --benchmark-only --benchmark-sort mean --benchmark-columns min,max,mean,rounds"
 test-coverage = "pytest --cov=dataframely --cov-report=xml --cov-report=term-missing"
 
 [feature.build.dependencies]
@@ -90,11 +93,15 @@ python = "3.12.*"
 [feature.py313.dependencies]
 python = "3.13.*"
 
+[feature.nightly.tasks]
+install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars"
+
 [environments]
 build = ["build"]
 default = ["dev", "lint", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
+nightly = ["nightly", "test"]
 py311 = ["py311", "test"]
 py312 = ["py312", "test"]
 py313 = ["py313", "test"]

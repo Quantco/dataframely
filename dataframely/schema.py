@@ -18,7 +18,13 @@ from polars._typing import FileSource, PartitioningScheme
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
-from ._serialization import SCHEMA_METADATA_KEY, SchemaJSONDecoder, SchemaJSONEncoder
+from ._serialization import (
+    SCHEMA_METADATA_KEY,
+    SERIALIZATION_FORMAT_VERSION,
+    SchemaJSONDecoder,
+    SchemaJSONEncoder,
+    serialization_versions,
+)
 from ._typing import DataFrame, LazyFrame, Validation
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
@@ -27,7 +33,6 @@ from .exc import RuleValidationError, ValidationError, ValidationRequiredError
 from .failure import FailureInfo
 from .random import Generator
 
-SERIALIZATION_FORMAT_VERSION = "1"
 _ORIGINAL_NULL_SUFFIX = "__orig_null__"
 
 
@@ -656,14 +661,17 @@ class Schema(BaseSchema, ABC):
             ValueError: If any column is not a "native" dataframely column type but
                 a custom subclass.
         """
-        from dataframely import __version__
+        result = {"versions": serialization_versions(), **cls._as_dict()}
+        return json.dumps(result, cls=SchemaJSONEncoder)
 
-        result = {
-            "versions": {
-                "format": SERIALIZATION_FORMAT_VERSION,
-                "dataframely": __version__,
-                "polars": pl.__version__,
-            },
+    @classmethod
+    def _as_dict(cls) -> dict[str, Any]:
+        """Return a dictionary representation of this schema.
+
+        This method should only be used internally for the purpose of serializing
+        objects referencing schemas.
+        """
+        return {
             "name": cls.__name__,
             "columns": {
                 name: col.as_dict(pl.col(name)) for name, col in cls.columns().items()
@@ -673,7 +681,6 @@ class Schema(BaseSchema, ABC):
                 for name, rule in cls._schema_validation_rules().items()
             },
         }
-        return json.dumps(result, cls=SchemaJSONEncoder)
 
     # ------------------------------------ PARQUET ----------------------------------- #
 
@@ -752,20 +759,22 @@ class Schema(BaseSchema, ABC):
 
         Args:
             source: Path, directory, or file-like object from which to read the data.
-            validate: The strategy for running validation when reading the data:
+            validation: The strategy for running validation when reading the data:
 
-                - If set to ``"auto"``, this method tries to read the parquet file's
-                  metadata. If it matches this schema, the data frame is read without
+                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                  the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``. However, it prints a
-                  warning that the read introduces additional overhead.
-                - If ``True``, the method behaves similarly to ``"auto"``. However, the
-                  user acknowledges that the read might run validation, and no warning
-                  will be emitted.
-                - If ``False``, validation is never run automatically and an error is
-                  raised if the parquet file does not store schema information or the
-                  stored schema mismatches this schema.
+                  runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the schema stored in the parquet file's metadata matches
+                  this schema.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. _Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.read_parquet` to convey the purpose better_.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.read_parquet`.
@@ -775,7 +784,7 @@ class Schema(BaseSchema, ABC):
 
         Raises:
             ValidationRequiredError: If no schema information can be read from the
-                source and ``validate`` is set to ``False``.
+                source and ``validation`` is set to ``"forbid"``.
 
         Attention:
             Be aware that this method suffers from the same limitations as
@@ -801,20 +810,22 @@ class Schema(BaseSchema, ABC):
 
         Args:
             source: Path, directory, or file-like object from which to read the data.
-            validate: The strategy for running validation when reading the data:
+            validation: The strategy for running validation when reading the data:
 
-                - If set to ``"auto"``, this method tries to read the parquet file's
-                  metadata. If it matches this schema, the data frame is read without
+                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                  the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``. However, it prints a
-                  warning that the read introduces additional overhead.
-                - If ``True``, the method behaves similarly to ``"auto"``. However, the
-                  user acknowledges that the read might run validation, and no warning
-                  will be emitted.
-                - If ``False``, validation is never run automatically and an error is
-                  raised if the parquet file does not store schema information or the
-                  stored schema mismatches this schema.
+                  runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the schema stored in the parquet file's metadata matches
+                  this schema.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. _Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.scan_parquet` to convey the purpose better_.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.scan_parquet`.
@@ -824,11 +835,11 @@ class Schema(BaseSchema, ABC):
 
         Raises:
             ValidationRequiredError: If no schema information can be read from the
-                source and ``validate`` is set to ``False``.
+                source and ``validation`` is set to ``"forbid"``.
 
         Note:
             Due to current limitations in dataframely, this method actually reads the
-            parquet file into memory if ``validate`` is ``"auto"`` or ``True`` and
+            parquet file into memory if ``validation`` is ``"warn"`` or ``"allow"`` and
             validation is required.
 
         Attention:
@@ -968,14 +979,22 @@ def deserialize_schema(data: str) -> type[Schema]:
         :meth:`Schema.serialize` for additional information on serialization.
     """
     decoded = json.loads(data, cls=SchemaJSONDecoder)
-    if (format := decoded["versions"]["format"]) != "1":
+    if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
         raise ValueError(f"Unsupported schema format version: {format}")
+    return _schema_from_dict(decoded)
 
+
+def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:
+    """Create a schema from a dictionary representation.
+
+    This function should only be used internally for the purpose of deserializing
+    objects referencing schemas.
+    """
     return type(
-        f"{decoded['name']}_dynamic",
+        f"{data['name']}_dynamic",
         (Schema,),
         {
-            **{name: column_from_dict(col) for name, col in decoded["columns"].items()},
-            **{name: rule_from_dict(rule) for name, rule in decoded["rules"].items()},
+            **{name: column_from_dict(col) for name, col in data["columns"].items()},
+            **{name: rule_from_dict(rule) for name, rule in data["rules"].items()},
         },
     )
