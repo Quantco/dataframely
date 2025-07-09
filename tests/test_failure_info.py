@@ -52,6 +52,18 @@ def test_scan_sink_parquet(tmp_path: Path) -> None:
     assert MySchema.matches(read.schema)
 
 
+def test_write_parquet_custom_metadata(tmp_path: Path) -> None:
+    df = pl.DataFrame(
+        {
+            "a": [4, 5, 6, 6, 7, 8],
+            "b": [1, 2, 3, 4, 5, 6],
+        }
+    )
+    _, failure = MySchema.filter(df)
+    failure.write_parquet(tmp_path / "failure.parquet", metadata={"custom": "test"})
+    assert pl.read_parquet_metadata(tmp_path / "failure.parquet")["custom"] == "test"
+
+
 @pytest.mark.parametrize(
     "read_fn",
     [dy.FailureInfo.read_parquet, dy.FailureInfo.scan_parquet],
