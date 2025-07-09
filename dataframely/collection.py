@@ -161,8 +161,8 @@ class Collection(BaseCollection, ABC):
 
         g = generator or Generator()
 
-        primary_keys = cls.common_primary_keys()
-        requires_dependent_sampling = len(cls.members()) > 1 and len(primary_keys) > 0
+        primary_key = cls.common_primary_key()
+        requires_dependent_sampling = len(cls.members()) > 1 and len(primary_key) > 0
 
         # 1) Preprocess all samples to make sampling efficient and ensure shared primary
         #    keys.
@@ -180,7 +180,7 @@ class Collection(BaseCollection, ABC):
         #    can properly sample members.
         if requires_dependent_sampling:
             if not all(
-                all(k in sample for k in primary_keys) for sample in processed_samples
+                all(k in sample for k in primary_key) for sample in processed_samples
             ):
                 raise ValueError("All samples must contain the common primary keys.")
 
@@ -192,7 +192,7 @@ class Collection(BaseCollection, ABC):
         for member, schema in cls.member_schemas().items():
             if (
                 not requires_dependent_sampling
-                or set(schema.primary_keys()) == set(primary_keys)
+                or set(schema.primary_key()) == set(primary_key)
                 or member_infos[member].ignored_in_filters
             ):
                 # If the primary keys are equal to the shared ones, each sample
@@ -206,7 +206,7 @@ class Collection(BaseCollection, ABC):
                         **(
                             {}
                             if member_infos[member].ignored_in_filters
-                            else _extract_keys_if_exist(sample, primary_keys)
+                            else _extract_keys_if_exist(sample, primary_key)
                         ),
                         **_extract_keys_if_exist(
                             (
@@ -224,7 +224,7 @@ class Collection(BaseCollection, ABC):
                 # observe values for the member
                 member_overrides = [
                     {
-                        **_extract_keys_if_exist(sample, primary_keys),
+                        **_extract_keys_if_exist(sample, primary_key),
                         **_extract_keys_if_exist(item, schema.column_names()),
                     }
                     for sample in processed_samples
@@ -324,7 +324,7 @@ class Collection(BaseCollection, ABC):
             has common primary keys, this sample **must** include **all** common
             primary keys.
         """
-        if len(cls.members()) > 1 and len(cls.common_primary_keys()) > 0:
+        if len(cls.members()) > 1 and len(cls.common_primary_key()) > 0:
             raise ValueError(
                 "`_preprocess_sample` must be overwritten for collections with more "
                 "than 1 member sharing a common primary key."
@@ -448,16 +448,16 @@ class Collection(BaseCollection, ABC):
         filters = cls._filters()
         if len(filters) > 0:
             result_cls = cls._init(results)
-            primary_keys = cls.common_primary_keys()
+            primary_key = cls.common_primary_key()
 
             keep: dict[str, pl.DataFrame] = {}
             for name, filter in filters.items():
-                keep[name] = filter.logic(result_cls).select(primary_keys).collect()
+                keep[name] = filter.logic(result_cls).select(primary_key).collect()
 
             # Using the filter results, we can define a joint data frame that we use to filter
             # the input.
             all_keep = join_all_inner(
-                [df.lazy() for df in keep.values()], on=primary_keys
+                [df.lazy() for df in keep.values()], on=primary_key
             ).collect()
 
             # Now we can iterate over the results where we do the following:
@@ -467,14 +467,14 @@ class Collection(BaseCollection, ABC):
             for member_name, filtered in results.items():
                 if cls.members()[member_name].ignored_in_filters:
                     continue
-                results[member_name] = filtered.join(all_keep, on=primary_keys)
+                results[member_name] = filtered.join(all_keep, on=primary_key)
 
                 new_failure_names = list(filters.keys())
                 new_failure_pks = [
-                    filtered.select(primary_keys)
+                    filtered.select(primary_key)
                     .lazy()
                     .unique()
-                    .join(filter_keep.lazy(), on=primary_keys, how="anti")
+                    .join(filter_keep.lazy(), on=primary_key, how="anti")
                     .with_columns(pl.lit(False).alias(name))
                     for name, filter_keep in keep.items()
                 ]
@@ -482,7 +482,7 @@ class Collection(BaseCollection, ABC):
                 #  filtered out by all filters. In this case, we want to assign a validation
                 #  value of `True`.
                 all_new_failure_pks = join_all_outer(
-                    new_failure_pks, on=primary_keys
+                    new_failure_pks, on=primary_key
                 ).with_columns(pl.col(new_failure_names).fill_null(True))
 
                 # At this point, we have a data frame with the primary keys of the *excluded*
@@ -500,7 +500,7 @@ class Collection(BaseCollection, ABC):
                     lf=pl.concat(
                         [
                             failure._lf,
-                            filtered.lazy().join(all_new_failure_pks, on=primary_keys),
+                            filtered.lazy().join(all_new_failure_pks, on=primary_key),
                         ],
                         how="diagonal",
                     ),

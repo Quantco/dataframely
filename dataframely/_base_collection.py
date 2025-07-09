@@ -60,8 +60,8 @@ class CollectionMember:
 # --------------------------------------- UTILS -------------------------------------- #
 
 
-def _common_primary_keys(columns: Iterable[type[Schema]]) -> set[str]:
-    return set.intersection(*[set(schema.primary_keys()) for schema in columns])
+def _common_primary_key(columns: Iterable[type[Schema]]) -> set[str]:
+    return set.intersection(*[set(schema.primary_key()) for schema in columns])
 
 
 # ------------------------------------------------------------------------------------ #
@@ -117,7 +117,7 @@ class CollectionMeta(ABCMeta):
         # 1) Check that there are overlapping primary keys that allow the application
         # of filters.
         if len(non_ignored_member_schemas) > 0 and len(result.filters) > 0:
-            if len(_common_primary_keys(non_ignored_member_schemas)) == 0:
+            if len(_common_primary_key(non_ignored_member_schemas)) == 0:
                 raise ImplementationError(
                     "Members of a collection must have an overlapping primary key "
                     "but did not find any."
@@ -145,11 +145,11 @@ class CollectionMeta(ABCMeta):
 
         # 3) Check that inlining for sampling is configured correctly.
         if len(non_ignored_member_schemas) > 0:
-            common_primary_keys = _common_primary_keys(non_ignored_member_schemas)
+            common_primary_key = _common_primary_key(non_ignored_member_schemas)
             inlined_columns: set[str] = set()
             for member, info in result.members.items():
                 if info.inline_for_sampling:
-                    if set(info.schema.primary_keys()) != common_primary_keys:
+                    if set(info.schema.primary_key()) != common_primary_key:
                         raise ImplementationError(
                             f"Member '{member}' is inlined for sampling but its primary "
                             "key is a superset of the common primary key. Such a member "
@@ -157,7 +157,7 @@ class CollectionMeta(ABCMeta):
                             "for a single combination of the common primary key."
                         )
                     non_primary_key_columns = (
-                        set(info.schema.column_names()) - common_primary_keys
+                        set(info.schema.column_names()) - common_primary_key
                     )
                     if len(inlined_columns & non_primary_key_columns):
                         raise ImplementationError(
@@ -317,10 +317,10 @@ class BaseCollection(metaclass=CollectionMeta):
         }
 
     @classmethod
-    def common_primary_keys(cls) -> list[str]:
+    def common_primary_key(cls) -> list[str]:
         """The primary keys shared by non ignored members of the collection."""
         return sorted(
-            _common_primary_keys(
+            _common_primary_key(
                 [
                     member.schema
                     for member in cls.members().values()
