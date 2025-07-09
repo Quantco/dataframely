@@ -1,4 +1,4 @@
-from typing import Literal, overload
+from typing import overload
 
 def matching_string_length(regex: str) -> tuple[int, int | None]:
     """
