@@ -97,7 +97,7 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`.
         """
-        metadata = self._build_metadata(**kwargs)
+        metadata = self._build_metadata(kwargs)
         self._df.write_parquet(file, metadata=metadata, **kwargs)
 
     def sink_parquet(
@@ -117,10 +117,10 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`.
         """
-        metadata = self._build_metadata(**kwargs)
+        metadata = self._build_metadata(kwargs)
         self._lf.sink_parquet(file, metadata=metadata, **kwargs)
 
-    def _build_metadata(self, **kwargs: Any) -> dict[str, Any]:
+    def _build_metadata(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         metadata = kwargs.pop("metadata", {})
         metadata[RULE_METADATA_KEY] = json.dumps(self._rule_columns)
         metadata[SCHEMA_METADATA_KEY] = self.schema.serialize()
