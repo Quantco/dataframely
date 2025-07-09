@@ -48,7 +48,7 @@ def sample(
 @overload
 def sample(
     regex: str,
-    n: Literal[None] = None,
+    n: None = None,
     max_repetitions: int = 16,
     seed: int | None = None,
 ) -> str: ...
