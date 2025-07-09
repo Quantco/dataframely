@@ -1,4 +1,4 @@
-from typing import Literal, overload
+from typing import overload
 
 def matching_string_length(regex: str) -> tuple[int, int | None]:
     """
@@ -48,7 +48,7 @@ def sample(
 @overload
 def sample(
     regex: str,
-    n: Literal[None] = None,
+    n: None = None,
     max_repetitions: int = 16,
     seed: int | None = None,
 ) -> str: ...
