@@ -14,7 +14,7 @@ from . import random
 from ._base_collection import CollectionMember
 from ._filter import filter
 from ._rule import rule
-from ._typing import DataFrame, LazyFrame
+from ._typing import DataFrame, LazyFrame, Validation
 from .collection import Collection, deserialize_collection
 from .columns import (
     Any,
@@ -96,4 +96,5 @@ __all__ = [
     "List",
     "Array",
     "Object",
+    "Validation",
 ]
