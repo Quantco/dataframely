@@ -6,7 +6,7 @@ author_email: oliver.borchert@quantco.com
 author_name: Oliver Borchert
 github_url: https://github.com/quantco/dataframely
 github_user: borchero
-minimal_python_version: py311
+minimal_python_version: py310
 project_short_description: A declarative, polars-native data frame validation library
 project_slug: dataframely
 use_devcontainer: false
