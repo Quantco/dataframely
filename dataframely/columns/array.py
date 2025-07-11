@@ -5,9 +5,10 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from typing import Any, Literal, Self, cast
+from typing import Any, Literal, cast
 
 import polars as pl
+from typing_extensions import Self
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator

@@ -9,10 +9,11 @@
 import datetime
 import decimal
 import functools
-from typing import Any, NotRequired, TypedDict
+from typing import Any, TypedDict
 
 import polars as pl
 import pytest
+from typing_extensions import NotRequired
 
 import dataframely as dy
 

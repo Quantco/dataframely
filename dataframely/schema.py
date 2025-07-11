@@ -8,12 +8,13 @@ import warnings
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import IO, Any, Literal, Self, overload
+from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
 import polars.selectors as cs
 from polars._typing import FileSource, PartitioningScheme
+from typing_extensions import Self
 
 from ._base_schema import BaseSchema
 from ._compat import pa, sa

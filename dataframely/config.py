@@ -3,7 +3,9 @@
 
 import contextlib
 from types import TracebackType
-from typing import TypedDict, Unpack
+from typing import TypedDict
+
+from typing_extensions import Unpack
 
 
 class Options(TypedDict):
