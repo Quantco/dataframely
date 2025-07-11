@@ -19,7 +19,7 @@ dependencies = [
   "numpy",
   "polars>=1.30",
   # Conditional
-  'typing-extensions; python_version<="3.10"',
+  'typing-extensions; python_version <= "3.10"',
 ]
 description = "A declarative, polars-native data frame validation library"
 name = "dataframely"
