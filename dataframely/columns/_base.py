@@ -75,12 +75,16 @@ class Column(ABC):
 
         if nullable and primary_key:
             warn_no_nullable_primary_keys()
+            nullable = False
 
         if nullable is None:
-            warn_nullable_default_change()
-            nullable = True
+            if primary_key:
+                nullable = False
+            else:
+                warn_nullable_default_change()
+                nullable = True
 
-        self.nullable = nullable and not primary_key
+        self.nullable = nullable
         self.primary_key = primary_key
         self.check = check
         self.alias = alias
