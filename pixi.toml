@@ -86,6 +86,7 @@ pre-commit-run = "pre-commit run -a"
 
 [feature.py310.dependencies]
 python = "3.10.*"
+typing-extensions = "*"
 
 [feature.py311.dependencies]
 python = "3.11.*"
