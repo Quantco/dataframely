@@ -8,9 +8,10 @@ import typing
 from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Self, cast, get_args, get_origin
+from typing import Annotated, Any, cast, get_args, get_origin
 
 import polars as pl
+from typing_extensions import Self
 
 from ._filter import Filter
 from ._typing import LazyFrame as TypedLazyFrame

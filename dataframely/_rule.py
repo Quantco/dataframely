@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any, Self
+from typing import Any
 
 import polars as pl
+from typing_extensions import Self
 
 ValidationFunction = Callable[[], pl.Expr]
 

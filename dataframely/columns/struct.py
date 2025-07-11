@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Self, cast
+from typing import Any, cast
 
 import polars as pl
+from typing_extensions import Self
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType

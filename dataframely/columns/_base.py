@@ -7,9 +7,10 @@ import inspect
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
-from typing import Any, Self, TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 import polars as pl
+from typing_extensions import Self
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._deprecation import (

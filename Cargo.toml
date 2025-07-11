@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 name = "dataframely"
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["abi3-py311", "extension-module"] }
+pyo3 = { version = "0.24", features = ["abi3-py310", "extension-module"] }
 rand = { version = "0.9", features = ["std_rng"] }
 regex-syntax = "0.8"
 thiserror = "2.0"

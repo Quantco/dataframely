@@ -7,10 +7,11 @@ from abc import ABC
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated, Any, Self, cast
+from typing import Annotated, Any, cast
 
 import polars as pl
 import polars.exceptions as plexc
+from typing_extensions import Self
 
 from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter

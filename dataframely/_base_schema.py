@@ -7,9 +7,10 @@ import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Any
 
 import polars as pl
+from typing_extensions import Self
 
 from ._rule import GroupRule, Rule
 from .columns import Column

@@ -61,7 +61,7 @@ jobs:
         uses: PyO3/maturin-action@e10f6c464b90acceb5f640d31beda6d586ba7b4a # v1.49.3
         with:
           command: build
-          args: --out dist -i python3.11
+          args: --out dist -i python3.10
           manylinux: auto
       - name: Check package
         run: pixi run -e build check-wheel

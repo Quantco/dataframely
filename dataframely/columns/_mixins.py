@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Generic, Protocol, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 import polars as pl
+from typing_extensions import Self
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import Column
