@@ -76,7 +76,7 @@ class Column(ABC):
         if nullable and primary_key:
             warn_no_nullable_primary_keys()
 
-        if nullable is None:
+        if nullable is None and not primary_key:
             warn_nullable_default_change()
             nullable = True
 
