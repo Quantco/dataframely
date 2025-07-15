@@ -21,7 +21,7 @@ import dataframely as dy
 # we also need to make sure that imported schemas are properly processed.
 from dataframely.testing.typing import MyImportedSchema
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 11):
     from typing import NotRequired
 else:
     from typing_extensions import NotRequired

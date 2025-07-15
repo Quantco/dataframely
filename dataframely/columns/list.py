@@ -17,7 +17,7 @@ from ._base import Check, Column
 from ._registry import column_from_dict, register
 from .struct import Struct
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self

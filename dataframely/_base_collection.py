@@ -18,7 +18,7 @@ from ._typing import LazyFrame as TypedLazyFrame
 from .exc import AnnotationImplementationError, ImplementationError
 from .schema import Schema
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self

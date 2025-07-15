@@ -20,7 +20,7 @@ from dataframely._deprecation import (
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self

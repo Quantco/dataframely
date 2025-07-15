@@ -34,7 +34,7 @@ from .exc import RuleValidationError, ValidationError, ValidationRequiredError
 from .failure import FailureInfo
 from .random import Generator
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self

@@ -16,7 +16,7 @@ from ._rule import GroupRule, Rule
 from .columns import Column
 from .exc import ImplementationError
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
