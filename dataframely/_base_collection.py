@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 import textwrap
 import typing
 from abc import ABCMeta
@@ -11,12 +12,16 @@ from dataclasses import dataclass, field
 from typing import Annotated, Any, cast, get_args, get_origin
 
 import polars as pl
-from typing_extensions import Self
 
 from ._filter import Filter
 from ._typing import LazyFrame as TypedLazyFrame
 from .exc import AnnotationImplementationError, ImplementationError
 from .schema import Schema
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 _MEMBER_ATTR = "__dataframely_members__"
 _FILTER_ATTR = "__dataframely_filters__"

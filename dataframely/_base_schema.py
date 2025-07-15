@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 import textwrap
 from abc import ABCMeta
 from copy import copy
@@ -10,11 +11,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import polars as pl
-from typing_extensions import Self
 
 from ._rule import GroupRule, Rule
 from .columns import Column
 from .exc import ImplementationError
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"

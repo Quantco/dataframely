@@ -4,13 +4,13 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
 from typing import Any, TypeAlias, cast
 
 import polars as pl
-from typing_extensions import Self
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._deprecation import (
@@ -19,6 +19,11 @@ from dataframely._deprecation import (
 )
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 Check: TypeAlias = (
     Callable[[pl.Expr], pl.Expr]
