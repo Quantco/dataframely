@@ -21,6 +21,7 @@ import dataframely._extre as extre
         (r"[0-9]{2}[0-9a-zA-Z]{2,4}", 4, 6),
         (r"^[0-9]{2}[0-9a-zA-Z]{2,4}$", 4, 6),
         (r"^[0-9]{2}[0-9a-zA-Z]{2,4}.+$", 5, None),
+        (r"^[A-Z][0-9]{2}(\*|(\.[0-9]{1,2}[*!]?))?$", 3, 7),
     ],
 )
 def test_matching_string_length(
