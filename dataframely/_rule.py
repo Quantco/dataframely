@@ -3,12 +3,17 @@
 
 from __future__ import annotations
 
+import sys
 from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
 import polars as pl
-from typing_extensions import Self
+
+if sys.version_info > (3, 10):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 ValidationFunction = Callable[[], pl.Expr]
 

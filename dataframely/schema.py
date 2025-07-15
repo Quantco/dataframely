@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import warnings
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
@@ -14,7 +15,6 @@ import polars as pl
 import polars.exceptions as plexc
 import polars.selectors as cs
 from polars._typing import FileSource, PartitioningScheme
-from typing_extensions import Self
 
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
@@ -33,6 +33,11 @@ from .config import Config
 from .exc import RuleValidationError, ValidationError, ValidationRequiredError
 from .failure import FailureInfo
 from .random import Generator
+
+if sys.version_info > (3, 10):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 _ORIGINAL_NULL_SUFFIX = "__orig_null__"
 

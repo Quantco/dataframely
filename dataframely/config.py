@@ -2,10 +2,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import contextlib
+import sys
 from types import TracebackType
 from typing import TypedDict
 
-from typing_extensions import Unpack
+if sys.version_info > (3, 10):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
 
 
 class Options(TypedDict):

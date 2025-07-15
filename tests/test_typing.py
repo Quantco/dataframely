@@ -9,17 +9,22 @@
 import datetime
 import decimal
 import functools
+import sys
 from typing import Any, TypedDict
 
 import polars as pl
 import pytest
-from typing_extensions import NotRequired
 
 import dataframely as dy
 
 # Note: To properly test the typing of the library,
 # we also need to make sure that imported schemas are properly processed.
 from dataframely.testing.typing import MyImportedSchema
+
+if sys.version_info > (3, 10):
+    from typing import NotRequired
+else:
+    from typing_extensions import NotRequired
 
 pytestmark = pytest.mark.skip(reason="typing-only tests")
 

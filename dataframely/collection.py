@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import json
+import sys
 import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence
@@ -11,7 +12,6 @@ from typing import Annotated, Any, cast
 
 import polars as pl
 import polars.exceptions as plexc
-from typing_extensions import Self
 
 from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
@@ -32,6 +32,11 @@ from .exc import (
 from .failure import FailureInfo
 from .random import Generator
 from .schema import _schema_from_dict
+
+if sys.version_info > (3, 10):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class Collection(BaseCollection, ABC):
