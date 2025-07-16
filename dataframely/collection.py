@@ -688,15 +688,15 @@ class Collection(BaseCollection, ABC):
         except FileExistsError:
             pass
 
-        with fs.open(f"{directory}/schema.json", "w") as f:
+        with fs.open(f"{directory}{fs.sep}schema.json", "w") as f:
             f.write(self.serialize())
 
         member_schemas = self.member_schemas()
         for key, lf in self.to_dict().items():
             destination = (
-                f"{directory}/{key}"
+                f"{directory}{fs.sep}{key}"
                 if "partition_by" in kwargs
-                else f"{directory}/{key}.parquet"
+                else f"{directory}{fs.sep}{key}.parquet"
             )
             if sink:
                 member_schemas[key].sink_parquet(
@@ -851,10 +851,10 @@ class Collection(BaseCollection, ABC):
         )
         assert isinstance(fs, fsspec.AbstractFileSystem)
 
-        if fs.exists(path := f"{base_path}/{name}") and fs.isdir(path):
+        if fs.exists(path := f"{base_path}{fs.sep}{name}") and fs.isdir(path):
             # We assume that the member is stored as a hive-partitioned dataset
             return path
-        if fs.exists(path := f"{base_path}/{name}.parquet"):
+        if fs.exists(path := f"{base_path}{fs.sep}{name}.parquet"):
             # We assume that the member is stored as a single parquet file
             return path
         return None
@@ -874,7 +874,7 @@ class Collection(BaseCollection, ABC):
         # First, we check whether the path provides the serialization of the collection.
         # If it does, we check whether it matches this collection. If it does, we assume
         # that the data adheres to the collection and we do not need to run validation.
-        if fs.exists(json_serialization := f"{directory}/schema.json"):
+        if fs.exists(json_serialization := f"{directory}{fs.sep}schema.json"):
             metadata = fs.read_text(json_serialization)
             serialized_collection = deserialize_collection(metadata)
             if cls.matches(serialized_collection):
