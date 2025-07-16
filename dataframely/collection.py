@@ -10,6 +10,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any, cast
 
+import fsspec
 import polars as pl
 import polars.exceptions as plexc
 
@@ -678,15 +679,24 @@ class Collection(BaseCollection, ABC):
         self._to_parquet(directory, sink=True, **kwargs)
 
     def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
-        path = Path(directory) if isinstance(directory, str) else directory
-        path.mkdir(parents=True, exist_ok=True)
-        with open(path / "schema.json", "w") as f:
+        fs, _ = fsspec.url_to_fs(
+            directory if isinstance(directory, str) else str(directory)
+        )
+        assert isinstance(fs, fsspec.AbstractFileSystem)
+        try:
+            fs.makedir(directory, create_parents=True)
+        except FileExistsError:
+            pass
+
+        with fs.open(f"{directory}/schema.json", "w") as f:
             f.write(self.serialize())
 
         member_schemas = self.member_schemas()
         for key, lf in self.to_dict().items():
             destination = (
-                path / key if "partition_by" in kwargs else path / f"{key}.parquet"
+                f"{directory}/{key}"
+                if "partition_by" in kwargs
+                else f"{directory}/{key}.parquet"
             )
             if sink:
                 member_schemas[key].sink_parquet(
@@ -751,9 +761,8 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(path, validation):
+        data = cls._from_parquet(directory, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(directory, validation):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
@@ -821,8 +830,10 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def _from_parquet(
-        cls, path: Path, scan: bool, **kwargs: Any
+        cls, path: str | Path, scan: bool, **kwargs: Any
     ) -> dict[str, pl.LazyFrame]:
+        if isinstance(path, Path):
+            path = str(path)
         data = {}
         for key in cls.members():
             if (source_path := cls._member_source_path(path, key)) is not None:
@@ -834,11 +845,16 @@ class Collection(BaseCollection, ABC):
         return data
 
     @classmethod
-    def _member_source_path(cls, base_path: Path, name: str) -> Path | None:
-        if (path := base_path / name).exists() and base_path.is_dir():
+    def _member_source_path(cls, base_path: str, name: str) -> str | None:
+        fs, _ = fsspec.url_to_fs(
+            base_path if isinstance(base_path, str) else str(base_path)
+        )
+        assert isinstance(fs, fsspec.AbstractFileSystem)
+
+        if fs.exists(path := f"{base_path}/{name}") and fs.isdir(path):
             # We assume that the member is stored as a hive-partitioned dataset
             return path
-        if (path := base_path / f"{name}.parquet").exists():
+        if fs.exists(path := f"{base_path}/{name}.parquet"):
             # We assume that the member is stored as a single parquet file
             return path
         return None
@@ -846,17 +862,20 @@ class Collection(BaseCollection, ABC):
     @classmethod
     def _requires_validation_for_reading_parquets(
         cls,
-        directory: Path,
+        directory: str | Path,
         validation: Validation,
     ) -> bool:
         if validation == "skip":
             return False
-
+        if isinstance(directory, Path):
+            directory = str(directory)
+        fs, _ = fsspec.url_to_fs(directory)
+        assert isinstance(fs, fsspec.AbstractFileSystem)
         # First, we check whether the path provides the serialization of the collection.
         # If it does, we check whether it matches this collection. If it does, we assume
         # that the data adheres to the collection and we do not need to run validation.
-        if (json_serialization := directory / "schema.json").exists():
-            metadata = json_serialization.read_text()
+        if fs.exists(json_serialization := f"{directory}/schema.json"):
+            metadata = fs.read_text(json_serialization)
             serialized_collection = deserialize_collection(metadata)
             if cls.matches(serialized_collection):
                 return False
