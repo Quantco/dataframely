@@ -14,7 +14,10 @@ from typing import IO, Any, Literal, overload
 import polars as pl
 import polars.exceptions as plexc
 import polars.selectors as cs
+from cloudpathlib import CloudPath
 from polars._typing import FileSource, PartitioningScheme
+
+from dataframely._path import handle_cloud_path
 
 from ._base_schema import BaseSchema
 from ._compat import pa, sa
@@ -692,7 +695,11 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def write_parquet(
-        cls, df: DataFrame[Self], /, file: str | Path | IO[bytes], **kwargs: Any
+        cls,
+        df: DataFrame[Self],
+        /,
+        file: str | Path | IO[bytes] | CloudPath,
+        **kwargs: Any,
     ) -> None:
         """Write a typed data frame with this schema to a parquet file.
 
@@ -714,6 +721,7 @@ class Schema(BaseSchema, ABC):
             :meth:`serialize`.
         """
         metadata = kwargs.pop("metadata", {})
+        file = handle_cloud_path(file)
         df.write_parquet(
             file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
         )
@@ -723,7 +731,7 @@ class Schema(BaseSchema, ABC):
         cls,
         lf: LazyFrame[Self],
         /,
-        file: str | Path | IO[bytes] | PartitioningScheme,
+        file: str | Path | IO[bytes] | PartitioningScheme | CloudPath,
         **kwargs: Any,
     ) -> None:
         """Stream a typed lazy frame with this schema to a parquet file.
@@ -745,6 +753,7 @@ class Schema(BaseSchema, ABC):
             :meth:`serialize`.
         """
         metadata = kwargs.pop("metadata", {})
+        file = handle_cloud_path(file)
         lf.sink_parquet(
             file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
         )
@@ -752,7 +761,7 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def read_parquet(
         cls,
-        source: FileSource,
+        source: FileSource | CloudPath,
         *,
         validation: Validation = "warn",
         **kwargs: Any,
@@ -796,6 +805,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
+        source = handle_cloud_path(source)
         if not cls._requires_validation_for_reading_parquet(source, validation):
             return pl.read_parquet(source, **kwargs)  # type: ignore
         return cls.validate(pl.read_parquet(source, **kwargs), cast=True)
@@ -803,7 +813,7 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def scan_parquet(
         cls,
-        source: FileSource,
+        source: FileSource | CloudPath,
         *,
         validation: Validation = "warn",
         **kwargs: Any,
@@ -852,6 +862,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
+        source = handle_cloud_path(source)
         if not cls._requires_validation_for_reading_parquet(source, validation):
             return pl.scan_parquet(source, **kwargs)  # type: ignore
         return cls.validate(pl.read_parquet(source, **kwargs), cast=True).lazy()
@@ -962,7 +973,7 @@ class Schema(BaseSchema, ABC):
 
 
 def read_parquet_metadata_schema(
-    source: str | Path | IO[bytes] | bytes,
+    source: str | Path | IO[bytes] | bytes | CloudPath,
 ) -> type[Schema] | None:
     """Read a dataframely schema from the metadata of a parquet file.
 
@@ -973,6 +984,7 @@ def read_parquet_metadata_schema(
         The schema that was serialized to the metadata or ``None`` if no schema metadata
         is found.
     """
+    source = handle_cloud_path(source)
     metadata = pl.read_parquet_metadata(source)
     if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
         return deserialize_schema(schema_metadata)

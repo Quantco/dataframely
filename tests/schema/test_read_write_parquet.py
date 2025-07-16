@@ -7,9 +7,12 @@ from typing import Any, TypeVar
 import polars as pl
 import pytest
 import pytest_mock
+from cloudpathlib import CloudPath
+from cloudpathlib.local import LocalS3Path
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._path import handle_cloud_path
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_schema
 
@@ -17,7 +20,7 @@ S = TypeVar("S", bound=dy.Schema)
 
 
 def _write_parquet_typed(
-    schema: type[S], df: dy.DataFrame[S], path: Path, lazy: bool
+    schema: type[S], df: dy.DataFrame[S], path: Path | CloudPath, lazy: bool
 ) -> None:
     if lazy:
         schema.sink_parquet(df.lazy(), path)
@@ -25,7 +28,8 @@ def _write_parquet_typed(
         schema.write_parquet(df, path)
 
 
-def _write_parquet(df: pl.DataFrame, path: Path, lazy: bool) -> None:
+def _write_parquet(df: pl.DataFrame, path: Path | CloudPath, lazy: bool) -> None:
+    path = handle_cloud_path(path)
     if lazy:
         df.lazy().sink_parquet(path)
     else:
@@ -33,7 +37,7 @@ def _write_parquet(df: pl.DataFrame, path: Path, lazy: bool) -> None:
 
 
 def _read_parquet(
-    schema: type[S], path: Path, lazy: bool, **kwargs: Any
+    schema: type[S], path: Path | CloudPath, lazy: bool, **kwargs: Any
 ) -> dy.DataFrame[S]:
     if lazy:
         return schema.scan_parquet(path, **kwargs).collect()
@@ -41,14 +45,18 @@ def _read_parquet(
         return schema.read_parquet(path, **kwargs)
 
 
-def _write_parquet_with_no_schema(tmp_path: Path, lazy: bool) -> type[dy.Schema]:
+def _write_parquet_with_no_schema(
+    tmp_path: Path | CloudPath, lazy: bool
+) -> type[dy.Schema]:
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     df = schema.create_empty()
     _write_parquet(df, tmp_path / "test.parquet", lazy)
     return schema
 
 
-def _write_parquet_with_incorrect_schema(tmp_path: Path, lazy: bool) -> type[dy.Schema]:
+def _write_parquet_with_incorrect_schema(
+    tmp_path: Path | CloudPath, lazy: bool
+) -> type[dy.Schema]:
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     other_schema = create_schema(
         "test", {"a": dy.Int64(primary_key=True), "b": dy.String()}
@@ -58,22 +66,39 @@ def _write_parquet_with_incorrect_schema(tmp_path: Path, lazy: bool) -> type[dy.
     return schema
 
 
+@pytest.fixture
+def cloud_path() -> CloudPath:
+    """Fixture to provide a cloud path."""
+    path = LocalS3Path("s3://test-bucket/")
+    path.client._cloud_path_to_local(path).mkdir(exist_ok=True, parents=True)
+    return path
+
+
 # ------------------------------------------------------------------------------------ #
 
 
 @pytest.mark.parametrize("validation", ["warn", "allow", "forbid", "skip"])
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_if_schema_matches(
-    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+    path_fixture: str,
+    mocker: pytest_mock.MockerFixture,
+    validation: Any,
+    lazy: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
     # Arrange
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     df = schema.create_empty()
-    _write_parquet_typed(schema, df, tmp_path / "test.parquet", lazy)
+    _write_parquet_typed(schema, df, path / "test.parquet", lazy)
 
     # Act
     spy = mocker.spy(schema, "validate")
-    out = _read_parquet(schema, tmp_path / "test.parquet", lazy, validation=validation)
+    out = _read_parquet(schema, path / "test.parquet", lazy, validation=validation)
 
     # Assert
     spy.assert_not_called()
@@ -84,36 +109,54 @@ def test_read_write_parquet_if_schema_matches(
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_warn_no_schema(
-    tmp_path: Path, mocker: pytest_mock.MockerFixture, lazy: bool
+    path_fixture: str,
+    mocker: pytest_mock.MockerFixture,
+    lazy: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
     # Arrange
-    schema = _write_parquet_with_no_schema(tmp_path, lazy)
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+
+    schema = _write_parquet_with_no_schema(path, lazy)
 
     # Act
     spy = mocker.spy(schema, "validate")
     with pytest.warns(
         UserWarning, match=r"requires validation: no schema to check validity"
     ):
-        _read_parquet(schema, tmp_path / "test.parquet", lazy)
+        _read_parquet(schema, path / "test.parquet", lazy)
 
     # Assert
     spy.assert_called_once()
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_warn_invalid_schema(
-    tmp_path: Path, mocker: pytest_mock.MockerFixture, lazy: bool
+    path_fixture: str,
+    mocker: pytest_mock.MockerFixture,
+    lazy: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
     # Arrange
-    schema = _write_parquet_with_incorrect_schema(tmp_path, lazy)
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+
+    schema = _write_parquet_with_incorrect_schema(path, lazy)
 
     # Act
     spy = mocker.spy(schema, "validate")
     with pytest.warns(
         UserWarning, match=r"requires validation: current schema does not match"
     ):
-        _read_parquet(schema, tmp_path / "test.parquet", lazy)
+        _read_parquet(schema, path / "test.parquet", lazy)
 
     # Assert
     spy.assert_called_once()
@@ -123,30 +166,47 @@ def test_read_write_parquet_validation_warn_invalid_schema(
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_allow_no_schema(
-    tmp_path: Path, mocker: pytest_mock.MockerFixture, lazy: bool
+    path_fixture: str,
+    mocker: pytest_mock.MockerFixture,
+    lazy: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
     # Arrange
-    schema = _write_parquet_with_no_schema(tmp_path, lazy)
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+    schema = _write_parquet_with_no_schema(path, lazy)
 
     # Act
     spy = mocker.spy(schema, "validate")
-    _read_parquet(schema, tmp_path / "test.parquet", lazy, validation="allow")
+    _read_parquet(schema, path / "test.parquet", lazy, validation="allow")
 
     # Assert
     spy.assert_called_once()
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_allow_invalid_schema(
-    tmp_path: Path, mocker: pytest_mock.MockerFixture, lazy: bool
+    path_fixture: str,
+    mocker: pytest_mock.MockerFixture,
+    lazy: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
     # Arrange
-    schema = _write_parquet_with_incorrect_schema(tmp_path, lazy)
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+
+    schema = _write_parquet_with_incorrect_schema(path, lazy)
 
     # Act
     spy = mocker.spy(schema, "validate")
-    _read_parquet(schema, tmp_path / "test.parquet", lazy, validation="allow")
+    _read_parquet(schema, path / "test.parquet", lazy, validation="allow")
 
     # Assert
     spy.assert_called_once()
@@ -156,63 +216,92 @@ def test_read_write_parquet_validation_allow_invalid_schema(
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_forbid_no_schema(
-    tmp_path: Path, lazy: bool
+    path_fixture: str, lazy: bool, request: pytest.FixtureRequest
 ) -> None:
     # Arrange
-    schema = _write_parquet_with_no_schema(tmp_path, lazy)
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+
+    schema = _write_parquet_with_no_schema(path, lazy)
 
     # Act
     with pytest.raises(
         ValidationRequiredError,
         match=r"without validation: no schema to check validity",
     ):
-        _read_parquet(schema, tmp_path / "test.parquet", lazy, validation="forbid")
+        _read_parquet(schema, path / "test.parquet", lazy, validation="forbid")
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_forbid_invalid_schema(
-    tmp_path: Path, lazy: bool
+    path_fixture: str, lazy: bool, request: pytest.FixtureRequest
 ) -> None:
     # Arrange
-    schema = _write_parquet_with_incorrect_schema(tmp_path, lazy)
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+
+    schema = _write_parquet_with_incorrect_schema(path, lazy)
 
     # Act
     with pytest.raises(
         ValidationRequiredError,
         match=r"without validation: current schema does not match",
     ):
-        _read_parquet(schema, tmp_path / "test.parquet", lazy, validation="forbid")
+        _read_parquet(schema, path / "test.parquet", lazy, validation="forbid")
 
 
 # --------------------------------- VALIDATION "SKIP" -------------------------------- #
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_skip_no_schema(
-    tmp_path: Path, mocker: pytest_mock.MockerFixture, lazy: bool
+    path_fixture: str,
+    mocker: pytest_mock.MockerFixture,
+    lazy: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
     # Arrange
-    schema = _write_parquet_with_no_schema(tmp_path, lazy)
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+    schema = _write_parquet_with_no_schema(path, lazy)
 
     # Act
     spy = mocker.spy(schema, "validate")
-    _read_parquet(schema, tmp_path / "test.parquet", lazy, validation="skip")
+    _read_parquet(schema, path / "test.parquet", lazy, validation="skip")
 
     # Assert
     spy.assert_not_called()
 
 
 @pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize("path_fixture", ["tmp_path", "cloud_path"])
 def test_read_write_parquet_validation_skip_invalid_schema(
-    tmp_path: Path, mocker: pytest_mock.MockerFixture, lazy: bool
+    mocker: pytest_mock.MockerFixture,
+    lazy: bool,
+    path_fixture: str,
+    request: pytest.FixtureRequest,
 ) -> None:
+    path = request.getfixturevalue(path_fixture)
+    assert isinstance(path, Path | LocalS3Path), (
+        "Path fixture must be a Path or LocalS3Path"
+    )
+
     # Arrange
-    schema = _write_parquet_with_incorrect_schema(tmp_path, lazy)
+    schema = _write_parquet_with_incorrect_schema(path, lazy)
 
     # Act
     spy = mocker.spy(schema, "validate")
-    _read_parquet(schema, tmp_path / "test.parquet", lazy, validation="skip")
+    _read_parquet(schema, path / "test.parquet", lazy, validation="skip")
 
     # Assert
     spy.assert_not_called()

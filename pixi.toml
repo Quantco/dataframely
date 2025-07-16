@@ -14,6 +14,7 @@ rust = "=1.85"
 numpy = "*"
 polars = ">=1.30"
 pytest-mock = ">=3.14.1,<4"
+cloudpathlib = ">=0.21.1,<0.22"
 
 [host-dependencies]
 maturin = ">=1.7,<2"

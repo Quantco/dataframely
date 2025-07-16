@@ -12,6 +12,9 @@ from typing import Annotated, Any, cast
 
 import polars as pl
 import polars.exceptions as plexc
+from cloudpathlib import CloudPath
+
+from dataframely._path import handle_cloud_path
 
 from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
@@ -631,7 +634,7 @@ class Collection(BaseCollection, ABC):
 
     # ---------------------------------- PERSISTENCE --------------------------------- #
 
-    def write_parquet(self, directory: str | Path, **kwargs: Any) -> None:
+    def write_parquet(self, directory: str | Path | CloudPath, **kwargs: Any) -> None:
         """Write the members of this collection to parquet files in a directory.
 
         This method writes one parquet file per member into the provided directory.
@@ -654,7 +657,7 @@ class Collection(BaseCollection, ABC):
         """
         self._to_parquet(directory, sink=False, **kwargs)
 
-    def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
+    def sink_parquet(self, directory: str | Path | CloudPath, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
 
         This method writes one parquet file per member into the provided directory.
@@ -677,10 +680,12 @@ class Collection(BaseCollection, ABC):
         """
         self._to_parquet(directory, sink=True, **kwargs)
 
-    def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
+    def _to_parquet(
+        self, directory: str | Path | CloudPath, *, sink: bool, **kwargs: Any
+    ) -> None:
         path = Path(directory) if isinstance(directory, str) else directory
         path.mkdir(parents=True, exist_ok=True)
-        with open(path / "schema.json", "w") as f:
+        with (path / "schema.json").open("w") as f:
             f.write(self.serialize())
 
         member_schemas = self.member_schemas()
@@ -704,7 +709,7 @@ class Collection(BaseCollection, ABC):
     @classmethod
     def read_parquet(
         cls,
-        directory: str | Path,
+        directory: str | Path | CloudPath,
         *,
         validation: Validation = "warn",
         **kwargs: Any,
@@ -751,9 +756,10 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(path, validation):
+        if not isinstance(directory, Path | CloudPath):
+            directory = Path(directory)
+        data = cls._from_parquet(directory, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(directory, validation):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
@@ -761,7 +767,7 @@ class Collection(BaseCollection, ABC):
     @classmethod
     def scan_parquet(
         cls,
-        directory: str | Path,
+        directory: str | Path | CloudPath,
         *,
         validation: Validation = "warn",
         **kwargs: Any,
@@ -812,17 +818,19 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(path, validation):
+        if not isinstance(directory, Path | CloudPath):
+            directory = Path(directory)
+        data = cls._from_parquet(directory, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(directory, validation):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
 
     @classmethod
     def _from_parquet(
-        cls, path: Path, scan: bool, **kwargs: Any
+        cls, path: Path | CloudPath, scan: bool, **kwargs: Any
     ) -> dict[str, pl.LazyFrame]:
+        path = handle_cloud_path(path)
         data = {}
         for key in cls.members():
             if (source_path := cls._member_source_path(path, key)) is not None:
@@ -846,7 +854,7 @@ class Collection(BaseCollection, ABC):
     @classmethod
     def _requires_validation_for_reading_parquets(
         cls,
-        directory: Path,
+        directory: Path | CloudPath,
         validation: Validation,
     ) -> bool:
         if validation == "skip":
