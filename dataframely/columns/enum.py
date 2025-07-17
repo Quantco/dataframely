@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 from typing import Any
 
@@ -14,6 +15,11 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import register
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 @register
@@ -88,3 +94,23 @@ class Enum(Column):
         return generator.sample_choice(
             n, choices=self.categories, null_probability=self._null_probability
         ).cast(self.dtype)
+
+    def with_property(
+        self,
+        *,
+        categories: Sequence[str] | None = None,
+        nullable: bool | None = None,
+        primary_key: bool = False,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        result = super().with_property(
+            nullable=nullable,
+            primary_key=primary_key,
+            check=check,
+            alias=alias,
+            metadata=metadata,
+        )
+        result.categories = categories if categories is not None else self.categories
+        return result
