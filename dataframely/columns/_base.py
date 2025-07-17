@@ -8,7 +8,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias, TypeVar, cast
 
 import polars as pl
 
@@ -245,6 +245,32 @@ class Column(ABC):
     def col(self) -> pl.Expr:
         """Obtain a Polars column expression for the column."""
         return pl.col(self.name)
+
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool = False,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        """Create a copy of this column with updated properties."""
+        T = TypeVar("T")
+
+        def coerce(value: T, fallback: T) -> T:
+            if value is not None:
+                return value
+
+            return fallback
+
+        return self.__class__(
+            nullable=coerce(nullable, self.nullable),
+            primary_key=coerce(primary_key, self.primary_key),
+            check=coerce(check, self.check),
+            alias=coerce(alias, self.alias),
+            metadata=coerce(metadata, self.metadata),
+        )
 
     # ----------------------------------- SAMPLING ----------------------------------- #
 
