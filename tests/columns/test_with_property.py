@@ -49,3 +49,12 @@ def test_multiple() -> None:
     # Max
     with pytest.raises(dy.exc.ValidationError):
         SchemaWithMultipleProperties.validate(pl.LazyFrame({"column_one": [6]}))
+
+
+class SchemaAny(dy.Schema):
+    column_any = dy.Any().with_property(check=lambda x: x > 7)
+
+
+def test_any() -> None:
+    with pytest.raises(dy.exc.ValidationError):
+        SchemaAny.validate(pl.LazyFrame({"column_any": [6, 7]}))

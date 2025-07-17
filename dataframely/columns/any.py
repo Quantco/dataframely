@@ -3,6 +3,13 @@
 
 from __future__ import annotations
 
+import sys
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
@@ -11,6 +18,7 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import register
+from ._utils import first_non_null
 
 
 @register
@@ -79,3 +87,22 @@ class Any(Column):
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return pl.repeat(None, n, dtype=pl.Null, eager=True)
+
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        if nullable is not None and not nullable:
+            raise ValueError("Column `Any` must be nullable.")
+        if primary_key is not None and primary_key:
+            raise ValueError("Column `Any` can't be a primary key.")
+        return self.__class__(
+            check=check if check is not None else self.check,
+            alias=first_non_null(alias, self.alias, allow_null_response=True),
+            metadata=first_non_null(metadata, self.metadata, allow_null_response=True),
+        )
