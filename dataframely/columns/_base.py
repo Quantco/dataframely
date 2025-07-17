@@ -8,7 +8,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable
-from typing import Any, TypeAlias, TypeVar, cast
+from typing import Any, TypeAlias, cast
 
 import polars as pl
 
@@ -18,6 +18,7 @@ from dataframely._deprecation import (
     warn_nullable_default_change,
 )
 from dataframely._polars import PolarsDataType
+from dataframely.columns._utils import first_non_null
 from dataframely.random import Generator
 
 if sys.version_info >= (3, 11):
@@ -250,26 +251,19 @@ class Column(ABC):
         self,
         *,
         nullable: bool | None = None,
-        primary_key: bool = False,
+        primary_key: bool | None = None,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> Self:
         """Create a copy of this column with updated properties."""
-        T = TypeVar("T")
-
-        def coerce(value: T, fallback: T) -> T:
-            if value is not None:
-                return value
-
-            return fallback
-
+        new_check: Check | None = self.check if check is None else check
         return self.__class__(
-            nullable=coerce(nullable, self.nullable),
-            primary_key=coerce(primary_key, self.primary_key),
-            check=coerce(check, self.check),
-            alias=coerce(alias, self.alias),
-            metadata=coerce(metadata, self.metadata),
+            nullable=first_non_null(nullable, self.nullable, allow_null_response=True),
+            primary_key=first_non_null(primary_key, default=self.primary_key),
+            check=new_check,
+            alias=first_non_null(alias, self.alias, allow_null_response=True),
+            metadata=first_non_null(metadata, self.metadata, allow_null_response=True),
         )
 
     # ----------------------------------- SAMPLING ----------------------------------- #

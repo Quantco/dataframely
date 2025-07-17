@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
+import pytest
 
 import dataframely as dy
 
@@ -17,5 +18,34 @@ class SchemaTwo(dy.Schema):
 
 
 def test_with_property() -> None:
-    # Act and assert
+    # Check that the second schema has the updated column
     SchemaTwo.validate(pl.LazyFrame({"column_one": [1, 1], "column_two": [1, 2]}))
+    # Check that the first schema is unchanged
+    with pytest.raises(dy.exc.ValidationError):
+        SchemaOne.validate(pl.LazyFrame({"column_one": [1, 1], "column_two": [1, 2]}))
+
+
+class SchemaWithIsInConstraint(dy.Schema):
+    column_one = SchemaOne.column_one.with_property(is_in=[1, 2, 3])
+
+
+def test_with_is_in_property() -> None:
+    # Check that the updated schema has the constraint
+    with pytest.raises(dy.exc.ValidationError):
+        SchemaWithIsInConstraint.validate(pl.LazyFrame({"column_one": [1, 4]}))
+
+    # Check that the original schema is unchanged:
+    SchemaOne.validate(pl.LazyFrame({"column_one": [1, 4], "column_two": [1, 2]}))
+
+
+class SchemaWithMultipleProperties(dy.Schema):
+    column_one = SchemaOne.column_one.with_property(is_in=[1, 2, 3, 4, 5, 6], max=4)
+
+
+def test_multiple() -> None:
+    # Is in
+    with pytest.raises(dy.exc.ValidationError):
+        SchemaWithMultipleProperties.validate(pl.LazyFrame({"column_one": [0]}))
+    # Max
+    with pytest.raises(dy.exc.ValidationError):
+        SchemaWithMultipleProperties.validate(pl.LazyFrame({"column_one": [6]}))

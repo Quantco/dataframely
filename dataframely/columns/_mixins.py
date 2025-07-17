@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 import polars as pl
 
+from ._utils import first_non_null
+
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import Column
 
@@ -80,6 +82,26 @@ class OrdinalMixin(Generic[T], Base):
             result["max_exclusive"] = expr < self.max_exclusive  # type: ignore
         return result
 
+    def with_property(
+        self,
+        *,
+        min: T | None = None,
+        min_exclusive: T | None = None,
+        max: T | None = None,
+        max_exclusive: T | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        new_column = super().with_property(**kwargs)
+        new_column.min = first_non_null(min, self.min, allow_null_response=True)
+        new_column.min_exclusive = first_non_null(
+            min_exclusive, self.min_exclusive, allow_null_response=True
+        )
+        new_column.max = first_non_null(max, self.max, allow_null_response=True)
+        new_column.max_exclusive = first_non_null(
+            max_exclusive, self.max_exclusive, allow_null_response=True
+        )
+        return new_column
+
 
 # ------------------------------------ IS IN MIXIN ----------------------------------- #
 
@@ -98,3 +120,8 @@ class IsInMixin(Generic[U], Base):
         if self.is_in is not None:
             result["is_in"] = expr.is_in(self.is_in)
         return result
+
+    def with_property(self, *, is_in: Sequence[U] | None = None, **kwargs: Any) -> Self:
+        new_column = super().with_property(**kwargs)
+        new_column.is_in = first_non_null(is_in, self.is_in, allow_null_response=True)
+        return new_column
