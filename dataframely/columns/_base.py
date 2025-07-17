@@ -257,11 +257,10 @@ class Column(ABC):
         metadata: dict[str, Any] | None = None,
     ) -> Self:
         """Create a copy of this column with updated properties."""
-        new_check: Check | None = self.check if check is None else check
         return self.__class__(
             nullable=first_non_null(nullable, self.nullable, allow_null_response=True),
             primary_key=first_non_null(primary_key, default=self.primary_key),
-            check=new_check,
+            check=self.check if check is None else check,
             alias=first_non_null(alias, self.alias, allow_null_response=True),
             metadata=first_non_null(metadata, self.metadata, allow_null_response=True),
         )
