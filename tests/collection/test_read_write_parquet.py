@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import platform
 import random
 import string
 from collections.abc import Callable
@@ -87,6 +88,11 @@ def s3_path() -> str:
     return f"s3://{bucket_name}"
 
 
+def check_platform(path_fixture: str) -> None:
+    if platform.system() == "Windows" and path_fixture == "s3_path":
+        pytest.skip("Skipping because Minio is not set up in Windows CI")
+
+
 # ------------------------------------------------------------------------------------ #
 
 
@@ -115,6 +121,7 @@ def test_read_write_parquet(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
+    check_platform(path_fixture)
     if path_fixture == "s3_path" and len(kwargs) > 0:
         pytest.skip("Polars currently can not read partitioned S3 parquet files")
 
@@ -146,6 +153,7 @@ def test_read_write_parquet_optional(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
+    check_platform(path_fixture)
     if path_fixture == "s3_path" and len(kwargs) > 0:
         pytest.skip("Polars currently can not read partitioned S3 parquet files")
 
@@ -173,6 +181,7 @@ def test_read_write_parquet_if_schema_matches(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
 
     # Arrange
@@ -201,6 +210,7 @@ def test_read_write_parquet_validation_warn_no_schema(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
 
     # Arrange
@@ -226,6 +236,7 @@ def test_read_write_parquet_validation_warn_invalid_schema(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
     # Arrange
     collection = _write_collection_with_incorrect_schema(path, lazy)
@@ -253,8 +264,10 @@ def test_read_write_parquet_validation_allow_no_schema(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
-    # Arrange
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
+
+    # Arrange
     collection = _write_collection_with_no_schema(path, lazy)
 
     # Act
@@ -273,9 +286,10 @@ def test_read_write_parquet_validation_allow_invalid_schema(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
-    # Arrange
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
 
+    # Arrange
     collection = _write_collection_with_incorrect_schema(path, lazy)
 
     # Act
@@ -294,6 +308,7 @@ def test_read_write_parquet_validation_allow_invalid_schema(
 def test_read_write_parquet_validation_forbid_no_schema(
     lazy: bool, path_fixture: str, request: pytest.FixtureRequest
 ) -> None:
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
     # Arrange
     collection = _write_collection_with_no_schema(path, lazy)
@@ -311,8 +326,9 @@ def test_read_write_parquet_validation_forbid_no_schema(
 def test_read_write_parquet_validation_forbid_invalid_schema(
     lazy: bool, path_fixture: str, request: pytest.FixtureRequest
 ) -> None:
-    # Arrange
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
+    # Arrange
     collection = _write_collection_with_incorrect_schema(path, lazy)
 
     # Act
@@ -334,6 +350,7 @@ def test_read_write_parquet_validation_skip_no_schema(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
     # Arrange
     collection = _write_collection_with_no_schema(path, lazy)
@@ -354,6 +371,7 @@ def test_read_write_parquet_validation_skip_invalid_schema(
     path_fixture: str,
     request: pytest.FixtureRequest,
 ) -> None:
+    check_platform(path_fixture)
     path = request.getfixturevalue(path_fixture)
     # Arrange
     collection = _write_collection_with_incorrect_schema(path, lazy)
