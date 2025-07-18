@@ -41,6 +41,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         environment: [py310, py311, py312, py313]
+    services:
+      minio:
+        # we use the bitnami/minio image to avoid the need to set up the minio server
+        # through a 'command' section, which is not supported by GitHub Actions.
+        image: bitnami/minio:latest
+        ports:
+          - 9000:9000
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        options: >-
+          --name minio
     steps:
       - name: Checkout branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -52,6 +64,10 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes
+        env:
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_ENDPOINT_URL: http://127.0.0.1:9000
       - name: Upload codecov
         uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
         with:

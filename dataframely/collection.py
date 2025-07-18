@@ -679,14 +679,11 @@ class Collection(BaseCollection, ABC):
         self._to_parquet(directory, sink=True, **kwargs)
 
     def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
-        fs, _ = fsspec.url_to_fs(
-            directory if isinstance(directory, str) else str(directory)
-        )
+        directory = str(directory)
+        fs, _ = fsspec.url_to_fs(directory)
         assert isinstance(fs, fsspec.AbstractFileSystem)
-        try:
-            fs.makedir(directory, create_parents=True)
-        except FileExistsError:
-            pass
+        directory = directory.rstrip(fs.sep)
+        fs.makedirs(directory, exist_ok=True)
 
         with fs.open(f"{directory}{fs.sep}schema.json", "w") as f:
             f.write(self.serialize())
@@ -821,9 +818,8 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(path, validation):
+        data = cls._from_parquet(directory, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(directory, validation):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
@@ -832,11 +828,9 @@ class Collection(BaseCollection, ABC):
     def _from_parquet(
         cls, path: str | Path, scan: bool, **kwargs: Any
     ) -> dict[str, pl.LazyFrame]:
-        if isinstance(path, Path):
-            path = str(path)
         data = {}
         for key in cls.members():
-            if (source_path := cls._member_source_path(path, key)) is not None:
+            if (source_path := cls._member_source_path(str(path), key)) is not None:
                 data[key] = (
                     pl.scan_parquet(source_path, **kwargs)
                     if scan
@@ -846,9 +840,8 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def _member_source_path(cls, base_path: str, name: str) -> str | None:
-        fs, _ = fsspec.url_to_fs(
-            base_path if isinstance(base_path, str) else str(base_path)
-        )
+        fs, _ = fsspec.url_to_fs(base_path)
+        base_path = base_path.rstrip(fs.sep)
         assert isinstance(fs, fsspec.AbstractFileSystem)
 
         if fs.exists(path := f"{base_path}{fs.sep}{name}") and fs.isdir(path):
@@ -867,9 +860,9 @@ class Collection(BaseCollection, ABC):
     ) -> bool:
         if validation == "skip":
             return False
-        if isinstance(directory, Path):
-            directory = str(directory)
+        directory = str(directory)
         fs, _ = fsspec.url_to_fs(directory)
+        directory = directory.rstrip(fs.sep)
         assert isinstance(fs, fsspec.AbstractFileSystem)
         # First, we check whether the path provides the serialization of the collection.
         # If it does, we check whether it matches this collection. If it does, we assume
