@@ -74,7 +74,7 @@ jobs:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
   unit-tests-windows:
-    name: Unit Tests Windows- ${{ matrix.environment }}
+    name: Unit Tests (Windows) - ${{ matrix.environment }}
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
