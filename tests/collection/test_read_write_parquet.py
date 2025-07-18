@@ -1,7 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-import platform
+import os
 import random
 import string
 from collections.abc import Callable
@@ -89,8 +89,8 @@ def s3_path() -> str:
 
 
 def check_platform(path_fixture: str) -> None:
-    if platform.system() == "Windows" and path_fixture == "s3_path":
-        pytest.skip("Skipping because Minio is not set up in Windows CI")
+    if os.environ.get("AWS_ENDPOINT_URL") is None and path_fixture == "s3_path":
+        pytest.skip("Skipping S3 tests as Minio URL is not set.")
 
 
 # ------------------------------------------------------------------------------------ #
