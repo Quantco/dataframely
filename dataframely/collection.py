@@ -902,14 +902,6 @@ class Collection(BaseCollection, ABC):
                 f"Input misses {len(missing)} required members: {', '.join(missing)}."
             )
 
-        superfluous = actual - set(cls.members())
-        if len(superfluous) > 0:
-            warnings.warn(
-                f"Input provides {len(superfluous)} superfluous members that are "
-                f"ignored: {', '.join(superfluous)}."
-            )
-
-
 def deserialize_collection(data: str) -> type[Collection]:
     """Deserialize a collection from a JSON string.
 
