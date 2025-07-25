@@ -902,6 +902,7 @@ class Collection(BaseCollection, ABC):
                 f"Input misses {len(missing)} required members: {', '.join(missing)}."
             )
 
+
 def deserialize_collection(data: str) -> type[Collection]:
     """Deserialize a collection from a JSON string.
 
