@@ -4,7 +4,13 @@
 from __future__ import annotations
 
 import datetime as dt
+import sys
 from typing import Any, cast
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 import polars as pl
 from polars._typing import TimeUnit
@@ -149,6 +155,36 @@ class Date(OrdinalMixin[dt.date], Column):
             null_probability=self._null_probability,
         )
 
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool | None = None,
+        min: dt.date | None = None,
+        min_exclusive: dt.date | None = None,
+        max: dt.date | None = None,
+        max_exclusive: dt.date | None = None,
+        resolution: str | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        result = super().with_property(
+            nullable=nullable,
+            primary_key=primary_key,
+            min=min,
+            min_exclusive=min_exclusive,
+            max=max,
+            max_exclusive=max_exclusive,
+            check=check,
+            alias=alias,
+            metadata=metadata,
+        )
+        result.resolution = first_non_null(
+            resolution, self.resolution, allow_null_response=True
+        )
+        return result
+
 
 @register
 class Time(OrdinalMixin[dt.time], Column):
@@ -277,6 +313,36 @@ class Time(OrdinalMixin[dt.time], Column):
             resolution=self.resolution,
             null_probability=self._null_probability,
         )
+
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool | None = None,
+        min: dt.time | None = None,
+        min_exclusive: dt.time | None = None,
+        max: dt.time | None = None,
+        max_exclusive: dt.time | None = None,
+        resolution: str | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        result = super().with_property(
+            nullable=nullable,
+            primary_key=primary_key,
+            min=min,
+            min_exclusive=min_exclusive,
+            max=max,
+            max_exclusive=max_exclusive,
+            check=check,
+            alias=alias,
+            metadata=metadata,
+        )
+        result.resolution = first_non_null(
+            resolution, self.resolution, allow_null_response=True
+        )
+        return result
 
 
 @register
@@ -425,6 +491,42 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             return lhs.utcoffset(now) == rhs.utcoffset(now)
         return super()._attributes_match(lhs, rhs, name, column_expr)
 
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool = False,
+        min: dt.datetime | None = None,
+        min_exclusive: dt.datetime | None = None,
+        max: dt.datetime | None = None,
+        max_exclusive: dt.datetime | None = None,
+        resolution: str | None = None,
+        time_zone: str | dt.tzinfo | None = None,
+        time_unit: TimeUnit | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        result = super().with_property(
+            nullable=nullable,
+            primary_key=primary_key,
+            min=min,
+            min_exclusive=min_exclusive,
+            max=max,
+            max_exclusive=max_exclusive,
+            check=check,
+            alias=alias,
+            metadata=metadata,
+        )
+        result.resolution = first_non_null(
+            resolution, self.resolution, allow_null_response=True
+        )
+        result.time_zone = first_non_null(
+            time_zone, self.time_zone, allow_null_response=True
+        )
+        result.time_unit = first_non_null(time_unit, default=self.time_unit)
+        return result
+
 
 @register
 class Duration(OrdinalMixin[dt.timedelta], Column):
@@ -545,6 +647,36 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
             resolution=self.resolution,
             null_probability=self._null_probability,
         )
+
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool = False,
+        min: dt.timedelta | None = None,
+        min_exclusive: dt.timedelta | None = None,
+        max: dt.timedelta | None = None,
+        max_exclusive: dt.timedelta | None = None,
+        resolution: str | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        result = super().with_property(
+            nullable=nullable,
+            primary_key=primary_key,
+            min=min,
+            min_exclusive=min_exclusive,
+            max=max,
+            max_exclusive=max_exclusive,
+            check=check,
+            alias=alias,
+            metadata=metadata,
+        )
+        result.resolution = first_non_null(
+            resolution, self.resolution, allow_null_response=True
+        )
+        return result
 
 
 # --------------------------------------- UTILS -------------------------------------- #

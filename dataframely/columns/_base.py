@@ -18,6 +18,7 @@ from dataframely._deprecation import (
     warn_nullable_default_change,
 )
 from dataframely._polars import PolarsDataType
+from dataframely.columns._utils import first_non_null
 from dataframely.random import Generator
 
 if sys.version_info >= (3, 11):
@@ -245,6 +246,24 @@ class Column(ABC):
     def col(self) -> pl.Expr:
         """Obtain a Polars column expression for the column."""
         return pl.col(self.name)
+
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        """Create a copy of this column with updated properties."""
+        return self.__class__(
+            nullable=first_non_null(nullable, self.nullable, allow_null_response=True),
+            primary_key=first_non_null(primary_key, default=self.primary_key),
+            check=self.check if check is None else check,
+            alias=first_non_null(alias, self.alias, allow_null_response=True),
+            metadata=first_non_null(metadata, self.metadata, allow_null_response=True),
+        )
 
     # ----------------------------------- SAMPLING ----------------------------------- #
 
