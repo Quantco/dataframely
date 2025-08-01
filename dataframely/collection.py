@@ -981,7 +981,7 @@ def _extract_keys_if_exist(
 def read_parquet_metadata_collection(
     source: str | Path | IO[bytes] | bytes,
 ) -> type[Collection] | None:
-    """Read a dataframely schema from the metadata of a parquet file.
+    """Read a dataframely Collection type from the metadata of a parquet file.
 
     Args:
         source: Path to a parquet file or a file-like object that contains the metadata.
