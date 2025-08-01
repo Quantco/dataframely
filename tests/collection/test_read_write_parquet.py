@@ -29,7 +29,16 @@ def _write_parquet(collection: dy.Collection, path: Path, lazy: bool) -> None:
         collection.sink_parquet(path)
     else:
         collection.write_parquet(path)
-    (path / "schema.json").unlink()
+
+    def _delete_meta(file: Path) -> None:
+        df = pl.read_parquet(file)
+        df.write_parquet(file)
+
+    if path.is_file():
+        _delete_meta(path)
+    else:
+        for file in path.rglob("*.parquet"):
+            _delete_meta(file)
 
 
 def _read_parquet(collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:

@@ -841,8 +841,11 @@ class Collection(BaseCollection, ABC):
                     if scan
                     else pl.read_parquet(source_path, **kwargs).lazy()
                 )
-                parquet_collection_type = read_parquet_metadata_collection(source_path)
-                collection_types.add(parquet_collection_type)
+                if source_path.is_file():
+                    collection_types.add(read_parquet_metadata_collection(source_path))
+                else:
+                    for file in source_path.glob("**/*.parquet"):
+                        collection_types.add(read_parquet_metadata_collection(file))
         return data, _reconcile_collection_types(collection_types)
 
     @classmethod
