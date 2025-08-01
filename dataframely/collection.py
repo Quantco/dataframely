@@ -1,14 +1,15 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 
 import json
 import sys
 import warnings
 from abc import ABC
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated, Any, cast
+from typing import IO, Annotated, Any, cast
 
 import polars as pl
 import polars.exceptions as plexc
@@ -17,6 +18,7 @@ from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
 from ._polars import FrameType, join_all_inner, join_all_outer
 from ._serialization import (
+    COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
@@ -247,7 +249,7 @@ class Collection(BaseCollection, ABC):
         return cls.validate(members)
 
     @classmethod
-    def matches(cls, other: type["Collection"]) -> bool:
+    def matches(cls, other: type[Collection]) -> bool:
         """Check whether this collection semantically matches another.
 
         Args:
@@ -680,8 +682,11 @@ class Collection(BaseCollection, ABC):
     def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
         path = Path(directory) if isinstance(directory, str) else directory
         path.mkdir(parents=True, exist_ok=True)
-        with open(path / "schema.json", "w") as f:
-            f.write(self.serialize())
+
+        # The collection schema is serialized as part of the member parquet metadata
+        kwargs["metadata"] = kwargs.get("metadata", {}) | {
+            COLLECTION_METADATA_KEY: self.serialize()
+        }
 
         member_schemas = self.member_schemas()
         for key, lf in self.to_dict().items():
@@ -752,8 +757,10 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         path = Path(directory)
-        data = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(path, validation):
+        data, collection_type = cls._from_parquet(path, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(
+            path, collection_type, validation
+        ):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
@@ -813,8 +820,10 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         path = Path(directory)
-        data = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(path, validation):
+        data, collection_type = cls._from_parquet(path, scan=True, **kwargs)
+        if not cls._requires_validation_for_reading_parquets(
+            path, collection_type, validation
+        ):
             cls._validate_input_keys(data)
             return cls._init(data)
         return cls.validate(data, cast=True)
@@ -822,8 +831,9 @@ class Collection(BaseCollection, ABC):
     @classmethod
     def _from_parquet(
         cls, path: Path, scan: bool, **kwargs: Any
-    ) -> dict[str, pl.LazyFrame]:
+    ) -> tuple[dict[str, pl.LazyFrame], type[Collection] | None]:
         data = {}
+        collection_types = set()
         for key in cls.members():
             if (source_path := cls._member_source_path(path, key)) is not None:
                 data[key] = (
@@ -831,7 +841,9 @@ class Collection(BaseCollection, ABC):
                     if scan
                     else pl.read_parquet(source_path, **kwargs).lazy()
                 )
-        return data
+                parquet_collection_type = read_parquet_metadata_collection(source_path)
+                collection_types.add(parquet_collection_type)
+        return data, _reconcile_collection_types(collection_types)
 
     @classmethod
     def _member_source_path(cls, base_path: Path, name: str) -> Path | None:
@@ -847,27 +859,20 @@ class Collection(BaseCollection, ABC):
     def _requires_validation_for_reading_parquets(
         cls,
         directory: Path,
+        collection_type: type[Collection] | None,
         validation: Validation,
     ) -> bool:
         if validation == "skip":
             return False
 
-        # First, we check whether the path provides the serialization of the collection.
-        # If it does, we check whether it matches this collection. If it does, we assume
-        # that the data adheres to the collection and we do not need to run validation.
-        if (json_serialization := directory / "schema.json").exists():
-            metadata = json_serialization.read_text()
-            serialized_collection = deserialize_collection(metadata)
-            if cls.matches(serialized_collection):
-                return False
-        else:
-            serialized_collection = None
+        if collection_type is not None and cls.matches(collection_type):
+            return False
 
-        # Otherwise, we definitely need to run validation. However, we emit different
+        # Now we definitely need to run validation. However, we emit different
         # information to the user depending on the value of `validate`.
         msg = (
             "current collection schema does not match stored collection schema"
-            if serialized_collection is not None
+            if collection_type is not None
             else "no collection schema to check validity can be read from the source"
         )
         if validation == "forbid":
@@ -968,3 +973,39 @@ def _extract_keys_if_exist(
     data: Mapping[str, Any], keys: Sequence[str]
 ) -> dict[str, Any]:
     return {key: data[key] for key in keys if key in data}
+
+
+def read_parquet_metadata_collection(
+    source: str | Path | IO[bytes] | bytes,
+) -> type[Collection] | None:
+    """Read a dataframely schema from the metadata of a parquet file.
+
+    Args:
+        source: Path to a parquet file or a file-like object that contains the metadata.
+
+    Returns:
+        The schema that was serialized to the metadata or ``None`` if no schema metadata
+        is found.
+    """
+    metadata = pl.read_parquet_metadata(source)
+    if (schema_metadata := metadata.get(COLLECTION_METADATA_KEY)) is not None:
+        return deserialize_collection(schema_metadata)
+    return None
+
+
+def _reconcile_collection_types(
+    collection_types: Iterable[type[Collection] | None],
+) -> type[Collection] | None:
+    # When reading serialized collections, we may have collection type information from multiple sources
+    # (E.g. one set of information for each parquet file).
+    # This function
+    if not (collection_types := list(collection_types)):
+        return None
+    if (first_type := collection_types[0]) is None:
+        return None
+    for t in collection_types[1:]:
+        if t is None:
+            return None
+        if not first_type.matches(t):
+            return None
+    return first_type
