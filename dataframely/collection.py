@@ -987,7 +987,7 @@ def read_parquet_metadata_collection(
         source: Path to a parquet file or a file-like object that contains the metadata.
 
     Returns:
-        The schema that was serialized to the metadata or ``None`` if no schema metadata
+        The schema that was serialized to the metadata or ``None`` if no collection metadata
         is found.
     """
     metadata = pl.read_parquet_metadata(source)
