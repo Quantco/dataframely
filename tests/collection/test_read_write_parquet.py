@@ -11,6 +11,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_collection, create_schema
 
@@ -292,3 +293,58 @@ def test_read_write_parquet_validation_skip_invalid_schema(
 
     # Assert
     spy.assert_not_called()
+
+
+# ------------------------------- BACKWARD COMPATIBILITY ----------------------------- #
+
+
+@pytest.mark.parametrize("validation", ["warn", "allow", "forbid", "skip"])
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_write_parquet_schema_json_fallback(
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    # In https://github.com/Quantco/dataframely/pull/107, the
+    # mechanism for storing collection metadata was changed.
+    # Prior to this change, the metadata was stored in a `schema.json` file.
+    # After this change, the metadata was moved into the parquet files.
+    # This test verifies that the change was implemented a backward compatible manner:
+    # The new code can still read parquet files that do not contain the metadata,
+    # and will not call `validate` if the `schema.json` file is present.
+
+    # Arrange
+    collection_type = create_collection(
+        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
+    )
+    collection = collection_type.create_empty()
+    _write_parquet(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text(collection.serialize())
+
+    # Act
+    spy = mocker.spy(collection_type, "validate")
+    _read_parquet(collection_type, tmp_path, lazy, validation=validation)
+
+    # Assert
+    spy.assert_not_called()
+
+
+class MyCollection2(dy.Collection):
+    first: dy.LazyFrame[MyFirstSchema]
+
+
+@pytest.mark.parametrize(
+    "inputs,output",
+    [
+        # Nothing to reconcile
+        ([], None),
+        # Only one type, no uncertainty
+        ([MyCollection], MyCollection),
+        # One missing type, cannot be sure
+        ([MyCollection, None], None),
+        # Inconsistent types, treat like no information available
+        ([MyCollection, MyCollection2], None),
+    ],
+)
+def test_reconcile_collection_types(
+    inputs: list[type[dy.Collection] | None], output: type[dy.Collection] | None
+) -> None:
+    assert output == _reconcile_collection_types(inputs)

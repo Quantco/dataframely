@@ -8,6 +8,7 @@ import warnings
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
+from json import JSONDecodeError
 from pathlib import Path
 from typing import IO, Annotated, Any, cast
 
@@ -640,9 +641,6 @@ class Collection(BaseCollection, ABC):
         Each parquet file is named ``<member>.parquet``. No file is written for optional
         members which are not provided in the current collection.
 
-        In addition, one JSON file named ``schema.json`` is written, serializing the
-        collection's definition for fast reads.
-
         Args:
             directory: The directory where the Parquet files should be written to. If
                 the directory does not exist, it is created automatically, including all
@@ -662,9 +660,6 @@ class Collection(BaseCollection, ABC):
         This method writes one parquet file per member into the provided directory.
         Each parquet file is named ``<member>.parquet``. No file is written for optional
         members which are not provided in the current collection.
-
-        In addition, one JSON file named ``schema.json`` is written, serializing the
-        collection's definition for fast reads.
 
         Args:
             directory: The directory where the Parquet files should be written to. If
@@ -724,16 +719,16 @@ class Collection(BaseCollection, ABC):
                 Parquet files may have been written with Hive partitioning.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the ``schema.json`` file in the
-                  directory. If the stored collection schema matches this collection
+                - ``"allow"`: The method tries to read the schema data from the parquet
+                  files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
-                  schema mismatches this schema or no ``schema.json`` can be found in
-                  the directory, this method automatically runs :meth:`validate` with
+                  schema mismatches this schema or no metadata can be found in
+                  the parquets, this method automatically runs :meth:`validate` with
                   ``cast=True``.
                 - ``"warn"`: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
-                  returns if the ``schema.json`` stores a collection schema that matches
+                  returns if the metadata stores a collection schema that matches
                   this collection.
                 - ``"skip"``: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. _Use this option
@@ -751,6 +746,10 @@ class Collection(BaseCollection, ABC):
             ValueError: If the provided directory does not contain parquet files for
                 all required members.
             ValidationError: If the collection cannot be validate.
+
+        Note: This method is backward compatible with older versions of dataframely
+            in which the schema metadata was saved to `schema.json` files instead of
+            being encoded into the parquet files.
 
         Attention:
             Be aware that this method suffers from the same limitations as
@@ -783,16 +782,16 @@ class Collection(BaseCollection, ABC):
                 Parquet files may have been written with Hive partitioning.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the ``schema.json`` file in the
-                  directory. If the stored collection schema matches this collection
+                - ``"allow"`: The method tries to read the schema data from the parquet
+                  files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
-                  schema mismatches this schema or no ``schema.json`` can be found in
-                  the directory, this method automatically runs :meth:`validate` with
+                  schema mismatches this schema or no metadata can be found in
+                  the parquets, this method automatically runs :meth:`validate` with
                   ``cast=True``.
                 - ``"warn"`: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
-                  returns if the ``schema.json`` stores a collection schema that matches
+                  returns if the metadata stores a collection schema that matches
                   this collection.
                 - ``"skip"``: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. _Use this option
@@ -814,6 +813,10 @@ class Collection(BaseCollection, ABC):
             Due to current limitations in dataframely, this method actually reads the
             parquet file into memory if ``"validation"`` is ``"warn"`` or ``"allow"``
             and validation is required.
+
+        Note: This method is backward compatible with older versions of dataframely
+            in which the schema metadata was saved to `schema.json` files instead of
+            being encoded into the parquet files.
 
         Attention:
             Be aware that this method suffers from the same limitations as
@@ -846,7 +849,17 @@ class Collection(BaseCollection, ABC):
                 else:
                     for file in source_path.glob("**/*.parquet"):
                         collection_types.add(read_parquet_metadata_collection(file))
-        return data, _reconcile_collection_types(collection_types)
+        collection_type = _reconcile_collection_types(collection_types)
+
+        # Backward compatibility: If the parquets do not have schema information,
+        # fall back to looking for schema.json
+        if (collection_type is None) and (schema_file := path / "schema.json").exists():
+            try:
+                collection_type = deserialize_collection(schema_file.read_text())
+            except JSONDecodeError:
+                pass
+
+        return data, collection_type
 
     @classmethod
     def _member_source_path(cls, base_path: Path, name: str) -> Path | None:
