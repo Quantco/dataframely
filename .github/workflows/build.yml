@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@14c8aabd75893f83f4ab30c03e7cf853c8208961 # v0.8.10
+        uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143 # v0.8.14
         with:
           environments: build
       - name: Set version
@@ -52,7 +52,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@14c8aabd75893f83f4ab30c03e7cf853c8208961 # v0.8.10
+        uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143 # v0.8.14
         with:
           environments: build
       - name: Set version
