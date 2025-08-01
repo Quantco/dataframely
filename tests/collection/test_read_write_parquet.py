@@ -300,7 +300,7 @@ def test_read_write_parquet_validation_skip_invalid_schema(
 
 @pytest.mark.parametrize("validation", ["warn", "allow", "forbid", "skip"])
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_schema_json_fallback(
+def test_read_write_parquet_fallback_schema_json_success(
     tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
 ) -> None:
     # In https://github.com/Quantco/dataframely/pull/107, the
@@ -325,6 +325,32 @@ def test_read_write_parquet_schema_json_fallback(
 
     # Assert
     spy.assert_not_called()
+
+
+@pytest.mark.parametrize("validation", ["allow", "warn"])
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_write_parquet_schema_json_fallback_corrupt(
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    """If the schema.json file is present, but corrupt, we should always fall back to
+    validating."""
+    # Arrange
+    collection_type = create_collection(
+        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
+    )
+    collection = collection_type.create_empty()
+    _write_parquet(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text("} this is not a valid JSON {")
+
+    # Act
+    spy = mocker.spy(collection_type, "validate")
+    _read_parquet(collection_type, tmp_path, lazy, validation=validation)
+
+    # Assert
+    spy.assert_called_once()
+
+
+# --------------------------------------- UTILS -------------------------------------- #
 
 
 class MyCollection2(dy.Collection):
