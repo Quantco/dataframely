@@ -14,6 +14,7 @@ rust = "=1.85"
 numpy = "*"
 polars = ">=1.30"
 pytest-mock = ">=3.14.1,<4"
+fsspec = ">=2025.7.0,<2026"
 
 [host-dependencies]
 maturin = ">=1.7,<2"
@@ -51,6 +52,9 @@ pytest-cov = "*"
 pytest-md = "*"
 scikit-learn = "*"
 sqlalchemy = ">=2"
+s3fs = ">=2025.7.0,<2026"
+boto3 = ">=1.38.27,<2"
+boto3-stubs = ">=1.39.8,<2"
 
 [feature.test.tasks]
 test = "pytest"
