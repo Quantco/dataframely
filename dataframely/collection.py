@@ -722,9 +722,9 @@ class Collection(BaseCollection, ABC):
                 - ``"allow"`: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
-                  schema mismatches this schema or no metadata can be found in
-                  the parquets, this method automatically runs :meth:`validate` with
-                  ``cast=True``.
+                  schema mismatches this schema no metadata can be found in
+                  the parquets, or the files have conflicting metadata,
+                  this method automatically runs :meth:`validate` with ``cast=True``.
                 - ``"warn"`: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
@@ -756,7 +756,7 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         path = Path(directory)
-        data, collection_type = cls._from_parquet(path, scan=True, **kwargs)
+        data, collection_type = cls._from_parquet(path, scan=False, **kwargs)
         if not cls._requires_validation_for_reading_parquets(
             path, collection_type, validation
         ):
@@ -785,9 +785,9 @@ class Collection(BaseCollection, ABC):
                 - ``"allow"`: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
-                  schema mismatches this schema or no metadata can be found in
-                  the parquets, this method automatically runs :meth:`validate` with
-                  ``cast=True``.
+                  schema mismatches this schema no metadata can be found in
+                  the parquets, or the files have conflicting metadata,
+                  this method automatically runs :meth:`validate` with ``cast=True``.
                 - ``"warn"`: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
@@ -1000,7 +1000,7 @@ def read_parquet_metadata_collection(
         source: Path to a parquet file or a file-like object that contains the metadata.
 
     Returns:
-        The schema that was serialized to the metadata or ``None`` if no collection metadata
+        The collection that was serialized to the metadata or ``None`` if no collection metadata
         is found.
     """
     metadata = pl.read_parquet_metadata(source)
@@ -1014,7 +1014,7 @@ def _reconcile_collection_types(
 ) -> type[Collection] | None:
     # When reading serialized collections, we may have collection type information from multiple sources
     # (E.g. one set of information for each parquet file).
-    # This function
+    # This function determines which of them should finally be used
     if not (collection_types := list(collection_types)):
         return None
     if (first_type := collection_types[0]) is None:
