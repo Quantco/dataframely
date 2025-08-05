@@ -11,6 +11,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_collection, create_schema
 
@@ -29,7 +30,17 @@ def _write_parquet(collection: dy.Collection, path: Path, lazy: bool) -> None:
         collection.sink_parquet(path)
     else:
         collection.write_parquet(path)
-    (path / "schema.json").unlink()
+
+    def _delete_meta(file: Path) -> None:
+        """Overwrite a parquet file with the same data, but without metadata."""
+        df = pl.read_parquet(file)
+        df.write_parquet(file)
+
+    if path.is_file():
+        _delete_meta(path)
+    else:
+        for file in path.rglob("*.parquet"):
+            _delete_meta(file)
 
 
 def _read_parquet(collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
@@ -283,3 +294,84 @@ def test_read_write_parquet_validation_skip_invalid_schema(
 
     # Assert
     spy.assert_not_called()
+
+
+# ------------------------------- BACKWARD COMPATIBILITY ----------------------------- #
+
+
+@pytest.mark.parametrize("validation", ["warn", "allow", "forbid", "skip"])
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_write_parquet_fallback_schema_json_success(
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    # In https://github.com/Quantco/dataframely/pull/107, the
+    # mechanism for storing collection metadata was changed.
+    # Prior to this change, the metadata was stored in a `schema.json` file.
+    # After this change, the metadata was moved into the parquet files.
+    # This test verifies that the change was implemented a backward compatible manner:
+    # The new code can still read parquet files that do not contain the metadata,
+    # and will not call `validate` if the `schema.json` file is present.
+
+    # Arrange
+    collection_type = create_collection(
+        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
+    )
+    collection = collection_type.create_empty()
+    _write_parquet(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text(collection.serialize())
+
+    # Act
+    spy = mocker.spy(collection_type, "validate")
+    _read_parquet(collection_type, tmp_path, lazy, validation=validation)
+
+    # Assert
+    spy.assert_not_called()
+
+
+@pytest.mark.parametrize("validation", ["allow", "warn"])
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_write_parquet_schema_json_fallback_corrupt(
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    """If the schema.json file is present, but corrupt, we should always fall back to
+    validating."""
+    # Arrange
+    collection_type = create_collection(
+        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
+    )
+    collection = collection_type.create_empty()
+    _write_parquet(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text("} this is not a valid JSON {")
+
+    # Act
+    spy = mocker.spy(collection_type, "validate")
+    _read_parquet(collection_type, tmp_path, lazy, validation=validation)
+
+    # Assert
+    spy.assert_called_once()
+
+
+# --------------------------------------- UTILS -------------------------------------- #
+
+
+class MyCollection2(dy.Collection):
+    first: dy.LazyFrame[MyFirstSchema]
+
+
+@pytest.mark.parametrize(
+    ("inputs", "output"),
+    [
+        # Nothing to reconcile
+        ([], None),
+        # Only one type, no uncertainty
+        ([MyCollection], MyCollection),
+        # One missing type, cannot be sure
+        ([MyCollection, None], None),
+        # Inconsistent types, treat like no information available
+        ([MyCollection, MyCollection2], None),
+    ],
+)
+def test_reconcile_collection_types(
+    inputs: list[type[dy.Collection] | None], output: type[dy.Collection] | None
+) -> None:
+    assert output == _reconcile_collection_types(inputs)

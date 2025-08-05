@@ -11,6 +11,7 @@ from typing import Any, cast
 import polars as pl
 
 SCHEMA_METADATA_KEY = "dataframely_schema"
+COLLECTION_METADATA_KEY = "dataframely_collection"
 SERIALIZATION_FORMAT_VERSION = "1"
 
 
