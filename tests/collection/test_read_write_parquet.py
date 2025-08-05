@@ -359,7 +359,7 @@ class MyCollection2(dy.Collection):
 
 
 @pytest.mark.parametrize(
-    "inputs,output",
+    ("inputs", "output"),
     [
         # Nothing to reconcile
         ([], None),

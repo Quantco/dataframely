@@ -747,7 +747,8 @@ class Collection(BaseCollection, ABC):
                 all required members.
             ValidationError: If the collection cannot be validate.
 
-        Note: This method is backward compatible with older versions of dataframely
+        Note:
+            This method is backward compatible with older versions of dataframely
             in which the schema metadata was saved to `schema.json` files instead of
             being encoded into the parquet files.
 
