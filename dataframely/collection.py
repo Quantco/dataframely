@@ -982,15 +982,6 @@ def deserialize_collection(data: str) -> type[Collection]:
     )
 
 
-# --------------------------------------- UTILS -------------------------------------- #
-
-
-def _extract_keys_if_exist(
-    data: Mapping[str, Any], keys: Sequence[str]
-) -> dict[str, Any]:
-    return {key: data[key] for key in keys if key in data}
-
-
 def read_parquet_metadata_collection(
     source: str | Path | IO[bytes] | bytes,
 ) -> type[Collection] | None:
@@ -1007,6 +998,15 @@ def read_parquet_metadata_collection(
     if (schema_metadata := metadata.get(COLLECTION_METADATA_KEY)) is not None:
         return deserialize_collection(schema_metadata)
     return None
+
+
+# --------------------------------------- UTILS -------------------------------------- #
+
+
+def _extract_keys_if_exist(
+    data: Mapping[str, Any], keys: Sequence[str]
+) -> dict[str, Any]:
+    return {key: data[key] for key in keys if key in data}
 
 
 def _reconcile_collection_types(
