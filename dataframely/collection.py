@@ -925,6 +925,24 @@ class Collection(BaseCollection, ABC):
             )
 
 
+def read_parquet_metadata_collection(
+    source: str | Path | IO[bytes] | bytes,
+) -> type[Collection] | None:
+    """Read a dataframely Collection type from the metadata of a parquet file.
+
+    Args:
+        source: Path to a parquet file or a file-like object that contains the metadata.
+
+    Returns:
+        The collection that was serialized to the metadata or ``None`` if no collection metadata
+        is found.
+    """
+    metadata = pl.read_parquet_metadata(source)
+    if (schema_metadata := metadata.get(COLLECTION_METADATA_KEY)) is not None:
+        return deserialize_collection(schema_metadata)
+    return None
+
+
 def deserialize_collection(data: str) -> type[Collection]:
     """Deserialize a collection from a JSON string.
 
@@ -981,24 +999,6 @@ def deserialize_collection(data: str) -> type[Collection]:
             },
         },
     )
-
-
-def read_parquet_metadata_collection(
-    source: str | Path | IO[bytes] | bytes,
-) -> type[Collection] | None:
-    """Read a dataframely Collection type from the metadata of a parquet file.
-
-    Args:
-        source: Path to a parquet file or a file-like object that contains the metadata.
-
-    Returns:
-        The collection that was serialized to the metadata or ``None`` if no collection metadata
-        is found.
-    """
-    metadata = pl.read_parquet_metadata(source)
-    if (schema_metadata := metadata.get(COLLECTION_METADATA_KEY)) is not None:
-        return deserialize_collection(schema_metadata)
-    return None
 
 
 # --------------------------------------- UTILS -------------------------------------- #
