@@ -32,6 +32,7 @@ def _write_parquet(collection: dy.Collection, path: Path, lazy: bool) -> None:
         collection.write_parquet(path)
 
     def _delete_meta(file: Path) -> None:
+        """Overwrite a parquet file with the same data, but without metadata."""
         df = pl.read_parquet(file)
         df.write_parquet(file)
 
