@@ -1,9 +1,9 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
-
 import base64
 import datetime as dt
 import decimal
+from abc import ABC, abstractmethod
 from io import BytesIO
 from json import JSONDecoder, JSONEncoder
 from typing import Any, cast
@@ -112,3 +112,82 @@ class SchemaJSONDecoder(JSONDecoder):
                 )
             case _:
                 raise TypeError(f"Unknown type '{dct['__type__']}' in JSON data.")
+
+
+SerializedSchema = str
+
+
+class DataFramelyIO(ABC):
+    # --------------------------- Individual tables ------------------------------------
+    @abstractmethod
+    def sink_table(
+        self, lf: pl.LazyFrame, serialized_schema: SerializedSchema, **kwargs: Any
+    ) -> None: ...
+
+    @abstractmethod
+    def write_table(
+        self, df: pl.DataFrame, serialized_schema: SerializedSchema, **kwargs: Any
+    ) -> None: ...
+
+    @abstractmethod
+    def scan_table(
+        self, **kwargs: Any
+    ) -> tuple[pl.LazyFrame, SerializedSchema | None]: ...
+
+    @abstractmethod
+    def read_table(
+        self, **kwargs: Any
+    ) -> tuple[pl.DataFrame, SerializedSchema | None]: ...
+
+    # # --------------------------- Collections ------------------------------------
+    # @abstractmethod
+    # def sink_collection(self, dfs: dict[str, pl.LazyFrame], collection_metadata: MetaData, table_metadata: dict[str, MetaData], *args: WriteArgs.args, **kwargs: WriteArgs.kwargs) -> None:
+    #     ...
+    #
+    # @abstractmethod
+    # def write_collection(self, dfs: dict[str, pl.DataFrame], collection_metadata: MetaData, table_metadata: dict[str, MetaData], *args: WriteArgs.args, **kwargs: WriteArgs.kwargs) -> None:
+    #     ...
+    #
+    # @abstractmethod
+    # def scan_collection(self, *args: ReadArgs.args, **kwargs: ReadArgs.kwargs) -> tuple[dict[str, pl.LazyFrame], MetaData]:
+    #     ...
+    #
+    # @abstractmethod
+    # def read_collection(self, *args: ReadArgs.args, **kwargs: ReadArgs.kwargs) -> tuple[dict[str, pl.DataFrame], MetaData]:
+    #     ...
+
+
+class ParquetIO(DataFramelyIO):
+    def sink_table(
+        self, lf: pl.LazyFrame, serialized_schema: SerializedSchema, **kwargs: Any
+    ) -> None:
+        file = kwargs.pop("file")
+        metadata = kwargs.pop("metadata", {})
+        lf.sink_parquet(
+            file,
+            metadata={**metadata, SCHEMA_METADATA_KEY: serialized_schema},
+            **kwargs,
+        )
+
+    def write_table(
+        self, df: pl.DataFrame, serialized_schema: SerializedSchema, **kwargs: Any
+    ) -> None:
+        file = kwargs.pop("file")
+        metadata = kwargs.pop("metadata", {})
+        df.write_parquet(
+            file,
+            metadata={**metadata, SCHEMA_METADATA_KEY: serialized_schema},
+            **kwargs,
+        )
+
+    def scan_table(self, **kwargs: Any) -> tuple[pl.LazyFrame, SerializedSchema | None]:
+        source = kwargs.pop("source")
+        lf = pl.scan_parquet(source, **kwargs)
+        metadata = pl.read_parquet_metadata(source).get(SCHEMA_METADATA_KEY)
+        return lf, metadata
+
+    def read_table(self, **kwargs: Any) -> tuple[pl.DataFrame, SerializedSchema | None]:
+        source = kwargs.pop("source")
+        df = pl.read_parquet(source, **kwargs)
+        metadata = pl.read_parquet_metadata(source).get(SCHEMA_METADATA_KEY)
+        return df, metadata

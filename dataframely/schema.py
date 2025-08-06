@@ -22,6 +22,8 @@ from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
     SCHEMA_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
+    DataFramelyIO,
+    ParquetIO,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
     serialization_versions,
@@ -713,10 +715,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        metadata = kwargs.pop("metadata", {})
-        df.write_parquet(
-            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
-        )
+        cls._write(df=df, io=ParquetIO(), file=file, **kwargs)
 
     @classmethod
     def sink_parquet(
@@ -744,10 +743,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        metadata = kwargs.pop("metadata", {})
-        lf.sink_parquet(
-            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
-        )
+        return cls._sink(lf=lf, io=ParquetIO(), file=file, **kwargs)
 
     @classmethod
     def read_parquet(
@@ -796,9 +792,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        if not cls._requires_validation_for_reading_parquet(source, validation):
-            return pl.read_parquet(source, **kwargs)  # type: ignore
-        return cls.validate(pl.read_parquet(source, **kwargs), cast=True)
+        return cls._read(ParquetIO(), validation=validation, source=source, **kwargs)
 
     @classmethod
     def scan_parquet(
@@ -852,13 +846,14 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        if not cls._requires_validation_for_reading_parquet(source, validation):
-            return pl.scan_parquet(source, **kwargs)  # type: ignore
-        return cls.validate(pl.read_parquet(source, **kwargs), cast=True).lazy()
+        return cls._scan(ParquetIO(), validation=validation, source=source, **kwargs)
 
     @classmethod
     def _requires_validation_for_reading_parquet(
-        cls, source: FileSource, validation: Validation
+        cls,
+        deserialized_schema: type[Schema] | None,
+        validation: Validation,
+        source: str,
     ) -> bool:
         if validation == "skip":
             return False
@@ -866,20 +861,16 @@ class Schema(BaseSchema, ABC):
         # First, we check whether the source provides the dataframely schema. If it
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
-        serialized_schema = (
-            read_parquet_metadata_schema(source)
-            if not isinstance(source, list)
-            else None
-        )
-        if serialized_schema is not None:
-            if cls.matches(serialized_schema):
+
+        if deserialized_schema is not None:
+            if cls.matches(deserialized_schema):
                 return False
 
         # Otherwise, we definitely need to run validation. However, we emit different
         # information to the user depending on the value of `validate`.
         msg = (
             "current schema does not match stored schema"
-            if serialized_schema is not None
+            if deserialized_schema is not None
             else "no schema to check validity can be read from the source"
         )
         if validation == "forbid":
@@ -891,6 +882,40 @@ class Schema(BaseSchema, ABC):
                 f"Reading parquet file from '{source!r}' requires validation: {msg}."
             )
         return True
+
+    # ------------------------------------- IO --------------------------------------- #
+    @classmethod
+    def _write(cls, df: pl.DataFrame, io: DataFramelyIO, **kwargs: Any) -> None:
+        io.write_table(df=df, serialized_schema=cls.serialize(), **kwargs)
+
+    @classmethod
+    def _sink(cls, lf: pl.LazyFrame, io: DataFramelyIO, **kwargs: Any) -> None:
+        io.sink_table(lf=lf, serialized_schema=cls.serialize(), **kwargs)
+
+    @classmethod
+    def _scan(
+        cls, io: DataFramelyIO, validation: Validation, **kwargs: Any
+    ) -> LazyFrame[Self]:
+        source = kwargs.pop("source")
+
+        # Load
+        df, serialized_schema = io.scan_table(source=source)
+        deserialized_schema = (
+            deserialize_schema(serialized_schema) if serialized_schema else None
+        )
+
+        # Smart validation
+        if cls._requires_validation_for_reading_parquet(
+            deserialized_schema, validation, source=str(source)
+        ):
+            return cls.validate(df, cast=True).lazy()
+        return cls.cast(df)
+
+    @classmethod
+    def _read(
+        cls, io: DataFramelyIO, validation: Validation, **kwargs: Any
+    ) -> DataFrame[Self]:
+        return cls._scan(io=io, validation=validation, **kwargs).collect()
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
