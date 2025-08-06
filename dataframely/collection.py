@@ -21,6 +21,8 @@ from ._polars import FrameType, join_all_inner, join_all_outer
 from ._serialization import (
     COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
+    DataFramelyIO,
+    ParquetIO,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
     serialization_versions,
@@ -652,7 +654,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._to_parquet(directory, sink=False, **kwargs)
+        self._write(ParquetIO(), directory=directory)
 
     def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
@@ -672,34 +674,35 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._to_parquet(directory, sink=True, **kwargs)
+        self._sink(ParquetIO(), directory=directory)
 
-    def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
-        path = Path(directory) if isinstance(directory, str) else directory
-        path.mkdir(parents=True, exist_ok=True)
-
-        # The collection schema is serialized as part of the member parquet metadata
-        kwargs["metadata"] = kwargs.get("metadata", {}) | {
-            COLLECTION_METADATA_KEY: self.serialize()
-        }
-
-        member_schemas = self.member_schemas()
-        for key, lf in self.to_dict().items():
-            destination = (
-                path / key if "partition_by" in kwargs else path / f"{key}.parquet"
-            )
-            if sink:
-                member_schemas[key].sink_parquet(
-                    lf,  # type: ignore
-                    destination,
-                    **kwargs,
-                )
-            else:
-                member_schemas[key].write_parquet(
-                    lf.collect(),  # type: ignore
-                    destination,
-                    **kwargs,
-                )
+    #
+    # def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
+    #     path = Path(directory) if isinstance(directory, str) else directory
+    #     path.mkdir(parents=True, exist_ok=True)
+    #
+    #     # The collection schema is serialized as part of the member parquet metadata
+    #     kwargs["metadata"] = kwargs.get("metadata", {}) | {
+    #         COLLECTION_METADATA_KEY: self.serialize()
+    #     }
+    #
+    #     member_schemas = self.member_schemas()
+    #     for key, lf in self.to_dict().items():
+    #         destination = (
+    #             path / key if "partition_by" in kwargs else path / f"{key}.parquet"
+    #         )
+    #         if sink:
+    #             member_schemas[key].sink_parquet(
+    #                 lf,  # type: ignore
+    #                 destination,
+    #                 **kwargs,
+    #             )
+    #         else:
+    #             member_schemas[key].write_parquet(
+    #                 lf.collect(),  # type: ignore
+    #                 destination,
+    #                 **kwargs,
+    #             )
 
     @classmethod
     def read_parquet(
@@ -861,6 +864,26 @@ class Collection(BaseCollection, ABC):
                 pass
 
         return data, collection_type
+
+    def _write(self, io: DataFramelyIO, directory: Path | str) -> None:
+        io.write_collection(
+            self.to_dict(),
+            serialized_collection=self.serialize(),
+            serialized_schemas={
+                key: schema.serialize() for key, schema in self.member_schemas().items()
+            },
+            directory=directory,
+        )
+
+    def _sink(self, io: DataFramelyIO, directory: Path | str) -> None:
+        io.sink_collection(
+            self.to_dict(),
+            serialized_collection=self.serialize(),
+            serialized_schemas={
+                key: schema.serialize() for key, schema in self.member_schemas().items()
+            },
+            directory=directory,
+        )
 
     @classmethod
     def _member_source_path(cls, base_path: Path, name: str) -> Path | None:

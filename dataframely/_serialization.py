@@ -6,6 +6,7 @@ import decimal
 from abc import ABC, abstractmethod
 from io import BytesIO
 from json import JSONDecoder, JSONEncoder
+from pathlib import Path
 from typing import Any, cast
 
 import polars as pl
@@ -115,6 +116,7 @@ class SchemaJSONDecoder(JSONDecoder):
 
 
 SerializedSchema = str
+SerializedCollection = str
 
 
 class DataFramelyIO(ABC):
@@ -140,14 +142,24 @@ class DataFramelyIO(ABC):
     ) -> tuple[pl.DataFrame, SerializedSchema | None]: ...
 
     # # --------------------------- Collections ------------------------------------
-    # @abstractmethod
-    # def sink_collection(self, dfs: dict[str, pl.LazyFrame], collection_metadata: MetaData, table_metadata: dict[str, MetaData], *args: WriteArgs.args, **kwargs: WriteArgs.kwargs) -> None:
-    #     ...
-    #
-    # @abstractmethod
-    # def write_collection(self, dfs: dict[str, pl.DataFrame], collection_metadata: MetaData, table_metadata: dict[str, MetaData], *args: WriteArgs.args, **kwargs: WriteArgs.kwargs) -> None:
-    #     ...
-    #
+    @abstractmethod
+    def sink_collection(
+        self,
+        dfs: dict[str, pl.LazyFrame],
+        serialized_collection: SerializedCollection,
+        serialized_schemas: dict[str, str],
+        **kwargs: Any,
+    ) -> None: ...
+
+    @abstractmethod
+    def write_collection(
+        self,
+        dfs: dict[str, pl.LazyFrame],
+        serialized_collection: SerializedCollection,
+        serialized_schemas: dict[str, str],
+        **kwargs: Any,
+    ) -> None: ...
+
     # @abstractmethod
     # def scan_collection(self, *args: ReadArgs.args, **kwargs: ReadArgs.kwargs) -> tuple[dict[str, pl.LazyFrame], MetaData]:
     #     ...
@@ -158,6 +170,7 @@ class DataFramelyIO(ABC):
 
 
 class ParquetIO(DataFramelyIO):
+    # --------------------------- Schema -----------------------------------------------
     def sink_table(
         self, lf: pl.LazyFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
@@ -191,3 +204,54 @@ class ParquetIO(DataFramelyIO):
         df = pl.read_parquet(source, **kwargs)
         metadata = pl.read_parquet_metadata(source).get(SCHEMA_METADATA_KEY)
         return df, metadata
+
+    # ----------------------------- Collection -----------------------------------------
+    def sink_collection(
+        self,
+        dfs: dict[str, pl.LazyFrame],
+        serialized_collection: SerializedCollection,
+        serialized_schemas: dict[str, str],
+        **kwargs: Any,
+    ) -> None:
+        path = Path(kwargs.pop("directory"))
+
+        # The collection schema is serialized as part of the member parquet metadata
+        kwargs["metadata"] = kwargs.get("metadata", {}) | {
+            COLLECTION_METADATA_KEY: serialized_collection
+        }
+
+        for key, lf in dfs.items():
+            destination = (
+                path / key if "partition_by" in kwargs else path / f"{key}.parquet"
+            )
+            self.sink_table(
+                lf,
+                serialized_schema=serialized_schemas[key],
+                file=destination,
+                **kwargs,
+            )
+
+    def write_collection(
+        self,
+        dfs: dict[str, pl.LazyFrame],
+        serialized_collection: SerializedCollection,
+        serialized_schemas: dict[str, str],
+        **kwargs: Any,
+    ) -> None:
+        path = Path(kwargs.pop("directory"))
+
+        # The collection schema is serialized as part of the member parquet metadata
+        kwargs["metadata"] = kwargs.get("metadata", {}) | {
+            COLLECTION_METADATA_KEY: serialized_collection
+        }
+
+        for key, lf in dfs.items():
+            destination = (
+                path / key if "partition_by" in kwargs else path / f"{key}.parquet"
+            )
+            self.sink_table(
+                lf,
+                serialized_schema=serialized_schemas[key],
+                file=destination,
+                **kwargs,
+            )
