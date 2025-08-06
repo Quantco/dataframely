@@ -759,14 +759,12 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data, collection_type = cls._from_parquet(path, scan=False, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(
-            path, collection_type, validation
-        ):
-            cls._validate_input_keys(data)
-            return cls._init(data)
-        return cls.validate(data, cast=True)
+        return cls._read(
+            io=ParquetIO(),
+            validation=validation,
+            directory=directory,
+            **kwargs,
+        )
 
     @classmethod
     def scan_parquet(
@@ -826,44 +824,12 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data, collection_type = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(
-            path, collection_type, validation
-        ):
-            cls._validate_input_keys(data)
-            return cls._init(data)
-        return cls.validate(data, cast=True)
-
-    @classmethod
-    def _from_parquet(
-        cls, path: Path, scan: bool, **kwargs: Any
-    ) -> tuple[dict[str, pl.LazyFrame], type[Collection] | None]:
-        data = {}
-        collection_types = set()
-        for key in cls.members():
-            if (source_path := cls._member_source_path(path, key)) is not None:
-                data[key] = (
-                    pl.scan_parquet(source_path, **kwargs)
-                    if scan
-                    else pl.read_parquet(source_path, **kwargs).lazy()
-                )
-                if source_path.is_file():
-                    collection_types.add(read_parquet_metadata_collection(source_path))
-                else:
-                    for file in source_path.glob("**/*.parquet"):
-                        collection_types.add(read_parquet_metadata_collection(file))
-        collection_type = _reconcile_collection_types(collection_types)
-
-        # Backward compatibility: If the parquets do not have schema information,
-        # fall back to looking for schema.json
-        if (collection_type is None) and (schema_file := path / "schema.json").exists():
-            try:
-                collection_type = deserialize_collection(schema_file.read_text())
-            except JSONDecodeError:
-                pass
-
-        return data, collection_type
+        return cls._scan(
+            io=ParquetIO(),
+            validation=validation,
+            directory=directory,
+            **kwargs,
+        )
 
     def _write(self, io: DataFramelyIO, directory: Path | str) -> None:
         io.write_collection(
@@ -886,19 +852,52 @@ class Collection(BaseCollection, ABC):
         )
 
     @classmethod
-    def _member_source_path(cls, base_path: Path, name: str) -> Path | None:
-        if (path := base_path / name).exists() and base_path.is_dir():
-            # We assume that the member is stored as a hive-partitioned dataset
-            return path
-        if (path := base_path / f"{name}.parquet").exists():
-            # We assume that the member is stored as a single parquet file
-            return path
-        return None
+    def _scan(cls, io: DataFramelyIO, validation: Validation, **kwargs: Any) -> Self:
+        data, serialized_collection_types = io.read_collection(
+            members=cls.member_schemas().keys(), **kwargs
+        )
+        collection_types = []
+        collection_type: type[Collection] | None = None
+        for t in serialized_collection_types:
+            if t is None:
+                continue
+            try:
+                collection_type = deserialize_collection(t)
+                collection_types.append(collection_type)
+            except JSONDecodeError:
+                pass
+
+        collection_type = _reconcile_collection_types(collection_types)
+
+        if cls._requires_validation_for_reading_parquets(collection_type, validation):
+            return cls.validate(data, cast=True)
+        return cls.cast(data)
+
+    @classmethod
+    def _read(cls, io: DataFramelyIO, validation: Validation, **kwargs: Any) -> Self:
+        data, serialized_collection_types = io.scan_collection(
+            members=cls.member_schemas().keys(), **kwargs
+        )
+        collection_types = []
+        collection_type: type[Collection] | None = None
+        for t in serialized_collection_types:
+            if t is None:
+                continue
+            try:
+                collection_type = deserialize_collection(t)
+                collection_types.append(collection_type)
+            except JSONDecodeError:
+                pass
+
+        collection_type = _reconcile_collection_types(collection_types)
+
+        if cls._requires_validation_for_reading_parquets(collection_type, validation):
+            return cls.validate(data, cast=True)
+        return cls.cast(data)
 
     @classmethod
     def _requires_validation_for_reading_parquets(
         cls,
-        directory: Path,
         collection_type: type[Collection] | None,
         validation: Validation,
     ) -> bool:
@@ -917,12 +916,10 @@ class Collection(BaseCollection, ABC):
         )
         if validation == "forbid":
             raise ValidationRequiredError(
-                f"Cannot read collection from '{directory!r}' without validation: {msg}."
+                f"Cannot read collection without validation: {msg}."
             )
         if validation == "warn":
-            warnings.warn(
-                f"Reading parquet file from '{directory!r}' requires validation: {msg}."
-            )
+            warnings.warn(f"Reading parquet file requires validation: {msg}.")
         return True
 
     # ----------------------------------- UTILITIES ---------------------------------- #

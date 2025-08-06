@@ -4,6 +4,7 @@ import base64
 import datetime as dt
 import decimal
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from io import BytesIO
 from json import JSONDecoder, JSONEncoder
 from pathlib import Path
@@ -160,13 +161,15 @@ class DataFramelyIO(ABC):
         **kwargs: Any,
     ) -> None: ...
 
-    # @abstractmethod
-    # def scan_collection(self, *args: ReadArgs.args, **kwargs: ReadArgs.kwargs) -> tuple[dict[str, pl.LazyFrame], MetaData]:
-    #     ...
-    #
-    # @abstractmethod
-    # def read_collection(self, *args: ReadArgs.args, **kwargs: ReadArgs.kwargs) -> tuple[dict[str, pl.DataFrame], MetaData]:
-    #     ...
+    @abstractmethod
+    def scan_collection(
+        self, members: Iterable[str], **kwargs: Any
+    ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]: ...
+
+    @abstractmethod
+    def read_collection(
+        self, members: Iterable[str], **kwargs: Any
+    ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]: ...
 
 
 class ParquetIO(DataFramelyIO):
@@ -255,3 +258,56 @@ class ParquetIO(DataFramelyIO):
                 file=destination,
                 **kwargs,
             )
+
+    def scan_collection(
+        self, members: Iterable[str], **kwargs: Any
+    ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
+        path = Path(kwargs.pop("directory"))
+        return self._from_parquet(path=path, members=members, scan=True, **kwargs)
+
+    def read_collection(
+        self, members: Iterable[str], **kwargs: Any
+    ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
+        path = Path(kwargs.pop("directory"))
+        return self._from_parquet(path=path, members=members, scan=False, **kwargs)
+
+    def _from_parquet(
+        self, path: Path, members: Iterable[str], scan: bool, **kwargs: Any
+    ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
+        data = {}
+        collection_types = []
+
+        for key in members:
+            if (source_path := self._member_source_path(path, key)) is not None:
+                data[key] = (
+                    pl.scan_parquet(source_path, **kwargs)
+                    if scan
+                    else pl.read_parquet(source_path, **kwargs).lazy()
+                )
+                if source_path.is_file():
+                    collection_types.append(_read_serialized_collection(source_path))
+                else:
+                    for file in source_path.glob("**/*.parquet"):
+                        collection_types.append(_read_serialized_collection(file))
+
+        # Backward compatibility: If the parquets do not have schema information,
+        # fall back to looking for schema.json
+        if (not collection_types) and (schema_file := path / "schema.json").exists():
+            collection_types.append(schema_file.read_text())
+
+        return data, collection_types
+
+    @classmethod
+    def _member_source_path(cls, base_path: Path, name: str) -> Path | None:
+        if (path := base_path / name).exists() and base_path.is_dir():
+            # We assume that the member is stored as a hive-partitioned dataset
+            return path
+        if (path := base_path / f"{name}.parquet").exists():
+            # We assume that the member is stored as a single parquet file
+            return path
+        return None
+
+
+def _read_serialized_collection(path: Path) -> SerializedCollection | None:
+    meta = pl.read_parquet_metadata(path)
+    return meta.get(COLLECTION_METADATA_KEY)
