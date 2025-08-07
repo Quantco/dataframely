@@ -1,12 +1,13 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-from typing import Annotated
+from typing import Annotated, Any
 
 import pytest
 
 import dataframely as dy
 from dataframely.exc import ImplementationError
+from dataframely.random import Generator
 from dataframely.testing.factory import create_collection_raw
 
 
@@ -56,6 +57,17 @@ class IgnoringCollection(dy.Collection):
     second: Annotated[
         dy.LazyFrame[MySecondSchema], dy.CollectionMember(ignored_in_filters=True)
     ]
+
+
+class IncorrectOverrideCollection(dy.Collection):
+    first: dy.LazyFrame[MyFirstSchema]
+    second: dy.LazyFrame[MySecondSchema] | None
+
+    @classmethod
+    def _preprocess_sample(
+        cls, sample: dict[str, Any], index: int, generator: Generator
+    ) -> dict[str, Any]:
+        return sample
 
 
 # ------------------------------------------------------------------------------------ #
@@ -141,6 +153,11 @@ def test_sample_with_ignored_members(n: int) -> None:
 def test_sample_num_rows_mismatch() -> None:
     with pytest.raises(ValueError, match=r"`num_rows` mismatches"):
         MyCollection.sample(num_rows=1, overrides=[])
+
+
+def test_sample_incorrect_override() -> None:
+    with pytest.raises(ValueError, match=r"All samples must contain"):
+        IncorrectOverrideCollection.sample()
 
 
 def test_invalid_inline_for_sampling() -> None:
