@@ -23,8 +23,21 @@ def test_equal_to_polars_schema(column_type: type[Column]) -> None:
     assert actual == expected
 
 
-def test_equal_polars_schema_enum() -> None:
-    schema = create_schema("test", {"a": dy.Enum(["a", "b"])})
+@pytest.mark.parametrize(
+    "categories",
+    [
+        ("a", "b"),
+        tuple(str(i) for i in range(2**8 - 2)),
+        tuple(str(i) for i in range(2**8 - 1)),
+        tuple(str(i) for i in range(2**8)),
+        tuple(str(i) for i in range(2**16 - 2)),
+        tuple(str(i) for i in range(2**16 - 1)),
+        tuple(str(i) for i in range(2**16)),
+        tuple(str(i) for i in range(2**17)),
+    ],
+)
+def test_equal_polars_schema_enum(categories: list[str]) -> None:
+    schema = create_schema("test", {"a": dy.Enum(categories)})
     actual = schema.pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected

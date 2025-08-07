@@ -82,7 +82,13 @@ class Enum(Column):
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return pa.dictionary(pa.uint32(), pa.large_string())
+        if len(self.categories) <= 2**8 - 2:
+            dtype = pa.uint8()
+        elif len(self.categories) <= 2**16 - 2:
+            dtype = pa.uint16()
+        else:
+            dtype = pa.uint32()
+        return pa.dictionary(dtype, pa.large_string())
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(
