@@ -88,6 +88,20 @@ def test_sample_with_overrides() -> None:
     assert collection.second.collect()["c"].to_list() == [3, 4, 6]
 
 
+def test_sample_with_primary_key_override() -> None:
+    collection = MyCollection.sample(
+        overrides=[
+            {"a": 1, "second": [{"c": 3}, {"c": 4}]},
+            {"a": 2, "second": [{"c": 6}]},
+        ]
+    )
+
+    assert collection.first.collect()["a"].to_list() == [1, 2]
+
+    assert collection.second is not None
+    assert collection.second.collect()["a"].to_list() == [1, 1, 2]
+
+
 @pytest.mark.parametrize(
     "collection_type", [MyInlinedCollection, MyInlinedCollectionWithOptional]
 )
