@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
@@ -345,7 +346,9 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
 
     # Act
     spy = mocker.spy(collection_type, "validate")
-    _read_parquet(collection_type, tmp_path, lazy, validation=validation)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        _read_parquet(collection_type, tmp_path, lazy, validation=validation)
 
     # Assert
     spy.assert_called_once()
