@@ -21,10 +21,10 @@ from ._polars import FrameType, join_all_inner, join_all_outer
 from ._serialization import (
     COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
-    IOManager,
-    ParquetIOManager,
+    ParquetStorageBackend,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
+    StorageBackend,
     serialization_versions,
 )
 from ._typing import LazyFrame, Validation
@@ -667,7 +667,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._write(ParquetIOManager(), directory=directory)
+        self._write(ParquetStorageBackend(), directory=directory)
 
     def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
@@ -687,7 +687,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._sink(ParquetIOManager(), directory=directory)
+        self._sink(ParquetStorageBackend(), directory=directory)
 
     @classmethod
     def read_parquet(
@@ -745,7 +745,7 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         return cls._read(
-            io=ParquetIOManager(),
+            io=ParquetStorageBackend(),
             validation=validation,
             directory=directory,
             lazy=False,
@@ -811,15 +811,15 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         return cls._read(
-            io=ParquetIOManager(),
+            io=ParquetStorageBackend(),
             validation=validation,
             directory=directory,
             lazy=True,
             **kwargs,
         )
 
-    def _write(self, io: IOManager, directory: Path | str) -> None:
-        # Utility method encapsulating the interaction with the IOManager
+    def _write(self, io: StorageBackend, directory: Path | str) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
 
         io.write_collection(
             self.to_dict(),
@@ -830,8 +830,8 @@ class Collection(BaseCollection, ABC):
             directory=directory,
         )
 
-    def _sink(self, io: IOManager, directory: Path | str) -> None:
-        # Utility method encapsulating the interaction with the IOManager
+    def _sink(self, io: StorageBackend, directory: Path | str) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
 
         io.sink_collection(
             self.to_dict(),
@@ -844,9 +844,9 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def _read(
-        cls, io: IOManager, validation: Validation, lazy: bool, **kwargs: Any
+        cls, io: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
     ) -> Self:
-        # Utility method encapsulating the interaction with the IOManager
+        # Utility method encapsulating the interaction with the StorageBackend
 
         scan_function = io.scan_collection if lazy else io.read_collection
         data, serialized_collection_types = scan_function(

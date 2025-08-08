@@ -23,10 +23,10 @@ from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
     SCHEMA_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
-    IOManager,
-    ParquetIOManager,
+    ParquetStorageBackend,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
+    StorageBackend,
     serialization_versions,
 )
 from ._typing import DataFrame, LazyFrame, Validation
@@ -716,7 +716,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        cls._write(df=df, io=ParquetIOManager(), file=file, **kwargs)
+        cls._write(df=df, io=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def sink_parquet(
@@ -744,7 +744,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        return cls._sink(lf=lf, io=ParquetIOManager(), file=file, **kwargs)
+        return cls._sink(lf=lf, io=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def read_parquet(
@@ -794,7 +794,7 @@ class Schema(BaseSchema, ABC):
             :meth:`serialize`.
         """
         return cls._read(
-            ParquetIOManager(), validation=validation, source=source, **kwargs
+            ParquetStorageBackend(), validation=validation, source=source, **kwargs
         )
 
     @classmethod
@@ -850,7 +850,7 @@ class Schema(BaseSchema, ABC):
             :meth:`serialize`.
         """
         return cls._scan(
-            ParquetIOManager(), validation=validation, source=source, **kwargs
+            ParquetStorageBackend(), validation=validation, source=source, **kwargs
         )
 
     @classmethod
@@ -890,16 +890,16 @@ class Schema(BaseSchema, ABC):
 
     # ------------------------------------- IO --------------------------------------- #
     @classmethod
-    def _write(cls, df: pl.DataFrame, io: IOManager, **kwargs: Any) -> None:
+    def _write(cls, df: pl.DataFrame, io: StorageBackend, **kwargs: Any) -> None:
         io.write_frame(df=df, serialized_schema=cls.serialize(), **kwargs)
 
     @classmethod
-    def _sink(cls, lf: pl.LazyFrame, io: IOManager, **kwargs: Any) -> None:
+    def _sink(cls, lf: pl.LazyFrame, io: StorageBackend, **kwargs: Any) -> None:
         io.sink_frame(lf=lf, serialized_schema=cls.serialize(), **kwargs)
 
     @classmethod
     def _scan(
-        cls, io: IOManager, validation: Validation, **kwargs: Any
+        cls, io: StorageBackend, validation: Validation, **kwargs: Any
     ) -> LazyFrame[Self]:
         source = kwargs.pop("source")
 
@@ -918,7 +918,7 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def _read(
-        cls, io: IOManager, validation: Validation, **kwargs: Any
+        cls, io: StorageBackend, validation: Validation, **kwargs: Any
     ) -> DataFrame[Self]:
         return cls._scan(io=io, validation=validation, **kwargs).collect()
 

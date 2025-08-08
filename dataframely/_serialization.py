@@ -126,7 +126,7 @@ SerializedSchema = str
 SerializedCollection = str
 
 
-class IOManager(ABC):
+class StorageBackend(ABC):
     """Base class for IO managers.
 
     An IO manager encapsulates a way of serializing and deserializing dataframlely
@@ -265,7 +265,7 @@ class IOManager(ABC):
         """
 
 
-class ParquetIOManager(IOManager):
+class ParquetStorageBackend(StorageBackend):
     """IO manager that stores data and metadata in parquet files on a file system.
 
     Single frames are stored as individual parquet files
