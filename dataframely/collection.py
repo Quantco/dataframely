@@ -21,8 +21,8 @@ from ._polars import FrameType, join_all_inner, join_all_outer
 from ._serialization import (
     COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
-    DataFramelyIO,
-    ParquetIO,
+    IOManager,
+    ParquetIOManager,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
     serialization_versions,
@@ -654,7 +654,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._write(ParquetIO(), directory=directory)
+        self._write(ParquetIOManager(), directory=directory)
 
     def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
@@ -674,35 +674,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._sink(ParquetIO(), directory=directory)
-
-    #
-    # def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
-    #     path = Path(directory) if isinstance(directory, str) else directory
-    #     path.mkdir(parents=True, exist_ok=True)
-    #
-    #     # The collection schema is serialized as part of the member parquet metadata
-    #     kwargs["metadata"] = kwargs.get("metadata", {}) | {
-    #         COLLECTION_METADATA_KEY: self.serialize()
-    #     }
-    #
-    #     member_schemas = self.member_schemas()
-    #     for key, lf in self.to_dict().items():
-    #         destination = (
-    #             path / key if "partition_by" in kwargs else path / f"{key}.parquet"
-    #         )
-    #         if sink:
-    #             member_schemas[key].sink_parquet(
-    #                 lf,  # type: ignore
-    #                 destination,
-    #                 **kwargs,
-    #             )
-    #         else:
-    #             member_schemas[key].write_parquet(
-    #                 lf.collect(),  # type: ignore
-    #                 destination,
-    #                 **kwargs,
-    #             )
+        self._sink(ParquetIOManager(), directory=directory)
 
     @classmethod
     def read_parquet(
@@ -760,7 +732,7 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         return cls._read(
-            io=ParquetIO(),
+            io=ParquetIOManager(),
             validation=validation,
             directory=directory,
             **kwargs,
@@ -825,13 +797,13 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         return cls._scan(
-            io=ParquetIO(),
+            io=ParquetIOManager(),
             validation=validation,
             directory=directory,
             **kwargs,
         )
 
-    def _write(self, io: DataFramelyIO, directory: Path | str) -> None:
+    def _write(self, io: IOManager, directory: Path | str) -> None:
         io.write_collection(
             self.to_dict(),
             serialized_collection=self.serialize(),
@@ -841,7 +813,7 @@ class Collection(BaseCollection, ABC):
             directory=directory,
         )
 
-    def _sink(self, io: DataFramelyIO, directory: Path | str) -> None:
+    def _sink(self, io: IOManager, directory: Path | str) -> None:
         io.sink_collection(
             self.to_dict(),
             serialized_collection=self.serialize(),
@@ -852,7 +824,7 @@ class Collection(BaseCollection, ABC):
         )
 
     @classmethod
-    def _scan(cls, io: DataFramelyIO, validation: Validation, **kwargs: Any) -> Self:
+    def _scan(cls, io: IOManager, validation: Validation, **kwargs: Any) -> Self:
         data, serialized_collection_types = io.read_collection(
             members=cls.member_schemas().keys(), **kwargs
         )
@@ -874,7 +846,7 @@ class Collection(BaseCollection, ABC):
         return cls.cast(data)
 
     @classmethod
-    def _read(cls, io: DataFramelyIO, validation: Validation, **kwargs: Any) -> Self:
+    def _read(cls, io: IOManager, validation: Validation, **kwargs: Any) -> Self:
         data, serialized_collection_types = io.scan_collection(
             members=cls.member_schemas().keys(), **kwargs
         )
