@@ -47,6 +47,7 @@ from dataframely.testing import COLUMN_TYPES, create_schema
         (dy.String(regex="^[abc]{1,3}d$"), "VARCHAR(4)"),
         (dy.Enum(["foo", "bar"]), "CHAR(3)"),
         (dy.Enum(["a", "abc"]), "VARCHAR(3)"),
+        (dy.Categorical(), "VARCHAR(max)"),
     ],
 )
 def test_mssql_datatype(column: Column, datatype: str) -> None:
