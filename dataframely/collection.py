@@ -667,7 +667,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._write(ParquetStorageBackend(), directory=directory)
+        self._write(ParquetStorageBackend(), directory=directory, **kwargs)
 
     def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
@@ -687,7 +687,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._sink(ParquetStorageBackend(), directory=directory)
+        self._sink(ParquetStorageBackend(), directory=directory, **kwargs)
 
     @classmethod
     def read_parquet(
@@ -818,7 +818,7 @@ class Collection(BaseCollection, ABC):
             **kwargs,
         )
 
-    def _write(self, io: StorageBackend, directory: Path | str) -> None:
+    def _write(self, io: StorageBackend, directory: Path | str, **kwargs: Any) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
 
         io.write_collection(
@@ -828,9 +828,10 @@ class Collection(BaseCollection, ABC):
                 key: schema.serialize() for key, schema in self.member_schemas().items()
             },
             directory=directory,
+            **kwargs,
         )
 
-    def _sink(self, io: StorageBackend, directory: Path | str) -> None:
+    def _sink(self, io: StorageBackend, directory: Path | str, **kwargs: Any) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
 
         io.sink_collection(
@@ -840,6 +841,7 @@ class Collection(BaseCollection, ABC):
                 key: schema.serialize() for key, schema in self.member_schemas().items()
             },
             directory=directory,
+            **kwargs,
         )
 
     @classmethod

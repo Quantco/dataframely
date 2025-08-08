@@ -403,8 +403,8 @@ class ParquetStorageBackend(StorageBackend):
             destination = (
                 path / key if "partition_by" in kwargs else path / f"{key}.parquet"
             )
-            self.sink_frame(
-                lf,
+            self.write_frame(
+                lf.collect(),
                 serialized_schema=serialized_schemas[key],
                 file=destination,
                 **kwargs,
