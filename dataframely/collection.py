@@ -150,9 +150,16 @@ class Collection(BaseCollection, ABC):
             A collection where all members (including optional ones) have been sampled
             according to the input parameters.
 
+        Attention:
+            In case the collection has members with a common primary key, the
+            `_preprocess_sample` method must return distinct primary key values for each
+            sample. The default implementation does this on a best-effort basis but may
+            cause primary key violations. Hence, it is recommended to override this
+            method and ensure that all primary key columns are set.
+
         Raises:
             ValueError: If the :meth:`_preprocess_sample` method does not return all
-                common primary keys for all samples.
+                common primary key columns for all samples.
             ValidationError: If the sampled members violate any of the collection
                 filters. If the collection does not have filters, this error is never
                 raised. To prevent validation errors, overwrite the
@@ -320,9 +327,7 @@ class Collection(BaseCollection, ABC):
         of fuzzy sampling rounds when sampling individual members.
 
         Args:
-            sample: The sample to preprocess. By default, this is a simple dictionary.
-                Subclasses may decide, however, to introduce a :class:`TypedDict` to
-                ease the creation of samples.
+            sample: The sample to preprocess.
             index: The index of the sample in the list of samples. Typically, this value
                 can be used to assign unique primary keys for samples.
             generator: The generator to use when performing random sampling within the
@@ -334,10 +339,18 @@ class Collection(BaseCollection, ABC):
             primary keys.
         """
         if len(cls.members()) > 1 and len(cls.common_primary_keys()) > 0:
-            raise ValueError(
-                "`_preprocess_sample` must be overwritten for collections with more "
-                "than 1 member sharing a common primary key."
-            )
+            # If we have multiple members with a common primary key, we need to ensure
+            # that the samples have a value set for all common primary key columns.
+            # NOTE: This is experimental as we commit to a primary key that cannot be
+            #  changed at a later point (e.g. due to primary key violations).
+            first_member_columns = next(iter(cls.member_schemas().values())).columns()
+            for primary_key in cls.common_primary_keys():
+                if primary_key in sample:
+                    continue
+
+                value = first_member_columns[primary_key].sample(generator).item()
+                sample[primary_key] = value
+
         return sample
 
     # ---------------------------------- VALIDATION ---------------------------------- #
