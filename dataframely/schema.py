@@ -794,7 +794,11 @@ class Schema(BaseSchema, ABC):
             :meth:`serialize`.
         """
         return cls._read(
-            ParquetStorageBackend(), validation=validation, source=source, **kwargs
+            ParquetStorageBackend(),
+            validation=validation,
+            lazy=False,
+            source=source,
+            **kwargs,
         )
 
     @classmethod
@@ -849,8 +853,12 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        return cls._scan(
-            ParquetStorageBackend(), validation=validation, source=source, **kwargs
+        return cls._read(
+            ParquetStorageBackend(),
+            validation=validation,
+            lazy=True,
+            source=source,
+            **kwargs,
         )
 
     @classmethod
@@ -897,14 +905,36 @@ class Schema(BaseSchema, ABC):
     def _sink(cls, lf: pl.LazyFrame, io: StorageBackend, **kwargs: Any) -> None:
         io.sink_frame(lf=lf, serialized_schema=cls.serialize(), **kwargs)
 
+    @overload
     @classmethod
-    def _scan(
-        cls, io: StorageBackend, validation: Validation, **kwargs: Any
-    ) -> LazyFrame[Self]:
+    def _read(
+        cls,
+        io: StorageBackend,
+        validation: Validation,
+        lazy: Literal[True],
+        **kwargs: Any,
+    ) -> LazyFrame[Self]: ...
+
+    @overload
+    @classmethod
+    def _read(
+        cls,
+        io: StorageBackend,
+        validation: Validation,
+        lazy: Literal[False],
+        **kwargs: Any,
+    ) -> DataFrame[Self]: ...
+
+    @classmethod
+    def _read(
+        cls, io: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
+    ) -> LazyFrame[Self] | DataFrame[Self]:
+        read_function = io.scan_frame if lazy else io.read_frame
+
         source = kwargs.pop("source")
 
         # Load
-        df, serialized_schema = io.scan_frame(source=source)
+        df, serialized_schema = read_function(source=source)
         deserialized_schema = (
             deserialize_schema(serialized_schema) if serialized_schema else None
         )
@@ -915,12 +945,6 @@ class Schema(BaseSchema, ABC):
         ):
             return cls.validate(df, cast=True).lazy()
         return cls.cast(df)
-
-    @classmethod
-    def _read(
-        cls, io: StorageBackend, validation: Validation, **kwargs: Any
-    ) -> DataFrame[Self]:
-        return cls._scan(io=io, validation=validation, **kwargs).collect()
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
