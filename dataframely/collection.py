@@ -857,7 +857,7 @@ class Collection(BaseCollection, ABC):
         if (collection_type is None) and (schema_file := path / "schema.json").exists():
             try:
                 collection_type = deserialize_collection(schema_file.read_text())
-            except JSONDecodeError:
+            except (JSONDecodeError, plexc.ComputeError):
                 pass
 
         return data, collection_type
@@ -934,12 +934,15 @@ def read_parquet_metadata_collection(
         source: Path to a parquet file or a file-like object that contains the metadata.
 
     Returns:
-        The collection that was serialized to the metadata or ``None`` if no collection metadata
-        is found.
+        The collection that was serialized to the metadata. ``None`` if no collection
+        metadata is found or the deserialization fails.
     """
     metadata = pl.read_parquet_metadata(source)
     if (schema_metadata := metadata.get(COLLECTION_METADATA_KEY)) is not None:
-        return deserialize_collection(schema_metadata)
+        try:
+            return deserialize_collection(schema_metadata)
+        except (JSONDecodeError, plexc.ComputeError):
+            return None
     return None
 
 

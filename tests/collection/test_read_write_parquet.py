@@ -11,6 +11,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._serialization import COLLECTION_METADATA_KEY
 from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_collection, create_schema
@@ -375,3 +376,20 @@ def test_reconcile_collection_types(
     inputs: list[type[dy.Collection] | None], output: type[dy.Collection] | None
 ) -> None:
     assert output == _reconcile_collection_types(inputs)
+
+
+# ---------------------------------- MANUAL METADATA --------------------------------- #
+
+
+def test_read_invalid_parquet_metadata_collection(tmp_path: Path) -> None:
+    # Arrange
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    df.write_parquet(
+        tmp_path / "df.parquet", metadata={COLLECTION_METADATA_KEY: "invalid"}
+    )
+
+    # Act
+    collection = dy.read_parquet_metadata_collection(tmp_path / "df.parquet")
+
+    # Assert
+    assert collection is None
