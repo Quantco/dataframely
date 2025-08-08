@@ -735,6 +735,7 @@ class Collection(BaseCollection, ABC):
             io=ParquetIOManager(),
             validation=validation,
             directory=directory,
+            lazy=False,
             **kwargs,
         )
 
@@ -796,10 +797,11 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        return cls._scan(
+        return cls._read(
             io=ParquetIOManager(),
             validation=validation,
             directory=directory,
+            lazy=True,
             **kwargs,
         )
 
@@ -828,47 +830,17 @@ class Collection(BaseCollection, ABC):
         )
 
     @classmethod
-    def _scan(cls, io: IOManager, validation: Validation, **kwargs: Any) -> Self:
+    def _read(
+        cls, io: IOManager, validation: Validation, lazy: bool, **kwargs: Any
+    ) -> Self:
         # Utility method encapsulating the interaction with the IOManager
 
-        data, serialized_collection_types = io.read_collection(
+        scan_function = io.scan_collection if lazy else io.read_collection
+        data, serialized_collection_types = scan_function(
             members=cls.member_schemas().keys(), **kwargs
         )
-        collection_types = []
-        collection_type: type[Collection] | None = None
-        for t in serialized_collection_types:
-            if t is None:
-                continue
-            try:
-                collection_type = deserialize_collection(t)
-                collection_types.append(collection_type)
-            except JSONDecodeError:
-                pass
 
-        collection_type = _reconcile_collection_types(collection_types)
-
-        if cls._requires_validation_for_reading_parquets(collection_type, validation):
-            return cls.validate(data, cast=True)
-        return cls.cast(data)
-
-    @classmethod
-    def _read(cls, io: IOManager, validation: Validation, **kwargs: Any) -> Self:
-        # Utility method encapsulating the interaction with the IOManager
-
-        data, serialized_collection_types = io.scan_collection(
-            members=cls.member_schemas().keys(), **kwargs
-        )
-        collection_types = []
-        collection_type: type[Collection] | None = None
-        for t in serialized_collection_types:
-            if t is None:
-                continue
-            try:
-                collection_type = deserialize_collection(t)
-                collection_types.append(collection_type)
-            except JSONDecodeError:
-                pass
-
+        collection_types = _deserialize_types(serialized_collection_types)
         collection_type = _reconcile_collection_types(collection_types)
 
         if cls._requires_validation_for_reading_parquets(collection_type, validation):
@@ -1008,6 +980,23 @@ def _extract_keys_if_exist(
     data: Mapping[str, Any], keys: Sequence[str]
 ) -> dict[str, Any]:
     return {key: data[key] for key in keys if key in data}
+
+
+def _deserialize_types(
+    serialized_collection_types: Iterable[str | None],
+) -> list[type[Collection]]:
+    collection_types = []
+    collection_type: type[Collection] | None = None
+    for t in serialized_collection_types:
+        if t is None:
+            continue
+        try:
+            collection_type = deserialize_collection(t)
+            collection_types.append(collection_type)
+        except JSONDecodeError:
+            pass
+
+    return collection_types
 
 
 def _reconcile_collection_types(
