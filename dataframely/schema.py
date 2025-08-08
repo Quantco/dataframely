@@ -1027,11 +1027,15 @@ def read_parquet_metadata_schema(
         The schema that was serialized to the metadata. ``None`` if no schema metadata
         is found or the deserialization fails.
     """
-    metadata = pl.read_parquet_metadata(source)
+    try:
+        metadata = pl.read_parquet_metadata(source)
+    except plexc.ComputeError:
+        return None
+
     if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
         try:
             return deserialize_schema(schema_metadata)
-        except (JSONDecodeError, plexc.ComputeError):
+        except JSONDecodeError:
             return None
     return None
 
