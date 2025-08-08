@@ -292,7 +292,7 @@ class ParquetIO(DataFramelyIO):
 
         # Backward compatibility: If the parquets do not have schema information,
         # fall back to looking for schema.json
-        if (not collection_types) and (schema_file := path / "schema.json").exists():
+        if not any(collection_types) and (schema_file := path / "schema.json").exists():
             collection_types.append(schema_file.read_text())
 
         return data, collection_types
