@@ -134,7 +134,7 @@ class IOManager(ABC):
 
     # ----------------------------------- Schemas -------------------------------------
     @abstractmethod
-    def sink_schema(
+    def sink_frame(
         self, lf: pl.LazyFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
         """Stream the contents of a dataframe, and its metadata to the storage backend.
@@ -147,7 +147,7 @@ class IOManager(ABC):
         """
 
     @abstractmethod
-    def write_schema(
+    def write_frame(
         self, df: pl.DataFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
         """Write the contents of a dataframe, and its metadata to the storage backend.
@@ -160,9 +160,7 @@ class IOManager(ABC):
         """
 
     @abstractmethod
-    def scan_schema(
-        self, **kwargs: Any
-    ) -> tuple[pl.LazyFrame, SerializedSchema | None]:
+    def scan_frame(self, **kwargs: Any) -> tuple[pl.LazyFrame, SerializedSchema | None]:
         """Lazily read frame data and metadata from the storage backend.
 
         Args:
@@ -174,9 +172,7 @@ class IOManager(ABC):
         """
 
     @abstractmethod
-    def read_schema(
-        self, **kwargs: Any
-    ) -> tuple[pl.DataFrame, SerializedSchema | None]:
+    def read_frame(self, **kwargs: Any) -> tuple[pl.DataFrame, SerializedSchema | None]:
         """Eagerly read frame data and metadata from the storage backend.
 
         Args:
@@ -272,7 +268,7 @@ class ParquetIOManager(IOManager):
     """
 
     # ----------------------------------- Schemas -------------------------------------
-    def sink_schema(
+    def sink_frame(
         self, lf: pl.LazyFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
         """This method stores frames as individual parquet files.
@@ -294,7 +290,7 @@ class ParquetIOManager(IOManager):
             **kwargs,
         )
 
-    def write_schema(
+    def write_frame(
         self, df: pl.DataFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
         """This method stores frames as individual parquet files.
@@ -316,9 +312,7 @@ class ParquetIOManager(IOManager):
             **kwargs,
         )
 
-    def scan_schema(
-        self, **kwargs: Any
-    ) -> tuple[pl.LazyFrame, SerializedSchema | None]:
+    def scan_frame(self, **kwargs: Any) -> tuple[pl.LazyFrame, SerializedSchema | None]:
         """Lazily read single frames from parquet.
 
         Args:
@@ -330,9 +324,7 @@ class ParquetIOManager(IOManager):
         metadata = _read_serialized_schema(source)
         return lf, metadata
 
-    def read_schema(
-        self, **kwargs: Any
-    ) -> tuple[pl.DataFrame, SerializedSchema | None]:
+    def read_frame(self, **kwargs: Any) -> tuple[pl.DataFrame, SerializedSchema | None]:
         """Eagerly read single frames from parquet.
 
         Args:
@@ -371,7 +363,7 @@ class ParquetIOManager(IOManager):
             destination = (
                 path / key if "partition_by" in kwargs else path / f"{key}.parquet"
             )
-            self.sink_schema(
+            self.sink_frame(
                 lf,
                 serialized_schema=serialized_schemas[key],
                 file=destination,
@@ -404,7 +396,7 @@ class ParquetIOManager(IOManager):
             destination = (
                 path / key if "partition_by" in kwargs else path / f"{key}.parquet"
             )
-            self.sink_schema(
+            self.sink_frame(
                 lf,
                 serialized_schema=serialized_schemas[key],
                 file=destination,

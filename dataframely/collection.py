@@ -804,6 +804,8 @@ class Collection(BaseCollection, ABC):
         )
 
     def _write(self, io: IOManager, directory: Path | str) -> None:
+        # Utility method encapsulating the interaction with the IOManager
+
         io.write_collection(
             self.to_dict(),
             serialized_collection=self.serialize(),
@@ -814,6 +816,8 @@ class Collection(BaseCollection, ABC):
         )
 
     def _sink(self, io: IOManager, directory: Path | str) -> None:
+        # Utility method encapsulating the interaction with the IOManager
+
         io.sink_collection(
             self.to_dict(),
             serialized_collection=self.serialize(),
@@ -825,6 +829,8 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def _scan(cls, io: IOManager, validation: Validation, **kwargs: Any) -> Self:
+        # Utility method encapsulating the interaction with the IOManager
+
         data, serialized_collection_types = io.read_collection(
             members=cls.member_schemas().keys(), **kwargs
         )
@@ -847,6 +853,8 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def _read(cls, io: IOManager, validation: Validation, **kwargs: Any) -> Self:
+        # Utility method encapsulating the interaction with the IOManager
+
         data, serialized_collection_types = io.scan_collection(
             members=cls.member_schemas().keys(), **kwargs
         )

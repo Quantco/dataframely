@@ -890,11 +890,11 @@ class Schema(BaseSchema, ABC):
     # ------------------------------------- IO --------------------------------------- #
     @classmethod
     def _write(cls, df: pl.DataFrame, io: IOManager, **kwargs: Any) -> None:
-        io.write_schema(df=df, serialized_schema=cls.serialize(), **kwargs)
+        io.write_frame(df=df, serialized_schema=cls.serialize(), **kwargs)
 
     @classmethod
     def _sink(cls, lf: pl.LazyFrame, io: IOManager, **kwargs: Any) -> None:
-        io.sink_schema(lf=lf, serialized_schema=cls.serialize(), **kwargs)
+        io.sink_frame(lf=lf, serialized_schema=cls.serialize(), **kwargs)
 
     @classmethod
     def _scan(
@@ -903,7 +903,7 @@ class Schema(BaseSchema, ABC):
         source = kwargs.pop("source")
 
         # Load
-        df, serialized_schema = io.scan_schema(source=source)
+        df, serialized_schema = io.scan_frame(source=source)
         deserialized_schema = (
             deserialize_schema(serialized_schema) if serialized_schema else None
         )
