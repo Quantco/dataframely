@@ -929,12 +929,15 @@ class Schema(BaseSchema, ABC):
     def _read(
         cls, io: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
     ) -> LazyFrame[Self] | DataFrame[Self]:
-        read_function = io.scan_frame if lazy else io.read_frame
-
         source = kwargs.pop("source")
 
         # Load
-        df, serialized_schema = read_function(source=source)
+        if lazy:
+            lf, serialized_schema = io.scan_frame(source=source)
+        else:
+            df, serialized_schema = io.read_frame(source=source)
+            lf = df.lazy()
+
         deserialized_schema = (
             deserialize_schema(serialized_schema) if serialized_schema else None
         )
@@ -943,8 +946,17 @@ class Schema(BaseSchema, ABC):
         if cls._requires_validation_for_reading_parquet(
             deserialized_schema, validation, source=str(source)
         ):
-            return cls.validate(df, cast=True).lazy()
-        return cls.cast(df)
+            validated = cls.validate(lf, cast=True)
+            if lazy:
+                return validated.lazy()
+            else:
+                return validated
+
+        casted = cls.cast(lf)
+        if lazy:
+            return casted
+        else:
+            return casted.collect()
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 

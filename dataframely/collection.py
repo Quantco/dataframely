@@ -850,10 +850,14 @@ class Collection(BaseCollection, ABC):
     ) -> Self:
         # Utility method encapsulating the interaction with the StorageBackend
 
-        scan_function = io.scan_collection if lazy else io.read_collection
-        data, serialized_collection_types = scan_function(
-            members=cls.member_schemas().keys(), **kwargs
-        )
+        if lazy:
+            data, serialized_collection_types = io.scan_collection(
+                members=cls.member_schemas().keys(), **kwargs
+            )
+        else:
+            data, serialized_collection_types = io.read_collection(
+                members=cls.member_schemas().keys(), **kwargs
+            )
 
         collection_types = _deserialize_types(serialized_collection_types)
         collection_type = _reconcile_collection_types(collection_types)
