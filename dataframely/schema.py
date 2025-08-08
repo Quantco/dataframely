@@ -744,7 +744,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        return cls._sink(lf=lf, io=ParquetStorageBackend(), file=file, **kwargs)
+        cls._sink(lf=lf, io=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def read_parquet(
