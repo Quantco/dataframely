@@ -40,6 +40,7 @@ class Generator:
             seed: The seed to use for initializing the random number generator used
                 for all sampling methods.
         """
+        self.seed = seed
         self.numpy_generator = np.random.default_rng(seed)
 
     def sample_seed(self) -> int:

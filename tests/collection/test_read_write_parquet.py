@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
@@ -11,6 +12,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._serialization import COLLECTION_METADATA_KEY
 from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_collection, create_schema
@@ -345,7 +347,9 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
 
     # Act
     spy = mocker.spy(collection_type, "validate")
-    _read_parquet(collection_type, tmp_path, lazy, validation=validation)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        _read_parquet(collection_type, tmp_path, lazy, validation=validation)
 
     # Assert
     spy.assert_called_once()
@@ -375,3 +379,20 @@ def test_reconcile_collection_types(
     inputs: list[type[dy.Collection] | None], output: type[dy.Collection] | None
 ) -> None:
     assert output == _reconcile_collection_types(inputs)
+
+
+# ---------------------------------- MANUAL METADATA --------------------------------- #
+
+
+def test_read_invalid_parquet_metadata_collection(tmp_path: Path) -> None:
+    # Arrange
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    df.write_parquet(
+        tmp_path / "df.parquet", metadata={COLLECTION_METADATA_KEY: "invalid"}
+    )
+
+    # Act
+    collection = dy.read_parquet_metadata_collection(tmp_path / "df.parquet")
+
+    # Assert
+    assert collection is None

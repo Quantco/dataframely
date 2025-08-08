@@ -48,7 +48,7 @@ class SchemaJSONEncoder(JSONEncoder):
             case pl.Expr():
                 return {
                     "__type__": "expression",
-                    "value": obj.meta.serialize(format="json"),
+                    "value": base64.b64encode(obj.meta.serialize()).decode("utf-8"),
                 }
             case pl.LazyFrame():
                 return {
@@ -89,8 +89,14 @@ class SchemaJSONDecoder(JSONDecoder):
             case "tuple":
                 return tuple(dct["value"])
             case "expression":
-                data = BytesIO(cast(str, dct["value"]).encode("utf-8"))
-                return pl.Expr.deserialize(data, format="json")
+                value_str = cast(str, dct["value"]).encode("utf-8")
+                if value_str.startswith(b"{"):
+                    # NOTE: This branch is for backwards-compatibility only
+                    data = BytesIO(value_str)
+                    return pl.Expr.deserialize(data, format="json")
+                else:
+                    data = BytesIO(base64.b64decode(value_str))
+                    return pl.Expr.deserialize(data)
             case "lazyframe":
                 data = BytesIO(
                     base64.b64decode(cast(str, dct["value"]).encode("utf-8"))
