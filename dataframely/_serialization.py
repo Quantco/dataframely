@@ -89,6 +89,7 @@ class SchemaJSONDecoder(JSONDecoder):
             case "expression":
                 value_str = cast(str, dct["value"]).encode("utf-8")
                 if value_str.startswith(b"{"):
+                    # NOTE: This branch is for backwards-compatibility only
                     data = BytesIO(value_str)
                     return pl.Expr.deserialize(data, format="json")
                 else:
