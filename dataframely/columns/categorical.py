@@ -1,10 +1,11 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
+
 from typing import Any
 
 import polars as pl
-from sqlalchemy import Dialect
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
@@ -63,7 +64,7 @@ class Categorical(Column):
     def dtype(self) -> pl.DataType:
         return pl.Categorical()
 
-    def sqlalchemy_dtype(self, dialect: Dialect) -> sa_TypeEngine:
+    def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.String()
 
     @property
