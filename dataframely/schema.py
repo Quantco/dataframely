@@ -8,6 +8,7 @@ import sys
 import warnings
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
+from json import JSONDecodeError
 from pathlib import Path
 from typing import IO, Any, Literal, overload
 
@@ -970,12 +971,15 @@ def read_parquet_metadata_schema(
         source: Path to a parquet file or a file-like object that contains the metadata.
 
     Returns:
-        The schema that was serialized to the metadata or ``None`` if no schema metadata
-        is found.
+        The schema that was serialized to the metadata. ``None`` if no schema metadata
+        is found or the deserialization fails.
     """
     metadata = pl.read_parquet_metadata(source)
     if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
-        return deserialize_schema(schema_metadata)
+        try:
+            return deserialize_schema(schema_metadata)
+        except (JSONDecodeError, plexc.ComputeError):
+            return None
     return None
 
 
