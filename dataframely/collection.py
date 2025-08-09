@@ -1010,7 +1010,7 @@ def deserialize_collection(data: str) -> type[Collection]:
         {
             "__annotations__": annotations,
             **{
-                name: Filter(logic=lambda _: logic)
+                name: Filter(logic=lambda _, logic=logic: logic)  # type: ignore
                 for name, logic in decoded["filters"].items()
             },
         },
