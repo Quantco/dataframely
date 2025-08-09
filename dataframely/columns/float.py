@@ -8,6 +8,12 @@ import sys
 from abc import abstractmethod
 from typing import Any
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
+
 import numpy as np
 import polars as pl
 from polars.datatypes.group import FLOAT_DTYPES
@@ -136,6 +142,36 @@ class _BaseFloat(OrdinalMixin[float], Column):
             nan_probability=self._nan_probability,
             inf_probability=self._inf_probability,
         ).cast(self.dtype)
+
+    def with_property(
+        self,
+        *,
+        nullable: bool | None = None,
+        primary_key: bool | None = None,
+        allow_inf_nan: bool | None = None,
+        min: float | None = None,
+        min_exclusive: float | None = None,
+        max: float | None = None,
+        max_exclusive: float | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        result = super().with_property(
+            nullable=nullable,
+            primary_key=primary_key,
+            min=min,
+            min_exclusive=min_exclusive,
+            max=max,
+            max_exclusive=max_exclusive,
+            check=check,
+            alias=alias,
+            metadata=metadata,
+        )
+        result.allow_inf_nan = (
+            allow_inf_nan if allow_inf_nan is not None else self.allow_inf_nan
+        )
+        return result
 
 
 # ------------------------------------------------------------------------------------ #
