@@ -17,7 +17,7 @@ import polars.exceptions as plexc
 
 from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
-from ._polars import FrameType, join_all_inner, join_all_outer
+from ._polars import FrameType
 from ._serialization import (
     COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
@@ -478,42 +478,34 @@ class Collection(BaseCollection, ABC):
             for name, filter in filters.items():
                 keep[name] = filter.logic(result_cls).select(primary_keys).collect()
 
-            # Using the filter results, we can define a joint data frame that we use to filter
-            # the input.
-            all_keep = join_all_inner(
-                [df.lazy() for df in keep.values()], on=primary_keys
-            ).collect()
-
-            # Now we can iterate over the results where we do the following:
-            # - Join the current result onto `all_keep` to get rid of the rows we do not
-            #   want to keep.
-            # - Anti-join onto each individual filter to extend the failure reasons
+            # Now we can iterate over the results and left-join onto each individual
+            # filter to obtain independent boolean indicators of whether to keep the row
             for member_name, filtered in results.items():
                 member_info = cls.members()[member_name]
                 if member_info.ignored_in_filters:
                     continue
-                results[member_name] = filtered.join(all_keep, on=primary_keys)
 
-                new_failure_names = list(filters.keys())
-                new_failure_pks = [
-                    filtered.select(primary_keys)
-                    .lazy()
-                    .unique()
-                    .join(filter_keep.lazy(), on=primary_keys, how="anti")
-                    .with_columns(pl.lit(False).alias(name))
-                    for name, filter_keep in keep.items()
-                ]
-                # NOTE: The outer join might generate NULL values if a primary key is not
-                #  filtered out by all filters. In this case, we want to assign a validation
-                #  value of `True`.
-                all_new_failure_pks = join_all_outer(
-                    new_failure_pks, on=primary_keys
-                ).with_columns(pl.col(new_failure_names).fill_null(True))
+                lf_with_eval = filtered.lazy()
+                for name, filter_keep in keep.items():
+                    lf_with_eval = lf_with_eval.join(
+                        filter_keep.lazy().with_columns(pl.lit(True).alias(name)),
+                        on=primary_keys,
+                        how="left",
+                    ).with_columns(pl.col(name).fill_null(False))
 
-                # At this point, we have a data frame with the primary keys of the *excluded*
-                # rows of the member result along with the reasons. We join on the result again
-                # which will give us the same shape as the current failure info lf. Thus, we can
-                # simply concatenate diagonally, resulting in a failure info object as follows:
+                result_with_eval = lf_with_eval.collect()
+
+                # Filtering `result_with_eval` by the rows for which all joins
+                # "succeeded", we can identify the rows that pass all the filters. We
+                # keep these rows for the result.
+                results[member_name] = result_with_eval.filter(
+                    pl.all_horizontal(keep.keys())
+                ).drop(keep.keys())
+
+                # Filtering `result_with_eval` with the inverse condition, we find all
+                # the problematic rows. We can build a single failure info object by
+                # simply concatenating diagonally with the already existing failure. The
+                # resulting failure info looks as follows:
                 #
                 #  | Source Data | Rule Columns (schema) | Filter Name Columns (collection) |
                 #  | ----------- | --------------------- | -------------------------------- |
@@ -521,9 +513,9 @@ class Collection(BaseCollection, ABC):
                 #  | ...         | NULL                  | <filled>                         |
                 #
                 failure = failures[member_name]
-                filtered_failure = filtered.lazy().join(
-                    all_new_failure_pks, on=primary_keys
-                )
+                filtered_failure = result_with_eval.filter(
+                    ~pl.all_horizontal(keep.keys())
+                ).lazy()
 
                 # If we cast previously, `failure` and `filtered_failure` have different
                 # dtypes for the source data: `failure` keeps the original dtypes while
@@ -559,7 +551,7 @@ class Collection(BaseCollection, ABC):
 
                 failures[member_name] = FailureInfo(
                     lf=failure_lf,
-                    rule_columns=failure._rule_columns + new_failure_names,
+                    rule_columns=failure._rule_columns + list(keep.keys()),
                     schema=failure.schema,
                 )
 
