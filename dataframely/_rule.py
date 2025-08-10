@@ -59,6 +59,14 @@ class Rule:
         return str(self.expr)
 
 
+class DtypeCastRule(Rule):
+    """Rule that evaluates whether casting a column to another dtype is successful.
+
+    The only purpose of this rule is to provide a runtime type to distinguish it from
+    other rules.
+    """
+
+
 class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
 
@@ -147,7 +155,8 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
         while ``False`` indicates an issue.
     """
     # Rules must be distinguished into two types of rules:
-    #  1. Simple rules can simply be selected on the data frame
+    #  1. Simple rules can simply be selected on the data frame (this includes rules
+    #     that check whether dtype casts succeeded).
     #  2. "Group" rules require a `group_by` and a subsequent join
     simple_exprs = {
         name: rule.expr
@@ -160,13 +169,34 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
 
     # Before we can select all of the simple expressions, we need to turn the
     # group rules into something to use in a `select` statement as well.
-    return (
+    result = (
         # NOTE: A value of `null` always validates successfully as nullability should
         #  already be checked via dedicated rules.
         _with_group_rules(lf, group_rules).with_columns(
             **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
         )
     )
+
+    # If there is at least one rule that checks for successful dtype casting, we need
+    # to take an extra step: rules other than the "dtype rules" might not be reliable
+    # if casting failed, i.e. if any of the "dtype rules" evaluated to `False`. For
+    # this reason, we set all other rule evaluations to `null` in the case of dtype
+    # casting failure.
+    dtype_rule_names = [
+        name for name, rule in rules.items() if isinstance(rule, DtypeCastRule)
+    ]
+    if len(dtype_rule_names) > 0:
+        non_dtype_rule_names = [
+            name for name, rule in rules.items() if not isinstance(rule, DtypeCastRule)
+        ]
+        all_dtype_casts_valid = pl.all_horizontal(dtype_rule_names)
+        return result.with_columns(
+            pl.when(all_dtype_casts_valid)
+            .then(pl.col(non_dtype_rule_names))
+            .otherwise(pl.lit(None, dtype=pl.Boolean))
+        )
+
+    return result
 
 
 def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyFrame:

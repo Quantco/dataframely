@@ -41,6 +41,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+_FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
+
 
 class Collection(BaseCollection, ABC):
     """Base class for all collections of data frames with a predefined schema.
@@ -465,7 +467,7 @@ class Collection(BaseCollection, ABC):
                 data[member_name], cast=cast
             )
 
-        # Once we're done that, we can apply the filters on this collection. To this end,
+        # Once we've done that, we can apply the filters on this collection. To this end,
         # we iterate over all filters and store the filter results.
         filters = cls._filters()
         if len(filters) > 0:
@@ -487,7 +489,8 @@ class Collection(BaseCollection, ABC):
             #   want to keep.
             # - Anti-join onto each individual filter to extend the failure reasons
             for member_name, filtered in results.items():
-                if cls.members()[member_name].ignored_in_filters:
+                member_info = cls.members()[member_name]
+                if member_info.ignored_in_filters:
                     continue
                 results[member_name] = filtered.join(all_keep, on=primary_keys)
 
@@ -518,18 +521,47 @@ class Collection(BaseCollection, ABC):
                 #  | ...         | NULL                  | <filled>                         |
                 #
                 failure = failures[member_name]
-                new_failure = FailureInfo(
-                    lf=pl.concat(
-                        [
-                            failure._lf,
-                            filtered.lazy().join(all_new_failure_pks, on=primary_keys),
-                        ],
-                        how="diagonal",
-                    ),
+                filtered_failure = filtered.lazy().join(
+                    all_new_failure_pks, on=primary_keys
+                )
+
+                # If we cast previously, `failure` and `filtered_failure` have different
+                # dtypes for the source data: `failure` keeps the original dtypes while
+                # `filtered_failure` has the target dtypes. Hence, we need to cast
+                # `filtered_failure` to the original dtypes. This is safe because any
+                # row in `filtered_failure` must have already been successfully cast and
+                # a "roundtrip cast" is always possible.
+                # Doing this in a fully lazy way is not trivial: we do a diagonal
+                # concatenation where we duplicate each column of the source data. We
+                # then coalesce the two versions into the original column dtype.
+                if cast:
+                    filtered_failure = filtered_failure.rename(
+                        {
+                            name: f"{_FILTER_COLUMN_PREFIX}{name}"
+                            for name in member_info.schema.column_names()
+                        }
+                    )
+
+                failure_lf = pl.concat([failure._lf, filtered_failure], how="diagonal")
+                if cast:
+                    failure_lf = failure_lf.with_columns(
+                        pl.coalesce(
+                            name,
+                            pl.col(f"{_FILTER_COLUMN_PREFIX}{name}").cast(
+                                pl.dtype_of(name)
+                            ),
+                        )
+                        for name in member_info.schema.column_names()
+                    ).drop(
+                        f"{_FILTER_COLUMN_PREFIX}{name}"
+                        for name in member_info.schema.column_names()
+                    )
+
+                failures[member_name] = FailureInfo(
+                    lf=failure_lf,
                     rule_columns=failure._rule_columns + new_failure_names,
                     schema=failure.schema,
                 )
-                failures[member_name] = new_failure
 
         return cls._init(results), failures
 
