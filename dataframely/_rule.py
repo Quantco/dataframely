@@ -156,7 +156,7 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
     """
     # Rules must be distinguished into two types of rules:
     #  1. Simple rules can simply be selected on the data frame (this includes rules
-    #     that check whether dtype casts succeeded).
+    #     that check whether dtype casts succeeded)
     #  2. "Group" rules require a `group_by` and a subsequent join
     simple_exprs = {
         name: rule.expr
