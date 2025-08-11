@@ -167,3 +167,16 @@ def test_filter_nondeterministic_lazyframe() -> None:
 
     filtered, _ = MySchema.filter(lf)
     assert filtered.select(pl.col("b").n_unique()).item() == 1
+
+
+def test_filter_failure_info_original_dtype() -> None:
+    schema = create_schema("test", {"a": dy.UInt8()})
+    lf = pl.LazyFrame({"a": [100, 200, 300]}, schema={"a": pl.Int64})
+
+    out, failures = schema.filter(lf, cast=True)
+    assert len(out) == 2
+    assert out.schema.dtypes() == [pl.UInt8]
+
+    assert failures.counts() == {"a|dtype": 1}
+    assert failures.invalid().get_column("a").to_list() == [300]
+    assert failures.invalid().dtypes == [pl.Int64]

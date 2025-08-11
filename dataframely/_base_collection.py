@@ -137,7 +137,7 @@ class CollectionMeta(ABCMeta):
                     for member in result.members.values()
                 ),
                 *(
-                    set(member.schema._validation_rules())
+                    set(member.schema._validation_rules(with_cast=True))
                     for member in result.members.values()
                 ),
             )
