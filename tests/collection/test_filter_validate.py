@@ -244,6 +244,13 @@ def test_maintain_order() -> None:
         "first": MyFirstSchema.sample(overrides={"a": range(100_000)}),
         "second": MySecondSchema.sample(overrides={"a": range(200_000)}),
     }
+
+    # Ensure order is maintained in `filter`
     out, _ = MyShufflingCollection.filter(data)
+    assert out.first.select("a").collect().to_series().is_sorted()
+    assert out.second.select("a").collect().to_series().is_sorted()
+
+    # Ensure order is maintained in `validate`
+    out = MyShufflingCollection.validate(out.to_dict())
     assert out.first.select("a").collect().to_series().is_sorted()
     assert out.second.select("a").collect().to_series().is_sorted()

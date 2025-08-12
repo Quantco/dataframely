@@ -9,7 +9,9 @@ from polars.datatypes import DataTypeClass
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._rule import GroupRule
 from dataframely.exc import DtypeValidationError, ValidationError
+from dataframely.random import Generator
 from dataframely.testing import create_schema, validation_mask
 
 
@@ -180,3 +182,24 @@ def test_filter_failure_info_original_dtype() -> None:
     assert failures.counts() == {"a|dtype": 1}
     assert failures.invalid().get_column("a").to_list() == [300]
     assert failures.invalid().dtypes == [pl.Int64]
+
+
+def test_filter_maintain_order() -> None:
+    schema = create_schema(
+        "test",
+        {"a": dy.UInt16(), "b": dy.UInt8()},
+        {
+            "at_least_fifty_per_b": GroupRule(
+                lambda: pl.len() >= 50, group_columns=["b"]
+            )
+        },
+    )
+    generator = Generator()
+    df = pl.DataFrame(
+        {
+            "a": range(10_000),
+            "b": generator.sample_int(10_000, min=0, max=255),
+        }
+    )
+    out, _ = schema.filter(df, cast=True)
+    assert out.get_column("a").is_sorted()
