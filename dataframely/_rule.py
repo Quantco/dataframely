@@ -214,16 +214,12 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
         # We group by the group columns and apply all expressions
         group_evaluations[group_columns] = lf.group_by(group_columns).agg(**group_rules)
 
-    # Eventually, we apply the rule evaluations onto the input data frame. For this,
-    # we're using left-joins. This has two effects:
-    #  - We're essentially "broadcasting" the results within each group across rows
-    #    in the same group.
-    #  - While an inner-join would be semantically more accurate, the left-join
-    #    preserves the order of the left data frame.
+    # Eventually, we apply the rule evaluations onto the input data frame. For this, we
+    # "broadcast" the results within each group across rows in the same group.
     result = lf
     for group_columns, frame in group_evaluations.items():
         result = result.join(
-            frame, on=list(group_columns), how="left", nulls_equal=True
+            frame, on=list(group_columns), nulls_equal=True, maintain_order="left"
         )
     return result
 
