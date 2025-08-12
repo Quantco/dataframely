@@ -39,6 +39,12 @@ class MyCollection(dy.Collection):
         ).filter((pl.col("b") > pl.col("b_right")).fill_null(True))
 
 
+class MyShufflingCollection(MyCollection):
+    @dy.filter()
+    def just_shuffle(self) -> pl.LazyFrame:
+        return self.first.select(pl.col("a").shuffle())
+
+
 class SimpleCollection(dy.Collection):
     first: dy.LazyFrame[MyFirstSchema]
     second: dy.LazyFrame[MySecondSchema]
@@ -231,3 +237,13 @@ def test_validate_with_filter_with_rule_violation(
     exc.match(r"'equal_primary_keys' failed validation for 2 rows")
     exc.match(r"Member 'second' failed validation")
     exc.match(r"'min' failed for 1 rows")
+
+
+def test_maintain_order() -> None:
+    data = {
+        "first": MyFirstSchema.sample(overrides={"a": range(100_000)}),
+        "second": MySecondSchema.sample(overrides={"a": range(200_000)}),
+    }
+    out, _ = MyShufflingCollection.filter(data)
+    assert out.first.select("a").collect().to_series().is_sorted()
+    assert out.second.select("a").collect().to_series().is_sorted()

@@ -218,12 +218,10 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
     # we're using left-joins. This has two effects:
     #  - We're essentially "broadcasting" the results within each group across rows
     #    in the same group.
-    #  - While an inner-join would be semantically more accurate, the left-join
-    #    preserves the order of the left data frame.
     result = lf
     for group_columns, frame in group_evaluations.items():
         result = result.join(
-            frame, on=list(group_columns), how="left", nulls_equal=True
+            frame, on=list(group_columns), nulls_equal=True, maintain_order="left"
         )
     return result
 

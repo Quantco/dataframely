@@ -378,7 +378,8 @@ class Collection(BaseCollection, ABC):
         Returns:
             An instance of the collection. All members of the collection are guaranteed
             to be valid with respect to their respective schemas and the filters on this
-            collection did not remove rows from any member.
+            collection did not remove rows from any member. The input order of each
+            member is maintained.
         """
         out, failure = cls.filter(data, cast=cast)
         if any(len(fail) > 0 for fail in failure.values()):
@@ -441,7 +442,9 @@ class Collection(BaseCollection, ABC):
               filtered out by any of the collection's filters. While collection members
               are always instances of :class:`~polars.LazyFrame`, the members of the
               returned collection are essentially eager as they are constructed by
-              calling ``.lazy()`` on eager data frames.
+              calling ``.lazy()`` on eager data frames. Just like in polars' native
+              :meth:`~polars.DataFrame.filter`, the order of rows is maintained in all
+              returned data frames.
             - A mapping from member name to a :class:`FailureInfo` object which provides
               details on why individual rows had been removed. Optional members are only
               included in this dictionary if they had been provided in the input.
@@ -491,6 +494,7 @@ class Collection(BaseCollection, ABC):
                         filter_keep.lazy().with_columns(pl.lit(True).alias(name)),
                         on=primary_keys,
                         how="left",
+                        maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
 
                 result_with_eval = lf_with_eval.collect()

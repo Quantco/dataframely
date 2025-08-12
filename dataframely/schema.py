@@ -416,7 +416,8 @@ class Schema(BaseSchema, ABC):
 
         Returns:
             The (collected) input data frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence.
+            input's data frame type to reflect schema adherence. The data frame is
+            guaranteed to maintain its order.
 
         Raises:
             ValidationError: If the input data frame does not satisfy the schema
@@ -504,7 +505,9 @@ class Schema(BaseSchema, ABC):
         Returns:
             A tuple of the validated rows in the input data frame (potentially
             empty) and a simple dataclass carrying information about the rows of the
-            data frame which could not be validated successfully.
+            data frame which could not be validated successfully. Just like in polars'
+            native :meth:`~polars.DataFrame.filter`, the order of rows in the returned
+            data frame is maintained.
 
         Raises:
             ValidationError: If the columns of the input data frame are invalid. This
