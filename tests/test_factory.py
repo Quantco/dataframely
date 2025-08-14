@@ -20,6 +20,8 @@ class MySchema2(dy.Schema):
 class MyCollection(dy.Collection):
     member: dy.LazyFrame[MySchema]
 
+    # TODO add filter already here to ensure that it still exists later on
+
     def foo(self) -> str:
         return "foo"
 
