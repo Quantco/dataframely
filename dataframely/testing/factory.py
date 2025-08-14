@@ -36,7 +36,6 @@ def create_collection(
     schemas: dict[str, type[Schema]],
     filters: dict[str, Filter] | None = None,
     *,
-    collection_base_class: type = Collection,
     annotation_base_class: type = LazyFrame,
 ) -> type[Collection]:
     return create_collection_raw(
@@ -46,6 +45,25 @@ def create_collection(
             for name, schema in schemas.items()
         },
         filters=filters,
+    )
+
+
+def extend_collection(
+    name: str,
+    *,
+    collection_base_class: type[Collection],
+    additional_schemas: dict[str, type[Schema]] | None = None,
+    additional_filters: dict[str, Filter] | None = None,
+) -> type[Collection]:
+    return create_collection_raw(
+        name,
+        annotations={
+            name: LazyFrame[schema]  # type: ignore
+            for name, schema in (
+                collection_base_class.member_schemas() | (additional_schemas or dict())
+            ).items()
+        },
+        filters=collection_base_class._filters() | (additional_filters or {}),
         collection_base_class=collection_base_class,
     )
 
