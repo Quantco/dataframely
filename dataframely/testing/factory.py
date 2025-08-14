@@ -33,7 +33,7 @@ def create_schema(
 
 def create_collection(
     name: str,
-    schemas: dict[str, type[Schema]] | None = None,
+    schemas: dict[str, type[Schema]],
     filters: dict[str, Filter] | None = None,
     *,
     collection_base_class: type[Collection] = Collection,
@@ -58,7 +58,7 @@ def create_collection(
         annotations={
             name: annotation_base_class[schema]  # type: ignore
             for name, schema in (
-                collection_base_class.member_schemas() | (schemas or dict())
+                collection_base_class.member_schemas() | schemas
             ).items()
         },
         filters=collection_base_class._filters() | (filters or {}),
