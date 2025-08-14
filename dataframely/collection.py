@@ -10,12 +10,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Annotated, Any, cast
+from typing import IO, Annotated, Any, Literal, cast
 
 import polars as pl
 import polars.exceptions as plexc
 
-from ._base_collection import BaseCollection, CollectionMember
+from ._base_collection import BaseCollection, CollectionMember, _common_primary_keys
 from ._filter import Filter
 from ._polars import FrameType
 from ._serialization import (
@@ -560,6 +560,47 @@ class Collection(BaseCollection, ABC):
                 )
 
         return cls._init(results), failures
+
+    def join(
+        self,
+        primary_keys: pl.LazyFrame,
+        how: Literal["semi", "anti"] = "semi",
+    ) -> Self:
+        """Filter the collection by joining onto a data frame containing entries for the
+        primary keys whose respective rows should be kept or removed in the collection
+        members.
+
+        Args:
+            primary_keys: The data frame to join on. Must contain the common primary key
+                columns of the collection.
+            how: The join strategy to use. Like in polars, `semi` will keep all rows
+                that correspond to `primary_keys`, `anti` will remove them.
+
+        Raises:
+            ValidationError: If the provided `primary_keys` data frame does not contain
+                all common primary key columns of the collection.
+
+        Returns:
+            The collection, potentially reduced in size.
+        """
+        from .testing import create_schema
+
+        all_columns = next(iter(self.member_schemas().values())).columns()
+        # TODO think about ignored_in_filters
+        common_primary_keys = _common_primary_keys(self.member_schemas().values())
+        common_primary_key_columns = {
+            column: all_columns[column] for column in common_primary_keys
+        }
+        target_schema = create_schema(
+            name="CommonPrimaryKeysSchema", columns=common_primary_key_columns
+        )
+        validated_df = target_schema.validate(primary_keys, cast=True).lazy()
+        return self.cast(
+            {
+                key: lf.join(validated_df, on=self.common_primary_keys(), how=how)
+                for key, lf in self.to_dict().items()
+            }
+        )
 
     # ------------------------------------ CASTING ----------------------------------- #
 

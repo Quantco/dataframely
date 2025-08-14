@@ -66,8 +66,8 @@ class CollectionMember:
 # --------------------------------------- UTILS -------------------------------------- #
 
 
-def _common_primary_keys(columns: Iterable[type[Schema]]) -> set[str]:
-    return set.intersection(*[set(schema.primary_keys()) for schema in columns])
+def _common_primary_keys(schemas: Iterable[type[Schema]]) -> set[str]:
+    return set.intersection(*[set(schema.primary_keys()) for schema in schemas])
 
 
 # ------------------------------------------------------------------------------------ #
