@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
-import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
@@ -32,23 +31,14 @@ class MyCollection(dy.Collection):
         return "foo"
 
 
-# ------------------------------------------ Fixtures ------------------------------------------- #
-
-
-@pytest.fixture()
-def member() -> pl.LazyFrame:
-    return pl.LazyFrame({"a": [0, 1, 2, 3, 10]})
-
-
-@pytest.fixture()
-def member2() -> pl.LazyFrame:
-    return pl.LazyFrame({"a": [0, 1, 2, 3, 10], "b": ["a", "b", "c", "d", "e"]})
-
-
 # -------------------------------------------- Tests -------------------------------------------- #
 
 
-def test_create_collection_new(member: pl.LazyFrame, member2: pl.LazyFrame) -> None:
+def test_create_collection_new() -> None:
+    # Arrange
+    member = pl.LazyFrame({"a": [0, 1, 2, 3, 10]})
+    member2 = pl.LazyFrame({"a": [0, 1, 2, 3, 10], "b": ["a", "b", "c", "d", "e"]})
+
     # Act
     temp_collection = create_collection(
         "TempCollection",
@@ -66,9 +56,11 @@ def test_create_collection_new(member: pl.LazyFrame, member2: pl.LazyFrame) -> N
     assert_frame_equal(instance.member2, member2.filter(pl.col("a") > 0))  # type: ignore
 
 
-def test_create_collection_extension(
-    member: pl.LazyFrame, member2: pl.LazyFrame
-) -> None:
+def test_create_collection_extension() -> None:
+    # Arrange
+    member = pl.LazyFrame({"a": [0, 1, 2, 3, 10]})
+    member2 = pl.LazyFrame({"a": [0, 1, 2, 3, 10], "b": ["a", "b", "c", "d", "e"]})
+
     # Act
     temp_collection = create_collection(
         "TempCollectionExtended",
