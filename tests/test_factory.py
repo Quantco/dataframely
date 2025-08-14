@@ -4,7 +4,6 @@
 
 import dataframely as dy
 from dataframely.testing import create_collection
-from dataframely.testing.factory import extend_collection
 
 
 class MySchema(dy.Schema):
@@ -37,10 +36,10 @@ def test_create_collection() -> None:
 
 def test_extend_collection() -> None:
     # Act
-    temp_collection = extend_collection(
+    temp_collection = create_collection(
         "TempCollectionExtended",
         collection_base_class=MyCollection,
-        additional_schemas={"member2": MySchema},
+        schemas={"member2": MySchema},
         # additional_filters={"testfilter": Filter(lambda c: c.member.filter(pl.col("a") > 0))},
     )
 

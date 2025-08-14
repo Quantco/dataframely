@@ -33,37 +33,35 @@ def create_schema(
 
 def create_collection(
     name: str,
-    schemas: dict[str, type[Schema]],
+    schemas: dict[str, type[Schema]] | None = None,
     filters: dict[str, Filter] | None = None,
     *,
+    collection_base_class: type[Collection] = Collection,
     annotation_base_class: type = LazyFrame,
 ) -> type[Collection]:
+    """Dynamically create a new collection with the provided name.
+
+    Args:
+        name: The name of the collection.
+        schemas: The (additional) schemas to use for the collection.
+        filters: The (additional) filters to set on the collection.
+        collection_base_class: The base class for the collection. The new collection
+            inherits from this collection and also uses all its schemas and filters.
+            Defaults to `Collection`.
+        annotation_base_class: The base class for the member's schemas. Defaults to `LazyFrame`.
+
+    Returns:
+        A collection with the given name and the combined schemas and filters.
+    """
     return create_collection_raw(
         name,
         annotations={
             name: annotation_base_class[schema]  # type: ignore
-            for name, schema in schemas.items()
-        },
-        filters=filters,
-    )
-
-
-def extend_collection(
-    name: str,
-    *,
-    collection_base_class: type[Collection],
-    additional_schemas: dict[str, type[Schema]] | None = None,
-    additional_filters: dict[str, Filter] | None = None,
-) -> type[Collection]:
-    return create_collection_raw(
-        name,
-        annotations={
-            name: LazyFrame[schema]  # type: ignore
             for name, schema in (
-                collection_base_class.member_schemas() | (additional_schemas or dict())
+                collection_base_class.member_schemas() | (schemas or dict())
             ).items()
         },
-        filters=collection_base_class._filters() | (additional_filters or {}),
+        filters=collection_base_class._filters() | (filters or {}),
         collection_base_class=collection_base_class,
     )
 
