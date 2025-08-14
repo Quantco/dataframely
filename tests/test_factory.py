@@ -2,10 +2,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
+import pytest
+from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely._filter import Filter
 from dataframely.testing import create_collection
+
+# ----------------------------------- Schemas And Collections ----------------------------------- #
 
 
 class MySchema(dy.Schema):
@@ -20,51 +24,74 @@ class MySchema2(dy.Schema):
 class MyCollection(dy.Collection):
     member: dy.LazyFrame[MySchema]
 
-    # TODO add filter already here to ensure that it still exists later on
+    @dy.filter()
+    def a_smaller_ten(self) -> pl.LazyFrame:
+        return self.member.filter(pl.col("a") < 10)
 
     def foo(self) -> str:
         return "foo"
 
 
-def test_create_collection() -> None:
+# ------------------------------------------ Fixtures ------------------------------------------- #
+
+
+@pytest.fixture()
+def member() -> pl.LazyFrame:
+    return pl.LazyFrame({"a": [0, 1, 2, 3, 10]})
+
+
+@pytest.fixture()
+def member2() -> pl.LazyFrame:
+    return pl.LazyFrame({"a": [0, 1, 2, 3, 10], "b": ["a", "b", "c", "d", "e"]})
+
+
+# -------------------------------------------- Tests -------------------------------------------- #
+
+
+def test_create_collection_new(member: pl.LazyFrame, member2: pl.LazyFrame) -> None:
     # Act
     temp_collection = create_collection(
         "TempCollection",
         schemas={"member": MySchema, "member2": MySchema2},
-        filters={"testfilter": Filter(lambda c: c.member.filter(pl.col("a") > 0))},
+        filters={"a_greater_zero": Filter(lambda c: c.member.filter(pl.col("a") > 0))},
     )
 
     # Assert
     instance, _ = temp_collection.filter(
-        {
-            "member": pl.DataFrame({"a": [-1, 1, 2, 3]}),
-            "member2": pl.DataFrame({"a": [-1, 1, 2, 3], "b": ["a", "x", "y", "z"]}),
-        },
+        {"member": member, "member2": member2},
         cast=True,
     )
-    assert len(instance.member.collect()) == 3  # type: ignore
-    assert len(instance.member2.collect()) == 3  # type: ignore
+    # Check that the newly added filter is the only one that is applied
+    assert_frame_equal(instance.member, member.filter(pl.col("a") > 0))  # type: ignore
+    assert_frame_equal(instance.member2, member2.filter(pl.col("a") > 0))  # type: ignore
 
 
-def test_extend_collection() -> None:
+def test_create_collection_extension(
+    member: pl.LazyFrame, member2: pl.LazyFrame
+) -> None:
     # Act
     temp_collection = create_collection(
         "TempCollectionExtended",
         collection_base_class=MyCollection,
         schemas={"member2": MySchema2},
-        filters={"testfilter": Filter(lambda c: c.member.filter(pl.col("a") > 0))},
+        filters={"a_greater_zero": Filter(lambda c: c.member.filter(pl.col("a") > 0))},
     )
 
     # Assert
     instance, _ = temp_collection.filter(
-        {
-            "member": pl.DataFrame({"a": [-1, 1, 2, 3]}),
-            "member2": pl.DataFrame({"a": [-1, 1, 2, 3], "b": ["a", "x", "y", "z"]}),
-        },
+        {"member": member, "member2": member2},
         cast=True,
     )
-    assert len(instance.member.collect()) == 3  # type: ignore
-    assert len(instance.member2.collect()) == 3  # type: ignore
+    # Check that both the inherited and new filters are applied
+    assert_frame_equal(
+        instance.member,  # type: ignore
+        member.filter(pl.col("a") > 0, pl.col("a") < 10),
+    )
+    assert_frame_equal(
+        instance.member2,  # type: ignore
+        member2.filter(pl.col("a") > 0, pl.col("a") < 10),
+    )
 
+    # Check that the new collection inherits correctly
     assert issubclass(temp_collection, MyCollection)
     assert instance.foo() == "foo"  # type: ignore
