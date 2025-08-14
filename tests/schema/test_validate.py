@@ -6,7 +6,10 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._rule import GroupRule
 from dataframely.exc import DtypeValidationError, RuleValidationError, ValidationError
+from dataframely.random import Generator
+from dataframely.testing import create_schema
 
 
 class MySchema(dy.Schema):
@@ -147,3 +150,20 @@ def test_group_rule_on_nulls(
     with pytest.raises(RuleValidationError):
         schema.validate(df, cast=True)
     assert not schema.is_valid(df, cast=True)
+
+
+def test_validate_maintain_order() -> None:
+    schema = create_schema(
+        "test",
+        {"a": dy.UInt16(), "b": dy.UInt8()},
+        {"at_least_fifty_per_b": GroupRule(lambda: pl.len() >= 2, group_columns=["b"])},
+    )
+    generator = Generator()
+    df = pl.DataFrame(
+        {
+            "a": range(10_000),
+            "b": generator.sample_int(10_000, min=0, max=255),
+        }
+    )
+    out = schema.validate(df, cast=True)
+    assert out.get_column("a").is_sorted()
