@@ -1,7 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-from typing import Literal
+from typing import Annotated, Literal
 
 import polars as pl
 import polars.exceptions as plexc
@@ -71,3 +71,22 @@ def test_missing_primary_key_column() -> None:
         collection.join(
             pl.LazyFrame({"non_primary_key": primary_keys}), how="semi"
         ).collect_all()
+
+
+class CollectionWithIgnoredMembers(dy.Collection):
+    member_one: dy.LazyFrame[SchemaOne]
+    member_two: Annotated[
+        dy.LazyFrame[SchemaTwo],
+        dy.CollectionMember(ignored_in_filters=True),
+    ]
+
+
+def test_join_raises_with_ignored_member() -> None:
+    # Arrange
+    collection = CollectionWithIgnoredMembers.sample(
+        overrides=[{"id": 1}, {"id": 2}, {"id": 3}]
+    )
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="ignored in filters"):
+        collection.join(collection.member_one, how="semi")

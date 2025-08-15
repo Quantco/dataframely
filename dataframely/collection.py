@@ -15,7 +15,7 @@ from typing import IO, Annotated, Any, Literal, cast
 import polars as pl
 import polars.exceptions as plexc
 
-from ._base_collection import BaseCollection, CollectionMember, _common_primary_keys
+from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
 from ._polars import FrameType
 from ._serialization import (
@@ -577,23 +577,22 @@ class Collection(BaseCollection, ABC):
                 that correspond to `primary_keys`, `anti` will remove them.
 
         Raises:
+            ValueError: If the collection contains any member that is annotated with
+                `ignored_in_filters==True`.
             ColumnNotFoundError: If the `primary_keys` data frame does not contain
                 all common primary key columns of the collection.
-
-        Note:
-            This method does not consider the `ignored_in_filters` attribute of
-            collection members.
 
         Returns:
             The collection, with members potentially reduced in length.
         """
-        # TODO think about ignored_in_filters
-        # Get common primary keys, also considering schemas that are ignored in filters.
-        common_primary_keys = list(_common_primary_keys(self.member_schemas().values()))
+        if any(member.ignored_in_filters for member in self.members().values()):
+            raise ValueError(
+                "The join operation is not supported for collections with members that are ignored in filters."
+            )
 
         return self.cast(
             {
-                key: lf.join(primary_keys, on=common_primary_keys, how=how)
+                key: lf.join(primary_keys, on=self.common_primary_keys(), how=how)
                 for key, lf in self.to_dict().items()
             }
         )
