@@ -5,9 +5,16 @@ from __future__ import annotations
 
 import decimal
 import math
+import sys
 from typing import Any
 
 import polars as pl
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
@@ -156,6 +163,39 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             null_probability=self._null_probability,
         )
         return ((samples * 10**self.scale).floor() / 10**self.scale).cast(self.dtype)
+
+    def with_property(
+        self,
+        *,
+        precision: int | None = None,
+        scale: int | None = None,
+        nullable: bool | None = None,
+        primary_key: bool = False,
+        min: decimal.Decimal | None = None,
+        min_exclusive: decimal.Decimal | None = None,
+        max: decimal.Decimal | None = None,
+        max_exclusive: decimal.Decimal | None = None,
+        check: Check | None = None,
+        alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Self:
+        # TODO validate
+        result = super().with_property(
+            nullable=nullable,
+            primary_key=primary_key,
+            min=min,
+            min_exclusive=min_exclusive,
+            max=max,
+            max_exclusive=max_exclusive,
+            check=check,
+            alias=alias,
+            metadata=metadata,
+        )
+        result.precision = first_non_null(
+            precision, self.precision, allow_null_response=True
+        )
+        result.scale = scale if scale is not None else self.scale
+        return result
 
 
 # --------------------------------------- UTILS -------------------------------------- #
