@@ -565,23 +565,32 @@ class Collection(BaseCollection, ABC):
         self,
         primary_keys: pl.LazyFrame,
         how: Literal["semi", "anti"] = "semi",
+        maintain_order: Literal["none", "left"] = "none",
     ) -> Self:
         """Filter the collection by joining onto a data frame containing entries for the
-        common primary key columns whose respective rows should be kept or removed in the
-        collection members.
+        common primary key columns whose respective rows should be kept or removed in
+        the collection members.
 
         Args:
             primary_keys: The data frame to join on. Must contain the common primary key
                 columns of the collection.
             how: The join strategy to use. Like in polars, `semi` will keep all rows
                 that can be found in `primary_keys`, `anti` will remove them.
+            maintain_order: The `maintain_order` option to use for the polars join.
+
+        Returns:
+            The collection, with members potentially reduced in length.
 
         Raises:
             ValueError: If the collection contains any member that is annotated with
                 `ignored_in_filters=True`.
 
-        Returns:
-            The collection, with members potentially reduced in length.
+        Attention:
+            This method does not validate the resulting collection. Ensure to only use
+            this if the resulting collection still satisfies the filters of the collection.
+            The joins are not evaluated eagerly. Therefore, a downstream call to `collect`
+            might fail, especially if `primary_keys` does not contain all columns for all
+            common primary keys.
         """
         if any(member.ignored_in_filters for member in self.members().values()):
             raise ValueError(
@@ -590,7 +599,12 @@ class Collection(BaseCollection, ABC):
 
         return self.cast(
             {
-                key: lf.join(primary_keys, on=self.common_primary_keys(), how=how)
+                key: lf.join(
+                    primary_keys,
+                    on=self.common_primary_keys(),
+                    how=how,
+                    maintain_order=maintain_order,
+                )
                 for key, lf in self.to_dict().items()
             }
         )
