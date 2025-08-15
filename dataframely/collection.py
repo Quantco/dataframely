@@ -587,10 +587,10 @@ class Collection(BaseCollection, ABC):
 
         Attention:
             This method does not validate the resulting collection. Ensure to only use
-            this if the resulting collection still satisfies the filters of the collection.
-            The joins are not evaluated eagerly. Therefore, a downstream call to `collect`
-            might fail, especially if `primary_keys` does not contain all columns for all
-            common primary keys.
+            this if the resulting collection still satisfies the filters of the
+            collection. The joins are not evaluated eagerly. Therefore, a downstream
+            call to :meth:`collect` might fail, especially if `primary_keys` does not
+            contain all columns for all common primary keys.
         """
         if any(member.ignored_in_filters for member in self.members().values()):
             raise ValueError(
