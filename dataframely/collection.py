@@ -567,8 +567,8 @@ class Collection(BaseCollection, ABC):
         how: Literal["semi", "anti"] = "semi",
     ) -> Self:
         """Filter the collection by joining onto a data frame containing entries for the
-        primary keys whose respective rows should be kept or removed in the collection
-        members.
+        common primary keys whose respective rows should be kept or removed in the
+        collection members.
 
         Args:
             primary_keys: The data frame to join on. Must contain the common primary key
@@ -577,27 +577,23 @@ class Collection(BaseCollection, ABC):
                 that correspond to `primary_keys`, `anti` will remove them.
 
         Raises:
-            ValidationError: If the provided `primary_keys` data frame does not contain
+            ColumnNotFoundError: If the `primary_keys` data frame does not contain
                 all common primary key columns of the collection.
 
-        Returns:
-            The collection, potentially reduced in size.
-        """
-        from .testing import create_schema
+        Note:
+            This method does not consider the `ignored_in_filters` attribute of
+            collection members.
 
-        all_columns = next(iter(self.member_schemas().values())).columns()
+        Returns:
+            The collection, with members potentially reduced in length.
+        """
         # TODO think about ignored_in_filters
-        common_primary_keys = _common_primary_keys(self.member_schemas().values())
-        common_primary_key_columns = {
-            column: all_columns[column] for column in common_primary_keys
-        }
-        target_schema = create_schema(
-            name="CommonPrimaryKeysSchema", columns=common_primary_key_columns
-        )
-        validated_df = target_schema.validate(primary_keys, cast=True).lazy()
+        # Get common primary keys, also considering schemas that are ignored in filters.
+        common_primary_keys = list(_common_primary_keys(self.member_schemas().values()))
+
         return self.cast(
             {
-                key: lf.join(validated_df, on=self.common_primary_keys(), how=how)
+                key: lf.join(primary_keys, on=common_primary_keys, how=how)
                 for key, lf in self.to_dict().items()
             }
         )

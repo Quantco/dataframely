@@ -4,6 +4,7 @@
 from typing import Literal
 
 import polars as pl
+import polars.exceptions as plexc
 import pytest
 from polars.testing import assert_frame_equal
 
@@ -31,27 +32,42 @@ def test_join_semi_simple(how: Literal["semi", "anti"]) -> None:
     collection = MyCollection.sample(
         overrides=[{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
     )
-    primary_keys = pl.LazyFrame({"id": [1, 4, 5]})
+    primary_keys = [1, 4, 5]
 
     # Act
-    result = collection.join(primary_keys, how=how)
+    result = collection.join(pl.LazyFrame({"id": primary_keys}), how=how)
 
     # Assert
+    keep_primary_keys = pl.col("id").is_in(primary_keys)
     if how == "semi":
         assert_frame_equal(
             result.member_one,
-            collection.member_one.filter(pl.col("id").is_in([1, 4, 5])),
+            collection.member_one.filter(keep_primary_keys),
         )
         assert_frame_equal(
             result.member_two,
-            collection.member_two.filter(pl.col("id").is_in([1, 4, 5])),
+            collection.member_two.filter(keep_primary_keys),
         )
     else:
         assert_frame_equal(
             result.member_one,
-            collection.member_one.filter(~pl.col("id").is_in([1, 4, 5])),
+            collection.member_one.filter(~keep_primary_keys),
         )
         assert_frame_equal(
             result.member_two,
-            collection.member_two.filter(~pl.col("id").is_in([1, 4, 5])),
+            collection.member_two.filter(~keep_primary_keys),
         )
+
+
+def test_missing_primary_key_column() -> None:
+    # Arrange
+    collection = MyCollection.sample(
+        overrides=[{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
+    )
+    primary_keys = [1, 4, 5]
+
+    # Act & Assert
+    with pytest.raises(plexc.ColumnNotFoundError, match="unable to find column"):
+        collection.join(
+            pl.LazyFrame({"non_primary_key": primary_keys}), how="semi"
+        ).collect_all()
