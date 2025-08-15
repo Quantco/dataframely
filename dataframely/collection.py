@@ -567,20 +567,18 @@ class Collection(BaseCollection, ABC):
         how: Literal["semi", "anti"] = "semi",
     ) -> Self:
         """Filter the collection by joining onto a data frame containing entries for the
-        common primary keys whose respective rows should be kept or removed in the
+        common primary key columns whose respective rows should be kept or removed in the
         collection members.
 
         Args:
             primary_keys: The data frame to join on. Must contain the common primary key
                 columns of the collection.
             how: The join strategy to use. Like in polars, `semi` will keep all rows
-                that correspond to `primary_keys`, `anti` will remove them.
+                that can be found in `primary_keys`, `anti` will remove them.
 
         Raises:
             ValueError: If the collection contains any member that is annotated with
-                `ignored_in_filters==True`.
-            ColumnNotFoundError: If the `primary_keys` data frame does not contain
-                all common primary key columns of the collection.
+                `ignored_in_filters=True`.
 
         Returns:
             The collection, with members potentially reduced in length.
