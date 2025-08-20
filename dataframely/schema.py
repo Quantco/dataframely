@@ -985,7 +985,7 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         The schema loaded from the JSON data.
 
     Raises:
-        ValueError: If the schema format version is not supported and ``strict = True``.
+        ValueError: If the schema format version is not supported and ``strict=True``.
 
     Attention:
         This functionality is considered unstable. It may be changed at any time
