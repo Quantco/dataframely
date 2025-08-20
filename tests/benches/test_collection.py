@@ -65,7 +65,7 @@ def test_single_filter_filter(
 ) -> None:
     def benchmark_fn() -> None:
         _, failure = SingleFilterCollection.filter(partitioned_dataset)
-        _ = [len(f) for f in failure.values()]  # type: ignore
+        _ = [len(f) for f in failure.values()]
 
     benchmark(benchmark_fn)
 
@@ -107,6 +107,6 @@ def test_multi_filter_filter(
 ) -> None:
     def benchmark_fn() -> None:
         _, failure = MultiFilterCollection.filter(partitioned_dataset)
-        _ = [len(f) for f in failure.values()]  # type: ignore
+        _ = [len(f) for f in failure.values()]
 
     benchmark(benchmark_fn)
