@@ -959,14 +959,19 @@ def read_parquet_metadata_schema(
     """
     metadata = pl.read_parquet_metadata(source)
     if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
-        try:
-            return deserialize_schema(schema_metadata)
-        except (JSONDecodeError, plexc.ComputeError):
-            return None
+        return deserialize_schema(schema_metadata, strict=False)
     return None
 
 
-def deserialize_schema(data: str) -> type[Schema]:
+@overload
+def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]: ...
+
+
+@overload
+def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
+
+
+def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
     """Deserialize a schema from a JSON string.
 
     This method allows to dynamically load a schema from its serialization, without
@@ -974,12 +979,13 @@ def deserialize_schema(data: str) -> type[Schema]:
 
     Args:
         data: The JSON string created via :meth:`Schema.serialize`.
+        strict: Whether to raise an exception if the schema cannot be deserialized.
 
     Returns:
         The schema loaded from the JSON data.
 
     Raises:
-        ValueError: If the schema format version is not supported.
+        ValueError: If the schema format version is not supported and ``strict=True``.
 
     Attention:
         This functionality is considered unstable. It may be changed at any time
@@ -988,10 +994,15 @@ def deserialize_schema(data: str) -> type[Schema]:
     See also:
         :meth:`Schema.serialize` for additional information on serialization.
     """
-    decoded = json.loads(data, cls=SchemaJSONDecoder)
-    if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
-        raise ValueError(f"Unsupported schema format version: {format}")
-    return _schema_from_dict(decoded)
+    try:
+        decoded = json.loads(data, cls=SchemaJSONDecoder)
+        if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
+            raise ValueError(f"Unsupported schema format version: {format}")
+        return _schema_from_dict(decoded)
+    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+        if strict:
+            raise e from e
+        return None
 
 
 def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:

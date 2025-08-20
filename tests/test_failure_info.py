@@ -9,6 +9,8 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._serialization import SCHEMA_METADATA_KEY
+from dataframely.failure import RULE_METADATA_KEY, UNKNOWN_SCHEMA_NAME, FailureInfo
 
 
 class MySchema(dy.Schema):
@@ -68,7 +70,9 @@ def test_write_parquet_custom_metadata(tmp_path: Path) -> None:
     "read_fn",
     [dy.FailureInfo.read_parquet, dy.FailureInfo.scan_parquet],
 )
-def test_missing_metadata(tmp_path: Path, read_fn: Callable[[Path], None]) -> None:
+def test_missing_metadata(
+    tmp_path: Path, read_fn: Callable[[Path], FailureInfo]
+) -> None:
     df = pl.DataFrame(
         {
             "a": [4, 5, 6, 6, 7, 8],
@@ -79,3 +83,27 @@ def test_missing_metadata(tmp_path: Path, read_fn: Callable[[Path], None]) -> No
 
     with pytest.raises(ValueError, match=r"does not contain the required metadata"):
         read_fn(tmp_path / "failure.parquet")
+
+
+@pytest.mark.parametrize(
+    "read_fn",
+    [dy.FailureInfo.read_parquet, dy.FailureInfo.scan_parquet],
+)
+def test_invalid_schema_deserialization(
+    tmp_path: Path, read_fn: Callable[[Path], FailureInfo]
+) -> None:
+    df = pl.DataFrame(
+        {
+            "a": [1, 2, 3],
+            "b": [False, True, False],
+        }
+    )
+    df.write_parquet(
+        tmp_path / "failure.parquet",
+        metadata={
+            SCHEMA_METADATA_KEY: "{WRONG",
+            RULE_METADATA_KEY: '["b"]',
+        },
+    )
+    failure = read_fn(tmp_path / "failure.parquet")
+    assert failure.schema.__name__ == UNKNOWN_SCHEMA_NAME
