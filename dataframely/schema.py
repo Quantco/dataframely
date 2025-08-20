@@ -16,7 +16,6 @@ import polars as pl
 import polars.exceptions as plexc
 import polars.selectors as cs
 from polars._typing import FileSource, PartitioningScheme
-from sqlalchemy.sql.coercions import expect
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
@@ -963,11 +962,14 @@ def read_parquet_metadata_schema(
         return deserialize_schema(schema_metadata, strict=False)
     return None
 
+
 @overload
 def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]: ...
 
+
 @overload
 def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
+
 
 def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
     """Deserialize a schema from a JSON string.
@@ -995,7 +997,7 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
     try:
         decoded = json.loads(data, cls=SchemaJSONDecoder)
         if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
-                raise ValueError(f"Unsupported schema format version: {format}")
+            raise ValueError(f"Unsupported schema format version: {format}")
         return _schema_from_dict(decoded)
     except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
         if strict:
