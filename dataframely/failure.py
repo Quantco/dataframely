@@ -189,10 +189,11 @@ class FailureInfo(Generic[S]):
             if scan
             else pl.read_parquet(source, **kwargs).lazy()
         )
+        failure_schema = deserialize_schema(schema_metadata, strict = False) or type("__DATAFRAMELY_UNKNOWN__", (Schema,), {})
         return FailureInfo(
             lf,
             json.loads(rule_metadata),
-            schema=deserialize_schema(schema_metadata),
+            schema=failure_schema,
         )
 
 
