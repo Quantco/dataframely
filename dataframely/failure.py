@@ -19,6 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .schema import Schema
 
 RULE_METADATA_KEY = "dataframely_rule_columns"
+UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
 
 S = TypeVar("S", bound=BaseSchema)
 
@@ -176,7 +177,7 @@ class FailureInfo(Generic[S]):
     def _from_parquet(
         cls, source: str | Path | IO[bytes], scan: bool, **kwargs: Any
     ) -> FailureInfo[Schema]:
-        from .schema import deserialize_schema
+        from .schema import Schema, deserialize_schema
 
         metadata = pl.read_parquet_metadata(source)
         schema_metadata = metadata.get(SCHEMA_METADATA_KEY)
@@ -189,10 +190,13 @@ class FailureInfo(Generic[S]):
             if scan
             else pl.read_parquet(source, **kwargs).lazy()
         )
+        failure_schema = deserialize_schema(schema_metadata, strict=False) or type(
+            UNKNOWN_SCHEMA_NAME, (Schema,), {}
+        )
         return FailureInfo(
             lf,
             json.loads(rule_metadata),
-            schema=deserialize_schema(schema_metadata),
+            schema=failure_schema,
         )
 
 

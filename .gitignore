@@ -388,3 +388,6 @@ $RECYCLE.BIN/
 
 # interactive testing
 /*.ipynb
+
+# pytest-benchmark
+.benchmarks/

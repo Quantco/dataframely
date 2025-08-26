@@ -12,7 +12,7 @@ from typing import Any
 
 import polars as pl
 
-from ._rule import GroupRule, Rule
+from ._rule import DtypeCastRule, GroupRule, Rule
 from .columns import Column
 from .exc import ImplementationError
 
@@ -24,11 +24,13 @@ else:
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
 
+ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
+
 # --------------------------------------- UTILS -------------------------------------- #
 
 
 def _build_rules(
-    custom: dict[str, Rule], columns: dict[str, Column]
+    custom: dict[str, Rule], columns: dict[str, Column], *, with_cast: bool
 ) -> dict[str, Rule]:
     # NOTE: Copy here to prevent in-place modification of the custom rules
     rules: dict[str, Rule] = copy(custom)
@@ -45,6 +47,21 @@ def _build_rules(
         for rule_name, expr in column.validation_rules(pl.col(col_name)).items()
     }
     rules.update(column_rules)
+
+    # Add casting rules if requested. Here, we can simply check whether the nullability
+    # property of a column changes due to lenient dtype casting. Whenever casting fails,
+    # the value is set to `null`, mismatching the previous nullability.
+    # NOTE: This check assumes that both the original and cast column are present in the
+    #  data frame.
+    if with_cast:
+        casting_rules = {
+            f"{col_name}|dtype": DtypeCastRule(
+                pl.col(col_name).is_null()
+                == pl.col(f"{ORIGINAL_COLUMN_PREFIX}{col_name}").is_null()
+            )
+            for col_name in columns
+        }
+        rules.update(casting_rules)
 
     return rules
 
@@ -93,9 +110,7 @@ class SchemaMeta(ABCMeta):
         # we assume that users cast dtypes, i.e. additional rules for dtype casting
         # are also checked.
         all_column_names = set(result.columns)
-        all_rule_names = set(_build_rules(result.rules, result.columns).keys()) | set(
-            f"{col}|dtype" for col in result.columns
-        )
+        all_rule_names = set(_build_rules(result.rules, result.columns, with_cast=True))
         common_names = all_column_names & all_rule_names
         if len(common_names) > 0:
             common_list = ", ".join(sorted(f"'{col}'" for col in common_names))
@@ -189,8 +204,10 @@ class BaseSchema(metaclass=SchemaMeta):
         return _primary_keys(cls.columns())
 
     @classmethod
-    def _validation_rules(cls) -> dict[str, Rule]:
-        return _build_rules(cls._schema_validation_rules(), cls.columns())
+    def _validation_rules(cls, *, with_cast: bool) -> dict[str, Rule]:
+        return _build_rules(
+            cls._schema_validation_rules(), cls.columns(), with_cast=with_cast
+        )
 
     @classmethod
     def _schema_validation_rules(cls) -> dict[str, Rule]:

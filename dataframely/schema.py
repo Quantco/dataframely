@@ -17,7 +17,7 @@ import polars.exceptions as plexc
 import polars.selectors as cs
 from polars._typing import FileSource, PartitioningScheme
 
-from ._base_schema import BaseSchema
+from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
@@ -41,8 +41,6 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
-
-_ORIGINAL_NULL_SUFFIX = "__orig_null__"
 
 
 # ------------------------------------------------------------------------------------ #
@@ -362,7 +360,7 @@ class Schema(BaseSchema, ABC):
         combined_dataframe = combined_dataframe.with_columns(override_expressions)
 
         # NOTE: We already know that all columns have the correct dtype
-        rules = cls._validation_rules()
+        rules = cls._validation_rules(with_cast=False)
         filtered, evaluated = cls._filter_raw(combined_dataframe, rules, cast=False)
 
         if evaluated is None:
@@ -420,7 +418,8 @@ class Schema(BaseSchema, ABC):
 
         Returns:
             The (collected) input data frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence.
+            input's data frame type to reflect schema adherence. The data frame is
+            guaranteed to maintain its order.
 
         Raises:
             ValidationError: If the input data frame does not satisfy the schema
@@ -478,7 +477,7 @@ class Schema(BaseSchema, ABC):
             # whether casting succeeded.
             # NOTE: This code path is only executed from the `filter` method.
             lf = lf.with_columns(
-                pl.col(cls.column_names()).is_null().name.suffix(_ORIGINAL_NULL_SUFFIX)
+                pl.col(cls.column_names()).name.prefix(ORIGINAL_COLUMN_PREFIX)
             )
 
         lf = validate_dtypes(lf, actual=schema, expected=cls.columns(), casting=casting)
@@ -508,7 +507,9 @@ class Schema(BaseSchema, ABC):
         Returns:
             A tuple of the validated rows in the input data frame (potentially
             empty) and a simple dataclass carrying information about the rows of the
-            data frame which could not be validated successfully.
+            data frame which could not be validated successfully. Just like in polars'
+            native :meth:`~polars.DataFrame.filter`, the order of rows in the returned
+            data frame is maintained.
 
         Raises:
             ValidationError: If the columns of the input data frame are invalid. This
@@ -518,7 +519,7 @@ class Schema(BaseSchema, ABC):
         Note:
             This method preserves the ordering of the input data frame.
         """
-        rules = cls._validation_rules()
+        rules = cls._validation_rules(with_cast=cast)
         df_filtered, df_evaluated = cls._filter_raw(df, rules, cast)
         if df_evaluated is not None:
             failure_lf = (
@@ -526,6 +527,13 @@ class Schema(BaseSchema, ABC):
                 .filter(~pl.col("__final_valid__"))
                 .drop("__final_valid__")
             )
+            if cast:
+                # If we cast, we kept the original values around. In the failure info,
+                # we must return the original values instead of the casted ones.
+                failure_lf = failure_lf.with_columns(
+                    pl.col(f"{ORIGINAL_COLUMN_PREFIX}{name}").alias(name)
+                    for name in cls.column_names()
+                ).drop(f"{ORIGINAL_COLUMN_PREFIX}{name}" for name in cls.column_names())
             return (
                 df_filtered,
                 FailureInfo(lf=failure_lf, rule_columns=list(rules.keys()), schema=cls),
@@ -540,43 +548,14 @@ class Schema(BaseSchema, ABC):
         lf = cls._validate_schema(df.lazy(), casting=("lenient" if cast else "none"))
 
         # Then, we filter the data frame
-        if cast:
-            # Add rules for dtype casting. We can simply check whether the nullability property
-            # of any column value changed due to lenient dtype casting (whenever casting fails,
-            # the value is set to `null` while previous `null` values are simply kept). To this
-            # end, `_validate_schema` kept around the original columns.
-            dtype_rules = {
-                f"{col}|dtype": Rule(
-                    pl.col(col).is_null() == pl.col(f"{col}{_ORIGINAL_NULL_SUFFIX}")
-                )
-                for col in cls.column_names()
-            }
-            rules.update(dtype_rules)
-
         if len(rules) > 0:
-            lf_with_eval = with_evaluation_rules(lf, rules)
-            if cast:
-                # If we cast dtypes, we need to take care of two things:
-                # - There's still a bunch of columns showing the original nullability in the
-                #   data frame. We simply remove these columns again.
-                # - Rules other than the "dtype rule" might not be reliable if type casting
-                #   failed, i.e. if the "dtype rule" evaluated to `False`. For this reason,
-                #   we set all other rule evaluations to `null` in the case of dtype casting
-                #   failure.
-                non_dtype_rule_names = [
-                    rule for rule in rules if not rule.endswith("|dtype")
-                ]
-                all_dtype_casts_valid = pl.all_horizontal(pl.col(r"^.*\|dtype$"))
-                lf_with_eval = lf_with_eval.drop(
-                    cs.matches(f"{_ORIGINAL_NULL_SUFFIX}$")
-                ).with_columns(
-                    pl.when(all_dtype_casts_valid)
-                    .then(pl.col(non_dtype_rule_names))
-                    .otherwise(pl.lit(None, dtype=pl.Boolean))
-                )
+            lf_with_eval = lf.pipe(with_evaluation_rules, rules)
 
             # At this point, `lf_with_eval` contains the following:
-            # - All relevant columns of the original data frame, potentially with cast dtypes
+            # - All relevant columns of the original data frame
+            #   - If `cast` is set to `True`, the columns with their original names are
+            #     already cast and the original values are available in the columns
+            #     prefixed with `ORIGINAL_COLUMN_PREFIX`.
             # - One boolean column for each rule in `rules`
             rule_columns = rules.keys()
             df_evaluated = lf_with_eval.with_columns(
@@ -587,8 +566,12 @@ class Schema(BaseSchema, ABC):
             # and the invalid data frame
             lf = (
                 df_evaluated.lazy()
-                .filter(pl.col("__final_valid__"))
-                .drop("__final_valid__", *rule_columns)
+                .filter("__final_valid__")
+                .drop(
+                    "__final_valid__",
+                    cs.starts_with(ORIGINAL_COLUMN_PREFIX),
+                    *rule_columns,
+                )
             )
         else:
             df_evaluated = None
@@ -1042,14 +1025,19 @@ def read_parquet_metadata_schema(
     metadata = pl.read_parquet_metadata(source)
 
     if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
-        try:
-            return deserialize_schema(schema_metadata)
-        except (JSONDecodeError, plexc.ComputeError):
-            return None
+        return deserialize_schema(schema_metadata, strict=False)
     return None
 
 
-def deserialize_schema(data: str) -> type[Schema]:
+@overload
+def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]: ...
+
+
+@overload
+def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
+
+
+def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
     """Deserialize a schema from a JSON string.
 
     This method allows to dynamically load a schema from its serialization, without
@@ -1057,12 +1045,13 @@ def deserialize_schema(data: str) -> type[Schema]:
 
     Args:
         data: The JSON string created via :meth:`Schema.serialize`.
+        strict: Whether to raise an exception if the schema cannot be deserialized.
 
     Returns:
         The schema loaded from the JSON data.
 
     Raises:
-        ValueError: If the schema format version is not supported.
+        ValueError: If the schema format version is not supported and ``strict=True``.
 
     Attention:
         This functionality is considered unstable. It may be changed at any time
@@ -1071,10 +1060,15 @@ def deserialize_schema(data: str) -> type[Schema]:
     See also:
         :meth:`Schema.serialize` for additional information on serialization.
     """
-    decoded = json.loads(data, cls=SchemaJSONDecoder)
-    if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
-        raise ValueError(f"Unsupported schema format version: {format}")
-    return _schema_from_dict(decoded)
+    try:
+        decoded = json.loads(data, cls=SchemaJSONDecoder)
+        if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
+            raise ValueError(f"Unsupported schema format version: {format}")
+        return _schema_from_dict(decoded)
+    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+        if strict:
+            raise e from e
+        return None
 
 
 def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:

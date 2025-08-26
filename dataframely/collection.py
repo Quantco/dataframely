@@ -10,14 +10,14 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Annotated, Any, cast
+from typing import IO, Annotated, Any, Literal, cast
 
 import polars as pl
 import polars.exceptions as plexc
 
 from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
-from ._polars import FrameType, join_all_inner, join_all_outer
+from ._polars import FrameType
 from ._serialization import (
     COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
@@ -42,6 +42,8 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
+_FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
 
 
 class Collection(BaseCollection, ABC):
@@ -378,7 +380,8 @@ class Collection(BaseCollection, ABC):
         Returns:
             An instance of the collection. All members of the collection are guaranteed
             to be valid with respect to their respective schemas and the filters on this
-            collection did not remove rows from any member.
+            collection did not remove rows from any member. The input order of each
+            member is maintained.
         """
         out, failure = cls.filter(data, cast=cast)
         if any(len(fail) > 0 for fail in failure.values()):
@@ -441,7 +444,9 @@ class Collection(BaseCollection, ABC):
               filtered out by any of the collection's filters. While collection members
               are always instances of :class:`~polars.LazyFrame`, the members of the
               returned collection are essentially eager as they are constructed by
-              calling ``.lazy()`` on eager data frames.
+              calling ``.lazy()`` on eager data frames. Just like in polars' native
+              :meth:`~polars.DataFrame.filter`, the order of rows is maintained in all
+              returned data frames.
             - A mapping from member name to a :class:`FailureInfo` object which provides
               details on why individual rows had been removed. Optional members are only
               included in this dictionary if they had been provided in the input.
@@ -467,7 +472,7 @@ class Collection(BaseCollection, ABC):
                 data[member_name], cast=cast
             )
 
-        # Once we're done that, we can apply the filters on this collection. To this end,
+        # Once we've done that, we can apply the filters on this collection. To this end,
         # we iterate over all filters and store the filter results.
         filters = cls._filters()
         if len(filters) > 0:
@@ -478,41 +483,35 @@ class Collection(BaseCollection, ABC):
             for name, filter in filters.items():
                 keep[name] = filter.logic(result_cls).select(primary_keys).collect()
 
-            # Using the filter results, we can define a joint data frame that we use to filter
-            # the input.
-            all_keep = join_all_inner(
-                [df.lazy() for df in keep.values()], on=primary_keys
-            ).collect()
-
-            # Now we can iterate over the results where we do the following:
-            # - Join the current result onto `all_keep` to get rid of the rows we do not
-            #   want to keep.
-            # - Anti-join onto each individual filter to extend the failure reasons
+            # Now we can iterate over the results and left-join onto each individual
+            # filter to obtain independent boolean indicators of whether to keep the row
             for member_name, filtered in results.items():
-                if cls.members()[member_name].ignored_in_filters:
+                member_info = cls.members()[member_name]
+                if member_info.ignored_in_filters:
                     continue
-                results[member_name] = filtered.join(all_keep, on=primary_keys)
 
-                new_failure_names = list(filters.keys())
-                new_failure_pks = [
-                    filtered.select(primary_keys)
-                    .lazy()
-                    .unique()
-                    .join(filter_keep.lazy(), on=primary_keys, how="anti")
-                    .with_columns(pl.lit(False).alias(name))
-                    for name, filter_keep in keep.items()
-                ]
-                # NOTE: The outer join might generate NULL values if a primary key is not
-                #  filtered out by all filters. In this case, we want to assign a validation
-                #  value of `True`.
-                all_new_failure_pks = join_all_outer(
-                    new_failure_pks, on=primary_keys
-                ).with_columns(pl.col(new_failure_names).fill_null(True))
+                lf_with_eval = filtered.lazy()
+                for name, filter_keep in keep.items():
+                    lf_with_eval = lf_with_eval.join(
+                        filter_keep.lazy().with_columns(pl.lit(True).alias(name)),
+                        on=primary_keys,
+                        how="left",
+                        maintain_order="left",
+                    ).with_columns(pl.col(name).fill_null(False))
 
-                # At this point, we have a data frame with the primary keys of the *excluded*
-                # rows of the member result along with the reasons. We join on the result again
-                # which will give us the same shape as the current failure info lf. Thus, we can
-                # simply concatenate diagonally, resulting in a failure info object as follows:
+                result_with_eval = lf_with_eval.collect()
+
+                # Filtering `result_with_eval` by the rows for which all joins
+                # "succeeded", we can identify the rows that pass all the filters. We
+                # keep these rows for the result.
+                results[member_name] = result_with_eval.filter(
+                    pl.all_horizontal(keep.keys())
+                ).drop(keep.keys())
+
+                # Filtering `result_with_eval` with the inverse condition, we find all
+                # the problematic rows. We can build a single failure info object by
+                # simply concatenating diagonally with the already existing failure. The
+                # resulting failure info looks as follows:
                 #
                 #  | Source Data | Rule Columns (schema) | Filter Name Columns (collection) |
                 #  | ----------- | --------------------- | -------------------------------- |
@@ -520,20 +519,97 @@ class Collection(BaseCollection, ABC):
                 #  | ...         | NULL                  | <filled>                         |
                 #
                 failure = failures[member_name]
-                new_failure = FailureInfo(
-                    lf=pl.concat(
-                        [
-                            failure._lf,
-                            filtered.lazy().join(all_new_failure_pks, on=primary_keys),
-                        ],
-                        how="diagonal",
-                    ),
-                    rule_columns=failure._rule_columns + new_failure_names,
+                filtered_failure = result_with_eval.filter(
+                    ~pl.all_horizontal(keep.keys())
+                ).lazy()
+
+                # If we cast previously, `failure` and `filtered_failure` have different
+                # dtypes for the source data: `failure` keeps the original dtypes while
+                # `filtered_failure` has the target dtypes. Hence, we need to cast
+                # `filtered_failure` to the original dtypes. This is safe because any
+                # row in `filtered_failure` must have already been successfully cast and
+                # a "roundtrip cast" is always possible.
+                # Doing this in a fully lazy way is not trivial: we do a diagonal
+                # concatenation where we duplicate each column of the source data. We
+                # then coalesce the two versions into the original column dtype.
+                if cast:
+                    filtered_failure = filtered_failure.rename(
+                        {
+                            name: f"{_FILTER_COLUMN_PREFIX}{name}"
+                            for name in member_info.schema.column_names()
+                        }
+                    )
+
+                failure_lf = pl.concat([failure._lf, filtered_failure], how="diagonal")
+                if cast:
+                    failure_lf = failure_lf.with_columns(
+                        pl.coalesce(
+                            name,
+                            pl.col(f"{_FILTER_COLUMN_PREFIX}{name}").cast(
+                                pl.dtype_of(name)
+                            ),
+                        )
+                        for name in member_info.schema.column_names()
+                    ).drop(
+                        f"{_FILTER_COLUMN_PREFIX}{name}"
+                        for name in member_info.schema.column_names()
+                    )
+
+                failures[member_name] = FailureInfo(
+                    lf=failure_lf,
+                    rule_columns=failure._rule_columns + list(keep.keys()),
                     schema=failure.schema,
                 )
-                failures[member_name] = new_failure
 
         return cls._init(results), failures
+
+    def join(
+        self,
+        primary_keys: pl.LazyFrame,
+        how: Literal["semi", "anti"] = "semi",
+        maintain_order: Literal["none", "left"] = "none",
+    ) -> Self:
+        """Filter the collection by joining onto a data frame containing entries for the
+        common primary key columns whose respective rows should be kept or removed in
+        the collection members.
+
+        Args:
+            primary_keys: The data frame to join on. Must contain the common primary key
+                columns of the collection.
+            how: The join strategy to use. Like in polars, `semi` will keep all rows
+                that can be found in `primary_keys`, `anti` will remove them.
+            maintain_order: The `maintain_order` option to use for the polars join.
+
+        Returns:
+            The collection, with members potentially reduced in length.
+
+        Raises:
+            ValueError: If the collection contains any member that is annotated with
+                `ignored_in_filters=True`.
+
+        Attention:
+            This method does not validate the resulting collection. Ensure to only use
+            this if the resulting collection still satisfies the filters of the
+            collection. The joins are not evaluated eagerly. Therefore, a downstream
+            call to :meth:`collect` might fail, especially if `primary_keys` does not
+            contain all columns for all common primary keys.
+        """
+        if any(member.ignored_in_filters for member in self.members().values()):
+            raise ValueError(
+                "The join operation is not supported for collections with members that are ignored in filters."
+            )
+
+        return self.cast(
+            {
+                key: lf.join(
+                    primary_keys,
+                    on=self.common_primary_keys(),
+                    how=how,
+                    maintain_order=maintain_order,
+                )
+                for key, lf in self.to_dict().items()
+            }
+        )
 
     # ------------------------------------ CASTING ----------------------------------- #
 
@@ -988,7 +1064,7 @@ def deserialize_collection(data: str) -> type[Collection]:
         {
             "__annotations__": annotations,
             **{
-                name: Filter(logic=lambda _: logic)
+                name: Filter(logic=lambda _, logic=logic: logic)  # type: ignore
                 for name, logic in decoded["filters"].items()
             },
         },

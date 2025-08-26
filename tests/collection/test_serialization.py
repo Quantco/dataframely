@@ -3,6 +3,7 @@
 
 import json
 
+import polars as pl
 import pytest
 
 import dataframely as dy
@@ -57,6 +58,21 @@ class OptionalCollection(dy.Collection):
             },
             {
                 "filter1": Filter(lambda c: c.s1.join(c.s2, on="a")),
+            },
+        ),
+        create_collection(
+            "test",
+            {
+                "s1": create_schema("schema1", {"a": dy.Int64(primary_key=True)}),
+                "s2": create_schema("schema2", {"a": dy.Int64(primary_key=True)}),
+            },
+            {
+                "filter1": Filter(lambda c: c.s1.join(c.s2, on="a")),
+                "filter2": Filter(
+                    lambda c: c.s1.join_where(
+                        c.s2, pl.col("a") + pl.col("a_right") < 10
+                    )
+                ),
             },
         ),
         OptionalCollection,
