@@ -12,7 +12,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._serialization import COLLECTION_METADATA_KEY
+from dataframely._storage.parquet import COLLECTION_METADATA_KEY
 from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_collection, create_schema

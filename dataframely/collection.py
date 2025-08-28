@@ -19,14 +19,13 @@ from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
 from ._polars import FrameType
 from ._serialization import (
-    COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
-    ParquetStorageBackend,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
-    StorageBackend,
     serialization_versions,
 )
+from ._storage.base import StorageBackend
+from ._storage.parquet import COLLECTION_METADATA_KEY, ParquetStorageBackend
 from ._typing import LazyFrame, Validation
 from .exc import (
     MemberValidationError,

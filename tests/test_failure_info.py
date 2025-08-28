@@ -9,7 +9,7 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._serialization import SCHEMA_METADATA_KEY
+from dataframely._storage.parquet import SCHEMA_METADATA_KEY
 from dataframely.failure import RULE_METADATA_KEY, UNKNOWN_SCHEMA_NAME, FailureInfo
 
 

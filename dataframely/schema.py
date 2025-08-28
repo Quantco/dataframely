@@ -21,14 +21,13 @@ from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
-    SCHEMA_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
-    ParquetStorageBackend,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
-    StorageBackend,
     serialization_versions,
 )
+from ._storage.base import StorageBackend
+from ._storage.parquet import SCHEMA_METADATA_KEY, ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame, Validation
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict

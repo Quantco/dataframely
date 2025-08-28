@@ -10,7 +10,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._serialization import SCHEMA_METADATA_KEY
+from dataframely._storage.parquet import SCHEMA_METADATA_KEY
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_schema
 
