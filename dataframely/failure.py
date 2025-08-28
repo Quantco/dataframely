@@ -140,7 +140,9 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
-        return cls._read(io=ParquetStorageBackend(), file=source, lazy=False, **kwargs)
+        return cls._read(
+            backend=ParquetStorageBackend(), file=source, lazy=False, **kwargs
+        )
 
     @classmethod
     def scan_parquet(
@@ -161,17 +163,19 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
-        return cls._read(io=ParquetStorageBackend(), file=source, lazy=True, **kwargs)
+        return cls._read(
+            backend=ParquetStorageBackend(), file=source, lazy=True, **kwargs
+        )
 
     # -------------------------------- Storage --------------------------------------- #
 
     def _sink(
         self,
-        io: StorageBackend,
+        backend: StorageBackend,
         file: str | Path | IO[bytes] | PartitioningScheme,
         **kwargs: Any,
     ) -> None:
-        io.sink_failure_info(
+        backend.sink_failure_info(
             lf=self._lf,
             serialized_rules=json.dumps(self._rule_columns),
             serialized_schema=self.schema.serialize(),
@@ -181,11 +185,11 @@ class FailureInfo(Generic[S]):
 
     def _write(
         self,
-        io: StorageBackend,
+        backend: StorageBackend,
         file: str | Path | IO[bytes] | PartitioningScheme,
         **kwargs: Any,
     ) -> None:
-        io.write_failure_info(
+        backend.write_failure_info(
             df=self._df,
             serialized_rules=json.dumps(self._rule_columns),
             serialized_schema=self.schema.serialize(),
@@ -196,7 +200,7 @@ class FailureInfo(Generic[S]):
     @classmethod
     def _read(
         cls,
-        io: StorageBackend,
+        backend: StorageBackend,
         file: str | Path | IO[bytes] | PartitioningScheme,
         lazy: bool,
         **kwargs: Any,
@@ -204,11 +208,11 @@ class FailureInfo(Generic[S]):
         from .schema import Schema, deserialize_schema
 
         if lazy:
-            lf, serialized_rules, serialized_schema = io.scan_failure_info(
+            lf, serialized_rules, serialized_schema = backend.scan_failure_info(
                 file=file, **kwargs
             )
         else:
-            df, serialized_rules, serialized_schema = io.read_failure_info(
+            df, serialized_rules, serialized_schema = backend.read_failure_info(
                 file=file, **kwargs
             )
             lf = df.lazy()

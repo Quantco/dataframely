@@ -820,7 +820,7 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         return cls._read(
-            io=ParquetStorageBackend(),
+            backend=ParquetStorageBackend(),
             validation=validation,
             directory=directory,
             lazy=False,
@@ -886,7 +886,7 @@ class Collection(BaseCollection, ABC):
             :meth:`serialize`.
         """
         return cls._read(
-            io=ParquetStorageBackend(),
+            backend=ParquetStorageBackend(),
             validation=validation,
             directory=directory,
             lazy=True,
@@ -895,10 +895,12 @@ class Collection(BaseCollection, ABC):
 
     # -------------------------------- Storage --------------------------------------- #
 
-    def _write(self, io: StorageBackend, directory: Path | str, **kwargs: Any) -> None:
+    def _write(
+        self, backend: StorageBackend, directory: Path | str, **kwargs: Any
+    ) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
 
-        io.write_collection(
+        backend.write_collection(
             self.to_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
@@ -908,10 +910,12 @@ class Collection(BaseCollection, ABC):
             **kwargs,
         )
 
-    def _sink(self, io: StorageBackend, directory: Path | str, **kwargs: Any) -> None:
+    def _sink(
+        self, backend: StorageBackend, directory: Path | str, **kwargs: Any
+    ) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
 
-        io.sink_collection(
+        backend.sink_collection(
             self.to_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
@@ -923,16 +927,16 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def _read(
-        cls, io: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
+        cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
     ) -> Self:
         # Utility method encapsulating the interaction with the StorageBackend
 
         if lazy:
-            data, serialized_collection_types = io.scan_collection(
+            data, serialized_collection_types = backend.scan_collection(
                 members=cls.member_schemas().keys(), **kwargs
             )
         else:
-            data, serialized_collection_types = io.read_collection(
+            data, serialized_collection_types = backend.read_collection(
                 members=cls.member_schemas().keys(), **kwargs
             )
 

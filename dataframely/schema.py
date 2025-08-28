@@ -698,7 +698,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        cls._write(df=df, io=ParquetStorageBackend(), file=file, **kwargs)
+        cls._write(df=df, backend=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def sink_parquet(
@@ -726,7 +726,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        cls._sink(lf=lf, io=ParquetStorageBackend(), file=file, **kwargs)
+        cls._sink(lf=lf, backend=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def read_parquet(
@@ -881,18 +881,18 @@ class Schema(BaseSchema, ABC):
     # --------------------------------- Storage -------------------------------------- #
 
     @classmethod
-    def _write(cls, df: pl.DataFrame, io: StorageBackend, **kwargs: Any) -> None:
-        io.write_frame(df=df, serialized_schema=cls.serialize(), **kwargs)
+    def _write(cls, df: pl.DataFrame, backend: StorageBackend, **kwargs: Any) -> None:
+        backend.write_frame(df=df, serialized_schema=cls.serialize(), **kwargs)
 
     @classmethod
-    def _sink(cls, lf: pl.LazyFrame, io: StorageBackend, **kwargs: Any) -> None:
-        io.sink_frame(lf=lf, serialized_schema=cls.serialize(), **kwargs)
+    def _sink(cls, lf: pl.LazyFrame, backend: StorageBackend, **kwargs: Any) -> None:
+        backend.sink_frame(lf=lf, serialized_schema=cls.serialize(), **kwargs)
 
     @overload
     @classmethod
     def _read(
         cls,
-        io: StorageBackend,
+        backend: StorageBackend,
         validation: Validation,
         lazy: Literal[True],
         **kwargs: Any,
@@ -902,7 +902,7 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def _read(
         cls,
-        io: StorageBackend,
+        backend: StorageBackend,
         validation: Validation,
         lazy: Literal[False],
         **kwargs: Any,
@@ -910,15 +910,15 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def _read(
-        cls, io: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
+        cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
     ) -> LazyFrame[Self] | DataFrame[Self]:
         source = kwargs.pop("source")
 
         # Load
         if lazy:
-            lf, serialized_schema = io.scan_frame(source=source)
+            lf, serialized_schema = backend.scan_frame(source=source)
         else:
-            df, serialized_schema = io.read_frame(source=source)
+            df, serialized_schema = backend.read_frame(source=source)
             lf = df.lazy()
 
         deserialized_schema = (
