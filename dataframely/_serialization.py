@@ -128,15 +128,15 @@ SerializedCollection = str
 
 
 class StorageBackend(ABC):
-    """Base class for IO managers.
+    """Base class for storage backends.
 
-    An IO manager encapsulates a way of serializing and deserializing dataframlely
+    A storage backend encapsulates a way of serializing and deserializing dataframlely
     data-/lazyframes and collections. This base class provides a unified interface for
     all such use cases.
 
-    The interface is designed to operate data provided as polars frames, and metadata
-    provided serialized strings. This design is meant to limit the coupling between the
-    Schema/Collection classes and specifics of how data and metadata is stored.
+    The interface is designed to operate on data provided as polars frames, and metadata
+    provided as serialized strings. This design is meant to limit the coupling between
+    the Schema/Collection classes and specifics of how data and metadata is stored.
     """
 
     # ----------------------------------- Schemas -------------------------------------
