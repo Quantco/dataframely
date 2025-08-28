@@ -9,6 +9,7 @@ import polars as pl
 
 SerializedSchema = str
 SerializedCollection = str
+SerializedRules = str
 
 
 class StorageBackend(ABC):
@@ -148,3 +149,50 @@ class StorageBackend(ABC):
             It is up to the caller to decide how to handle the presence/absence/consistency
             of the returned values.
         """
+
+    # ------------------------------ Failure Info --------------------------------------
+    @abstractmethod
+    def sink_failure_info(
+        self,
+        lf: pl.LazyFrame,
+        serialized_rules: SerializedRules,
+        serialized_schema: SerializedSchema,
+        **kwargs: Any,
+    ) -> None:
+        """Stream the failure info to the storage backend.
+
+        Args:
+            lf: LazyFrame backing the failure info.
+            serialized_rules: String-serialized information about the rules the
+                failing cases violated.
+            serialized_schema: String-serialized schema information.
+        """
+
+    @abstractmethod
+    def write_failure_info(
+        self,
+        df: pl.DataFrame,
+        serialized_rules: SerializedRules,
+        serialized_schema: SerializedSchema,
+        **kwargs: Any,
+    ) -> None:
+        """Write the failure info to the storage backend.
+
+        Args:
+            df: DataFrame backing the failure info.
+            serialized_rules: String-serialized information about the rules the
+                failing cases violated.
+            serialized_schema: String-serialized schema information.
+        """
+
+    @abstractmethod
+    def scan_failure_info(
+        self, **kwargs: Any
+    ) -> tuple[pl.LazyFrame, SerializedRules, SerializedSchema]:
+        """Lazily read the failure info from the storage backend."""
+
+    @abstractmethod
+    def read_failure_info(
+        self, **kwargs: Any
+    ) -> tuple[pl.DataFrame, SerializedRules, SerializedSchema]:
+        """Read the failure info from the storage backend."""

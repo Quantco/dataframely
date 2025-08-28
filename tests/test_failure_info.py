@@ -9,8 +9,8 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._storage.parquet import SCHEMA_METADATA_KEY
-from dataframely.failure import RULE_METADATA_KEY, UNKNOWN_SCHEMA_NAME, FailureInfo
+from dataframely._storage.parquet import RULE_METADATA_KEY, SCHEMA_METADATA_KEY
+from dataframely.failure import UNKNOWN_SCHEMA_NAME, FailureInfo
 
 
 class MySchema(dy.Schema):

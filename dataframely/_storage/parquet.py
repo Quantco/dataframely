@@ -7,10 +7,16 @@ from typing import Any
 
 import polars as pl
 
-from .base import SerializedCollection, SerializedSchema, StorageBackend
+from .base import (
+    SerializedCollection,
+    SerializedRules,
+    SerializedSchema,
+    StorageBackend,
+)
 
 SCHEMA_METADATA_KEY = "dataframely_schema"
 COLLECTION_METADATA_KEY = "dataframely_collection"
+RULE_METADATA_KEY = "dataframely_rule_columns"
 
 
 class ParquetStorageBackend(StorageBackend):
@@ -160,6 +166,56 @@ class ParquetStorageBackend(StorageBackend):
             # We assume that the member is stored as a single parquet file
             return path
         return None
+
+    # ------------------------------ Failure Info --------------------------------------
+    def sink_failure_info(
+        self,
+        lf: pl.LazyFrame,
+        serialized_rules: SerializedRules,
+        serialized_schema: SerializedSchema,
+        **kwargs: Any,
+    ) -> None:
+        file = kwargs.pop("file")
+        metadata = kwargs.pop("metadata", {})
+        metadata[RULE_METADATA_KEY] = serialized_rules
+        metadata[SCHEMA_METADATA_KEY] = serialized_schema
+        lf.sink_parquet(file, metadata=metadata, **kwargs)
+
+    def write_failure_info(
+        self,
+        df: pl.DataFrame,
+        serialized_rules: SerializedRules,
+        serialized_schema: SerializedSchema,
+        **kwargs: Any,
+    ) -> None:
+        file = kwargs.pop("file")
+        metadata = kwargs.pop("metadata", {})
+        metadata[RULE_METADATA_KEY] = serialized_rules
+        metadata[SCHEMA_METADATA_KEY] = serialized_schema
+        df.write_parquet(file, metadata=metadata, **kwargs)
+
+    def scan_failure_info(
+        self, **kwargs: Any
+    ) -> tuple[pl.LazyFrame, SerializedRules, SerializedSchema]:
+        file = kwargs.pop("file")
+        metadata = pl.read_parquet_metadata(file)
+        schema_metadata = metadata.get(SCHEMA_METADATA_KEY)
+
+        rule_metadata = metadata.get(RULE_METADATA_KEY)
+        if schema_metadata is None or rule_metadata is None:
+            raise ValueError("The parquet file does not contain the required metadata.")
+        lf = pl.scan_parquet(file, **kwargs)
+        return lf, rule_metadata, schema_metadata
+
+    def read_failure_info(
+        self, **kwargs: Any
+    ) -> tuple[pl.DataFrame, SerializedRules, SerializedSchema]:
+        lf, rule_metadata, schema_metadata = self.scan_failure_info(**kwargs)
+        return (
+            lf.collect(),
+            rule_metadata,
+            schema_metadata,
+        )
 
 
 def _read_serialized_collection(path: Path) -> SerializedCollection | None:
