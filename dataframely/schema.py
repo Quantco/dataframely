@@ -878,7 +878,8 @@ class Schema(BaseSchema, ABC):
             )
         return True
 
-    # ------------------------------------- IO --------------------------------------- #
+    # --------------------------------- Storage -------------------------------------- #
+
     @classmethod
     def _write(cls, df: pl.DataFrame, io: StorageBackend, **kwargs: Any) -> None:
         io.write_frame(df=df, serialized_schema=cls.serialize(), **kwargs)

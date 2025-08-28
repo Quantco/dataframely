@@ -140,7 +140,7 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
-        return cls._read(io=ParquetStorageBackend(), file=source, **kwargs)
+        return cls._read(io=ParquetStorageBackend(), file=source, lazy=False, **kwargs)
 
     @classmethod
     def scan_parquet(
@@ -161,7 +161,9 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
-        return cls._scan(io=ParquetStorageBackend(), file=source, **kwargs)
+        return cls._read(io=ParquetStorageBackend(), file=source, lazy=True, **kwargs)
+
+    # -------------------------------- Storage --------------------------------------- #
 
     def _sink(
         self,
@@ -192,43 +194,30 @@ class FailureInfo(Generic[S]):
         )
 
     @classmethod
-    def _scan(
+    def _read(
         cls,
         io: StorageBackend,
         file: str | Path | IO[bytes] | PartitioningScheme,
+        lazy: bool,
         **kwargs: Any,
     ) -> FailureInfo[Schema]:
         from .schema import Schema, deserialize_schema
 
-        lf, serialized_rules, serialized_schema = io.scan_failure_info(
-            file=file, **kwargs
-        )
+        if lazy:
+            lf, serialized_rules, serialized_schema = io.scan_failure_info(
+                file=file, **kwargs
+            )
+        else:
+            df, serialized_rules, serialized_schema = io.read_failure_info(
+                file=file, **kwargs
+            )
+            lf = df.lazy()
+
         schema = deserialize_schema(serialized_schema, strict=False) or type(
             UNKNOWN_SCHEMA_NAME, (Schema,), {}
         )
         return FailureInfo(
             lf,
-            json.loads(serialized_rules),
-            schema=schema,
-        )
-
-    @classmethod
-    def _read(
-        cls,
-        io: StorageBackend,
-        file: str | Path | IO[bytes] | PartitioningScheme,
-        **kwargs: Any,
-    ) -> FailureInfo[Schema]:
-        from .schema import Schema, deserialize_schema
-
-        df, serialized_rules, serialized_schema = io.scan_failure_info(
-            file=file, **kwargs
-        )
-        schema = deserialize_schema(serialized_schema, strict=False) or type(
-            UNKNOWN_SCHEMA_NAME, (Schema,), {}
-        )
-        return FailureInfo(
-            df,
             json.loads(serialized_rules),
             schema=schema,
         )

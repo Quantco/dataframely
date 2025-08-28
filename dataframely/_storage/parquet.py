@@ -175,11 +175,12 @@ class ParquetStorageBackend(StorageBackend):
         serialized_schema: SerializedSchema,
         **kwargs: Any,
     ) -> None:
-        file = kwargs.pop("file")
-        metadata = kwargs.pop("metadata", {})
-        metadata[RULE_METADATA_KEY] = serialized_rules
-        metadata[SCHEMA_METADATA_KEY] = serialized_schema
-        lf.sink_parquet(file, metadata=metadata, **kwargs)
+        self._write_failure_info(
+            df=lf,
+            serialized_rules=serialized_rules,
+            serialized_schema=serialized_schema,
+            **kwargs,
+        )
 
     def write_failure_info(
         self,
@@ -188,11 +189,30 @@ class ParquetStorageBackend(StorageBackend):
         serialized_schema: SerializedSchema,
         **kwargs: Any,
     ) -> None:
+        self._write_failure_info(
+            df=df,
+            serialized_rules=serialized_rules,
+            serialized_schema=serialized_schema,
+            **kwargs,
+        )
+
+    def _write_failure_info(
+        self,
+        df: pl.DataFrame | pl.LazyFrame,
+        serialized_rules: SerializedRules,
+        serialized_schema: SerializedSchema,
+        **kwargs: Any,
+    ) -> None:
         file = kwargs.pop("file")
         metadata = kwargs.pop("metadata", {})
+
         metadata[RULE_METADATA_KEY] = serialized_rules
         metadata[SCHEMA_METADATA_KEY] = serialized_schema
-        df.write_parquet(file, metadata=metadata, **kwargs)
+
+        if isinstance(df, pl.DataFrame):
+            df.write_parquet(file, metadata=metadata, **kwargs)
+        else:
+            df.sink_parquet(file, metadata=metadata, **kwargs)
 
     def scan_failure_info(
         self, **kwargs: Any

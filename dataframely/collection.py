@@ -893,6 +893,8 @@ class Collection(BaseCollection, ABC):
             **kwargs,
         )
 
+    # -------------------------------- Storage --------------------------------------- #
+
     def _write(self, io: StorageBackend, directory: Path | str, **kwargs: Any) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
 
