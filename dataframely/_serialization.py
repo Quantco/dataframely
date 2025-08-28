@@ -278,17 +278,6 @@ class ParquetStorageBackend(StorageBackend):
     def sink_frame(
         self, lf: pl.LazyFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
-        """This method stores frames as individual parquet files.
-
-        Args:
-            lf: LazyFrame containing the data to be stored.
-            kwargs: The "file" kwarg is required to specify where data is stored.
-                It should point to a parquet file. If hive partitioning is used,
-                it should point to a directory.
-                The "metadata" kwarg is supported to pass a dictionary of parquet
-                metadata.
-                Additional keyword arguments are passed to polars.
-        """
         file = kwargs.pop("file")
         metadata = kwargs.pop("metadata", {})
         lf.sink_parquet(
@@ -300,17 +289,6 @@ class ParquetStorageBackend(StorageBackend):
     def write_frame(
         self, df: pl.DataFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
-        """This method stores frames as individual parquet files.
-
-        Args:
-            df: DataFrame containing the data to be stored.
-            kwargs: The "file" kwarg is required to specify where data is stored.
-                It should point to a parquet file. If hive partitioning is used,
-                it should point to a directory.
-                The "metadata" kwarg is supported to pass a dictionary of parquet
-                metadata.
-                Additional keyword arguments are passed to polars.
-        """
         file = kwargs.pop("file")
         metadata = kwargs.pop("metadata", {})
         df.write_parquet(
@@ -320,24 +298,12 @@ class ParquetStorageBackend(StorageBackend):
         )
 
     def scan_frame(self, **kwargs: Any) -> tuple[pl.LazyFrame, SerializedSchema | None]:
-        """Lazily read single frames from parquet.
-
-        Args:
-            kwargs: The "source" kwarg is required to specify where data is stored.
-                Other kwargs are passed to polars.
-        """
         source = kwargs.pop("source")
         lf = pl.scan_parquet(source, **kwargs)
         metadata = _read_serialized_schema(source)
         return lf, metadata
 
     def read_frame(self, **kwargs: Any) -> tuple[pl.DataFrame, SerializedSchema | None]:
-        """Eagerly read single frames from parquet.
-
-        Args:
-            kwargs: The "source" kwarg is required to specify where data is stored.
-                Other kwargs are passed to polars.
-        """
         source = kwargs.pop("source")
         df = pl.read_parquet(source, **kwargs)
         metadata = _read_serialized_schema(source)
@@ -351,14 +317,6 @@ class ParquetStorageBackend(StorageBackend):
         serialized_schemas: dict[str, str],
         **kwargs: Any,
     ) -> None:
-        """Stream multiple frames to parquet.
-
-        Args:
-            dfs: See base class.
-            serialized_collection: See base class.
-            serialized_schemas: See base class.
-            kwargs: The "directory" kwarg is required to specify where data is stored.
-        """
         path = Path(kwargs.pop("directory"))
 
         # The collection schema is serialized as part of the member parquet metadata
@@ -384,14 +342,6 @@ class ParquetStorageBackend(StorageBackend):
         serialized_schemas: dict[str, str],
         **kwargs: Any,
     ) -> None:
-        """Write multiple frames to parquet.
-
-        Args:
-            dfs: See base class.
-            serialized_collection: See base class.
-            serialized_schemas: See base class.
-            kwargs: The "directory" kwarg is required to specify where data is stored.
-        """
         path = Path(kwargs.pop("directory"))
 
         # The collection schema is serialized as part of the member parquet metadata
@@ -413,12 +363,6 @@ class ParquetStorageBackend(StorageBackend):
     def scan_collection(
         self, members: Iterable[str], **kwargs: Any
     ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
-        """Lazily read multiple frames from parquet.
-
-        Args:
-            members: See base class.
-            kwargs: The "directory" kwarg is required to specify where data is stored.
-        """
         path = Path(kwargs.pop("directory"))
         return self._collection_from_parquet(
             path=path, members=members, scan=True, **kwargs
@@ -427,12 +371,6 @@ class ParquetStorageBackend(StorageBackend):
     def read_collection(
         self, members: Iterable[str], **kwargs: Any
     ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
-        """Eagerly read multiple frames from parquet.
-
-        Args:
-            members: See base class.
-            kwargs: The "directory" kwarg is required to specify where data is stored.
-        """
         path = Path(kwargs.pop("directory"))
         return self._collection_from_parquet(
             path=path, members=members, scan=False, **kwargs
