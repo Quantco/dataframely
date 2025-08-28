@@ -175,6 +175,8 @@ class FailureInfo(Generic[S]):
         file: str | Path | IO[bytes] | PartitioningScheme,
         **kwargs: Any,
     ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
         backend.sink_failure_info(
             lf=self._lf,
             serialized_rules=json.dumps(self._rule_columns),
@@ -189,6 +191,8 @@ class FailureInfo(Generic[S]):
         file: str | Path | IO[bytes] | PartitioningScheme,
         **kwargs: Any,
     ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
         backend.write_failure_info(
             df=self._df,
             serialized_rules=json.dumps(self._rule_columns),
@@ -205,6 +209,8 @@ class FailureInfo(Generic[S]):
         lazy: bool,
         **kwargs: Any,
     ) -> FailureInfo[Schema]:
+        # Utility method encapsulating the interaction with the StorageBackend
+
         from .schema import Schema, deserialize_schema
 
         if lazy:
