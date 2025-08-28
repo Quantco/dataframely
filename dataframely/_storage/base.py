@@ -163,8 +163,8 @@ class StorageBackend(ABC):
 
         Args:
             lf: LazyFrame backing the failure info.
-            serialized_rules: String-serialized information about the rules the
-                failing cases violated.
+            serialized_rules: JSON-serialized list of rule column names
+                used for validation.
             serialized_schema: String-serialized schema information.
         """
 
@@ -180,8 +180,8 @@ class StorageBackend(ABC):
 
         Args:
             df: DataFrame backing the failure info.
-            serialized_rules: String-serialized information about the rules the
-                failing cases violated.
+            serialized_rules: JSON-serialized list of rule column names
+                used for validation.
             serialized_schema: String-serialized schema information.
         """
 
