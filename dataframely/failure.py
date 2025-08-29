@@ -13,12 +13,12 @@ from polars._typing import PartitioningScheme
 
 from dataframely._base_schema import BaseSchema
 
-from ._serialization import SCHEMA_METADATA_KEY
+from ._storage import StorageBackend
+from ._storage.parquet import ParquetStorageBackend
 
 if TYPE_CHECKING:  # pragma: no cover
     from .schema import Schema
 
-RULE_METADATA_KEY = "dataframely_rule_columns"
 UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
 
 S = TypeVar("S", bound=BaseSchema)
@@ -98,8 +98,7 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`.
         """
-        metadata, kwargs = self._build_metadata(**kwargs)
-        self._df.write_parquet(file, metadata=metadata, **kwargs)
+        self._write(ParquetStorageBackend(), file=file, **kwargs)
 
     def sink_parquet(
         self, file: str | Path | IO[bytes] | PartitioningScheme, **kwargs: Any
@@ -118,16 +117,7 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`.
         """
-        metadata, kwargs = self._build_metadata(**kwargs)
-        self._lf.sink_parquet(file, metadata=metadata, **kwargs)
-
-    def _build_metadata(
-        self, **kwargs: dict[str, Any]
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
-        metadata = kwargs.pop("metadata", {})
-        metadata[RULE_METADATA_KEY] = json.dumps(self._rule_columns)
-        metadata[SCHEMA_METADATA_KEY] = self.schema.serialize()
-        return metadata, kwargs
+        self._sink(ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def read_parquet(
@@ -150,7 +140,9 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
-        return cls._from_parquet(source, scan=False, **kwargs)
+        return cls._read(
+            backend=ParquetStorageBackend(), file=source, lazy=False, **kwargs
+        )
 
     @classmethod
     def scan_parquet(
@@ -171,32 +163,73 @@ class FailureInfo(Generic[S]):
             Be aware that this method suffers from the same limitations as
             :meth:`Schema.serialize`
         """
-        return cls._from_parquet(source, scan=True, **kwargs)
+        return cls._read(
+            backend=ParquetStorageBackend(), file=source, lazy=True, **kwargs
+        )
+
+    # -------------------------------- Storage --------------------------------------- #
+
+    def _sink(
+        self,
+        backend: StorageBackend,
+        file: str | Path | IO[bytes] | PartitioningScheme,
+        **kwargs: Any,
+    ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        backend.sink_failure_info(
+            lf=self._lf,
+            serialized_rules=json.dumps(self._rule_columns),
+            serialized_schema=self.schema.serialize(),
+            file=file,
+            **kwargs,
+        )
+
+    def _write(
+        self,
+        backend: StorageBackend,
+        file: str | Path | IO[bytes] | PartitioningScheme,
+        **kwargs: Any,
+    ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        backend.write_failure_info(
+            df=self._df,
+            serialized_rules=json.dumps(self._rule_columns),
+            serialized_schema=self.schema.serialize(),
+            file=file,
+            **kwargs,
+        )
 
     @classmethod
-    def _from_parquet(
-        cls, source: str | Path | IO[bytes], scan: bool, **kwargs: Any
+    def _read(
+        cls,
+        backend: StorageBackend,
+        file: str | Path | IO[bytes] | PartitioningScheme,
+        lazy: bool,
+        **kwargs: Any,
     ) -> FailureInfo[Schema]:
+        # Utility method encapsulating the interaction with the StorageBackend
+
         from .schema import Schema, deserialize_schema
 
-        metadata = pl.read_parquet_metadata(source)
-        schema_metadata = metadata.get(SCHEMA_METADATA_KEY)
-        rule_metadata = metadata.get(RULE_METADATA_KEY)
-        if schema_metadata is None or rule_metadata is None:
-            raise ValueError("The parquet file does not contain the required metadata.")
+        if lazy:
+            lf, serialized_rules, serialized_schema = backend.scan_failure_info(
+                file=file, **kwargs
+            )
+        else:
+            df, serialized_rules, serialized_schema = backend.read_failure_info(
+                file=file, **kwargs
+            )
+            lf = df.lazy()
 
-        lf = (
-            pl.scan_parquet(source, **kwargs)
-            if scan
-            else pl.read_parquet(source, **kwargs).lazy()
-        )
-        failure_schema = deserialize_schema(schema_metadata, strict=False) or type(
+        schema = deserialize_schema(serialized_schema, strict=False) or type(
             UNKNOWN_SCHEMA_NAME, (Schema,), {}
         )
         return FailureInfo(
             lf,
-            json.loads(rule_metadata),
-            schema=failure_schema,
+            json.loads(serialized_rules),
+            schema=schema,
         )
 
 

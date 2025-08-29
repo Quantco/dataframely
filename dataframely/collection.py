@@ -19,12 +19,13 @@ from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
 from ._polars import FrameType
 from ._serialization import (
-    COLLECTION_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
     serialization_versions,
 )
+from ._storage import StorageBackend
+from ._storage.parquet import COLLECTION_METADATA_KEY, ParquetStorageBackend
 from ._typing import LazyFrame, Validation
 from .exc import (
     MemberValidationError,
@@ -741,7 +742,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._to_parquet(directory, sink=False, **kwargs)
+        self._write(ParquetStorageBackend(), directory=directory, **kwargs)
 
     def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
@@ -761,34 +762,7 @@ class Collection(BaseCollection, ABC):
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
-        self._to_parquet(directory, sink=True, **kwargs)
-
-    def _to_parquet(self, directory: str | Path, *, sink: bool, **kwargs: Any) -> None:
-        path = Path(directory) if isinstance(directory, str) else directory
-        path.mkdir(parents=True, exist_ok=True)
-
-        # The collection schema is serialized as part of the member parquet metadata
-        kwargs["metadata"] = kwargs.get("metadata", {}) | {
-            COLLECTION_METADATA_KEY: self.serialize()
-        }
-
-        member_schemas = self.member_schemas()
-        for key, lf in self.to_dict().items():
-            destination = (
-                path / key if "partition_by" in kwargs else path / f"{key}.parquet"
-            )
-            if sink:
-                member_schemas[key].sink_parquet(
-                    lf,  # type: ignore
-                    destination,
-                    **kwargs,
-                )
-            else:
-                member_schemas[key].write_parquet(
-                    lf.collect(),  # type: ignore
-                    destination,
-                    **kwargs,
-                )
+        self._sink(ParquetStorageBackend(), directory=directory, **kwargs)
 
     @classmethod
     def read_parquet(
@@ -845,14 +819,13 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data, collection_type = cls._from_parquet(path, scan=False, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(
-            path, collection_type, validation
-        ):
-            cls._validate_input_keys(data)
-            return cls._init(data)
-        return cls.validate(data, cast=True)
+        return cls._read(
+            backend=ParquetStorageBackend(),
+            validation=validation,
+            directory=directory,
+            lazy=False,
+            **kwargs,
+        )
 
     @classmethod
     def scan_parquet(
@@ -912,59 +885,71 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        path = Path(directory)
-        data, collection_type = cls._from_parquet(path, scan=True, **kwargs)
-        if not cls._requires_validation_for_reading_parquets(
-            path, collection_type, validation
-        ):
-            cls._validate_input_keys(data)
-            return cls._init(data)
-        return cls.validate(data, cast=True)
+        return cls._read(
+            backend=ParquetStorageBackend(),
+            validation=validation,
+            directory=directory,
+            lazy=True,
+            **kwargs,
+        )
+
+    # -------------------------------- Storage --------------------------------------- #
+
+    def _write(
+        self, backend: StorageBackend, directory: Path | str, **kwargs: Any
+    ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        backend.write_collection(
+            self.to_dict(),
+            serialized_collection=self.serialize(),
+            serialized_schemas={
+                key: schema.serialize() for key, schema in self.member_schemas().items()
+            },
+            directory=directory,
+            **kwargs,
+        )
+
+    def _sink(
+        self, backend: StorageBackend, directory: Path | str, **kwargs: Any
+    ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        backend.sink_collection(
+            self.to_dict(),
+            serialized_collection=self.serialize(),
+            serialized_schemas={
+                key: schema.serialize() for key, schema in self.member_schemas().items()
+            },
+            directory=directory,
+            **kwargs,
+        )
 
     @classmethod
-    def _from_parquet(
-        cls, path: Path, scan: bool, **kwargs: Any
-    ) -> tuple[dict[str, pl.LazyFrame], type[Collection] | None]:
-        data = {}
-        collection_types = set()
-        for key in cls.members():
-            if (source_path := cls._member_source_path(path, key)) is not None:
-                data[key] = (
-                    pl.scan_parquet(source_path, **kwargs)
-                    if scan
-                    else pl.read_parquet(source_path, **kwargs).lazy()
-                )
-                if source_path.is_file():
-                    collection_types.add(read_parquet_metadata_collection(source_path))
-                else:
-                    for file in source_path.glob("**/*.parquet"):
-                        collection_types.add(read_parquet_metadata_collection(file))
+    def _read(
+        cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
+    ) -> Self:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        if lazy:
+            data, serialized_collection_types = backend.scan_collection(
+                members=cls.member_schemas().keys(), **kwargs
+            )
+        else:
+            data, serialized_collection_types = backend.read_collection(
+                members=cls.member_schemas().keys(), **kwargs
+            )
+
+        collection_types = _deserialize_types(serialized_collection_types)
         collection_type = _reconcile_collection_types(collection_types)
 
-        # Backward compatibility: If the parquets do not have schema information,
-        # fall back to looking for schema.json
-        if (collection_type is None) and (schema_file := path / "schema.json").exists():
-            try:
-                collection_type = deserialize_collection(schema_file.read_text())
-            except (JSONDecodeError, plexc.ComputeError):
-                pass
-
-        return data, collection_type
-
-    @classmethod
-    def _member_source_path(cls, base_path: Path, name: str) -> Path | None:
-        if (path := base_path / name).exists() and base_path.is_dir():
-            # We assume that the member is stored as a hive-partitioned dataset
-            return path
-        if (path := base_path / f"{name}.parquet").exists():
-            # We assume that the member is stored as a single parquet file
-            return path
-        return None
+        if cls._requires_validation_for_reading_parquets(collection_type, validation):
+            return cls.validate(data, cast=True)
+        return cls.cast(data)
 
     @classmethod
     def _requires_validation_for_reading_parquets(
         cls,
-        directory: Path,
         collection_type: type[Collection] | None,
         validation: Validation,
     ) -> bool:
@@ -983,12 +968,10 @@ class Collection(BaseCollection, ABC):
         )
         if validation == "forbid":
             raise ValidationRequiredError(
-                f"Cannot read collection from '{directory!r}' without validation: {msg}."
+                f"Cannot read collection without validation: {msg}."
             )
         if validation == "warn":
-            warnings.warn(
-                f"Reading parquet file from '{directory!r}' requires validation: {msg}."
-            )
+            warnings.warn(f"Reading parquet file requires validation: {msg}.")
         return True
 
     # ----------------------------------- UTILITIES ---------------------------------- #
@@ -1100,6 +1083,23 @@ def _extract_keys_if_exist(
     data: Mapping[str, Any], keys: Sequence[str]
 ) -> dict[str, Any]:
     return {key: data[key] for key in keys if key in data}
+
+
+def _deserialize_types(
+    serialized_collection_types: Iterable[str | None],
+) -> list[type[Collection]]:
+    collection_types = []
+    collection_type: type[Collection] | None = None
+    for t in serialized_collection_types:
+        if t is None:
+            continue
+        try:
+            collection_type = deserialize_collection(t)
+            collection_types.append(collection_type)
+        except (JSONDecodeError, plexc.ComputeError):
+            pass
+
+    return collection_types
 
 
 def _reconcile_collection_types(

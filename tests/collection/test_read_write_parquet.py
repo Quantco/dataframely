@@ -12,7 +12,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._serialization import COLLECTION_METADATA_KEY
+from dataframely._storage.parquet import COLLECTION_METADATA_KEY
 from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_collection, create_schema
@@ -371,6 +371,7 @@ class MyCollection2(dy.Collection):
         ([MyCollection], MyCollection),
         # One missing type, cannot be sure
         ([MyCollection, None], None),
+        ([None, MyCollection], None),
         # Inconsistent types, treat like no information available
         ([MyCollection, MyCollection2], None),
     ],
@@ -384,11 +385,15 @@ def test_reconcile_collection_types(
 # ---------------------------------- MANUAL METADATA --------------------------------- #
 
 
-def test_read_invalid_parquet_metadata_collection(tmp_path: Path) -> None:
+@pytest.mark.parametrize("metadata", [None, {COLLECTION_METADATA_KEY: "invalid"}])
+def test_read_invalid_parquet_metadata_collection(
+    tmp_path: Path, metadata: dict | None
+) -> None:
     # Arrange
     df = pl.DataFrame({"a": [1, 2, 3]})
     df.write_parquet(
-        tmp_path / "df.parquet", metadata={COLLECTION_METADATA_KEY: "invalid"}
+        tmp_path / "df.parquet",
+        metadata=metadata,
     )
 
     # Act

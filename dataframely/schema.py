@@ -21,12 +21,13 @@ from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
-    SCHEMA_METADATA_KEY,
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
     serialization_versions,
 )
+from ._storage import StorageBackend
+from ._storage.parquet import SCHEMA_METADATA_KEY, ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame, Validation
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
@@ -697,10 +698,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        metadata = kwargs.pop("metadata", {})
-        df.write_parquet(
-            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
-        )
+        cls._write(df=df, backend=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def sink_parquet(
@@ -728,10 +726,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        metadata = kwargs.pop("metadata", {})
-        lf.sink_parquet(
-            file, metadata={**metadata, SCHEMA_METADATA_KEY: cls.serialize()}, **kwargs
-        )
+        cls._sink(lf=lf, backend=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
     def read_parquet(
@@ -780,9 +775,13 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        if not cls._requires_validation_for_reading_parquet(source, validation):
-            return pl.read_parquet(source, **kwargs)  # type: ignore
-        return cls.validate(pl.read_parquet(source, **kwargs), cast=True)
+        return cls._read(
+            ParquetStorageBackend(),
+            validation=validation,
+            lazy=False,
+            source=source,
+            **kwargs,
+        )
 
     @classmethod
     def scan_parquet(
@@ -836,13 +835,20 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
         """
-        if not cls._requires_validation_for_reading_parquet(source, validation):
-            return pl.scan_parquet(source, **kwargs)  # type: ignore
-        return cls.validate(pl.read_parquet(source, **kwargs), cast=True).lazy()
+        return cls._read(
+            ParquetStorageBackend(),
+            validation=validation,
+            lazy=True,
+            source=source,
+            **kwargs,
+        )
 
     @classmethod
     def _requires_validation_for_reading_parquet(
-        cls, source: FileSource, validation: Validation
+        cls,
+        deserialized_schema: type[Schema] | None,
+        validation: Validation,
+        source: str,
     ) -> bool:
         if validation == "skip":
             return False
@@ -850,20 +856,16 @@ class Schema(BaseSchema, ABC):
         # First, we check whether the source provides the dataframely schema. If it
         # does, we check whether it matches this schema. If it does, we assume that the
         # data adheres to the schema and we do not need to run validation.
-        serialized_schema = (
-            read_parquet_metadata_schema(source)
-            if not isinstance(source, list)
-            else None
-        )
-        if serialized_schema is not None:
-            if cls.matches(serialized_schema):
+
+        if deserialized_schema is not None:
+            if cls.matches(deserialized_schema):
                 return False
 
         # Otherwise, we definitely need to run validation. However, we emit different
         # information to the user depending on the value of `validate`.
         msg = (
             "current schema does not match stored schema"
-            if serialized_schema is not None
+            if deserialized_schema is not None
             else "no schema to check validity can be read from the source"
         )
         if validation == "forbid":
@@ -875,6 +877,69 @@ class Schema(BaseSchema, ABC):
                 f"Reading parquet file from '{source!r}' requires validation: {msg}."
             )
         return True
+
+    # --------------------------------- Storage -------------------------------------- #
+
+    @classmethod
+    def _write(cls, df: pl.DataFrame, backend: StorageBackend, **kwargs: Any) -> None:
+        backend.write_frame(df=df, serialized_schema=cls.serialize(), **kwargs)
+
+    @classmethod
+    def _sink(cls, lf: pl.LazyFrame, backend: StorageBackend, **kwargs: Any) -> None:
+        backend.sink_frame(lf=lf, serialized_schema=cls.serialize(), **kwargs)
+
+    @overload
+    @classmethod
+    def _read(
+        cls,
+        backend: StorageBackend,
+        validation: Validation,
+        lazy: Literal[True],
+        **kwargs: Any,
+    ) -> LazyFrame[Self]: ...
+
+    @overload
+    @classmethod
+    def _read(
+        cls,
+        backend: StorageBackend,
+        validation: Validation,
+        lazy: Literal[False],
+        **kwargs: Any,
+    ) -> DataFrame[Self]: ...
+
+    @classmethod
+    def _read(
+        cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
+    ) -> LazyFrame[Self] | DataFrame[Self]:
+        source = kwargs.pop("source")
+
+        # Load
+        if lazy:
+            lf, serialized_schema = backend.scan_frame(source=source)
+        else:
+            df, serialized_schema = backend.read_frame(source=source)
+            lf = df.lazy()
+
+        deserialized_schema = (
+            deserialize_schema(serialized_schema) if serialized_schema else None
+        )
+
+        # Smart validation
+        if cls._requires_validation_for_reading_parquet(
+            deserialized_schema, validation, source=str(source)
+        ):
+            validated = cls.validate(lf, cast=True)
+            if lazy:
+                return validated.lazy()
+            else:
+                return validated
+
+        casted = cls.cast(lf)
+        if lazy:
+            return casted
+        else:
+            return casted.collect()
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
@@ -958,6 +1023,7 @@ def read_parquet_metadata_schema(
         is found or the deserialization fails.
     """
     metadata = pl.read_parquet_metadata(source)
+
     if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
         return deserialize_schema(schema_metadata, strict=False)
     return None
