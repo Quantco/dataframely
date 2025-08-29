@@ -24,7 +24,7 @@ from ._serialization import (
     SchemaJSONEncoder,
     serialization_versions,
 )
-from ._storage.base import StorageBackend
+from ._storage import StorageBackend
 from ._storage.parquet import COLLECTION_METADATA_KEY, ParquetStorageBackend
 from ._typing import LazyFrame, Validation
 from .exc import (

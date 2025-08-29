@@ -26,7 +26,7 @@ from ._serialization import (
     SchemaJSONEncoder,
     serialization_versions,
 )
-from ._storage.base import StorageBackend
+from ._storage import StorageBackend
 from ._storage.parquet import SCHEMA_METADATA_KEY, ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame, Validation
 from ._validation import DtypeCasting, validate_columns, validate_dtypes

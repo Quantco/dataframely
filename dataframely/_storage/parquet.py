@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from .base import (
+from ._base import (
     SerializedCollection,
     SerializedRules,
     SerializedSchema,

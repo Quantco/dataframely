@@ -13,7 +13,7 @@ from polars._typing import PartitioningScheme
 
 from dataframely._base_schema import BaseSchema
 
-from ._storage.base import StorageBackend
+from ._storage import StorageBackend
 from ._storage.parquet import ParquetStorageBackend
 
 if TYPE_CHECKING:  # pragma: no cover
