@@ -13,10 +13,7 @@ from ._base import (
     SerializedSchema,
     StorageBackend,
 )
-
-SCHEMA_METADATA_KEY = "dataframely_schema"
-COLLECTION_METADATA_KEY = "dataframely_collection"
-RULE_METADATA_KEY = "dataframely_rule_columns"
+from .constants import COLLECTION_METADATA_KEY, RULE_METADATA_KEY, SCHEMA_METADATA_KEY
 
 
 class ParquetStorageBackend(StorageBackend):

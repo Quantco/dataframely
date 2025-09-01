@@ -10,7 +10,7 @@ from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Any, Literal, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
@@ -26,8 +26,12 @@ from ._serialization import (
     SchemaJSONEncoder,
     serialization_versions,
 )
-from ._storage import StorageBackend
-from ._storage.parquet import SCHEMA_METADATA_KEY, ParquetStorageBackend
+from ._storage._base import SerializedSchema, StorageBackend
+from ._storage.delta import DeltaStorageBackend
+from ._storage.parquet import (
+    SCHEMA_METADATA_KEY,
+    ParquetStorageBackend,
+)
 from ._typing import DataFrame, LazyFrame, Validation
 from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
@@ -41,6 +45,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if TYPE_CHECKING:
+    import deltalake
 
 # ------------------------------------------------------------------------------------ #
 #                                   SCHEMA DEFINITION                                  #
@@ -878,6 +884,37 @@ class Schema(BaseSchema, ABC):
             )
         return True
 
+    # --------------------------------- Delta -----------------------------------------#
+    @classmethod
+    def write_delta(
+        cls,
+        df: DataFrame[Self],
+        /,
+        target: str | Path | deltalake.DeltaTable,
+        **kwargs: Any,
+    ) -> None:
+        DeltaStorageBackend().write_frame(
+            df=df,
+            serialized_schema=cls.serialize(),
+            target=target,
+        )
+
+    @classmethod
+    def read_delta(
+        cls,
+        source: str | Path | deltalake.DeltaTable,
+        *,
+        validation: Validation = "warn",
+        **kwargs: Any,
+    ) -> DataFrame[Self]:
+        return cls._read(
+            DeltaStorageBackend(),
+            validation=validation,
+            lazy=False,
+            source=source,
+            **kwargs,
+        )
+
     # --------------------------------- Storage -------------------------------------- #
 
     @classmethod
@@ -912,34 +949,42 @@ class Schema(BaseSchema, ABC):
     def _read(
         cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
     ) -> LazyFrame[Self] | DataFrame[Self]:
-        source = kwargs.pop("source")
-
         # Load
         if lazy:
-            lf, serialized_schema = backend.scan_frame(source=source)
+            lf, serialized_schema = backend.scan_frame(**kwargs)
         else:
-            df, serialized_schema = backend.read_frame(source=source)
+            df, serialized_schema = backend.read_frame(**kwargs)
             lf = df.lazy()
 
+        validated = cls._validate_if_needed(
+            lf=lf,
+            serialized_schema=serialized_schema,
+            validation=validation,
+            source=kwargs["source"],
+        )
+        if lazy:
+            return validated
+        return validated.collect()
+
+    @classmethod
+    def _validate_if_needed(
+        cls,
+        lf: pl.LazyFrame,
+        serialized_schema: SerializedSchema | None,
+        validation: Validation,
+        source: str,
+    ) -> LazyFrame[Self]:
         deserialized_schema = (
             deserialize_schema(serialized_schema) if serialized_schema else None
         )
 
         # Smart validation
         if cls._requires_validation_for_reading_parquet(
-            deserialized_schema, validation, source=str(source)
+            deserialized_schema, validation, source=source
         ):
-            validated = cls.validate(lf, cast=True)
-            if lazy:
-                return validated.lazy()
-            else:
-                return validated
+            return cls.validate(lf, cast=True).lazy()
 
-        casted = cls.cast(lf)
-        if lazy:
-            return casted
-        else:
-            return casted.collect()
+        return cls.cast(lf)
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 

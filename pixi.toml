@@ -11,6 +11,7 @@ postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-
 python = ">=3.10"
 rust = "=1.85"
 
+deltalake = "*"
 numpy = "*"
 polars = ">=1.32"
 pytest-mock = ">=3.14.1,<4"
