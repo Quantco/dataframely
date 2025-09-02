@@ -31,9 +31,18 @@ class DeltaStorageBackend(StorageBackend):
     ) -> None:
         target = kwargs.pop("target")
         metadata = kwargs.pop("metadata", {})
+        delta_write_options = kwargs.pop("delta_write_options", {})
+
+        # Delta lake does not allow partitioning if there is only one column
+        # We dynamically remove this setting here to allow users to still specify it
+        # on the collection level without having to worry about each individual member
+        if len(df.columns) < 2:
+            delta_write_options.pop("partition_by", None)
+
         df.write_delta(
             target,
-            delta_write_options={
+            delta_write_options=delta_write_options
+            | {
                 "description": ("abc"),
                 "commit_properties": CommitProperties(
                     custom_metadata=metadata | {SCHEMA_METADATA_KEY: serialized_schema}
@@ -71,7 +80,7 @@ class DeltaStorageBackend(StorageBackend):
         serialized_schemas: dict[str, str],
         **kwargs: Any,
     ) -> None:
-        uri = Path(kwargs.pop("source"))
+        uri = Path(kwargs.pop("target"))
 
         # The collection schema is serialized as part of the member parquet metadata
         kwargs["metadata"] = kwargs.get("metadata", {}) | {
@@ -89,12 +98,17 @@ class DeltaStorageBackend(StorageBackend):
     def scan_collection(
         self, members: Iterable[str], **kwargs: Any
     ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
+        from deltalake import DeltaTable
+
         uri = Path(kwargs.pop("source"))
 
         data = {}
         collection_types = []
         for key in members:
-            table = _to_delta_table(uri / key)
+            member_uri = uri / key
+            if not DeltaTable.is_deltatable(str(member_uri)):
+                continue
+            table = _to_delta_table(member_uri)
             data[key] = pl.scan_delta(table, **kwargs)
             collection_types.append(_read_serialized_collection(table))
 
@@ -166,10 +180,10 @@ def _read_serialized_collection(
 def _to_delta_table(
     table: "Path | str | deltalake.DeltaTable",
 ) -> "deltalake.DeltaTable":
-    import deltalake
+    from deltalake import DeltaTable
 
-    if isinstance(table, deltalake.DeltaTable):
+    if isinstance(table, DeltaTable):
         return table
     if isinstance(table, str | Path):
-        return deltalake.DeltaTable(table)
+        return DeltaTable(table)
     raise TypeError(f"Unsupported type {type(table)}")

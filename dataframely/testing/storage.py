@@ -9,6 +9,7 @@ import polars as pl
 
 import dataframely as dy
 from dataframely import Validation
+from dataframely._storage.delta import _to_delta_table
 
 # ----------------------------------- Schema -------------------------------------------
 S = TypeVar("S", bound=dy.Schema)
@@ -182,3 +183,31 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
             return collection.scan_parquet(path, **kwargs)
         else:
             return collection.read_parquet(path, **kwargs)
+
+
+class DeltaCollectionStorageTester(CollectionStorageTester):
+    def write_typed(
+        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        extra_kwargs = {}
+        if partition_by := kwargs.pop("partition_by", None):
+            extra_kwargs["delta_write_options"] = {"partition_by": partition_by}
+
+        collection.write_delta(path, **kwargs, **extra_kwargs)
+
+    def write_untyped(
+        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        collection.write_delta(path, **kwargs)
+
+        # For each member table, write an empty commit
+        # Since the metadata retrieval depends on the metadata being attached to the
+        # latest commit, this will make the metadata unretrievable.
+        for member, df in collection.to_dict().items():
+            table = _to_delta_table(path / member)
+            df.head(0).collect().write_delta(table, mode="append")
+
+    def read(self, collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
+        if lazy:
+            return collection.scan_delta(source=path, **kwargs)
+        return collection.read_delta(source=path, **kwargs)

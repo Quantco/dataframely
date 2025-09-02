@@ -14,6 +14,7 @@ from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing.storage import (
     CollectionStorageTester,
+    DeltaCollectionStorageTester,
     ParquetCollectionStorageTester,
 )
 
@@ -44,7 +45,7 @@ class MyCollection2(dy.Collection):
     second: dy.LazyFrame[MySecondSchema] | None
 
 
-TESTERS = [ParquetCollectionStorageTester()]
+TESTERS = [ParquetCollectionStorageTester(), DeltaCollectionStorageTester()]
 
 
 @pytest.mark.parametrize("tester", TESTERS)
@@ -54,11 +55,12 @@ def test_read_write(
     tester: CollectionStorageTester, tmp_path: Path, kwargs: dict[str, Any], lazy: bool
 ) -> None:
     # Arrange
-    collection = MyCollection.cast(
+    collection = MyCollection.validate(
         {
             "first": pl.LazyFrame({"a": [1, 2, 3]}),
             "second": pl.LazyFrame({"a": [1, 2], "b": [10, 15]}),
-        }
+        },
+        cast=True,
     )
 
     # Act

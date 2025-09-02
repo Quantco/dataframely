@@ -10,7 +10,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Annotated, Any, Literal, cast
+from typing import IO, TYPE_CHECKING, Annotated, Any, Literal, cast
 
 import polars as pl
 import polars.exceptions as plexc
@@ -25,6 +25,7 @@ from ._serialization import (
     serialization_versions,
 )
 from ._storage import StorageBackend
+from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import COLLECTION_METADATA_KEY, ParquetStorageBackend
 from ._typing import LazyFrame, Validation
 from .exc import (
@@ -43,6 +44,9 @@ else:
     from typing_extensions import Self
 
 _FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
+
+if TYPE_CHECKING:
+    import deltalake
 
 
 class Collection(BaseCollection, ABC):
@@ -893,11 +897,48 @@ class Collection(BaseCollection, ABC):
             **kwargs,
         )
 
+    def write_delta(
+        self, target: str | Path | deltalake.DeltaTable, **kwargs: Any
+    ) -> None:
+        self._write(
+            backend=DeltaStorageBackend(),
+            target=target,
+            **kwargs,
+        )
+
+    @classmethod
+    def scan_delta(
+        cls,
+        source: str | Path | deltalake.DeltaTable,
+        *,
+        validation: Validation = "warn",
+        **kwargs: Any,
+    ) -> Self:
+        return cls._read(
+            backend=DeltaStorageBackend(),
+            validation=validation,
+            lazy=True,
+            source=source,
+        )
+
+    @classmethod
+    def read_delta(
+        cls,
+        source: str | Path | deltalake.DeltaTable,
+        *,
+        validation: Validation = "warn",
+        **kwargs: Any,
+    ) -> Self:
+        return cls._read(
+            backend=DeltaStorageBackend(),
+            validation=validation,
+            lazy=False,
+            source=source,
+        )
+
     # -------------------------------- Storage --------------------------------------- #
 
-    def _write(
-        self, backend: StorageBackend, directory: Path | str, **kwargs: Any
-    ) -> None:
+    def _write(self, backend: StorageBackend, **kwargs: Any) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.write_collection(
@@ -906,13 +947,10 @@ class Collection(BaseCollection, ABC):
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()
             },
-            directory=directory,
             **kwargs,
         )
 
-    def _sink(
-        self, backend: StorageBackend, directory: Path | str, **kwargs: Any
-    ) -> None:
+    def _sink(self, backend: StorageBackend, **kwargs: Any) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.sink_collection(
@@ -921,7 +959,6 @@ class Collection(BaseCollection, ABC):
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()
             },
-            directory=directory,
             **kwargs,
         )
 
