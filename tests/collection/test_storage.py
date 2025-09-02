@@ -12,7 +12,6 @@ from polars.testing import assert_frame_equal
 import dataframely as dy
 from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
-from dataframely.testing import create_collection, create_schema
 from dataframely.testing.storage import (
     CollectionStorageTester,
     ParquetCollectionStorageTester,
@@ -32,6 +31,16 @@ class MySecondSchema(dy.Schema):
 
 class MyCollection(dy.Collection):
     first: dy.LazyFrame[MyFirstSchema]
+    second: dy.LazyFrame[MySecondSchema] | None
+
+
+class MyThirdSchema(dy.Schema):
+    a = dy.UInt8(primary_key=True, min=3)
+
+
+class MyCollection2(dy.Collection):
+    # Read carefully: This says "MyThirdSchema"!
+    first: dy.LazyFrame[MyThirdSchema]
     second: dy.LazyFrame[MySecondSchema] | None
 
 
@@ -102,15 +111,12 @@ def test_read_write_if_schema_matches(
     lazy: bool,
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
+    collection = MyCollection.create_empty()
     tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
-    spy = mocker.spy(collection_type, "validate")
-    tester.read(collection_type, tmp_path, lazy=lazy, validation=validation)
+    spy = mocker.spy(MyCollection, "validate")
+    tester.read(MyCollection, tmp_path, lazy=lazy, validation=validation)
 
     # Assert
     spy.assert_not_called()
@@ -121,26 +127,23 @@ def test_read_write_if_schema_matches(
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_warn_no_schema(
+def test_read_write_validation_warn_no_schema(
     tester: CollectionStorageTester,
     tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
+    collection = MyCollection.create_empty()
     tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
-    spy = mocker.spy(collection_type, "validate")
+    spy = mocker.spy(MyCollection, "validate")
     with pytest.warns(
         UserWarning,
         match=r"requires validation: no collection schema to check validity",
     ):
-        tester.read(collection_type, tmp_path, lazy, validation="warn")
+        tester.read(MyCollection, tmp_path, lazy, validation="warn")
 
     # Assert
     spy.assert_called_once()
@@ -148,36 +151,23 @@ def test_read_write_parquet_validation_warn_no_schema(
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_warn_invalid_schema(
+def test_read_write_validation_warn_invalid_schema(
     tester: CollectionStorageTester,
     tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
-    tester.write_untyped(collection, tmp_path, lazy=lazy)
-
-    wrong_collection_type = create_collection(
-        "test",
-        {
-            "a": create_schema(
-                "test", {"a": dy.Int64(primary_key=True), "b": dy.String()}
-            )
-        },
-    )
+    collection = MyCollection.create_empty()
     tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
-    spy = mocker.spy(wrong_collection_type, "validate")
+    spy = mocker.spy(MyCollection2, "validate")
     with pytest.warns(
         UserWarning,
         match=r"requires validation: current collection schema does not match",
     ):
-        tester.read(wrong_collection_type, tmp_path, lazy)
+        tester.read(MyCollection2, tmp_path, lazy)
 
     # Assert
     spy.assert_called_once()
@@ -186,22 +176,19 @@ def test_read_write_parquet_validation_warn_invalid_schema(
 # -------------------------------- VALIDATION "ALLOW" -------------------------------- #
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_allow_no_schema(
+def test_read_write_validation_allow_no_schema(
     tester: CollectionStorageTester,
     tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
+    collection = MyCollection.create_empty()
     tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
-    spy = mocker.spy(collection_type, "validate")
-    tester.read(collection_type, tmp_path, lazy, validation="allow")
+    spy = mocker.spy(MyCollection, "validate")
+    tester.read(MyCollection, tmp_path, lazy, validation="allow")
 
     # Assert
     spy.assert_called_once()
@@ -209,31 +196,19 @@ def test_read_write_parquet_validation_allow_no_schema(
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_allow_invalid_schema(
+def test_read_write_validation_allow_invalid_schema(
     tester: CollectionStorageTester,
     tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
-
-    wrong_collection_type = create_collection(
-        "test",
-        {
-            "a": create_schema(
-                "test", {"a": dy.Int64(primary_key=True), "b": dy.String()}
-            )
-        },
-    )
+    collection = MyCollection.create_empty()
     tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
-    spy = mocker.spy(wrong_collection_type, "validate")
-    tester.read(wrong_collection_type, tmp_path, lazy, validation="allow")
+    spy = mocker.spy(MyCollection2, "validate")
+    tester.read(MyCollection2, tmp_path, lazy, validation="allow")
 
     # Assert
     spy.assert_called_once()
@@ -244,14 +219,11 @@ def test_read_write_parquet_validation_allow_invalid_schema(
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_forbid_no_schema(
+def test_read_write_validation_forbid_no_schema(
     tester: CollectionStorageTester, tmp_path: Path, lazy: bool
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
+    collection = MyCollection.create_empty()
     tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
@@ -259,28 +231,18 @@ def test_read_write_parquet_validation_forbid_no_schema(
         ValidationRequiredError,
         match=r"without validation: no collection schema to check validity",
     ):
-        tester.read(collection_type, tmp_path, lazy, validation="forbid")
+        tester.read(MyCollection, tmp_path, lazy, validation="forbid")
 
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_forbid_invalid_schema(
+def test_read_write_validation_forbid_invalid_schema(
     tester: CollectionStorageTester, tmp_path: Path, lazy: bool
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
 
-    wrong_collection_type = create_collection(
-        "test",
-        {
-            "a": create_schema(
-                "test", {"a": dy.Int64(primary_key=True), "b": dy.String()}
-            )
-        },
-    )
+    collection = MyCollection.create_empty()
+
     tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
@@ -288,7 +250,7 @@ def test_read_write_parquet_validation_forbid_invalid_schema(
         ValidationRequiredError,
         match=r"without validation: current collection schema does not match",
     ):
-        tester.read(wrong_collection_type, tmp_path, lazy, validation="forbid")
+        tester.read(MyCollection2, tmp_path, lazy, validation="forbid")
 
 
 # --------------------------------- VALIDATION "SKIP" -------------------------------- #
@@ -296,22 +258,19 @@ def test_read_write_parquet_validation_forbid_invalid_schema(
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_skip_no_schema(
+def test_read_write_validation_skip_no_schema(
     tester: CollectionStorageTester,
     tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
+    collection = MyCollection.create_empty()
     tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
-    spy = mocker.spy(collection_type, "validate")
-    tester.read(collection_type, tmp_path, lazy, validation="skip")
+    spy = mocker.spy(MyCollection, "validate")
+    tester.read(MyCollection, tmp_path, lazy, validation="skip")
 
     # Assert
     spy.assert_not_called()
@@ -319,40 +278,25 @@ def test_read_write_parquet_validation_skip_no_schema(
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_write_parquet_validation_skip_invalid_schema(
+def test_read_write_validation_skip_invalid_schema(
     tester: CollectionStorageTester,
     tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
-    collection_type = create_collection(
-        "test", {"a": create_schema("test", {"a": dy.Int64(), "b": dy.String()})}
-    )
-    collection = collection_type.create_empty()
-
-    wrong_collection_type = create_collection(
-        "test",
-        {
-            "a": create_schema(
-                "test", {"a": dy.Int64(primary_key=True), "b": dy.String()}
-            )
-        },
-    )
+    collection = MyCollection.create_empty()
     tester.write_typed(collection, tmp_path, lazy=lazy)
+
     # Act
     spy = mocker.spy(collection, "validate")
-    tester.read(wrong_collection_type, tmp_path, lazy, validation="skip")
+    tester.read(MyCollection2, tmp_path, lazy, validation="skip")
 
     # Assert
     spy.assert_not_called()
 
 
 # --------------------------------------- UTILS -------------------------------------- #
-
-
-class MyCollection2(dy.Collection):
-    first: dy.LazyFrame[MyFirstSchema]
 
 
 @pytest.mark.parametrize(
