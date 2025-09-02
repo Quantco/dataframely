@@ -50,7 +50,7 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
         return True
 
     def _wrap_path(self, path: Path) -> Path:
-        return path / ".parquet"
+        return path / "test.parquet"
 
     def write_typed(
         self, schema: type[S], df: dy.DataFrame[S], path: Path, lazy: bool
@@ -80,9 +80,11 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
         self, schema: type[S], path: Path, lazy: bool, validation: Validation
     ) -> dy.LazyFrame[S] | dy.DataFrame[S]:
         if lazy:
-            return schema.scan_parquet(self._wrap_path(path)).collect()
+            return schema.scan_parquet(
+                self._wrap_path(path), validation=validation
+            ).collect()
         else:
-            return schema.read_parquet(self._wrap_path(path))
+            return schema.read_parquet(self._wrap_path(path), validation=validation)
 
 
 class DeltaSchemaStorageTester(SchemaStorageTester):
@@ -113,7 +115,7 @@ class DeltaSchemaStorageTester(SchemaStorageTester):
         self, schema: type[S], path: Path, lazy: bool, validation: Validation
     ) -> dy.DataFrame[S] | dy.LazyFrame[S]:
         self._raise_if_lazy(lazy)
-        return schema.read_delta(path)
+        return schema.read_delta(path, validation=validation)
 
     def _raise_if_lazy(self, lazy: bool) -> None:
         if lazy:
