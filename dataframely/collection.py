@@ -900,6 +900,20 @@ class Collection(BaseCollection, ABC):
     def write_delta(
         self, target: str | Path | deltalake.DeltaTable, **kwargs: Any
     ) -> None:
+        """Write the members of this collection to Delta Lake tables.
+
+        This method writes each member to a Delta Lake table at the provided target location.
+        The target can be a path, URI, or an existing DeltaTable object. No table is written for optional
+        members which are not provided in the current collection.
+
+        Args:
+            target: The location or DeltaTable where the data should be written. If the location does not exist,
+                it is created automatically, including all of its parents.
+            kwargs: Additional keyword arguments passed directly to the storage backend for writing Delta tables.
+
+        Attention:
+            This method suffers from the same limitations as :meth:`Schema.serialize`.
+        """
         self._write(
             backend=DeltaStorageBackend(),
             target=target,
@@ -914,6 +928,35 @@ class Collection(BaseCollection, ABC):
         validation: Validation = "warn",
         **kwargs: Any,
     ) -> Self:
+        """Lazily read all collection members from Delta Lake tables.
+
+        This method reads each member from a Delta Lake table at the provided source location.
+        The source can be a path, URI, or an existing DeltaTable object. Optional members are only read if present.
+
+        Args:
+            source: The location or DeltaTable to read from.
+            validation: The strategy for running validation when reading the data:
+
+                - ``"allow"``: The method tries to read the schema data from the Delta tables. If the stored collection schema matches this collection schema, the collection is read without validation. If the stored schema mismatches this schema, no metadata can be found in the tables, or the tables have conflicting metadata, this method automatically runs :meth:`validate` with ``cast=True``.
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However, it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only returns if the metadata stores a collection schema that matches this collection.
+                - ``"skip"``: The method never runs validation and simply reads the data, entrusting the user that the schema is valid. _Use this option carefully_.
+
+            kwargs: Additional keyword arguments passed directly to the storage backend for scanning Delta tables.
+
+        Returns:
+            The initialized collection.
+
+        Raises:
+            ValidationRequiredError: If no collection schema can be read from the source and ``validation`` is set to ``"forbid"``.
+            ValueError: If the provided source does not contain Delta tables for all required members.
+
+        Note:
+            Due to current limitations in dataframely, this method may read the Delta table into memory if ``validation`` is ``"warn"`` or ``"allow"`` and validation is required.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as :meth:`serialize`.
+        """
         return cls._read(
             backend=DeltaStorageBackend(),
             validation=validation,
@@ -929,6 +972,33 @@ class Collection(BaseCollection, ABC):
         validation: Validation = "warn",
         **kwargs: Any,
     ) -> Self:
+        """Read all collection members from Delta Lake tables.
+
+        This method reads each member from a Delta Lake table at the provided source location.
+        The source can be a path, URI, or an existing DeltaTable object. Optional members are only read if present.
+
+        Args:
+            source: The location or DeltaTable to read from.
+            validation: The strategy for running validation when reading the data:
+
+                - ``"allow"``: The method tries to read the schema data from the Delta tables. If the stored collection schema matches this collection schema, the collection is read without validation. If the stored schema mismatches this schema, no metadata can be found in the tables, or the tables have conflicting metadata, this method automatically runs :meth:`validate` with ``cast=True``.
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However, it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only returns if the metadata stores a collection schema that matches this collection.
+                - ``"skip"``: The method never runs validation and simply reads the data, entrusting the user that the schema is valid. _Use this option carefully_.
+
+            kwargs: Additional keyword arguments passed directly to the storage backend for reading Delta tables.
+
+        Returns:
+            The initialized collection.
+
+        Raises:
+            ValidationRequiredError: If no collection schema can be read from the source and ``validation`` is set to ``"forbid"``.
+            ValueError: If the provided source does not contain Delta tables for all required members.
+            ValidationError: If the collection cannot be validated.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as :meth:`serialize`.
+        """
         return cls._read(
             backend=DeltaStorageBackend(),
             validation=validation,
