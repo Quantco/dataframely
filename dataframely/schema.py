@@ -893,6 +893,19 @@ class Schema(BaseSchema, ABC):
         target: str | Path | deltalake.DeltaTable,
         **kwargs: Any,
     ) -> None:
+        """Write a typed data frame with this schema to a Delta Lake table.
+
+        This method automatically adds a serialization of this schema to the Delta Lake table as metadata.
+        The metadata can be leveraged by :meth:`read_delta` and :meth:`scan_delta` for efficient reading or by external tools.
+
+        Args:
+            df: The data frame to write to the Delta Lake table.
+            target: The path or DeltaTable object to which to write the data.
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.write_delta`.
+
+        Attention:
+            This method suffers from the same limitations as :meth:`serialize`.
+        """
         DeltaStorageBackend().write_frame(
             df=df,
             serialized_schema=cls.serialize(),
@@ -907,6 +920,42 @@ class Schema(BaseSchema, ABC):
         validation: Validation = "warn",
         **kwargs: Any,
     ) -> LazyFrame[Self]:
+        """Lazily read a Delta Lake table into a typed data frame with this schema.
+
+        Compared to :meth:`polars.scan_delta`, this method checks the table's metadata
+        and runs validation if necessary to ensure that the data matches this schema.
+
+        Args:
+            source: Path or DeltaTable object from which to read the data.
+            validation: The strategy for running validation when reading the data:
+
+                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                  the stored schema matches this schema, the data frame is read without
+                  validation. If the stored schema mismatches this schema or no schema
+                  information can be found in the metadata, this method automatically
+                  runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the schema stored in the parquet file's metadata matches
+                  this schema.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. _Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.scan_delta` to convey the purpose better_.
+
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_delta`.
+
+        Returns:
+            The lazy data frame with this schema.
+
+        Raises:
+            ValidationRequiredError: If no schema information can be read
+            from the source and ``validation`` is set to ``"forbid"``.
+
+        Attention:
+            This method suffers from the same limitations as :meth:`serialize`.
+        """
         return cls._read(
             DeltaStorageBackend(),
             validation=validation,
@@ -923,6 +972,42 @@ class Schema(BaseSchema, ABC):
         validation: Validation = "warn",
         **kwargs: Any,
     ) -> DataFrame[Self]:
+        """Read a Delta Lake table into a typed data frame with this schema.
+
+        Compared to :meth:`polars.read_delta`, this method checks the table's metadata
+        and runs validation if necessary to ensure that the data matches this schema.
+
+        Args:
+            source: Path or DeltaTable object from which to read the data.
+            validation: The strategy for running validation when reading the data:
+
+                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                  the stored schema matches this schema, the data frame is read without
+                  validation. If the stored schema mismatches this schema or no schema
+                  information can be found in the metadata, this method automatically
+                  runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the schema stored in the parquet file's metadata matches
+                  this schema.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. _Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.read_delta` to convey the purpose better_.
+
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.read_delta`.
+
+        Returns:
+            The data frame with this schema.
+
+        Raises:
+            ValidationRequiredError: If no schema information can be read
+            from the source and ``validation`` is set to ``"forbid"``.
+
+        Attention:
+            This method suffers from the same limitations as :meth:`serialize`.
+        """
         return cls._read(
             DeltaStorageBackend(),
             validation=validation,
