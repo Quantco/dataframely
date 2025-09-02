@@ -903,12 +903,13 @@ class Collection(BaseCollection, ABC):
         """Write the members of this collection to Delta Lake tables.
 
         This method writes each member to a Delta Lake table at the provided target location.
-        The target can be a path, URI, or an existing DeltaTable object. No table is written for optional
-        members which are not provided in the current collection.
+        The target can be a path, URI, or an existing DeltaTable object.
+        No table is written for optional members which are not provided in the current collection.
 
         Args:
-            target: The location or DeltaTable where the data should be written. If the location does not exist,
-                it is created automatically, including all of its parents.
+            target: The location or DeltaTable where the data should be written.
+                If the location does not exist, it is created automatically,
+                including all of its parents.
             kwargs: Additional keyword arguments passed directly to :meth:`polars.write_delta`.
 
         Attention:
