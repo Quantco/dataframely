@@ -162,10 +162,8 @@ def _raise_on_lazy_write() -> None:
 
 
 def _read_serialized_schema(table: "deltalake.DeltaTable") -> SerializedSchema | None:
-    history = table.history(limit=1)
-    if not len(history):
-        return None
-    return history[0].get(SCHEMA_METADATA_KEY, None)
+    [last_commit] = table.history(limit=1)
+    return last_commit.get(SCHEMA_METADATA_KEY, None)
 
 
 def _read_serialized_collection(
