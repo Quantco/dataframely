@@ -909,7 +909,7 @@ class Collection(BaseCollection, ABC):
         Args:
             target: The location or DeltaTable where the data should be written. If the location does not exist,
                 it is created automatically, including all of its parents.
-            kwargs: Additional keyword arguments passed directly to the storage backend for writing Delta tables.
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.write_delta`.
 
         Attention:
             This method suffers from the same limitations as :meth:`Schema.serialize`.
@@ -937,12 +937,22 @@ class Collection(BaseCollection, ABC):
             source: The location or DeltaTable to read from.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"``: The method tries to read the schema data from the Delta tables. If the stored collection schema matches this collection schema, the collection is read without validation. If the stored schema mismatches this schema, no metadata can be found in the tables, or the tables have conflicting metadata, this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"``: The method behaves similarly to ``"allow"``. However, it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only returns if the metadata stores a collection schema that matches this collection.
-                - ``"skip"``: The method never runs validation and simply reads the data, entrusting the user that the schema is valid. _Use this option carefully_.
+                - ``"allow"`: The method tries to read the schema data from the parquet
+                  files. If the stored collection schema matches this collection
+                  schema, the collection is read without validation. If the stored
+                  schema mismatches this schema no metadata can be found in
+                  the parquets, or the files have conflicting metadata,
+                  this method automatically runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the metadata stores a collection schema that matches
+                  this collection.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  data, entrusting the user that the schema is valid. _Use this option
+                  carefully_.
 
-            kwargs: Additional keyword arguments passed directly to the storage backend for scanning Delta tables.
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_delta`.
 
         Returns:
             The initialized collection.
@@ -981,12 +991,22 @@ class Collection(BaseCollection, ABC):
             source: The location or DeltaTable to read from.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"``: The method tries to read the schema data from the Delta tables. If the stored collection schema matches this collection schema, the collection is read without validation. If the stored schema mismatches this schema, no metadata can be found in the tables, or the tables have conflicting metadata, this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"``: The method behaves similarly to ``"allow"``. However, it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only returns if the metadata stores a collection schema that matches this collection.
-                - ``"skip"``: The method never runs validation and simply reads the data, entrusting the user that the schema is valid. _Use this option carefully_.
+                - ``"allow"`: The method tries to read the schema data from the parquet
+                  files. If the stored collection schema matches this collection
+                  schema, the collection is read without validation. If the stored
+                  schema mismatches this schema no metadata can be found in
+                  the parquets, or the files have conflicting metadata,
+                  this method automatically runs :meth:`validate` with ``cast=True``.
+                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  it prints a warning if validation is necessary.
+                - ``"forbid"``: The method never runs validation automatically and only
+                  returns if the metadata stores a collection schema that matches
+                  this collection.
+                - ``"skip"``: The method never runs validation and simply reads the
+                  data, entrusting the user that the schema is valid. _Use this option
+                  carefully_.
 
-            kwargs: Additional keyword arguments passed directly to the storage backend for reading Delta tables.
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.read_delta`.
 
         Returns:
             The initialized collection.
