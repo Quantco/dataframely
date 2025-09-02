@@ -900,6 +900,22 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
+    def scan_delta(
+        cls,
+        source: str | Path | deltalake.DeltaTable,
+        *,
+        validation: Validation = "warn",
+        **kwargs: Any,
+    ) -> LazyFrame[Self]:
+        return cls._read(
+            DeltaStorageBackend(),
+            validation=validation,
+            lazy=True,
+            source=source,
+            **kwargs,
+        )
+
+    @classmethod
     def read_delta(
         cls,
         source: str | Path | deltalake.DeltaTable,

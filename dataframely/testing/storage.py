@@ -3,20 +3,25 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal, TypeVar, overload
+from typing import Any, Literal, TypeVar, overload
 
 import polars as pl
 
 import dataframely as dy
 from dataframely import Validation
 
+# ----------------------------------- Schema -------------------------------------------
 S = TypeVar("S", bound=dy.Schema)
 
 
 class SchemaStorageTester(ABC):
-    @abstractmethod
-    def supports_lazy_operations(self) -> bool:
-        """Whether this tester supports sink and scan operations."""
+    """A testing interface to enable parametrized testing of multiple storage types for
+    schemas.
+
+    In addition to the "normal" storage interface used in the main library, this
+    interfaces provides additional testing-only functionality and unifies the access
+    patterns of the backends.
+    """
 
     @abstractmethod
     def write_typed(
@@ -46,8 +51,7 @@ class SchemaStorageTester(ABC):
 
 
 class ParquetSchemaStorageTester(SchemaStorageTester):
-    def supports_lazy_operations(self) -> bool:
-        return True
+    """Testing interface for the parquet storage functionality of Schema."""
 
     def _wrap_path(self, path: Path) -> Path:
         return path / "test.parquet"
@@ -88,17 +92,14 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
 
 
 class DeltaSchemaStorageTester(SchemaStorageTester):
-    def supports_lazy_operations(self) -> bool:
-        return False
+    """Testing interface for the deltalake storage functionality of Schema."""
 
     def write_typed(
         self, schema: type[S], df: dy.DataFrame[S], path: Path, lazy: bool
     ) -> None:
-        self._raise_if_lazy(lazy)
         schema.write_delta(df, path)
 
     def write_untyped(self, df: pl.DataFrame, path: Path, lazy: bool) -> None:
-        self._raise_if_lazy(lazy)
         df.write_delta(path)
 
     @overload
@@ -114,9 +115,70 @@ class DeltaSchemaStorageTester(SchemaStorageTester):
     def read(
         self, schema: type[S], path: Path, lazy: bool, validation: Validation
     ) -> dy.DataFrame[S] | dy.LazyFrame[S]:
-        self._raise_if_lazy(lazy)
+        if lazy:
+            return schema.scan_delta(path, validation=validation)
         return schema.read_delta(path, validation=validation)
 
     def _raise_if_lazy(self, lazy: bool) -> None:
         if lazy:
             raise NotImplementedError("Lazy operations are not supported")
+
+
+# ------------------------------- Collection -------------------------------------------
+
+C = TypeVar("C", bound=dy.Collection)
+
+
+class CollectionStorageTester(ABC):
+    """Same as SchemaStorageTester, but for collections."""
+
+    @abstractmethod
+    def write_typed(
+        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        """Write a collectiob to the backend and record schema information."""
+
+    @abstractmethod
+    def write_untyped(
+        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        """Write a collection to the backend without recording schema information."""
+
+    @abstractmethod
+    def read(self, collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
+        """Read from the backend, using collection information if available."""
+
+
+class ParquetCollectionStorageTester(CollectionStorageTester):
+    def write_typed(
+        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        if lazy:
+            collection.sink_parquet(path, **kwargs)
+        else:
+            collection.write_parquet(path, **kwargs)
+
+    def write_untyped(
+        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        if lazy:
+            collection.sink_parquet(path, **kwargs)
+        else:
+            collection.write_parquet(path, **kwargs)
+
+        def _delete_meta(file: Path) -> None:
+            """Overwrite a parquet file with the same data, but without metadata."""
+            df = pl.read_parquet(file)
+            df.write_parquet(file)
+
+        if path.is_file():
+            _delete_meta(path)
+        else:
+            for file in path.rglob("*.parquet"):
+                _delete_meta(file)
+
+    def read(self, collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
+        if lazy:
+            return collection.scan_parquet(path, **kwargs)
+        else:
+            return collection.read_parquet(path, **kwargs)

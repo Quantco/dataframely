@@ -37,9 +37,6 @@ def test_read_write_if_schema_matches(
     validation: Validation,
     lazy: Literal[True] | Literal[False],
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
-
     # Arrange
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     df = schema.create_empty()
@@ -51,7 +48,7 @@ def test_read_write_if_schema_matches(
 
     # Assert
     spy.assert_not_called()
-    assert_frame_equal(df, out)
+    assert_frame_equal(df.lazy(), out.lazy())
 
 
 # --------------------------------- VALIDATION "WARN" -------------------------------- #
@@ -63,8 +60,6 @@ def test_read_write_validation_warn_no_schema(
     mocker: pytest_mock.MockerFixture,
     lazy: Literal[True | False],
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
     # Arrange
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     df = schema.create_empty()
@@ -79,7 +74,7 @@ def test_read_write_validation_warn_no_schema(
 
     # Assert
     spy.assert_called_once()
-    assert_frame_equal(df, out)
+    assert_frame_equal(df.lazy(), out.lazy())
 
 
 @pytest.mark.parametrize("tester", TESTERS)
@@ -90,13 +85,10 @@ def test_read_write_parquet_validation_warn_invalid_schema(
     mocker: pytest_mock.MockerFixture,
     lazy: Literal[True | False],
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
     # Arrange
     right = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     wrong = create_schema("wrong", {"x": dy.Int64(), "y": dy.String()})
     df = right.create_empty()
-
     tester.write_typed(wrong, df, tmp_path, lazy=lazy)
 
     # Act
@@ -108,7 +100,7 @@ def test_read_write_parquet_validation_warn_invalid_schema(
 
     # Assert
     spy.assert_called_once()
-    assert_frame_equal(df, out)
+    assert_frame_equal(df.lazy(), out.lazy())
 
 
 # -------------------------------- VALIDATION "ALLOW" -------------------------------- #
@@ -122,8 +114,6 @@ def test_read_write_parquet_validation_allow_no_schema(
     mocker: pytest_mock.MockerFixture,
     lazy: Literal[True | False],
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
     # Arrange
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     df = schema.create_empty()
@@ -135,7 +125,7 @@ def test_read_write_parquet_validation_allow_no_schema(
 
     # Assert
     spy.assert_called_once()
-    assert_frame_equal(df, out)
+    assert_frame_equal(df.lazy(), out.lazy())
 
 
 @pytest.mark.parametrize("tester", TESTERS)
@@ -146,8 +136,6 @@ def test_read_write_parquet_validation_allow_invalid_schema(
     mocker: pytest_mock.MockerFixture,
     lazy: Literal[True | False],
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
     # Arrange
     right = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     wrong = create_schema("wrong", {"x": dy.Int64(), "y": dy.String()})
@@ -160,7 +148,7 @@ def test_read_write_parquet_validation_allow_invalid_schema(
 
     # Assert
     spy.assert_called_once()
-    assert_frame_equal(df, out)
+    assert_frame_equal(df.lazy(), out.lazy())
 
 
 @pytest.mark.parametrize("tester", TESTERS)
@@ -168,12 +156,9 @@ def test_read_write_parquet_validation_allow_invalid_schema(
 def test_read_write_parquet_validation_forbid_no_schema(
     tester: SchemaStorageTester, tmp_path: Path, lazy: Literal[True | False]
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
+    # Arrange
     schema = create_schema("test", {"a": dy.Int64()})
     df = schema.create_empty()
-
-    # Arrange
     tester.write_untyped(df, tmp_path, lazy)
 
     # Act
@@ -189,8 +174,6 @@ def test_read_write_parquet_validation_forbid_no_schema(
 def test_read_write_parquet_validation_forbid_invalid_schema(
     tester: SchemaStorageTester, tmp_path: Path, lazy: Literal[True | False]
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
     # Arrange
     right = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     wrong = create_schema("wrong", {"x": dy.Int64(), "y": dy.String()})
@@ -216,8 +199,6 @@ def test_read_write_parquet_validation_skip_no_schema(
     mocker: pytest_mock.MockerFixture,
     lazy: Literal[True | False],
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
     # Arrange
     schema = create_schema("test", {"a": dy.Int64()})
     df = schema.create_empty()
@@ -239,8 +220,6 @@ def test_read_write_parquet_validation_skip_invalid_schema(
     mocker: pytest_mock.MockerFixture,
     lazy: Literal[True | False],
 ) -> None:
-    if lazy and not tester.supports_lazy_operations():
-        return
     # Arrange
     right = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     wrong = create_schema("wrong", {"x": dy.Int64(), "y": dy.String()})
