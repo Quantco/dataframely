@@ -169,10 +169,8 @@ def _read_serialized_schema(table: "deltalake.DeltaTable") -> SerializedSchema |
 def _read_serialized_collection(
     table: "deltalake.DeltaTable",
 ) -> SerializedCollection | None:
-    history = table.history(limit=1)
-    if not len(history):
-        return None
-    return history[0].get(COLLECTION_METADATA_KEY, None)
+    [last_commit] = table.history(limit=1)
+    return last_commit.get(COLLECTION_METADATA_KEY, None)
 
 
 def _to_delta_table(
