@@ -120,10 +120,6 @@ class DeltaSchemaStorageTester(SchemaStorageTester):
             return schema.scan_delta(path, validation=validation)
         return schema.read_delta(path, validation=validation)
 
-    def _raise_if_lazy(self, lazy: bool) -> None:
-        if lazy:
-            raise NotImplementedError("Lazy operations are not supported")
-
 
 # ------------------------------- Collection -------------------------------------------
 

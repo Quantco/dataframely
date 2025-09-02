@@ -10,6 +10,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._storage.delta import DeltaStorageBackend
 from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing.storage import (
@@ -319,3 +320,11 @@ def test_reconcile_collection_types(
     inputs: list[type[dy.Collection] | None], output: type[dy.Collection] | None
 ) -> None:
     assert output == _reconcile_collection_types(inputs)
+
+
+# ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
+def test_raise_on_lazy() -> None:
+    dsb = DeltaStorageBackend()
+    with pytest.raises(NotImplementedError):
+        # Arguments should not matter
+        dsb.sink_collection({}, "", {})

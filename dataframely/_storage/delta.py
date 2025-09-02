@@ -178,8 +178,10 @@ def _to_delta_table(
 ) -> "deltalake.DeltaTable":
     from deltalake import DeltaTable
 
-    if isinstance(table, DeltaTable):
-        return table
-    if isinstance(table, str | Path):
-        return DeltaTable(table)
-    raise TypeError(f"Unsupported type {type(table)}")
+    match table:
+        case DeltaTable():
+            return table
+        case str() | Path():
+            return DeltaTable(table)
+        case _:
+            raise TypeError(f"Unsupported type {table!r}")

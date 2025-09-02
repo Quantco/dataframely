@@ -4,12 +4,14 @@
 from pathlib import Path
 from typing import Literal, TypeVar, get_args
 
+import polars as pl
 import pytest
 import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely import Validation
+from dataframely._storage.delta import DeltaStorageBackend
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_schema
 from dataframely.testing.storage import (
@@ -231,3 +233,13 @@ def test_read_write_parquet_validation_skip_invalid_schema(
 
     # Assert
     spy.assert_not_called()
+
+
+# ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
+def test_raise_on_lazy() -> None:
+    dsb = DeltaStorageBackend()
+    lf = pl.LazyFrame({"x": [1, 2, 3]})
+
+    with pytest.raises(NotImplementedError):
+        # Arguments should not matter
+        dsb.sink_frame(lf, "")
