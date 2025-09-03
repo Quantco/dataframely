@@ -151,6 +151,10 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_typed(
         self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
     ) -> None:
+        # Polars does not support partitioning via kwarg on sink_parquet
+        if lazy:
+            kwargs.pop("partition_by", None)
+
         if lazy:
             collection.sink_parquet(path, **kwargs)
         else:
@@ -169,11 +173,8 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
             df = pl.read_parquet(file)
             df.write_parquet(file)
 
-        if path.is_file():
-            _delete_meta(path)
-        else:
-            for file in path.rglob("*.parquet"):
-                _delete_meta(file)
+        for file in path.rglob("*.parquet"):
+            _delete_meta(file)
 
     def read(self, collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
         if lazy:

@@ -8,7 +8,9 @@ import pytest
 from deltalake import DeltaTable
 from deltalake._internal import TableNotFoundError
 
-from dataframely._storage.delta import _to_delta_table
+from dataframely._storage.delta import DeltaStorageBackend, _to_delta_table
+
+# -------------------------- Utility functions -----------------------------------------
 
 
 @pytest.mark.parametrize("input_type", [str, Path])
@@ -28,3 +30,24 @@ def test_to_delta_table_type_error() -> None:
 def test_to_delta_table_does_not_exist(tmp_path: Path) -> None:
     with pytest.raises(TableNotFoundError):
         _to_delta_table(tmp_path)
+
+
+# -------------------------- Implementation Boundary -----------------------------------------
+
+
+def test_raise_on_sink_frame(tmp_path: Path) -> None:
+    backend = DeltaStorageBackend()
+    with pytest.raises(NotImplementedError):
+        backend.sink_frame(pl.LazyFrame(), "")
+
+
+def test_raise_on_sink_collection(tmp_path: Path) -> None:
+    backend = DeltaStorageBackend()
+    with pytest.raises(NotImplementedError):
+        backend.sink_collection({"x": pl.LazyFrame()}, "", {"x": ""})
+
+
+def test_raise_on_sink_failure_info(tmp_path: Path) -> None:
+    backend = DeltaStorageBackend()
+    with pytest.raises(NotImplementedError):
+        backend.sink_failure_info(pl.LazyFrame(), "", "")

@@ -65,11 +65,7 @@ def test_read_write(
     )
 
     # Act
-    # TODO: Refactor this
-    # Only write lazily if we do not partition via kwargs because that
-    # is not supported in polars
-    write_lazy = lazy and "partition_by" not in kwargs
-    tester.write_typed(collection, tmp_path, lazy=write_lazy, **kwargs)
+    tester.write_typed(collection, tmp_path, lazy=lazy, **kwargs)
 
     # Assert
     out = tester.read(MyCollection, tmp_path, lazy)
@@ -85,15 +81,16 @@ def test_read_write(
 def test_read_write_optional(
     tester: CollectionStorageTester, tmp_path: Path, kwargs: dict[str, Any], lazy: bool
 ) -> None:
-    collection = MyCollection.cast({"first": pl.LazyFrame({"a": [1, 2, 3]})})
+    # Arrange
+    collection = MyCollection.validate(
+        {"first": pl.LazyFrame({"a": [1, 2, 3]})}, cast=True
+    )
 
     # Act
-    # TODO: Refactor this
-    # Only write lazily if we do not partition via kwargs because that
-    # is not supported in polars
     write_lazy = lazy and "partition_by" not in kwargs
     tester.write_typed(collection, tmp_path, lazy=write_lazy, **kwargs)
 
+    # Assert
     out = tester.read(MyCollection, tmp_path, lazy)
     assert_frame_equal(collection.first, out.first)
     assert collection.second is None
