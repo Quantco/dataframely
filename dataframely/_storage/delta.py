@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
-from deltalake import CommitProperties
 
 from ._base import (
     SerializedCollection,
@@ -30,6 +29,8 @@ class DeltaStorageBackend(StorageBackend):
     def write_frame(
         self, df: pl.DataFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
+        import deltalake
+
         target = kwargs.pop("target")
         metadata = kwargs.pop("metadata", {})
         delta_write_options = kwargs.pop("delta_write_options", {})
@@ -44,7 +45,7 @@ class DeltaStorageBackend(StorageBackend):
             target,
             delta_write_options=delta_write_options
             | {
-                "commit_properties": CommitProperties(
+                "commit_properties": deltalake.CommitProperties(
                     custom_metadata=metadata | {SCHEMA_METADATA_KEY: serialized_schema}
                 ),
             },
@@ -98,7 +99,7 @@ class DeltaStorageBackend(StorageBackend):
     def scan_collection(
         self, members: Iterable[str], **kwargs: Any
     ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
-        from deltalake import DeltaTable
+        import deltalake
 
         uri = Path(kwargs.pop("source"))
 
@@ -106,7 +107,7 @@ class DeltaStorageBackend(StorageBackend):
         collection_types = []
         for key in members:
             member_uri = uri / key
-            if not DeltaTable.is_deltatable(str(member_uri)):
+            if not deltalake.DeltaTable.is_deltatable(str(member_uri)):
                 continue
             table = _to_delta_table(member_uri)
             data[key] = pl.scan_delta(table, **kwargs)

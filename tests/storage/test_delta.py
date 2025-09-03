@@ -13,7 +13,7 @@ from dataframely._storage.delta import DeltaStorageBackend, _to_delta_table
 # -------------------------- Utility functions -----------------------------------------
 
 
-@pytest.mark.parametrize("input_type", [str, Path])
+@pytest.mark.parametrize("input_type", [str, Path, DeltaTable])
 def test_to_delta_table_good(
     tmp_path: Path, input_type: type[str] | type[Path]
 ) -> None:
