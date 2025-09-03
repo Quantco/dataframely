@@ -14,7 +14,8 @@ from ._base import (
     SerializedSchema,
     StorageBackend,
 )
-from .constants import COLLECTION_METADATA_KEY, SCHEMA_METADATA_KEY
+from ._exc import assert_metadata
+from .constants import COLLECTION_METADATA_KEY, RULE_METADATA_KEY, SCHEMA_METADATA_KEY
 
 if TYPE_CHECKING:
     import deltalake
@@ -43,7 +44,6 @@ class DeltaStorageBackend(StorageBackend):
             target,
             delta_write_options=delta_write_options
             | {
-                "description": ("abc"),
                 "commit_properties": CommitProperties(
                     custom_metadata=metadata | {SCHEMA_METADATA_KEY: serialized_schema}
                 ),
@@ -129,9 +129,7 @@ class DeltaStorageBackend(StorageBackend):
         serialized_schema: SerializedSchema,
         **kwargs: Any,
     ) -> None:
-        raise NotImplementedError(
-            "Lazy streaming to deltalake is currently not supported."
-        )
+        _raise_on_lazy_write()
 
     def write_failure_info(
         self,
@@ -140,21 +138,29 @@ class DeltaStorageBackend(StorageBackend):
         serialized_schema: SerializedSchema,
         **kwargs: Any,
     ) -> None:
-        raise NotImplementedError("TODO.")
+        self.write_frame(
+            df,
+            serialized_schema,
+            metadata={
+                RULE_METADATA_KEY: serialized_rules,
+            },
+            **kwargs,
+        )
 
     def scan_failure_info(
         self, **kwargs: Any
     ) -> tuple[pl.LazyFrame, SerializedRules, SerializedSchema]:
         """Lazily read the failure info from the storage backend."""
-        raise NotImplementedError(
-            "Lazy loading from deltalake is currently not supported."
-        )
+        table = _to_delta_table(kwargs.pop("source"))
 
-    def read_failure_info(
-        self, **kwargs: Any
-    ) -> tuple[pl.DataFrame, SerializedRules, SerializedSchema]:
-        """Read the failure info from the storage backend."""
-        raise NotImplementedError("TODO.")
+        # Metadata
+        serialized_rules = assert_metadata(_read_serialized_rules(table))
+        serialized_schema = assert_metadata(_read_serialized_schema(table))
+
+        # Data
+        lf = pl.scan_delta(table, **kwargs)
+
+        return lf, serialized_rules, serialized_schema
 
 
 def _raise_on_lazy_write() -> None:
@@ -171,6 +177,13 @@ def _read_serialized_collection(
 ) -> SerializedCollection | None:
     [last_commit] = table.history(limit=1)
     return last_commit.get(COLLECTION_METADATA_KEY, None)
+
+
+def _read_serialized_rules(
+    table: "deltalake.DeltaTable",
+) -> SerializedRules | None:
+    [last_commit] = table.history(limit=1)
+    return last_commit.get(RULE_METADATA_KEY, None)
 
 
 def _to_delta_table(

@@ -14,9 +14,12 @@ from polars._typing import PartitioningScheme
 from dataframely._base_schema import BaseSchema
 
 from ._storage import StorageBackend
+from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
 
 if TYPE_CHECKING:  # pragma: no cover
+    import deltalake
+
     from .schema import Schema
 
 UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
@@ -167,12 +170,80 @@ class FailureInfo(Generic[S]):
             backend=ParquetStorageBackend(), file=source, lazy=True, **kwargs
         )
 
+    def write_delta(
+        self,
+        /,
+        target: str | Path | deltalake.DeltaTable,
+        **kwargs: Any,
+    ) -> None:
+        """Write the failure info to a delta lake table.
+
+        Args:
+            target: The file path or DeltaTable to which to write the delta lake data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.write_delta`.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
+        """
+        self._write(DeltaStorageBackend(), target=target, **kwargs)
+
+    @classmethod
+    def read_delta(
+        cls, source: str | Path | deltalake.DeltaTable, **kwargs: Any
+    ) -> FailureInfo[Schema]:
+        """Read a delta lake table with the failure info.
+
+        Args:
+            source: Path or DeltaTable from which to read the data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.read_delta`.
+
+        Returns:
+            The failure info object.
+
+        Raises:
+            ValueError: If no appropriate metadata can be found.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
+        """
+        return cls._read(
+            backend=DeltaStorageBackend(), source=source, lazy=False, **kwargs
+        )
+
+    @classmethod
+    def scan_delta(
+        cls, source: str | Path | deltalake.DeltaTable, **kwargs: Any
+    ) -> FailureInfo[Schema]:
+        """Lazily read a delta lake table with the failure info.
+
+        Args:
+            source: Path or DeltaTable from which to read the data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.scan_delta`.
+
+        Returns:
+            The failure info object.
+
+        Raises:
+            ValueError: If no appropriate metadata can be found.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
+        """
+        return cls._read(
+            backend=DeltaStorageBackend(), source=source, lazy=True, **kwargs
+        )
+
     # -------------------------------- Storage --------------------------------------- #
 
     def _sink(
         self,
         backend: StorageBackend,
-        file: str | Path | IO[bytes] | PartitioningScheme,
         **kwargs: Any,
     ) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
@@ -181,14 +252,12 @@ class FailureInfo(Generic[S]):
             lf=self._lf,
             serialized_rules=json.dumps(self._rule_columns),
             serialized_schema=self.schema.serialize(),
-            file=file,
             **kwargs,
         )
 
     def _write(
         self,
         backend: StorageBackend,
-        file: str | Path | IO[bytes] | PartitioningScheme,
         **kwargs: Any,
     ) -> None:
         # Utility method encapsulating the interaction with the StorageBackend
@@ -197,7 +266,6 @@ class FailureInfo(Generic[S]):
             df=self._df,
             serialized_rules=json.dumps(self._rule_columns),
             serialized_schema=self.schema.serialize(),
-            file=file,
             **kwargs,
         )
 
@@ -205,7 +273,6 @@ class FailureInfo(Generic[S]):
     def _read(
         cls,
         backend: StorageBackend,
-        file: str | Path | IO[bytes] | PartitioningScheme,
         lazy: bool,
         **kwargs: Any,
     ) -> FailureInfo[Schema]:
@@ -215,11 +282,11 @@ class FailureInfo(Generic[S]):
 
         if lazy:
             lf, serialized_rules, serialized_schema = backend.scan_failure_info(
-                file=file, **kwargs
+                **kwargs
             )
         else:
             df, serialized_rules, serialized_schema = backend.read_failure_info(
-                file=file, **kwargs
+                **kwargs
             )
             lf = df.lazy()
 

@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any, Literal, TypeVar, overload
 
 import polars as pl
+from deltalake import CommitProperties
 
 import dataframely as dy
-from dataframely import Validation
+from dataframely import FailureInfo, Validation
 from dataframely._storage.delta import _to_delta_table
 
 # ----------------------------------- Schema -------------------------------------------
@@ -207,3 +208,83 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
         if lazy:
             return collection.scan_delta(source=path, **kwargs)
         return collection.read_delta(source=path, **kwargs)
+
+
+# ------------------------------------ Failure info ------------------------------------
+class FailureInfoStorageTester(ABC):
+    @abstractmethod
+    def write_typed(
+        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+    ) -> None: ...
+
+    @abstractmethod
+    def write_untyped(
+        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+    ) -> None: ...
+
+    @abstractmethod
+    def read(self, path: Path, lazy: bool, **kwargs: Any) -> FailureInfo: ...
+
+    @abstractmethod
+    def set_metadata(self, path: Path, metadata: dict[str, Any]) -> None: ...
+
+
+class ParquetFailureInfoStorageTester(FailureInfoStorageTester):
+    def write_typed(
+        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        p = path / "failure.parquet"
+        if lazy:
+            failure_info.sink_parquet(p, **kwargs)
+        else:
+            failure_info.write_parquet(p, **kwargs)
+
+    def write_untyped(
+        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        p = path / "failure.parquet"
+        if lazy:
+            failure_info._lf.sink_parquet(p, **kwargs)
+        else:
+            failure_info._lf.collect().write_parquet(p, **kwargs)
+
+    def read(self, path: Path, lazy: bool, **kwargs: Any) -> FailureInfo:
+        p = path / "failure.parquet"
+        if lazy:
+            return FailureInfo.scan_parquet(source=p, **kwargs)
+        else:
+            return FailureInfo.read_parquet(source=p, **kwargs)
+
+    def set_metadata(self, path: Path, metadata: dict[str, Any]) -> None:
+        p = path / "failure.parquet"
+        data = pl.read_parquet(p)
+        data.write_parquet(p, metadata=metadata)
+
+
+class DeltaFailureInfoStorageTester(FailureInfoStorageTester):
+    def write_typed(
+        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        # Ignore 'lazy' here because lazy writes are not supported for delta lake at the moment.
+        failure_info.write_delta(path, **kwargs)
+
+    def write_untyped(
+        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+    ) -> None:
+        failure_info._lf.collect().write_delta(path, **kwargs)
+
+    def read(self, path: Path, lazy: bool, **kwargs: Any) -> FailureInfo:
+        if lazy:
+            return FailureInfo.scan_delta(source=path, **kwargs)
+        else:
+            return FailureInfo.read_delta(source=path, **kwargs)
+
+    def set_metadata(self, path: Path, metadata: dict[str, Any]) -> None:
+        df = pl.read_delta(path)
+        df.head(0).write_delta(
+            path,
+            delta_write_options={
+                "commit_properties": CommitProperties(custom_metadata=metadata),
+            },
+            mode="overwrite",
+        )

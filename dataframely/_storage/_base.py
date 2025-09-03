@@ -191,8 +191,14 @@ class StorageBackend(ABC):
     ) -> tuple[pl.LazyFrame, SerializedRules, SerializedSchema]:
         """Lazily read the failure info from the storage backend."""
 
-    @abstractmethod
     def read_failure_info(
         self, **kwargs: Any
     ) -> tuple[pl.DataFrame, SerializedRules, SerializedSchema]:
         """Read the failure info from the storage backend."""
+
+        lf, rule_metadata, schema_metadata = self.scan_failure_info(**kwargs)
+        return (
+            lf.collect(),
+            rule_metadata,
+            schema_metadata,
+        )
