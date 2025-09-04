@@ -44,4 +44,4 @@ except ImportError:  # pragma: no cover
 
 # ------------------------------------------------------------------------------------ #
 
-__all__ = ["sa", "sa_mssql", "sa_TypeEngine", "pa"]
+__all__ = ["sa", "sa_mssql", "sa_TypeEngine", "pa", "deltalake"]
