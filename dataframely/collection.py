@@ -912,6 +912,15 @@ class Collection(BaseCollection, ABC):
             kwargs: Additional keyword arguments passed directly to :meth:`polars.write_delta`.
 
         Attention:
+            Schema metadata is stored as custom commit metadata. Only the schema
+            information from the last commit is used, so any table modifications
+            that are not through dataframely will result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
+
             This method suffers from the same limitations as :meth:`Schema.serialize`.
         """
         self._write(
@@ -965,6 +974,15 @@ class Collection(BaseCollection, ABC):
             Due to current limitations in dataframely, this method may read the Delta table into memory if ``validation`` is ``"warn"`` or ``"allow"`` and validation is required.
 
         Attention:
+            Schema metadata is stored as custom commit metadata. Only the schema
+            information from the last commit is used, so any table modifications
+            that are not through dataframely will result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
+
             Be aware that this method suffers from the same limitations as :meth:`serialize`.
         """
         return cls._read(
@@ -1017,6 +1035,15 @@ class Collection(BaseCollection, ABC):
             ValidationError: If the collection cannot be validated.
 
         Attention:
+            Schema metadata is stored as custom commit metadata. Only the schema
+            information from the last commit is used, so any table modifications
+            that are not through dataframely will result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
+
             Be aware that this method suffers from the same limitations as :meth:`serialize`.
         """
         return cls._read(

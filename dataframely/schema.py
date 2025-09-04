@@ -905,6 +905,15 @@ class Schema(BaseSchema, ABC):
 
         Attention:
             This method suffers from the same limitations as :meth:`serialize`.
+
+            Schema metadata is stored as custom commit metadata. Only the schema
+            information from the last commit is used, so any table modifications
+            that are not through dataframely will result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
         """
         DeltaStorageBackend().write_frame(
             df=df,
@@ -954,6 +963,15 @@ class Schema(BaseSchema, ABC):
             from the source and ``validation`` is set to ``"forbid"``.
 
         Attention:
+            Schema metadata is stored as custom commit metadata. Only the schema
+            information from the last commit is used, so any table modifications
+            that are not through dataframely will result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
+
             This method suffers from the same limitations as :meth:`serialize`.
         """
         return cls._read(
@@ -1006,6 +1024,15 @@ class Schema(BaseSchema, ABC):
             from the source and ``validation`` is set to ``"forbid"``.
 
         Attention:
+            Schema metadata is stored as custom commit metadata. Only the schema
+            information from the last commit is used, so any table modifications
+            that are not through dataframely will result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
+
             This method suffers from the same limitations as :meth:`serialize`.
         """
         return cls._read(
