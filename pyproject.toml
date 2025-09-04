@@ -27,6 +27,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 version = "0.0.0"
 
+[project.optional-dependencies]
+sqlalchemy = ["sqlalchemy"]
+pyarrow = ["pyarrow"]
+
 [project.urls]
 Documentation = "https://dataframely.readthedocs.io/"
 Repository = "https://github.com/quantco/dataframely"
@@ -94,6 +98,9 @@ filterwarnings = [
   "ignore:The 'nullable' argument was not explicitly set:FutureWarning",
 ]
 testpaths = ["tests"]
+markers = [
+  "with_optionals: Tests that require optional dependencies to be installed",
+]
 
 [tool.coverage.run]
 omit = ["dataframely/mypy.py", "dataframely/testing/generate.py"]

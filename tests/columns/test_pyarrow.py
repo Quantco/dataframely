@@ -14,6 +14,8 @@ from dataframely.testing import (
     create_schema,
 )
 
+pytestmark = pytest.mark.with_optionals
+
 
 @pytest.mark.parametrize("column_type", ALL_COLUMN_TYPES)
 def test_equal_to_polars_schema(column_type: type[Column]) -> None:
