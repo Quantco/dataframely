@@ -235,7 +235,7 @@ def test_read_write_parquet_validation_skip_invalid_schema(
     spy.assert_not_called()
 
 
-# ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
+# ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #z
 def test_raise_on_lazy() -> None:
     dsb = DeltaStorageBackend()
     lf = pl.LazyFrame({"x": [1, 2, 3]})

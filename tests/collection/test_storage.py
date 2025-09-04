@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,7 @@ import pytest_mock
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
 from dataframely.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
@@ -319,7 +321,80 @@ def test_reconcile_collection_types(
     assert output == _reconcile_collection_types(inputs)
 
 
+# ---------------------------- PARQUET SPECIFICS ---------------------------------- #
+
+
+@pytest.mark.parametrize("validation", ["warn", "allow", "forbid", "skip"])
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_write_parquet_fallback_schema_json_success(
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    # In https://github.com/Quantco/dataframely/pull/107, the
+    # mechanism for storing collection metadata was changed.
+    # Prior to this change, the metadata was stored in a `schema.json` file.
+    # After this change, the metadata was moved into the parquet files.
+    # This test verifies that the change was implemented a backward compatible manner:
+    # The new code can still read parquet files that do not contain the metadata,
+    # and will not call `validate` if the `schema.json` file is present.
+
+    # Arrange
+    tester = ParquetCollectionStorageTester()
+    collection = MyCollection.create_empty()
+    tester.write_untyped(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text(collection.serialize())
+
+    # Act
+    spy = mocker.spy(MyCollection, "validate")
+    tester.read(MyCollection, tmp_path, lazy, validation=validation)
+
+    # Assert
+    spy.assert_not_called()
+
+
+@pytest.mark.parametrize("validation", ["allow", "warn"])
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_write_parquet_schema_json_fallback_corrupt(
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    """If the schema.json file is present, but corrupt, we should always fall back to
+    validating."""
+    # Arrange
+    collection = MyCollection.create_empty()
+    tester = ParquetCollectionStorageTester()
+    tester.write_untyped(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text("} this is not a valid JSON {")
+
+    # Act
+    spy = mocker.spy(MyCollection, "validate")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        tester.read(MyCollection, tmp_path, lazy, validation=validation)
+
+    # Assert
+    spy.assert_called_once()
+
+
+@pytest.mark.parametrize("metadata", [None, {COLLECTION_METADATA_KEY: "invalid"}])
+def test_read_invalid_parquet_metadata_collection(
+    tmp_path: Path, metadata: dict | None
+) -> None:
+    # Arrange
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    df.write_parquet(
+        tmp_path / "df.parquet",
+        metadata=metadata,
+    )
+
+    # Act
+    collection = dy.read_parquet_metadata_collection(tmp_path / "df.parquet")
+
+    # Assert
+    assert collection is None
+
+
 # ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
+
+
 def test_raise_on_lazy() -> None:
     dsb = DeltaStorageBackend()
     with pytest.raises(NotImplementedError):
