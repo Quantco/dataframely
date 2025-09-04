@@ -13,7 +13,7 @@ from ._base import (
     SerializedSchema,
     StorageBackend,
 )
-from ._exc import assert_metadata
+from ._exc import assert_failure_info_metadata
 from .constants import COLLECTION_METADATA_KEY, RULE_METADATA_KEY, SCHEMA_METADATA_KEY
 
 
@@ -219,8 +219,10 @@ class ParquetStorageBackend(StorageBackend):
 
         # Meta data
         metadata = pl.read_parquet_metadata(file)
-        serialized_schema = assert_metadata(metadata.get(SCHEMA_METADATA_KEY))
-        serialized_rules = assert_metadata(metadata.get(RULE_METADATA_KEY))
+        serialized_schema = assert_failure_info_metadata(
+            metadata.get(SCHEMA_METADATA_KEY)
+        )
+        serialized_rules = assert_failure_info_metadata(metadata.get(RULE_METADATA_KEY))
 
         # Data
         lf = pl.scan_parquet(file, **kwargs)

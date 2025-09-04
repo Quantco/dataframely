@@ -16,7 +16,7 @@ from ._base import (
     SerializedSchema,
     StorageBackend,
 )
-from ._exc import assert_metadata
+from ._exc import assert_failure_info_metadata
 from .constants import COLLECTION_METADATA_KEY, RULE_METADATA_KEY, SCHEMA_METADATA_KEY
 
 
@@ -154,8 +154,8 @@ class DeltaStorageBackend(StorageBackend):
         table = _to_delta_table(kwargs.pop("source"))
 
         # Metadata
-        serialized_rules = assert_metadata(_read_serialized_rules(table))
-        serialized_schema = assert_metadata(_read_serialized_schema(table))
+        serialized_rules = assert_failure_info_metadata(_read_serialized_rules(table))
+        serialized_schema = assert_failure_info_metadata(_read_serialized_schema(table))
 
         # Data
         lf = pl.scan_delta(table, **kwargs)

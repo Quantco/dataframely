@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 
-def assert_metadata(metadata: str | None) -> str:
+def assert_failure_info_metadata(metadata: str | None) -> str:
     if metadata:
         return metadata
     raise ValueError(
