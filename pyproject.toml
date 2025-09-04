@@ -99,7 +99,7 @@ filterwarnings = [
 ]
 testpaths = ["tests"]
 markers = [
-  "with_optionals: Test that require optional dependencies to be installed",
+  "with_optionals: Tests that require optional dependencies to be installed",
 ]
 
 [tool.coverage.run]
