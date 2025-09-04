@@ -13,6 +13,14 @@ class _DummyModule:  # pragma: no cover
         raise ValueError(f"Module '{self.module}' is not installed.")
 
 
+# ------------------------------------ DELTALAKE ------------------------------------- #
+
+try:
+    import deltalake
+except ImportError:  # pragma: no cover
+    deltalake = _DummyModule("deltalake")  # type: ignore
+
+
 # ------------------------------------ SQLALCHEMY ------------------------------------ #
 
 try:

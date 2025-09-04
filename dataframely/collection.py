@@ -10,10 +10,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Annotated, Any, Literal, cast
+from typing import IO, Annotated, Any, Literal, cast
 
 import polars as pl
 import polars.exceptions as plexc
+
+from dataframely._compat import deltalake
 
 from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
@@ -44,9 +46,6 @@ else:
     from typing_extensions import Self
 
 _FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
-
-if TYPE_CHECKING:
-    import deltalake
 
 
 class Collection(BaseCollection, ABC):

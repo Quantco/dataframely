@@ -1,11 +1,14 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import polars as pl
+
+from dataframely._compat import deltalake
 
 from ._base import (
     SerializedCollection,
@@ -15,9 +18,6 @@ from ._base import (
 )
 from ._exc import assert_metadata
 from .constants import COLLECTION_METADATA_KEY, RULE_METADATA_KEY, SCHEMA_METADATA_KEY
-
-if TYPE_CHECKING:
-    import deltalake
 
 
 class DeltaStorageBackend(StorageBackend):
@@ -29,8 +29,6 @@ class DeltaStorageBackend(StorageBackend):
     def write_frame(
         self, df: pl.DataFrame, serialized_schema: SerializedSchema, **kwargs: Any
     ) -> None:
-        import deltalake
-
         target = kwargs.pop("target")
         metadata = kwargs.pop("metadata", {})
         delta_write_options = kwargs.pop("delta_write_options", {})
@@ -43,12 +41,15 @@ class DeltaStorageBackend(StorageBackend):
 
         df.write_delta(
             target,
-            delta_write_options=delta_write_options
-            | {
-                "commit_properties": deltalake.CommitProperties(
-                    custom_metadata=metadata | {SCHEMA_METADATA_KEY: serialized_schema}
-                ),
-            },
+            delta_write_options=(
+                delta_write_options
+                | {
+                    "commit_properties": deltalake.CommitProperties(
+                        custom_metadata=metadata
+                        | {SCHEMA_METADATA_KEY: serialized_schema}
+                    ),
+                }
+            ),
             **kwargs,
         )
 
@@ -99,8 +100,6 @@ class DeltaStorageBackend(StorageBackend):
     def scan_collection(
         self, members: Iterable[str], **kwargs: Any
     ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
-        import deltalake
-
         uri = Path(kwargs.pop("source"))
 
         data = {}
@@ -168,28 +167,28 @@ def _raise_on_lazy_write() -> None:
     raise NotImplementedError("Lazy writes are not currently supported for deltalake.")
 
 
-def _read_serialized_schema(table: "deltalake.DeltaTable") -> SerializedSchema | None:
+def _read_serialized_schema(table: deltalake.DeltaTable) -> SerializedSchema | None:
     [last_commit] = table.history(limit=1)
     return last_commit.get(SCHEMA_METADATA_KEY, None)
 
 
 def _read_serialized_collection(
-    table: "deltalake.DeltaTable",
+    table: deltalake.DeltaTable,
 ) -> SerializedCollection | None:
     [last_commit] = table.history(limit=1)
     return last_commit.get(COLLECTION_METADATA_KEY, None)
 
 
 def _read_serialized_rules(
-    table: "deltalake.DeltaTable",
+    table: deltalake.DeltaTable,
 ) -> SerializedRules | None:
     [last_commit] = table.history(limit=1)
     return last_commit.get(RULE_METADATA_KEY, None)
 
 
 def _to_delta_table(
-    table: "Path | str | deltalake.DeltaTable",
-) -> "deltalake.DeltaTable":
+    table: Path | str | deltalake.DeltaTable,
+) -> deltalake.DeltaTable:
     from deltalake import DeltaTable
 
     match table:

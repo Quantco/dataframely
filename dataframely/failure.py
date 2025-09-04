@@ -12,14 +12,13 @@ import polars as pl
 from polars._typing import PartitioningScheme
 
 from dataframely._base_schema import BaseSchema
+from dataframely._compat import deltalake
 
 from ._storage import StorageBackend
 from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
 
 if TYPE_CHECKING:  # pragma: no cover
-    import deltalake
-
     from .schema import Schema
 
 UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
