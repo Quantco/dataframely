@@ -16,6 +16,11 @@ from dataframely.testing.storage import (
     ParquetFailureInfoStorageTester,
 )
 
+# Only execute these tests with optional dependencies installed
+# The parquet-based tests do not need them, but other storage
+# backends do.
+pytestmark = pytest.mark.with_optionals
+
 # ------------------------------ All storage backends ----------------------------------
 
 

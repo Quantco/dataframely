@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Any, Literal, TypeVar, overload
 
 import polars as pl
-from deltalake import CommitProperties
 
 import dataframely as dy
 from dataframely import FailureInfo, Validation
+from dataframely._compat import deltalake
 from dataframely._storage.delta import _to_delta_table
 
 # ----------------------------------- Schema -------------------------------------------
@@ -285,7 +285,9 @@ class DeltaFailureInfoStorageTester(FailureInfoStorageTester):
         df.head(0).write_delta(
             path,
             delta_write_options={
-                "commit_properties": CommitProperties(custom_metadata=metadata),
+                "commit_properties": deltalake.CommitProperties(
+                    custom_metadata=metadata
+                ),
             },
             mode="overwrite",
         )

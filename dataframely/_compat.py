@@ -17,10 +17,12 @@ class _DummyModule:  # pragma: no cover
 
 try:
     import deltalake
+    from deltalake import DeltaTable
 except ImportError:  # pragma: no cover
     deltalake = _DummyModule("deltalake")  # type: ignore
 
-
+    class DeltaTable:  # type: ignore # noqa: N801
+        pass
 # ------------------------------------ SQLALCHEMY ------------------------------------ #
 
 try:

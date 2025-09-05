@@ -20,6 +20,11 @@ from dataframely.testing.storage import (
     SchemaStorageTester,
 )
 
+# Only execute these tests with optional dependencies installed
+# The parquet-based tests do not need them, but other storage
+# backends do.
+pytestmark = pytest.mark.with_optionals
+
 S = TypeVar("S", bound=dy.Schema)
 
 

@@ -5,10 +5,11 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from deltalake import DeltaTable
-from deltalake._internal import TableNotFoundError
 
+from dataframely._compat import DeltaTable, deltalake
 from dataframely._storage.delta import DeltaStorageBackend, _to_delta_table
+
+pytestmark = pytest.mark.with_optionals
 
 # -------------------------- Utility functions -----------------------------------------
 
@@ -28,7 +29,7 @@ def test_to_delta_table_type_error() -> None:
 
 
 def test_to_delta_table_does_not_exist(tmp_path: Path) -> None:
-    with pytest.raises(TableNotFoundError):
+    with pytest.raises(deltalake._internal.TableNotFoundError):
         _to_delta_table(tmp_path)
 
 
