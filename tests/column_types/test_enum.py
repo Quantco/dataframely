@@ -1,6 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
-
+from enum import Enum
 from typing import Any
 
 import polars as pl
@@ -61,3 +61,21 @@ def test_different_sequences(type1: type, type2: type) -> None:
     S = create_schema("test", {"x": dy.Enum(type1(allowed))})
     df = pl.DataFrame({"x": pl.Series(["a", "b"], dtype=pl.Enum(type2(allowed)))})
     S.validate(df)
+
+
+def test_enum_of_enum() -> None:
+    class Categories(str, Enum):
+        a = "a"
+        b = "b"
+
+    assert pl.Enum(Categories) == dy.Enum(Categories).dtype
+
+
+def test_enum_of_series() -> None:
+    categories = pl.Series(["a", "b"])
+    assert pl.Enum(categories) == dy.Enum(categories).dtype
+
+
+def test_enum_of_iterable() -> None:
+    categories = (x for x in ["a", "b"])
+    assert pl.Enum(["a", "b"]) == dy.Enum(categories).dtype
