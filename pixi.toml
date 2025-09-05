@@ -110,7 +110,7 @@ build = ["build"]
 default = ["dev", "lint", "test", "optionals"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
-nightly = ["nightly", "test"]
+nightly = ["nightly", "test", "optionals"]
 py310 = ["py310", "test"]
 py311 = ["py311", "test"]
 py312 = ["py312", "test"]
