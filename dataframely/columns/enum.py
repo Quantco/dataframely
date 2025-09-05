@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import enum
+from collections.abc import Iterable
+from inspect import isclass
 from typing import Any
 
 import polars as pl
@@ -22,7 +24,7 @@ class Enum(Column):
 
     def __init__(
         self,
-        categories: Sequence[str],
+        categories: pl.Series | Iterable[str] | type[enum.Enum],
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
@@ -32,7 +34,8 @@ class Enum(Column):
     ):
         """
         Args:
-            categories: The list of valid categories for the enum.
+            categories: The set of valid categories for the enum, or an existing Python
+                string-valued enum.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`
@@ -63,7 +66,13 @@ class Enum(Column):
             alias=alias,
             metadata=metadata,
         )
-        self.categories = list(categories)
+        if isclass(categories) and issubclass(categories, enum.Enum):
+            categories = pl.Series(
+                values=[getattr(v, "value", v) for v in categories.__members__.values()]
+            )
+        elif not isinstance(categories, pl.Series):
+            categories = pl.Series(values=categories)
+        self.categories = categories
 
     @property
     def dtype(self) -> pl.DataType:
@@ -72,7 +81,7 @@ class Enum(Column):
     def validate_dtype(self, dtype: PolarsDataType) -> bool:
         if not isinstance(dtype, pl.Enum):
             return False
-        return self.categories == dtype.categories.to_list()
+        return self.categories.equals(dtype.categories)
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         category_lengths = [len(c) for c in self.categories]
@@ -92,5 +101,7 @@ class Enum(Column):
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(
-            n, choices=self.categories, null_probability=self._null_probability
+            n,
+            choices=self.categories.to_list(),
+            null_probability=self._null_probability,
         ).cast(self.dtype)
