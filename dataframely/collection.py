@@ -27,8 +27,9 @@ from ._serialization import (
     serialization_versions,
 )
 from ._storage import StorageBackend
+from ._storage.constants import COLLECTION_METADATA_KEY
 from ._storage.delta import DeltaStorageBackend
-from ._storage.parquet import COLLECTION_METADATA_KEY, ParquetStorageBackend
+from ._storage.parquet import ParquetStorageBackend
 from ._typing import LazyFrame, Validation
 from .exc import (
     MemberValidationError,
