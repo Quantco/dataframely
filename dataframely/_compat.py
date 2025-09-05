@@ -13,6 +13,16 @@ class _DummyModule:  # pragma: no cover
         raise ValueError(f"Module '{self.module}' is not installed.")
 
 
+# ------------------------------------ DELTALAKE ------------------------------------- #
+
+try:
+    import deltalake
+    from deltalake import DeltaTable
+except ImportError:  # pragma: no cover
+    deltalake = _DummyModule("deltalake")  # type: ignore
+
+    class DeltaTable:  # type: ignore # noqa: N801
+        pass
 # ------------------------------------ SQLALCHEMY ------------------------------------ #
 
 try:
@@ -47,6 +57,7 @@ except ImportError:  # pragma: no cover
 # ------------------------------------------------------------------------------------ #
 
 __all__ = [
+    "deltalake",
     "sa",
     "sa_mssql",
     "sa_TypeEngine",

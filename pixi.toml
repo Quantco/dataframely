@@ -53,12 +53,14 @@ scikit-learn = "*"
 [feature.optionals.dependencies]
 pyarrow = "*"
 sqlalchemy = ">=2"
+deltalake = "*"
 
 
 [feature.test.tasks]
 test = "pytest"
 test-bench = "pytest tests/benches --benchmark-only --benchmark-sort mean --benchmark-columns min,max,mean,rounds"
 test-coverage = "pytest --cov=dataframely --cov-report=xml --cov-report=term-missing"
+test-no-optional = "pytest -m 'not with_optionals'"
 
 [feature.build.dependencies]
 python-build = "*"

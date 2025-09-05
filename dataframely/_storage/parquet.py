@@ -13,10 +13,8 @@ from ._base import (
     SerializedSchema,
     StorageBackend,
 )
-
-SCHEMA_METADATA_KEY = "dataframely_schema"
-COLLECTION_METADATA_KEY = "dataframely_collection"
-RULE_METADATA_KEY = "dataframely_rule_columns"
+from ._exc import assert_failure_info_metadata
+from .constants import COLLECTION_METADATA_KEY, RULE_METADATA_KEY, SCHEMA_METADATA_KEY
 
 
 class ParquetStorageBackend(StorageBackend):
@@ -218,24 +216,17 @@ class ParquetStorageBackend(StorageBackend):
         self, **kwargs: Any
     ) -> tuple[pl.LazyFrame, SerializedRules, SerializedSchema]:
         file = kwargs.pop("file")
+
+        # Meta data
         metadata = pl.read_parquet_metadata(file)
-        schema_metadata = metadata.get(SCHEMA_METADATA_KEY)
-
-        rule_metadata = metadata.get(RULE_METADATA_KEY)
-        if schema_metadata is None or rule_metadata is None:
-            raise ValueError("The parquet file does not contain the required metadata.")
-        lf = pl.scan_parquet(file, **kwargs)
-        return lf, rule_metadata, schema_metadata
-
-    def read_failure_info(
-        self, **kwargs: Any
-    ) -> tuple[pl.DataFrame, SerializedRules, SerializedSchema]:
-        lf, rule_metadata, schema_metadata = self.scan_failure_info(**kwargs)
-        return (
-            lf.collect(),
-            rule_metadata,
-            schema_metadata,
+        serialized_schema = assert_failure_info_metadata(
+            metadata.get(SCHEMA_METADATA_KEY)
         )
+        serialized_rules = assert_failure_info_metadata(metadata.get(RULE_METADATA_KEY))
+
+        # Data
+        lf = pl.scan_parquet(file, **kwargs)
+        return lf, serialized_rules, serialized_schema
 
 
 def _read_serialized_collection(path: Path) -> SerializedCollection | None:
