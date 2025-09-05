@@ -26,6 +26,9 @@ except ImportError:  # pragma: no cover
 try:
     import sqlalchemy as sa
     import sqlalchemy.dialects.mssql as sa_mssql
+    from sqlalchemy import Dialect
+    from sqlalchemy.dialects.mssql.pyodbc import MSDialect_pyodbc
+    from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
     from sqlalchemy.sql.type_api import TypeEngine as sa_TypeEngine
 except ImportError:  # pragma: no cover
     sa = _DummyModule("sqlalchemy")  # type: ignore
@@ -34,7 +37,14 @@ except ImportError:  # pragma: no cover
     class sa_TypeEngine:  # type: ignore # noqa: N801
         pass
 
+    class MSDialect_pyodbc:  # type: ignore # noqa: N801
+        pass
 
+    class PGDialect_psycopg2:  # type: ignore # noqa: N801
+        pass
+
+    class Dialect:  # type: ignore # noqa: N801
+        pass
 # -------------------------------------- PYARROW ------------------------------------- #
 
 try:
@@ -44,4 +54,12 @@ except ImportError:  # pragma: no cover
 
 # ------------------------------------------------------------------------------------ #
 
-__all__ = ["sa", "sa_mssql", "sa_TypeEngine", "pa", "deltalake"]
+__all__ = [
+    "deltalake",
+    "sa",
+    "sa_mssql",
+    "sa_TypeEngine",
+    "pa",
+    "MSDialect_pyodbc",
+    "PGDialect_psycopg2",
+]

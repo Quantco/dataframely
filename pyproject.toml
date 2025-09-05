@@ -21,12 +21,16 @@ dependencies = [
   # Conditional
   'typing-extensions; python_version <= "3.10"',
 ]
-optional-dependencies = ["sqlalchemy", "deltalake", "pyarrow"]
 description = "A declarative, polars-native data frame validation library"
 name = "dataframely"
 readme = "README.md"
 requires-python = ">=3.10"
 version = "0.0.0"
+
+[project.optional-dependencies]
+deltalake = ["deltalake"]
+sqlalchemy = ["sqlalchemy"]
+pyarrow = ["pyarrow"]
 
 [project.urls]
 Documentation = "https://dataframely.readthedocs.io/"
@@ -95,6 +99,9 @@ filterwarnings = [
   "ignore:The 'nullable' argument was not explicitly set:FutureWarning",
 ]
 testpaths = ["tests"]
+markers = [
+  "with_optionals: Tests that require optional dependencies to be installed",
+]
 
 [tool.coverage.run]
 omit = ["dataframely/mypy.py", "dataframely/testing/generate.py"]

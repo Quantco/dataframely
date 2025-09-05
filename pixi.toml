@@ -11,7 +11,6 @@ postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-
 python = ">=3.10"
 rust = "=1.85"
 
-deltalake = "*"
 numpy = "*"
 polars = ">=1.32"
 pytest-mock = ">=3.14.1,<4"
@@ -44,14 +43,18 @@ readthedocs = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTH
 mypy = ">=1.13"
 pandas = "*"
 pandas-stubs = "*"
-pyarrow = "*"
 pyodbc = "*"
 pytest = ">=6"
 pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
 scikit-learn = "*"
+
+[feature.optionals.dependencies]
+pyarrow = "*"
 sqlalchemy = ">=2"
+deltalake = "*"
+
 
 [feature.test.tasks]
 test = "pytest"
@@ -103,7 +106,7 @@ install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :a
 
 [environments]
 build = ["build"]
-default = ["dev", "lint", "test"]
+default = ["dev", "lint", "test", "optionals"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "test"]
@@ -111,3 +114,4 @@ py310 = ["py310", "test"]
 py311 = ["py311", "test"]
 py312 = ["py312", "test"]
 py313 = ["py313", "test"]
+py313-optionals = ["py313", "test", "optionals"]
