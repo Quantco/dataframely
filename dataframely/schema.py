@@ -10,12 +10,14 @@ from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Literal, overload
+from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
 import polars.selectors as cs
 from polars._typing import FileSource, PartitioningScheme
+
+from dataframely._compat import deltalake
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
@@ -27,9 +29,9 @@ from ._serialization import (
     serialization_versions,
 )
 from ._storage._base import SerializedSchema, StorageBackend
+from ._storage.constants import SCHEMA_METADATA_KEY
 from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import (
-    SCHEMA_METADATA_KEY,
     ParquetStorageBackend,
 )
 from ._typing import DataFrame, LazyFrame, Validation
@@ -45,8 +47,6 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-if TYPE_CHECKING:
-    import deltalake
 
 # ------------------------------------------------------------------------------------ #
 #                                   SCHEMA DEFINITION                                  #
