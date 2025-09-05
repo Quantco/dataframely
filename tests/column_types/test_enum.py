@@ -1,5 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+import enum
+from collections.abc import Iterable
 from enum import Enum
 from typing import Any
 
@@ -63,7 +65,7 @@ def test_different_sequences(type1: type, type2: type) -> None:
     S.validate(df)
 
 
-def test_enum_of_enum() -> None:
+def test_enum_of_enum_136() -> None:
     class Categories(str, Enum):
         a = "a"
         b = "b"
@@ -79,3 +81,30 @@ def test_enum_of_series() -> None:
 def test_enum_of_iterable() -> None:
     categories = (x for x in ["a", "b"])
     assert pl.Enum(["a", "b"]) == dy.Enum(categories).dtype
+
+
+@pytest.mark.parametrize(
+    "categories1",
+    [
+        ["a", "b"],
+        ("a", "b"),
+        pl.Series(["a", "b"]),
+        Enum("Categories", {"a": "a", "b": "b"}),
+    ],
+)
+@pytest.mark.parametrize(
+    "categories2",
+    [
+        ["a", "b"],
+        ("a", "b"),
+        pl.Series(["a", "b"]),
+        Enum("Categories", {"a": "a", "b": "b"}),
+    ],
+)
+def test_sequences_and_enums(
+    categories1: pl.Series | Iterable[str] | type[enum.Enum],
+    categories2: pl.Series | Iterable[str] | type[enum.Enum],
+) -> None:
+    S = create_schema("test", {"x": dy.Enum(categories1)})
+    df = pl.DataFrame({"x": pl.Series(["a", "b"], dtype=pl.Enum(categories2))})
+    S.validate(df)
