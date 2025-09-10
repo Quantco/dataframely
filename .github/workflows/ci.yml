@@ -74,7 +74,7 @@ jobs:
         env:
           AWS_SECRET_ACCESS_KEY: minioadmin
           AWS_ACCESS_KEY_ID: minioadmin
-          AWS_ENDPOINT_URL: http://127.0.0.1:9000
+          AWS_ENDPOINT_URL: http://localhost:9000
       - name: Upload codecov
         uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
         with:
