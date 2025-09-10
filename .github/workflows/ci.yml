@@ -57,11 +57,20 @@ jobs:
         with:
           environments: ${{ matrix.environment }}
       - name: Start minio for s3 tests
+        if: matrix.os == 'ubuntu-latest'
         run: docker compose up minio -d --wait
       - name: Install repository
         run: pixi run -e ${{ matrix.environment }} postinstall
+      - name: Derive test markers
+        id: markers
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            echo 'marker=${{ matrix.with_optionals && '""' || '"not with_optionals"'}}' >> $GITHUB_OUTPUT
+          else
+            echo 'marker=${{ matrix.with_optionals && '"not s3"' || '"not with_optionals and not s3"' }}' >> $GITHUB_OUTPUT
+          fi
       - name: Run pytest
-        run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m ""' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
+        run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes -m ${{ steps.markers.outputs.marker }} --cov=dataframely --cov-report=xml
         env:
           AWS_SECRET_ACCESS_KEY: minioadmin
           AWS_ACCESS_KEY_ID: minioadmin

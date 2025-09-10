@@ -11,9 +11,9 @@ postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-
 python = ">=3.10"
 rust = "=1.85"
 
+fsspec = "*"
 numpy = "*"
 polars = ">=1.32"
-pytest-mock = ">=3.14.1,<4"
 
 [host-dependencies]
 maturin = ">=1.7,<2"
@@ -40,6 +40,7 @@ docs = "cd docs && make html"
 readthedocs = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html"
 
 [feature.test.dependencies]
+minio = "*"
 mypy = ">=1.13"
 pandas = "*"
 pandas-stubs = "*"
@@ -48,19 +49,20 @@ pytest = ">=6"
 pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
+pytest-mock = ">=3.14.1,<4"
+s3fs = "*"
 scikit-learn = "*"
-
-[feature.optionals.dependencies]
-pyarrow = "*"
-sqlalchemy = ">=2"
-deltalake = "*"
-
 
 [feature.test.tasks]
 test = "pytest"
 test-bench = "pytest tests/benches --benchmark-only --benchmark-sort mean --benchmark-columns min,max,mean,rounds"
 test-coverage = "pytest --cov=dataframely --cov-report=xml --cov-report=term-missing"
 test-no-optional = "pytest -m 'not with_optionals'"
+
+[feature.optionals.dependencies]
+deltalake = "*"
+pyarrow = "*"
+sqlalchemy = ">=2"
 
 [feature.build.dependencies]
 python-build = "*"
@@ -107,12 +109,12 @@ install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :a
 
 [environments]
 build = ["build"]
-default = ["dev", "lint", "test", "optionals"]
+default = ["dev", "lint", "optionals", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
-nightly = ["nightly", "test", "optionals"]
+nightly = ["nightly", "optionals", "test"]
 py310 = ["py310", "test"]
 py311 = ["py311", "test"]
 py312 = ["py312", "test"]
 py313 = ["py313", "test"]
-py313-optionals = ["py313", "test", "optionals"]
+py313-optionals = ["optionals", "py313", "test"]

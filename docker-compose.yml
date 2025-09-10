@@ -1,4 +1,3 @@
-version: "3"
 services:
   mssql:
     image: mcr.microsoft.com/azure-sql-edge:latest
@@ -10,13 +9,13 @@ services:
       - "1455:1433"
 
   minio:
-    image: quay.io/minio/minio
+    image: quay.io/minio/minio:latest
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9009:9009"
+      - "9010:9010"
     volumes:
       - minio-data:/data
-    command: server /data --console-address ":9001"
+    command: server /data --address ":9009" --console-address ":9010"
 
 volumes:
   minio-data:
