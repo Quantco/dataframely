@@ -56,10 +56,16 @@ jobs:
         uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143 # v0.8.14
         with:
           environments: ${{ matrix.environment }}
+      - name: Start minio for s3 tests
+        run: docker compose up minio -d --wait
       - name: Install repository
         run: pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
-        run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m with_optionals' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
+        run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m ""' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
+        env:
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_ENDPOINT_URL: http://127.0.0.1:9000
       - name: Upload codecov
         uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
         with:

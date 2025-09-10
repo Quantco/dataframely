@@ -8,3 +8,15 @@ services:
       SA_PASSWORD: P@ssword1
     ports:
       - "1455:1433"
+
+  minio:
+    image: quay.io/minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  minio-data:
