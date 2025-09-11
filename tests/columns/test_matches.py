@@ -8,6 +8,7 @@ import polars as pl
 import pytest
 
 import dataframely as dy
+from dataframely.columns._base import _compare_series
 
 
 @pytest.mark.parametrize(
@@ -64,3 +65,11 @@ import dataframely as dy
 )
 def test_matches(lhs: dy.Column, rhs: dy.Column, expected: bool) -> None:
     assert lhs.matches(rhs, expr=pl.element()) == expected
+
+
+# ------------------------ Implementation ------------------------ #
+
+
+def test_compare_series_invalid_type() -> None:
+    """A series compared to a non-series type should return False."""
+    assert not _compare_series(pl.Series(["a"]), 1)  # type: ignore
