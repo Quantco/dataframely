@@ -406,7 +406,7 @@ class Column(ABC):
 
 
 def _compare_series(lhs: pl.Series, rhs: pl.Series) -> bool:
-    if not isinstance(rhs, pl.Series) and isinstance(lhs, pl.Series):
+    if not (isinstance(rhs, pl.Series) and isinstance(lhs, pl.Series)):
         return False
 
     return (len(lhs) == len(rhs)) and lhs.equals(rhs)
