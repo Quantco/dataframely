@@ -60,7 +60,6 @@ import dataframely as dy
         ),
         (dy.Enum(["a", "b"]), dy.Enum(["a", "b"]), True),
         (dy.Enum(["a", "b"]), dy.Enum(["a", "b", "c"]), False),
-        (dy.Enum(["a", "b"]), dy.Enum(["a", "b", "c"]), False),
     ],
 )
 def test_matches(lhs: dy.Column, rhs: dy.Column, expected: bool) -> None:
