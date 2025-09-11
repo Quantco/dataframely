@@ -60,7 +60,18 @@ import dataframely as dy
         ),
         (dy.Enum(["a", "b"]), dy.Enum(["a", "b"]), True),
         (dy.Enum(["a", "b"]), dy.Enum(["a", "b", "c"]), False),
+        (dy.Enum(["a", "b"]), dy.Enum(["a", "b", "c"]), False),
     ],
 )
 def test_matches(lhs: dy.Column, rhs: dy.Column, expected: bool) -> None:
     assert lhs.matches(rhs, expr=pl.element()) == expected
+
+
+def test_matches_enum_attribute_type_mismatch() -> None:
+    # Comparison should fail if the `other` column has
+    # a `category` member, but its dtype is not `pl.Series`
+    col1 = dy.Enum(["a", "b"])
+    col2 = dy.Enum(["a", "b"])
+    col2.categories = "this_is_not_a_series"  # type: ignore
+
+    assert not col1.matches(col2, pl.element())
