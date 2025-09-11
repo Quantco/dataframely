@@ -378,6 +378,10 @@ class Column(ABC):
     ) -> bool:
         if name == "check":
             return _compare_checks(lhs, rhs, column_expr)
+
+        if isinstance(lhs, pl.Series) or isinstance(rhs, pl.Series):
+            return _compare_series(lhs, rhs)
+
         return lhs == rhs
 
     # -------------------------------- DUNDER METHODS -------------------------------- #
@@ -399,6 +403,13 @@ class Column(ABC):
 
     def __str__(self) -> str:
         return self.__class__.__name__.lower()
+
+
+def _compare_series(lhs: pl.Series, rhs: pl.Series) -> bool:
+    if not isinstance(rhs, pl.Series) and isinstance(lhs, pl.Series):
+        return False
+
+    return (len(lhs) == len(rhs)) and lhs.equals(rhs)
 
 
 def _compare_checks(lhs: Check | None, rhs: Check | None, expr: pl.Expr) -> bool:

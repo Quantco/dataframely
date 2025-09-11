@@ -58,6 +58,8 @@ import dataframely as dy
             dy.Datetime(time_zone=dt.timezone(dt.timedelta(hours=0))),
             True,
         ),
+        (dy.Enum(["a", "b"]), dy.Enum(["a", "b"]), True),
+        (dy.Enum(["a", "b"]), dy.Enum(["a", "b", "c"]), False),
     ],
 )
 def test_matches(lhs: dy.Column, rhs: dy.Column, expected: bool) -> None:
