@@ -10,7 +10,6 @@ from collections import Counter
 from collections.abc import Callable
 from typing import Any, TypeAlias, cast
 
-import pandas as pd
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
@@ -380,8 +379,8 @@ class Column(ABC):
         if name == "check":
             return _compare_checks(lhs, rhs, column_expr)
 
-        lhs_is_series = isinstance(lhs, pd.Series)
-        rhs_is_series = isinstance(rhs, pd.Series)
+        lhs_is_series = isinstance(lhs, pl.Series)
+        rhs_is_series = isinstance(rhs, pl.Series)
 
         if lhs_is_series != rhs_is_series:
             return False
