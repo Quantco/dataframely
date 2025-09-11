@@ -67,6 +67,7 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
             schema.write_parquet(df, self._wrap_path(path))
 
     def write_untyped(self, df: pl.DataFrame, path: Path, lazy: bool) -> None:
+        path.mkdir(parents=True, exist_ok=True)
         if lazy:
             df.lazy().sink_parquet(self._wrap_path(path))
         else:
