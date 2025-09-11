@@ -12,6 +12,22 @@ class CheckSchema(dy.Schema):
     b = dy.String(min_length=3, check=lambda col: col.str.contains("x"))
 
 
+def test_check_argument_covariant() -> None:
+    # The interesting part of this test is mypy accepting it statically,
+    # not the runtime behavior.
+    def check_all_or_none(expr: pl.Expr) -> pl.Expr:
+        return (expr == "all").all() | (expr != "all").all()
+
+    check_dict = {"all_or_none": check_all_or_none}
+
+    class CheckDictSchema(dy.Schema):
+        column = dy.String(check=check_dict)
+
+    df = pl.DataFrame({"column": ["all", "all", "all"]})
+    _, failures = CheckDictSchema.filter(df)
+    assert failures.counts() == {}
+
+
 def test_check() -> None:
     df = pl.DataFrame({"a": [7, 3, 15], "b": ["abc", "xyz", "x"]})
     _, failures = CheckSchema.filter(df)
