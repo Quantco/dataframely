@@ -379,7 +379,10 @@ class Column(ABC):
         if name == "check":
             return _compare_checks(lhs, rhs, column_expr)
 
-        if isinstance(lhs, pl.Series) or isinstance(rhs, pl.Series):
+        if isinstance(lhs, pl.Series) != isinstance(rhs, pl.Series):
+            return False
+
+        if isinstance(lhs, pl.Series) and isinstance(rhs, pl.Series):
             return _compare_series(lhs, rhs)
 
         return lhs == rhs
