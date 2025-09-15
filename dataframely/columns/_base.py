@@ -145,18 +145,20 @@ class Column(ABC):
                 for rule_name, rule_callable in self.check.items():
                     result[f"check__{rule_name}"] = rule_callable(expr)
             else:
-                rules_sequence = (
-                    self.check if isinstance(self.check, Sequence) else [self.check]
+                list_of_rules = (
+                    list(self.check)
+                    if isinstance(self.check, Sequence)
+                    else [self.check]
                 )
                 # Get unique names for rules from callables
-                rule_names = self._derive_check_rule_names(rules_sequence)
-                for rule_name, rule_callable in zip(rule_names, rules_sequence):
+                rule_names = self._derive_check_rule_names(list_of_rules)
+                for rule_name, rule_callable in zip(rule_names, list_of_rules):
                     result[rule_name] = rule_callable(expr)
 
         return result
 
     def _derive_check_rule_names(
-        self, rules: Sequence[Callable[[pl.Expr], pl.Expr]]
+        self, rules: list[Callable[[pl.Expr], pl.Expr]]
     ) -> list[str]:
         """Generate unique names for rule callables.
 
