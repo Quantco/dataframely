@@ -3,37 +3,18 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
-from ._base import Check, Column
+from ._base import Column
 from ._registry import register
 
 
 @register
 class Binary(Column):
     """A column of binary values."""
-
-    def __init__(
-        self,
-        *,
-        nullable: bool | None = None,
-        primary_key: bool = False,
-        check: Check | None = None,
-        alias: str | None = None,
-        metadata: dict[str, Any] | None = None,
-    ):
-        super().__init__(
-            nullable=nullable,
-            primary_key=primary_key,
-            check=check,
-            alias=alias,
-            metadata=metadata,
-        )
 
     @property
     def dtype(self) -> pl.DataType:
