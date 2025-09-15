@@ -7,14 +7,17 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa
+from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import register
 
 
-class _BaseBinary(Column):
+@register
+class Binary(Column):
+    """A column of binary values."""
+
     def __init__(
         self,
         *,
@@ -36,9 +39,9 @@ class _BaseBinary(Column):
     def dtype(self) -> pl.DataType:
         return pl.Binary()
 
-    def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa.sql.sqltypes.LargeBinary:
+    def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         if dialect.name == "mssql":
-            return sa.VARBINARY("max")
+            return sa.VARBINARY()
         return sa.LargeBinary()
 
     @property
@@ -48,12 +51,7 @@ class _BaseBinary(Column):
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_binary(
             n,
-            min_length=0,
-            max_length=255,
+            min_bytes=0,
+            max_bytes=32,
             null_probability=self._null_probability,
         )
-
-
-@register
-class Binary(_BaseBinary):
-    """A column of binary values."""

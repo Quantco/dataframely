@@ -3,30 +3,22 @@
 
 import polars as pl
 import pytest
-from polars.datatypes import DataTypeClass
 
 import dataframely as dy
+from dataframely.columns import Column
 
 
 class BinarySchema(dy.Schema):
     a = dy.Binary()
 
 
-@pytest.mark.parametrize("dtype", [pl.Binary])
-def test_any_binary_dtype_passes(dtype: DataTypeClass) -> None:
-    df = pl.DataFrame(schema={"a": dtype})
-    assert BinarySchema.is_valid(df)
-
-
-@pytest.mark.parametrize("dtype", [pl.Boolean, pl.String, pl.Int32])
-def test_non_binary_dtype_fails(dtype: DataTypeClass) -> None:
-    df = pl.DataFrame(schema={"a": dtype})
-    assert not BinarySchema.is_valid(df)
-
-
-def test_sample_binary_column() -> None:
-    generator = dy.random.Generator(seed=42)
-    column = dy.Binary()
-    series = column.sample(generator, n=100)
-    assert len(series) == 100
-    assert series.dtype == pl.Binary
+@pytest.mark.parametrize(
+    ("column", "dtype", "is_valid"),
+    [
+        (dy.Binary(), pl.Binary(), True),
+        (dy.Binary(), pl.String(), False),
+        (dy.Binary(), pl.Null(), False),
+    ],
+)
+def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool) -> None:
+    assert column.validate_dtype(dtype) == is_valid

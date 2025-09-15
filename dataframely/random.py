@@ -152,20 +152,22 @@ class Generator:
         self,
         n: int = 1,
         *,
-        min_length: int,
-        max_length: int,
+        min_bytes: int,
+        max_bytes: int,
         null_probability: float = 0.0,
     ) -> pl.Series:
         """Sample a list of binary values in the specified length range.
+
         Args:
             n: The number of binary values to sample.
-            min_length: The minimum byte-length of values.
-            max_length: The maximum byte-length of values.
+            min_bytes: The minimum number of bytes for each value.
+            max_bytes: The maximum number of bytes for each value.
             null_probability: The probability of an element being ``null``.
+
         Returns:
             A series with ``n`` elements of dtype ``Binary``.
         """
-        lengths = self.numpy_generator.integers(min_length, max_length + 1, size=n)
+        lengths = self.numpy_generator.integers(min_bytes, max_bytes + 1, size=n)
         samples = [self.numpy_generator.bytes(length) for length in lengths]
         return self._apply_null_mask(
             pl.Series(samples, dtype=pl.Binary), null_probability
