@@ -40,6 +40,7 @@ def test_seeding_nonconstant() -> None:
         lambda generator, n: generator.sample_float(n, min=0, max=5),
         lambda generator, n: generator.sample_string(n, regex="[abc]"),
         lambda generator, n: generator.sample_choice(n, choices=[1, 2, 3]),
+        lambda generator, n: generator.sample_binary(n, min_length=1, max_length=10),
         lambda generator, n: generator.sample_time(n, min=dt.time(0, 0), max=None),
         lambda generator, n: generator.sample_date(
             n, min=dt.date(1970, 1, 1), max=None
@@ -74,6 +75,9 @@ def test_sample_correct_n(
         ),
         lambda generator, n, prob: generator.sample_choice(
             n, choices=[1, 2, 3], null_probability=prob
+        ),
+        lambda generator, n, prob: generator.sample_binary(
+            n, min_length=1, max_length=10, null_probability=prob
         ),
         lambda generator, n, prob: generator.sample_time(
             n, min=dt.time(0, 0), max=None, null_probability=prob
@@ -129,6 +133,12 @@ def test_sample_float(generator: Generator) -> None:
 def test_sample_string(generator: Generator) -> None:
     samples = generator.sample_string(100_000, regex="[abc]d")
     assert (samples.str.len_bytes() == 2).all()
+
+
+def test_sample_binary(generator: Generator) -> None:
+    samples = generator.sample_binary(100, min_length=1, max_length=10)
+    assert samples.map_elements(len).min() >= 1
+    assert samples.map_elements(len).max() <= 10
 
 
 def test_sample_choice(generator: Generator) -> None:

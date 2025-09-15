@@ -23,6 +23,7 @@ from .collection import (
 from .columns import (
     Any,
     Array,
+    Binary,
     Bool,
     Categorical,
     Column,
@@ -77,6 +78,7 @@ __all__ = [
     "read_parquet_metadata_schema",
     "read_parquet_metadata_collection",
     "Any",
+    "Binary",
     "Bool",
     "Categorical",
     "Column",

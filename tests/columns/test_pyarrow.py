@@ -25,6 +25,11 @@ def test_equal_to_polars_schema(column_type: type[Column]) -> None:
     assert actual == expected
 
 
+def test_binary_pyarrow() -> None:
+    schema = create_schema("test", {"a": dy.Binary()})
+    assert str(schema.pyarrow_schema()) == "a: large_binary"
+
+
 @pytest.mark.parametrize(
     "categories",
     [
