@@ -736,9 +736,8 @@ class Collection(BaseCollection, ABC):
         members which are not provided in the current collection.
 
         Args:
-            directory: The directory where the Parquet files should be written to. If
-                the directory does not exist, it is created automatically, including all
-                of its parents.
+            directory: The directory where the Parquet files should be written to.
+                The `mkdir` kwarg controls whether the directory is created if needed.
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.write_parquet` of all members. ``metadata`` may only be
                 provided if it is a dictionary.
