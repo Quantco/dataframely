@@ -319,7 +319,7 @@ class Column(ABC):
                 param: (
                     _check_to_expr(getattr(self, param), expr)
                     if param == "check"
-                    else getattr(self, param)
+                    else _series_to_list(getattr(self, param))
                 )
                 for param in inspect.signature(self.__class__.__init__).parameters
                 if param not in ("self", "alias")
@@ -443,6 +443,8 @@ def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
             return [c(expr) for c in check]
         case Mapping():
             return {key: c(expr) for key, c in check.items()}
+        case pl.Series():
+            return None
         case _ if callable(check):
             return check(expr)
 
@@ -459,3 +461,9 @@ def _check_from_expr(value: Any) -> Check | None:
             return lambda _: value
         case _:  # pragma: no cover
             raise ValueError(f"Invalid type for check: {type(value)}")
+
+
+def _series_to_list(value: Any) -> Any:
+    if isinstance(value, pl.Series):
+        return value.to_list()
+    return value
