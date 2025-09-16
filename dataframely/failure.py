@@ -91,7 +91,8 @@ class FailureInfo(Generic[S]):
         Args:
             file: The file path or writable file-like object to which to write the
                 parquet file. This should be a path to a directory if writing a
-                partitioned dataset.
+                partitioned dataset. The `mkdir` kwarg controls whether the directory
+                is created if needed.
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
                 is a dictionary.

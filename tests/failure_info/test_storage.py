@@ -112,7 +112,12 @@ def test_invalid_schema_deserialization(
 
 
 # ------------------------------------ Parquet -----------------------------------------
-def test_write_parquet_custom_metadata(tmp_path: Path) -> None:
+
+
+@pytest.mark.parametrize("check_non_existent_directory", [True, False])
+def test_write_parquet_custom_metadata(
+    tmp_path: Path, check_non_existent_directory: bool
+) -> None:
     # Arrange
     df = pl.DataFrame(
         {
@@ -124,8 +129,12 @@ def test_write_parquet_custom_metadata(tmp_path: Path) -> None:
     assert failure._df.height == 4
 
     # Act
-    p = tmp_path / "failure.parquet"
-    failure.write_parquet(p, metadata={"custom": "test"})
+    if check_non_existent_directory:
+        p = tmp_path / "non_existent" / "failure.parquet"
+        failure.write_parquet(p, metadata={"custom": "test"}, mkdir=True)
+    else:
+        p = tmp_path / "failure.parquet"
+        failure.write_parquet(p, metadata={"custom": "test"})
 
     # Assert
     assert pl.read_parquet_metadata(p)["custom"] == "test"
