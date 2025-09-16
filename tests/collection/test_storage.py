@@ -60,10 +60,7 @@ TESTERS = [ParquetCollectionStorageTester(), DeltaCollectionStorageTester()]
 @pytest.mark.parametrize("kwargs", [{}, {"partition_by": "a"}])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write(
-    tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
-    kwargs: dict[str, Any],
-    lazy: bool,
+    tester: CollectionStorageTester, tmp_path: Path, kwargs: dict[str, Any], lazy: bool
 ) -> None:
     # Arrange
     collection = MyCollection.validate(
@@ -75,10 +72,10 @@ def test_read_write(
     )
 
     # Act
-    tester.write_typed(collection, tmp_path_non_existent, lazy=lazy, **kwargs)
+    tester.write_typed(collection, tmp_path, lazy=lazy, **kwargs)
 
     # Assert
-    out = tester.read(MyCollection, tmp_path_non_existent, lazy)
+    out = tester.read(MyCollection, tmp_path, lazy)
     assert_frame_equal(collection.first, out.first)
     assert collection.second is not None
     assert out.second is not None
@@ -89,10 +86,7 @@ def test_read_write(
 @pytest.mark.parametrize("kwargs", [{}, {"partition_by": "a"}])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_optional(
-    tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
-    kwargs: dict[str, Any],
-    lazy: bool,
+    tester: CollectionStorageTester, tmp_path: Path, kwargs: dict[str, Any], lazy: bool
 ) -> None:
     # Arrange
     collection = MyCollection.validate(
@@ -101,10 +95,10 @@ def test_read_write_optional(
 
     # Act
     write_lazy = lazy and "partition_by" not in kwargs
-    tester.write_typed(collection, tmp_path_non_existent, lazy=write_lazy, **kwargs)
+    tester.write_typed(collection, tmp_path, lazy=write_lazy, **kwargs)
 
     # Assert
-    out = tester.read(MyCollection, tmp_path_non_existent, lazy)
+    out = tester.read(MyCollection, tmp_path, lazy)
     assert_frame_equal(collection.first, out.first)
     assert collection.second is None
     assert out.second is None
@@ -118,18 +112,18 @@ def test_read_write_optional(
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_if_schema_matches(
     tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
+    tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     validation: Any,
     lazy: bool,
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_typed(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
-    tester.read(MyCollection, tmp_path_non_existent, lazy=lazy, validation=validation)
+    tester.read(MyCollection, tmp_path, lazy=lazy, validation=validation)
 
     # Assert
     spy.assert_not_called()
@@ -142,13 +136,13 @@ def test_read_write_if_schema_matches(
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_warn_no_schema(
     tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
+    tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_untyped(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
@@ -156,7 +150,7 @@ def test_read_write_validation_warn_no_schema(
         UserWarning,
         match=r"requires validation: no collection schema to check validity",
     ):
-        tester.read(MyCollection, tmp_path_non_existent, lazy, validation="warn")
+        tester.read(MyCollection, tmp_path, lazy, validation="warn")
 
     # Assert
     spy.assert_called_once()
@@ -166,13 +160,13 @@ def test_read_write_validation_warn_no_schema(
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_warn_invalid_schema(
     tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
+    tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_typed(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
     spy = mocker.spy(MyCollection2, "validate")
@@ -180,7 +174,7 @@ def test_read_write_validation_warn_invalid_schema(
         UserWarning,
         match=r"requires validation: current collection schema does not match",
     ):
-        tester.read(MyCollection2, tmp_path_non_existent, lazy)
+        tester.read(MyCollection2, tmp_path, lazy)
 
     # Assert
     spy.assert_called_once()
@@ -191,17 +185,17 @@ def test_read_write_validation_warn_invalid_schema(
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_allow_no_schema(
     tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
+    tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_untyped(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
-    tester.read(MyCollection, tmp_path_non_existent, lazy, validation="allow")
+    tester.read(MyCollection, tmp_path, lazy, validation="allow")
 
     # Assert
     spy.assert_called_once()
@@ -211,17 +205,17 @@ def test_read_write_validation_allow_no_schema(
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_allow_invalid_schema(
     tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
+    tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_typed(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
     spy = mocker.spy(MyCollection2, "validate")
-    tester.read(MyCollection2, tmp_path_non_existent, lazy, validation="allow")
+    tester.read(MyCollection2, tmp_path, lazy, validation="allow")
 
     # Assert
     spy.assert_called_once()
@@ -233,37 +227,37 @@ def test_read_write_validation_allow_invalid_schema(
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_forbid_no_schema(
-    tester: CollectionStorageTester, tmp_path_non_existent: Path, lazy: bool
+    tester: CollectionStorageTester, tmp_path: Path, lazy: bool
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_untyped(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
     with pytest.raises(
         ValidationRequiredError,
         match=r"without validation: no collection schema to check validity",
     ):
-        tester.read(MyCollection, tmp_path_non_existent, lazy, validation="forbid")
+        tester.read(MyCollection, tmp_path, lazy, validation="forbid")
 
 
 @pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_forbid_invalid_schema(
-    tester: CollectionStorageTester, tmp_path_non_existent: Path, lazy: bool
+    tester: CollectionStorageTester, tmp_path: Path, lazy: bool
 ) -> None:
     # Arrange
 
     collection = MyCollection.create_empty()
 
-    tester.write_typed(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
     with pytest.raises(
         ValidationRequiredError,
         match=r"without validation: current collection schema does not match",
     ):
-        tester.read(MyCollection2, tmp_path_non_existent, lazy, validation="forbid")
+        tester.read(MyCollection2, tmp_path, lazy, validation="forbid")
 
 
 # --------------------------------- VALIDATION "SKIP" -------------------------------- #
@@ -273,17 +267,17 @@ def test_read_write_validation_forbid_invalid_schema(
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_skip_no_schema(
     tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
+    tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_untyped(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_untyped(collection, tmp_path, lazy=lazy)
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
-    tester.read(MyCollection, tmp_path_non_existent, lazy, validation="skip")
+    tester.read(MyCollection, tmp_path, lazy, validation="skip")
 
     # Assert
     spy.assert_not_called()
@@ -293,17 +287,17 @@ def test_read_write_validation_skip_no_schema(
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_validation_skip_invalid_schema(
     tester: CollectionStorageTester,
-    tmp_path_non_existent: Path,
+    tmp_path: Path,
     mocker: pytest_mock.MockerFixture,
     lazy: bool,
 ) -> None:
     # Arrange
     collection = MyCollection.create_empty()
-    tester.write_typed(collection, tmp_path_non_existent, lazy=lazy)
+    tester.write_typed(collection, tmp_path, lazy=lazy)
 
     # Act
     spy = mocker.spy(collection, "validate")
-    tester.read(MyCollection2, tmp_path_non_existent, lazy, validation="skip")
+    tester.read(MyCollection2, tmp_path, lazy, validation="skip")
 
     # Assert
     spy.assert_not_called()
@@ -338,10 +332,7 @@ def test_reconcile_collection_types(
 @pytest.mark.parametrize("validation", ["warn", "allow", "forbid", "skip"])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_parquet_fallback_schema_json_success(
-    tmp_path_non_existent: Path,
-    mocker: pytest_mock.MockerFixture,
-    validation: Any,
-    lazy: bool,
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
 ) -> None:
     # In https://github.com/Quantco/dataframely/pull/107, the
     # mechanism for storing collection metadata was changed.
@@ -354,12 +345,12 @@ def test_read_write_parquet_fallback_schema_json_success(
     # Arrange
     tester = ParquetCollectionStorageTester()
     collection = MyCollection.create_empty()
-    tester.write_untyped(collection, tmp_path_non_existent, lazy)
-    (tmp_path_non_existent / "schema.json").write_text(collection.serialize())
+    tester.write_untyped(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text(collection.serialize())
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
-    tester.read(MyCollection, tmp_path_non_existent, lazy, validation=validation)
+    tester.read(MyCollection, tmp_path, lazy, validation=validation)
 
     # Assert
     spy.assert_not_called()
@@ -368,24 +359,21 @@ def test_read_write_parquet_fallback_schema_json_success(
 @pytest.mark.parametrize("validation", ["allow", "warn"])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_write_parquet_schema_json_fallback_corrupt(
-    tmp_path_non_existent: Path,
-    mocker: pytest_mock.MockerFixture,
-    validation: Any,
-    lazy: bool,
+    tmp_path: Path, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
 ) -> None:
     """If the schema.json file is present, but corrupt, we should always fall back to
     validating."""
     # Arrange
     collection = MyCollection.create_empty()
     tester = ParquetCollectionStorageTester()
-    tester.write_untyped(collection, tmp_path_non_existent, lazy)
-    (tmp_path_non_existent / "schema.json").write_text("} this is not a valid JSON {")
+    tester.write_untyped(collection, tmp_path, lazy)
+    (tmp_path / "schema.json").write_text("} this is not a valid JSON {")
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
-        tester.read(MyCollection, tmp_path_non_existent, lazy, validation=validation)
+        tester.read(MyCollection, tmp_path, lazy, validation=validation)
 
     # Assert
     spy.assert_called_once()

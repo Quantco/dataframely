@@ -31,7 +31,6 @@ class ParquetStorageBackend(StorageBackend):
     ) -> None:
         file = kwargs.pop("file")
         metadata = kwargs.pop("metadata", {})
-        file.parent.mkdir(parents=True, exist_ok=True)
         lf.sink_parquet(
             file,
             metadata={**metadata, SCHEMA_METADATA_KEY: serialized_schema},
@@ -43,7 +42,6 @@ class ParquetStorageBackend(StorageBackend):
     ) -> None:
         file = kwargs.pop("file")
         metadata = kwargs.pop("metadata", {})
-        file.parent.mkdir(parents=True, exist_ok=True)
         df.write_parquet(
             file,
             metadata={**metadata, SCHEMA_METADATA_KEY: serialized_schema},
