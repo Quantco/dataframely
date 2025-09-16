@@ -443,8 +443,6 @@ def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
             return [c(expr) for c in check]
         case Mapping():
             return {key: c(expr) for key, c in check.items()}
-        case pl.Series():
-            return None
         case _ if callable(check):
             return check(expr)
 
