@@ -396,7 +396,7 @@ class Column(ABC):
 
     def __repr__(self) -> str:
         parts = [
-            f"{attribute}={repr(getattr(self, attribute))}"
+            f"{attribute}={repr(_series_to_list(getattr(self, attribute)))}"
             for attribute, param_details in inspect.signature(
                 self.__class__.__init__
             ).parameters.items()
@@ -404,7 +404,7 @@ class Column(ABC):
             not in ["self", "alias"]  # alias is always equal to the column name here
             and not (
                 # Do not include attributes that are set to their default value
-                getattr(self, attribute) == param_details.default
+                _series_to_list(getattr(self, attribute)) == param_details.default
             )
         ]
         return f"{self.__class__.__name__}({', '.join(parts)})"
@@ -464,6 +464,7 @@ def _check_from_expr(value: Any) -> Check | None:
 
 
 def _series_to_list(value: Any) -> Any:
+    """If passed a `pl.Series` value, converts it to a list."""
     if isinstance(value, pl.Series):
         return value.to_list()
     return value
