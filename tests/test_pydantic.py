@@ -128,3 +128,17 @@ def test_fail_schemaless_model(df: pl.DataFrame) -> None:
 
         class SloppyPydanticModel(BaseModel):
             df: dy.DataFrame  # no schema
+
+
+@pytest.mark.parametrize(
+    "model",
+    [PydanticModel, LazyPydanticModel],
+)
+def test_json_schema(model: type[PydanticModel | LazyPydanticModel]) -> None:
+    schema = model.model_json_schema()
+    df_part = schema["properties"]["df"]
+    assert df_part == {
+        "additionalProperties": True,
+        "title": "Df",
+        "type": "object",
+    }

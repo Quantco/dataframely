@@ -210,7 +210,6 @@ class BaseSchema(metaclass=SchemaMeta):
         Returns:
             A :mod:`polars` schema that mirrors the schema defined by this class.
         """
-        pass
 
     @classmethod
     def primary_keys(cls) -> list[str]:
@@ -242,7 +241,6 @@ class BaseSchema(metaclass=SchemaMeta):
             This method _always_ collects the input data frame in order to raise
             potential validation errors.
         """
-        pass
 
     @classmethod
     def _validation_rules(cls, *, with_cast: bool) -> dict[str, Rule]:
