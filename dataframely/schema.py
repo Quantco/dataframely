@@ -414,26 +414,6 @@ class Schema(BaseSchema, ABC):
     def validate(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
     ) -> DataFrame[Self]:
-        """Validate that a data frame satisfies the schema.
-
-        Args:
-            df: The data frame to validate.
-            cast: Whether columns with a wrong data type in the input data frame are
-                cast to the schema's defined data type if possible.
-
-        Returns:
-            The (collected) input data frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence. The data frame is
-            guaranteed to maintain its order.
-
-        Raises:
-            ValidationError: If the input data frame does not satisfy the schema
-                definition.
-
-        Note:
-            This method _always_ collects the input data frame in order to raise
-            potential validation errors.
-        """
         # We can dispatch to the `filter` method and raise an error if any row cannot
         # be validated
         df_valid, failures = cls.filter(df, cast=cast)
@@ -1118,11 +1098,6 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def polars_schema(cls) -> pl.Schema:
-        """Obtain the polars schema for this schema.
-
-        Returns:
-            A :mod:`polars` schema that mirrors the schema defined by this class.
-        """
         return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
 
     @classmethod

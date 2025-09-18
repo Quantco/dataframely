@@ -49,6 +49,8 @@ pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
 scikit-learn = "*"
+pydantic = ">=2.11.9,<3"
+pydantic-core = ">=2.33.2,<3"
 
 [feature.optionals.dependencies]
 pyarrow = "*"

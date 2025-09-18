@@ -9,6 +9,11 @@ from typing import TYPE_CHECKING, Any, Concatenate, Generic, Literal, ParamSpec,
 import polars as pl
 
 from ._base_schema import BaseSchema
+from ._pydantic import get_pydantic_core_schema, get_pydantic_json_schema
+
+if TYPE_CHECKING:
+    import pydantic
+    from pydantic_core import core_schema
 
 S = TypeVar("S", bound=BaseSchema, covariant=True)
 
@@ -70,6 +75,20 @@ class DataFrame(pl.DataFrame, Generic[S]):
     def shrink_to_fit(self, *args: Any, **kwargs: Any) -> DataFrame[S]:
         raise NotImplementedError  # pragma: no cover
 
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: pydantic.GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return get_pydantic_core_schema(source_type, handler, lazy=False)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema_: core_schema.CoreSchema,
+        handler: pydantic.GetJsonSchemaHandler,
+    ) -> pydantic.json_schema.JsonSchemaValue:
+        return get_pydantic_json_schema(core_schema_, handler)
+
 
 class LazyFrame(pl.LazyFrame, Generic[S]):
     """Generic wrapper around a :class:`polars.LazyFrame` to attach schema information.
@@ -113,3 +132,17 @@ class LazyFrame(pl.LazyFrame, Generic[S]):
     @inherit_signature(pl.LazyFrame.set_sorted)
     def set_sorted(self, *args: Any, **kwargs: Any) -> LazyFrame[S]:
         raise NotImplementedError  # pragma: no cover
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: pydantic.GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return get_pydantic_core_schema(source_type, handler, lazy=True)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema_: core_schema.CoreSchema,
+        handler: pydantic.GetJsonSchemaHandler,
+    ) -> pydantic.json_schema.JsonSchemaValue:
+        return get_pydantic_json_schema(core_schema_, handler)
