@@ -70,6 +70,8 @@ def get_pydantic_core_schema(
 
     schema_type: type[BaseSchema] = get_args(source_type)[0]
 
+    # accept a DataFrame, a LazyFrame, or a dict that is converted to a DataFrame
+    # (-> output: DataFrame or LazyFrame)
     polars_schema = core_schema.union_schema(
         [
             core_schema.is_instance_schema(pl.DataFrame),
@@ -87,6 +89,8 @@ def get_pydantic_core_schema(
 
     to_lazy_schema = []
     if lazy:
+        # If the Pydantic field type is LazyFrame, add a step to convert
+        # the model back to a LazyFrame.
         to_lazy_schema.append(
             core_schema.no_info_plain_validator_function(
                 lambda df: df.lazy(),
