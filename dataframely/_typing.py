@@ -84,10 +84,10 @@ class DataFrame(pl.DataFrame, Generic[S]):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        core_schema_: core_schema.CoreSchema,
+        _core_schema: core_schema.CoreSchema,
         handler: pydantic.GetJsonSchemaHandler,
     ) -> pydantic.json_schema.JsonSchemaValue:
-        return get_pydantic_json_schema(core_schema_, handler)
+        return get_pydantic_json_schema(handler)
 
 
 class LazyFrame(pl.LazyFrame, Generic[S]):
@@ -145,4 +145,4 @@ class LazyFrame(pl.LazyFrame, Generic[S]):
         core_schema_: core_schema.CoreSchema,
         handler: pydantic.GetJsonSchemaHandler,
     ) -> pydantic.json_schema.JsonSchemaValue:
-        return get_pydantic_json_schema(core_schema_, handler)
+        return get_pydantic_json_schema(handler)

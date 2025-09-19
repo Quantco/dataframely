@@ -109,9 +109,7 @@ def get_pydantic_core_schema(
     )
 
 
-def get_pydantic_json_schema(
-    _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-) -> JsonSchemaValue:
+def get_pydantic_json_schema(handler: GetJsonSchemaHandler) -> JsonSchemaValue:
     from pydantic_core import core_schema
 
     # This could be made more sophisticated by actually reflecting the schema.
