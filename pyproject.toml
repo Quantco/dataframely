@@ -31,7 +31,7 @@ version = "0.0.0"
 deltalake = ["deltalake"]
 sqlalchemy = ["sqlalchemy"]
 pyarrow = ["pyarrow"]
-pydantic-core = ["pydantic-core>=2"]
+pydantic= ["pydantic>=2"]
 
 [project.urls]
 Documentation = "https://dataframely.readthedocs.io/"
