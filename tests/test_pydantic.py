@@ -68,19 +68,19 @@ def invalid_lazy_df(invalid_df: pl.DataFrame) -> pl.LazyFrame:
     return invalid_df.lazy()
 
 
-def test_python_validation(df: pl.DataFrame) -> None:
+def test_validation(df: pl.DataFrame) -> None:
     model = PydanticModel(df=df, other_field=42)
     assert isinstance(model.df, pl.DataFrame)
     assert_frame_equal(model.df, df)
 
 
-def test_python_validation_lazy(lazy_df: pl.LazyFrame) -> None:
+def test_validation_lazy(lazy_df: pl.LazyFrame) -> None:
     model = LazyPydanticModel(df=lazy_df, other_field=42)
     assert isinstance(model.df, pl.LazyFrame)
     assert_frame_equal(model.df, lazy_df)
 
 
-def test_python_validation_already_validated(df: pl.DataFrame) -> None:
+def test_validation_already_validated(df: pl.DataFrame) -> None:
     # In contrast to `test_python_validation`, this is mainly helpful to verify
     # that mypy is happy with passing a DataFrame that is already validated.
     validated_df = Schema.validate(df)
@@ -89,19 +89,19 @@ def test_python_validation_already_validated(df: pl.DataFrame) -> None:
     assert_frame_equal(model.df, validated_df)
 
 
-def test_python_validation_already_validated_lazy(df: pl.LazyFrame) -> None:
+def test_validation_already_validated_lazy(df: pl.LazyFrame) -> None:
     validated_df = Schema.validate(df)
     model = LazyPydanticModel(df=validated_df, other_field=42)
     assert isinstance(model.df, pl.LazyFrame)
     assert_frame_equal(model.df, validated_df.lazy())
 
 
-def test_python_validation_failure(invalid_df: pl.DataFrame) -> None:
+def test_validation_failure(invalid_df: pl.DataFrame) -> None:
     with pytest.raises(pydantic.ValidationError):
         PydanticModel(df=invalid_df, other_field=42)
 
 
-def test_python_validation_failure_lazy(invalid_lazy_df: pl.LazyFrame) -> None:
+def test_validation_failure_lazy(invalid_lazy_df: pl.LazyFrame) -> None:
     with pytest.raises(pydantic.ValidationError):
         LazyPydanticModel(df=invalid_df, other_field=42)
 
