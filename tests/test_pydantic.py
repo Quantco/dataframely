@@ -6,9 +6,9 @@ import json
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
-from pydantic import BaseModel, ValidationError
 
 import dataframely as dy
+from dataframely._compat import pydantic
 
 pytestmark = pytest.mark.with_optionals
 
@@ -19,12 +19,12 @@ class Schema(dy.Schema):
     comment = dy.String()
 
 
-class PydanticModel(BaseModel):
+class PydanticModel(pydantic.BaseModel):
     df: dy.DataFrame[Schema]
     other_field: int
 
 
-class LazyPydanticModel(BaseModel):
+class LazyPydanticModel(pydantic.BaseModel):
     df: dy.LazyFrame[Schema]
     other_field: int
 
@@ -92,12 +92,12 @@ def test_python_validation_already_validated_lazy(df: pl.LazyFrame) -> None:
 
 
 def test_python_validation_failure(invalid_df: pl.DataFrame) -> None:
-    with pytest.raises(ValidationError):
+    with pytest.raises(pydantic.ValidationError):
         PydanticModel(df=invalid_df, other_field=42)
 
 
 def test_python_validation_failure_lazy(invalid_lazy_df: pl.LazyFrame) -> None:
-    with pytest.raises(ValidationError):
+    with pytest.raises(pydantic.ValidationError):
         LazyPydanticModel(df=invalid_df, other_field=42)
 
 
@@ -115,7 +115,7 @@ def test_dict_violates_schema(df: pl.DataFrame) -> None:
     model_dict = model.model_dump()
     # violate non-nullable constraint
     model_dict["df"]["x"][0] = None
-    with pytest.raises(ValidationError):
+    with pytest.raises(pydantic.ValidationError):
         PydanticModel.model_validate(model_dict)
 
 
@@ -134,14 +134,14 @@ def test_json_violates_schema(df: pl.DataFrame) -> None:
     model_dict = json.loads(model_json)
     model_dict["df"]["x"][0] = None  # violate non-nullable constraint
     violated_json = json.dumps(model_dict)
-    with pytest.raises(ValidationError):
+    with pytest.raises(pydantic.ValidationError):
         PydanticModel.model_validate_json(violated_json)
 
 
 def test_fail_schemaless_model(df: pl.DataFrame) -> None:
     with pytest.raises(TypeError):
 
-        class SloppyPydanticModel(BaseModel):
+        class SloppyPydanticModel(pydantic.BaseModel):
             df: dy.DataFrame  # no schema
 
 

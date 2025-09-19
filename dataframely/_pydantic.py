@@ -8,13 +8,10 @@ from typing import TYPE_CHECKING, Literal, TypeVar, get_args, get_origin, overlo
 import polars as pl
 
 from ._base_schema import BaseSchema
+from ._compat import pydantic, pydantic_core_schema
 from .exc import ValidationError
 
 if TYPE_CHECKING:
-    from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler
-    from pydantic.json_schema import JsonSchemaValue
-    from pydantic_core import core_schema
-
     from ._typing import DataFrame, LazyFrame
 
 
@@ -42,26 +39,24 @@ def _serialize_df(df: pl.DataFrame) -> dict:
 @overload
 def get_pydantic_core_schema(
     source_type: type[DataFrame],
-    _handler: GetCoreSchemaHandler,
+    _handler: pydantic.GetCoreSchemaHandler,
     lazy: Literal[False],
-) -> core_schema.CoreSchema: ...
+) -> pydantic_core_schema.CoreSchema: ...
 
 
 @overload
 def get_pydantic_core_schema(
     source_type: type[LazyFrame],
-    _handler: GetCoreSchemaHandler,
+    _handler: pydantic.GetCoreSchemaHandler,
     lazy: Literal[True],
-) -> core_schema.CoreSchema: ...
+) -> pydantic_core_schema.CoreSchema: ...
 
 
 def get_pydantic_core_schema(
     source_type: type[DataFrame | LazyFrame],
-    _handler: GetCoreSchemaHandler,
+    _handler: pydantic.GetCoreSchemaHandler,
     lazy: bool,
-) -> core_schema.CoreSchema:
-    from pydantic_core import core_schema
-
+) -> pydantic_core_schema.CoreSchema:
     # https://docs.pydantic.dev/2.11/concepts/types/#handling-custom-generic-classes
     origin = get_origin(source_type)
     if origin is None:
@@ -72,14 +67,14 @@ def get_pydantic_core_schema(
 
     # accept a DataFrame, a LazyFrame, or a dict that is converted to a DataFrame
     # (-> output: DataFrame or LazyFrame)
-    polars_schema = core_schema.union_schema(
+    polars_schema = pydantic_core_schema.union_schema(
         [
-            core_schema.is_instance_schema(pl.DataFrame),
-            core_schema.is_instance_schema(pl.LazyFrame),
-            core_schema.chain_schema(
+            pydantic_core_schema.is_instance_schema(pl.DataFrame),
+            pydantic_core_schema.is_instance_schema(pl.LazyFrame),
+            pydantic_core_schema.chain_schema(
                 [
-                    core_schema.dict_schema(),
-                    core_schema.no_info_plain_validator_function(
+                    pydantic_core_schema.dict_schema(),
+                    pydantic_core_schema.no_info_plain_validator_function(
                         partial(_dict_to_df, schema_type)
                     ),
                 ]
@@ -92,24 +87,28 @@ def get_pydantic_core_schema(
         # If the Pydantic field type is LazyFrame, add a step to convert
         # the model back to a LazyFrame.
         to_lazy_schema.append(
-            core_schema.no_info_plain_validator_function(
+            pydantic_core_schema.no_info_plain_validator_function(
                 lambda df: df.lazy(),
             )
         )
 
-    return core_schema.chain_schema(
+    return pydantic_core_schema.chain_schema(
         [
             polars_schema,
-            core_schema.no_info_plain_validator_function(
+            pydantic_core_schema.no_info_plain_validator_function(
                 partial(_validate_df_schema, schema_type)
             ),
             *to_lazy_schema,
         ],
-        serialization=core_schema.plain_serializer_function_ser_schema(_serialize_df),
+        serialization=pydantic_core_schema.plain_serializer_function_ser_schema(
+            _serialize_df
+        ),
     )
 
 
-def get_pydantic_json_schema(handler: GetJsonSchemaHandler) -> JsonSchemaValue:
+def get_pydantic_json_schema(
+    handler: pydantic.GetJsonSchemaHandler,
+) -> pydantic.json_schema.JsonSchemaValue:
     from pydantic_core import core_schema
 
     # This could be made more sophisticated by actually reflecting the schema.

@@ -9,11 +9,8 @@ from typing import TYPE_CHECKING, Any, Concatenate, Generic, Literal, ParamSpec,
 import polars as pl
 
 from ._base_schema import BaseSchema
+from ._compat import pydantic, pydantic_core_schema
 from ._pydantic import get_pydantic_core_schema, get_pydantic_json_schema
-
-if TYPE_CHECKING:
-    import pydantic
-    from pydantic_core import core_schema
 
 S = TypeVar("S", bound=BaseSchema, covariant=True)
 
@@ -78,13 +75,13 @@ class DataFrame(pl.DataFrame, Generic[S]):
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: pydantic.GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
+    ) -> pydantic_core_schema.CoreSchema:
         return get_pydantic_core_schema(source_type, handler, lazy=False)
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        _core_schema: core_schema.CoreSchema,
+        _core_schema: pydantic_core_schema.CoreSchema,
         handler: pydantic.GetJsonSchemaHandler,
     ) -> pydantic.json_schema.JsonSchemaValue:
         return get_pydantic_json_schema(handler)
@@ -136,13 +133,13 @@ class LazyFrame(pl.LazyFrame, Generic[S]):
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: pydantic.GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
+    ) -> pydantic_core_schema.CoreSchema:
         return get_pydantic_core_schema(source_type, handler, lazy=True)
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        core_schema_: core_schema.CoreSchema,
+        _core_schema: pydantic_core_schema.CoreSchema,
         handler: pydantic.GetJsonSchemaHandler,
     ) -> pydantic.json_schema.JsonSchemaValue:
         return get_pydantic_json_schema(handler)
