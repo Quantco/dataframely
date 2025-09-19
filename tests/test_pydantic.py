@@ -10,6 +10,8 @@ from pydantic import BaseModel, ValidationError
 
 import dataframely as dy
 
+pytestmark = pytest.mark.with_optionals
+
 
 class Schema(dy.Schema):
     x = dy.UInt8(nullable=False)
