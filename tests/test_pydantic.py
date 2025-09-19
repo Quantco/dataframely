@@ -42,11 +42,6 @@ def df() -> pl.DataFrame:
 
 
 @pytest.fixture
-def lazy_df(df: pl.DataFrame) -> pl.LazyFrame:
-    return df.lazy()
-
-
-@pytest.fixture
 def invalid_df() -> pl.DataFrame:
     return pl.DataFrame(
         {
@@ -56,6 +51,16 @@ def invalid_df() -> pl.DataFrame:
         },
         schema=Schema.polars_schema(),
     )
+
+
+@pytest.fixture
+def lazy_df(df: pl.DataFrame) -> pl.LazyFrame:
+    return df.lazy()
+
+
+@pytest.fixture
+def invalid_lazy_df(invalid_df: pl.DataFrame) -> pl.LazyFrame:
+    return invalid_df.lazy()
 
 
 def test_python_validation(df: pl.DataFrame) -> None:
@@ -87,6 +92,11 @@ def test_python_validation_already_validated_lazy(df: pl.LazyFrame) -> None:
 def test_python_validation_failure(invalid_df: pl.DataFrame) -> None:
     with pytest.raises(ValidationError):
         PydanticModel(df=invalid_df, other_field=42)
+
+
+def test_python_validation_failure_lazy(invalid_lazy_df: pl.LazyFrame) -> None:
+    with pytest.raises(ValidationError):
+        LazyPydanticModel(df=invalid_df, other_field=42)
 
 
 def test_dict_roundtrip(df: pl.DataFrame) -> None:
