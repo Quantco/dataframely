@@ -101,7 +101,8 @@ def test_dict_roundtrip(df: pl.DataFrame) -> None:
 def test_dict_violates_schema(df: pl.DataFrame) -> None:
     model = PydanticModel(df=df, other_field=42)
     model_dict = model.model_dump()
-    model_dict["df"]["x"][0] = None  # violate non-nullable constraint
+    # violate non-nullable constraint
+    model_dict["df"]["x"][0] = None 
     with pytest.raises(ValidationError):
         PydanticModel.model_validate(model_dict)
 
