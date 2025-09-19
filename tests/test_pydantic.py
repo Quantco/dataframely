@@ -8,7 +8,12 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._compat import pydantic
+from dataframely._compat import _DummyModule, pydantic
+
+try:
+    BaseModel = pydantic.BaseModel
+except ValueError:
+    BaseModel = _DummyModule("pydantic")  # type: ignore
 
 pytestmark = pytest.mark.with_optionals
 
@@ -19,12 +24,12 @@ class Schema(dy.Schema):
     comment = dy.String()
 
 
-class PydanticModel(pydantic.BaseModel):
+class PydanticModel(BaseModel):
     df: dy.DataFrame[Schema]
     other_field: int
 
 
-class LazyPydanticModel(pydantic.BaseModel):
+class LazyPydanticModel(BaseModel):
     df: dy.LazyFrame[Schema]
     other_field: int
 
