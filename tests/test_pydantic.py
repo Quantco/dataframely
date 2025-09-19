@@ -8,12 +8,12 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._compat import _DummyModule, pydantic
+from dataframely._compat import pydantic
 
 try:
     BaseModel = pydantic.BaseModel
 except ValueError:
-    BaseModel = _DummyModule("pydantic")  # type: ignore
+    BaseModel = object  # type: ignore
 
 pytestmark = pytest.mark.with_optionals
 
