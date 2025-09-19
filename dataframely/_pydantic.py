@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 _S = TypeVar("_S", bound=BaseSchema)
 
 
-def _validate_df_from_dict(schema_type: type[BaseSchema], data: dict) -> pl.DataFrame:
+def _dict_to_df(schema_type: type[BaseSchema], data: dict) -> pl.DataFrame:
     return pl.from_dict(
         data,
         schema=schema_type.polars_schema(),
@@ -80,7 +80,7 @@ def get_pydantic_core_schema(
                 [
                     core_schema.dict_schema(),
                     core_schema.no_info_plain_validator_function(
-                        partial(_validate_df_from_dict, schema_type)
+                        partial(_dict_to_df, schema_type)
                     ),
                 ]
             ),
