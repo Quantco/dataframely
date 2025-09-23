@@ -12,7 +12,7 @@ python = ">=3.10"
 rust = "=1.85"
 
 numpy = "*"
-polars = ">=1.32"
+polars = ">=1.33"
 pytest-mock = ">=3.14.1,<4"
 
 [host-dependencies]

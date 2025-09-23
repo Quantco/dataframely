@@ -397,6 +397,28 @@ def test_read_invalid_parquet_metadata_collection(
     assert collection is None
 
 
+def test_write_nonexistent_directory(tmp_path: Path) -> None:
+    # Arrange
+    collection = MyCollection.validate(
+        {
+            "first": pl.LazyFrame({"a": [1, 2, 3]}),
+            "second": pl.LazyFrame({"a": [1, 2], "b": [10, 15]}),
+        },
+        cast=True,
+    )
+
+    # Act
+    path = tmp_path / "non_existent_dir"
+    collection.write_parquet(path, mkdir=True)
+
+    # Assert
+    out = MyCollection.read_parquet(path)
+    assert_frame_equal(collection.first, out.first)
+    assert collection.second is not None
+    assert out.second is not None
+    assert_frame_equal(collection.second, out.second)
+
+
 # ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
 
 
