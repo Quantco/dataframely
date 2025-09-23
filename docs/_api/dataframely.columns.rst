@@ -25,26 +25,10 @@ dataframely.columns.array module
    :show-inheritance:
    :undoc-members:
 
-dataframely.columns.binary module
----------------------------------
-
-.. automodule:: dataframely.columns.binary
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 dataframely.columns.bool module
 -------------------------------
 
 .. automodule:: dataframely.columns.bool
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-dataframely.columns.categorical module
---------------------------------------
-
-.. automodule:: dataframely.columns.categorical
    :members:
    :show-inheritance:
    :undoc-members:

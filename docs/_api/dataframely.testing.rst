@@ -41,14 +41,6 @@ dataframely.testing.rules module
    :show-inheritance:
    :undoc-members:
 
-dataframely.testing.storage module
-----------------------------------
-
-.. automodule:: dataframely.testing.storage
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 dataframely.testing.typing module
 ---------------------------------
 
