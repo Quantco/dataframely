@@ -319,7 +319,7 @@ class Column(ABC):
                 param: (
                     _check_to_expr(getattr(self, param), expr)
                     if param == "check"
-                    else _series_to_list(getattr(self, param))
+                    else getattr(self, param)
                 )
                 for param in inspect.signature(self.__class__.__init__).parameters
                 if param not in ("self", "alias")
@@ -387,7 +387,7 @@ class Column(ABC):
 
     def __repr__(self) -> str:
         parts = [
-            f"{attribute}={repr(_series_to_list(getattr(self, attribute)))}"
+            f"{attribute}={repr(getattr(self, attribute))}"
             for attribute, param_details in inspect.signature(
                 self.__class__.__init__
             ).parameters.items()
@@ -395,7 +395,7 @@ class Column(ABC):
             not in ["self", "alias"]  # alias is always equal to the column name here
             and not (
                 # Do not include attributes that are set to their default value
-                _series_to_list(getattr(self, attribute)) == param_details.default
+                getattr(self, attribute) == param_details.default
             )
         ]
         return f"{self.__class__.__name__}({', '.join(parts)})"
@@ -446,10 +446,3 @@ def _check_from_expr(value: Any) -> Check | None:
             return lambda _: value
         case _:  # pragma: no cover
             raise ValueError(f"Invalid type for check: {type(value)}")
-
-
-def _series_to_list(value: Any) -> Any:
-    """If passed a `pl.Series` value, converts it to a list."""
-    if isinstance(value, pl.Series):
-        return value.to_list()
-    return value
