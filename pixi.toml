@@ -54,7 +54,8 @@ scikit-learn = "*"
 pyarrow = "*"
 sqlalchemy = ">=2"
 deltalake = "*"
-
+pydantic = ">=2.11.9,<3"
+pydantic-core = ">=2.33.2,<3"
 
 [feature.test.tasks]
 test = "pytest"

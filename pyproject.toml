@@ -31,6 +31,7 @@ version = "0.0.0"
 deltalake = ["deltalake"]
 sqlalchemy = ["sqlalchemy"]
 pyarrow = ["pyarrow"]
+pydantic = ["pydantic>=2"]
 
 [project.urls]
 Documentation = "https://dataframely.readthedocs.io/"
@@ -82,13 +83,16 @@ disallow_untyped_defs = true
 exclude = ["docs/"]
 explicit_package_bases = true
 no_implicit_optional = true
-plugins = ["dataframely.mypy"]
+plugins = ["dataframely.mypy", "pydantic.mypy"]
 python_version = '3.10'
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = ["pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
+
+[tool.typos.default.extend-identifiers]
+plain_serializer_function_ser_schema = "plain_serializer_function_ser_schema"
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --benchmark-skip"
