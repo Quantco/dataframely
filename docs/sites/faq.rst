@@ -7,7 +7,7 @@ thinking, please add it here.
 How do I define additional unique keys in a ``dy.Schema``?
 ----------------------------------------------------------
 
-By default, ``dataframely`` only supports defining a single non-nullable primary key in ``dy.Schema``.
+By default, ``dataframely`` only supports defining a single non-nullable (composite) primary key in ``dy.Schema``.
 However, in some scenarios it may be useful to define additional unique keys (which support nullable fields and/or which are additionally unique).
 
 Consider the following example, which demonstrates two rules: one for validating that a field is entirely unique, and another for validating that a field, when provided, is unique.
