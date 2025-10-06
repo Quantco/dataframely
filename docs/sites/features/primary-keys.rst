@@ -44,4 +44,4 @@ Primary keys in ``dy.Collection``
 ---------------------------------
 
 The central idea behind ``dy.Collection`` is to unify multiple tables relating to the same set of underlying entities.
-This is useful because it allows us to write `dy.filter`s that use information from multiple tables to identify whether the underlying entity is valid or not. If any `dy.filter`s are defined, ``dataframely`` requires the tables in a ``dy.Collection`` to have an overlapping primary key, i.e. there must be at least one column that is a primary key in all tables.
+This is useful because it allows us to write ``dy.filter``s that use information from multiple tables to identify whether the underlying entity is valid or not. If any ``dy.filter``s are defined, ``dataframely`` requires the tables in a ``dy.Collection`` to have an overlapping primary key (i.e., there must be at least one column that is a primary key in all tables).
