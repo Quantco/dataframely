@@ -137,6 +137,25 @@ class SchemaMeta(ABCMeta):
                         f"which are not in the schema: {missing_list}."
                     )
 
+        # 3) Check that all members are non-pathological (i.e., user errors).
+        for attr_name, attr_value in namespace.items():
+            if attr_name.startswith("_"):
+                continue  # skip internal names
+
+            # Check for tuple of column (commonly caused by trailing comma)
+            if isinstance(attr_value, tuple):
+                raise TypeError(
+                    f"Column '{attr_name}' is defined as a tuple. "
+                    f"Did you accidentally add a trailing comma?"
+                )
+
+            # Check for column type instead of instance (e.g., dy.Float64 instead of dy.Float64())
+            if isinstance(attr_value, type) and issubclass(attr_value, Column):
+                raise TypeError(
+                    f"Column '{attr_name}' is a type, not an instance. "
+                    f"Did you forget to add parentheses?"
+                )
+
         return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
     def __getattribute__(cls, name: str) -> Any:

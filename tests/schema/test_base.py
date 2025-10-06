@@ -95,3 +95,20 @@ def test_dunder_name() -> None:
 
 def test_dunder_name_with_rule() -> None:
     assert MySchemaWithRule.__name__ == "MySchemaWithRule"
+
+
+def test_user_error_tuple_column() -> None:
+    with pytest.raises(TypeError, match="tuple"):
+
+        class MySchemaWithTupleOfColumn(dy.Schema):
+            a = dy.Int32(nullable=False)
+            b = (dy.Int32(nullable=False),)  # User error: Trailing comma = tuple
+            c = dy.Int32(nullable=False)
+
+
+def test_user_error_column_type_not_instance() -> None:
+    with pytest.raises(TypeError, match="type, not an instance"):
+
+        class MySchemaWithColumnTypeNotInstance(dy.Schema):
+            a = dy.Int32(nullable=False, primary_key=True)
+            b = dy.Float64  # User error: Forgot parentheses!
