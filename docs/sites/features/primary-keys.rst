@@ -4,9 +4,9 @@ Primary keys
 Defining primary keys in ``dy.Schema``
 --------------------------------------
 
-When working with tabular data, it is often useful to define `primary key <https://en.wikipedia.org/wiki/Primary_key>`_. A primary key is a set of one or multiple column, the combined values of which form a unique identifier for a record in a table.
+When working with tabular data, it is often useful to define a `primary key <https://en.wikipedia.org/wiki/Primary_key>`_. A primary key is a set of one or multiple column, the combined values of which form a unique identifier for every record in a table.
 
-Dataframely supports marking columns as part of the primary key when defining a ``dy.Schema`` by setting ``primary_key=True`` on the respective columns.
+Dataframely supports marking columns as part of the primary key when defining a ``dy.Schema`` by setting ``primary_key=True`` on the respective column(s).
 
 .. note::
 
