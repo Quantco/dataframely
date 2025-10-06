@@ -2,7 +2,7 @@ Primary keys
 ============
 
 Defining primary keys in ``dy.Schema``
---------------------------------
+--------------------------------------
 
 When working with tabular data, it is often useful to define `primary key <https://en.wikipedia.org/wiki/Primary_key>`_. A primary key is a set of one or multiple column, the combined values of which form a unique identifier for a record in a table.
 
