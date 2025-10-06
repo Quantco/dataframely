@@ -22,11 +22,12 @@ Contents
 
 .. toctree::
     :caption: Contents
-    :maxdepth: 1
+    :maxdepth: 2
 
     Installation <sites/installation.rst>
     Quickstart <sites/quickstart.rst>
     Real-world Example <sites/examples/real-world.ipynb>
+    Features <sites/features/index.rst>
     FAQ <sites/faq.rst>
     Development Guide <sites/development.rst>
     Versioning <sites/versioning.rst>
