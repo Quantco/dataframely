@@ -156,7 +156,7 @@ class SchemaMeta(ABCMeta):
             if isinstance(value, type) and issubclass(value, Column):
                 raise TypeError(
                     f"Column '{attr}' is a type, not an instance. "
-                    f"Schema members must be of type Column not type[Column]."
+                    f"Schema members must be of type Column not type[Column]. "
                     f"Did you forget to add parentheses?"
                 )
 
