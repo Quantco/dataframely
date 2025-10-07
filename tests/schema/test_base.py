@@ -97,6 +97,20 @@ def test_dunder_name_with_rule() -> None:
     assert MySchemaWithRule.__name__ == "MySchemaWithRule"
 
 
+def test_non_column_member_is_allowed() -> None:
+    class MySchemaWithNonColumnMembers(dy.Schema):
+        a = dy.Int32(nullable=False)
+        version: int = 1
+        useful_tuple: tuple[int, int] = (1, 2)
+
+    columns = MySchemaWithNonColumnMembers.columns()
+    assert "a" in columns
+    assert "version" not in columns
+    assert "useful_tuple" not in columns
+    assert MySchemaWithNonColumnMembers.version == 1
+    assert MySchemaWithNonColumnMembers.useful_tuple == (1, 2)
+
+
 def test_user_error_tuple_column() -> None:
     with pytest.raises(TypeError, match="tuple"):
 

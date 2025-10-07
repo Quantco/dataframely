@@ -138,21 +138,25 @@ class SchemaMeta(ABCMeta):
                     )
 
         # 3) Check that all members are non-pathological (i.e., user errors).
-        for attr_name, attr_value in namespace.items():
-            if attr_name.startswith("_"):
-                continue  # skip internal names
-
+        for attr, value in {
+            k: v for k, v in namespace.items() if not k.startswith("__")
+        }.items():
             # Check for tuple of column (commonly caused by trailing comma)
-            if isinstance(attr_value, tuple):
+            if (
+                isinstance(value, tuple)
+                and len(value) > 0
+                and isinstance(value[0], Column)
+            ):
                 raise TypeError(
-                    f"Column '{attr_name}' is defined as a tuple. "
+                    f"Column '{attr}' is defined as a tuple of dy.Column. "
                     f"Did you accidentally add a trailing comma?"
                 )
 
             # Check for column type instead of instance (e.g., dy.Float64 instead of dy.Float64())
-            if isinstance(attr_value, type) and issubclass(attr_value, Column):
+            if isinstance(value, type) and issubclass(value, Column):
                 raise TypeError(
-                    f"Column '{attr_name}' is a type, not an instance. "
+                    f"Column '{attr}' is a type, not an instance. "
+                    f"Schema members must be of type Column not type[Column]."
                     f"Did you forget to add parentheses?"
                 )
 
