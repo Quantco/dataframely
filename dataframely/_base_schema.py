@@ -138,9 +138,9 @@ class SchemaMeta(ABCMeta):
                     )
 
         # 3) Check that all members are non-pathological (i.e., user errors).
-        for attr, value in {
-            k: v for k, v in namespace.items() if not k.startswith("__")
-        }.items():
+        for attr, value in namespace.items():
+            if attr.startswith("__"):
+                continue
             # Check for tuple of column (commonly caused by trailing comma)
             if (
                 isinstance(value, tuple)
