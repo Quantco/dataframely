@@ -46,6 +46,7 @@ TEST_REGEXES = [
     "ab",
     "a|b",
     "[A-Z]+",
+    r"\d+",
     "[A-Za-z0-9]?",
     "([a-z]+:)?[0-9]*" r"[^@]+@[^@]+\.[^@]+",
     r"[a-z0-9\._%+!$&*=^|~#%'`?{}/\-]+@([a-z0-9\-]+\.){1,}([a-z]{2,16})",
@@ -56,6 +57,12 @@ TEST_REGEXES = [
 def test_sample_one(regex: str) -> None:
     sample = extre.sample(regex, max_repetitions=10)
     assert re.fullmatch(regex, sample) is not None
+
+
+def test_sample_digits() -> None:
+    regex = r"[0-9]{10}"
+    sample = extre.sample(regex, max_repetitions=10)
+    assert sample.isdigit()
 
 
 @pytest.mark.parametrize("regex", TEST_REGEXES)
