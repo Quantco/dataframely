@@ -225,6 +225,21 @@ class Schema(BaseSchema, ABC):
             override_keys = (
                 set(overrides) if isinstance(overrides, Mapping) else set(overrides[0])
             )
+            if not isinstance(overrides, Mapping):
+                # Check that overrides entries are consistent. Not necessary for mapping
+                # overrides as polars checks the series lists upon data frame construction.
+                inconsistent_override_keys = [
+                    index
+                    for index, current in enumerate(overrides)
+                    if set(current) != override_keys
+                ]
+                if len(inconsistent_override_keys) > 0:
+                    raise ValueError(
+                        "The `overrides` entries at the following indices "
+                        "do not provide the same keys as the first entry: "
+                        f"{inconsistent_override_keys}."
+                    )
+
             column_names = set(cls.column_names())
             if not override_keys.issubset(column_names):
                 raise ValueError(

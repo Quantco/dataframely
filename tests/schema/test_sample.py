@@ -206,3 +206,27 @@ def test_sample_raises_superfluous_column_override() -> None:
         match=r"`_sampling_overrides` for columns that are not in the schema",
     ):
         SchemaWithIrrelevantColumnPreProcessing.sample(100)
+
+
+def test_sample_with_inconsistent_overrides_raises() -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"The `overrides` entries at the following indices do not provide "
+            r"the same keys as the first entry: \[1, 2\]."
+        ),
+    ):
+        MySimpleSchema.sample(
+            overrides=[
+                {
+                    "a": 1,
+                    "b": "one",
+                },
+                {
+                    "a": 2,
+                },
+                {
+                    "b": 2,
+                },
+            ]
+        )
