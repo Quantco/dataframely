@@ -207,6 +207,8 @@ class Schema(BaseSchema, ABC):
         Raises:
             ValueError: If ``num_rows`` is not equal to the length of the values in
                 ``overrides``.
+            ValueError: If the values provided through `overrides` do not comply with
+                column-level validation rules of the schema.
             ValueError: If no valid data frame can be found in the configured maximum
                 number of iterations.
 
