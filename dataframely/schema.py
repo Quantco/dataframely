@@ -207,6 +207,8 @@ class Schema(BaseSchema, ABC):
         Raises:
             ValueError: If ``num_rows`` is not equal to the length of the values in
                 ``overrides``.
+            ValueError: If ``overrides`` are specified as a sequence of mappings and
+                the mappings do not provide the same keys.
             ValueError: If no valid data frame can be found in the configured maximum
                 number of iterations.
 
@@ -225,7 +227,7 @@ class Schema(BaseSchema, ABC):
             override_keys = (
                 set(overrides) if isinstance(overrides, Mapping) else set(overrides[0])
             )
-            if not isinstance(overrides, Mapping):
+            if isinstance(overrides, Sequence):
                 # Check that overrides entries are consistent. Not necessary for mapping
                 # overrides as polars checks the series lists upon data frame construction.
                 inconsistent_override_keys = [

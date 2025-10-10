@@ -208,7 +208,7 @@ def test_sample_raises_superfluous_column_override() -> None:
         SchemaWithIrrelevantColumnPreProcessing.sample(100)
 
 
-def test_sample_with_inconsistent_overrides_raises() -> None:
+def test_sample_with_inconsistent_overrides_keys_raises() -> None:
     with pytest.raises(
         ValueError,
         match=(
