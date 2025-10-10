@@ -91,6 +91,10 @@ class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
         return {"irrelevant_column": pl.col("irrelevant_column").cast(pl.String())}
 
 
+class MyAdvancedSchema(dy.Schema):
+    a = dy.Float64(min=20.0)
+
+
 # --------------------------------------- TESTS -------------------------------------- #
 
 
@@ -206,3 +210,11 @@ def test_sample_raises_superfluous_column_override() -> None:
         match=r"`_sampling_overrides` for columns that are not in the schema",
     ):
         SchemaWithIrrelevantColumnPreProcessing.sample(100)
+
+
+def test_sample_invalid_override_values_raises() -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"The provided overrides do not comply with the column-level rules of the schema.",
+    ):
+        MyAdvancedSchema.sample(overrides={"a": [0, 1]})

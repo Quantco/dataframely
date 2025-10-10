@@ -256,6 +256,23 @@ class Schema(BaseSchema, ABC):
             #  frame.
             values = pl.DataFrame()
 
+        # Check that the initial data frame complies with column-only rules
+        specified_columns = {
+            name: col for name, col in cls.columns().items() if name in values.columns
+        }
+        # TODO make this accessible instead of copy-pasting
+        column_rules = {
+            f"{col_name}|{rule_name}": Rule(expr)
+            for col_name, column in specified_columns.items()
+            for rule_name, expr in column.validation_rules(pl.col(col_name)).items()
+        }
+        # TODO do we need to cast here?
+        values_filtered, _ = cls._filter_raw(values, column_rules, cast=False)
+        if len(values_filtered) != len(values):
+            raise ValueError(
+                "The provided overrides do not comply with the column-level rules of the schema."
+            )
+
         # Prepare expressions for columns that need to be preprocessed during sampling
         # iterations.
         sampling_overrides = cls._sampling_overrides()
