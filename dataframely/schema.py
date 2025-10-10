@@ -19,7 +19,7 @@ from polars._typing import FileSource, PartitioningScheme
 
 from dataframely._compat import deltalake
 
-from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
+from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema, _build_column_rules
 from ._compat import pa, sa
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
@@ -39,7 +39,7 @@ from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
 from .config import Config
 from .exc import RuleValidationError, ValidationError, ValidationRequiredError
-from .failure import FailureInfo
+from .failure import FailureInfo, _compute_counts
 from .random import Generator
 
 if sys.version_info >= (3, 11):
@@ -207,6 +207,8 @@ class Schema(BaseSchema, ABC):
         Raises:
             ValueError: If ``num_rows`` is not equal to the length of the values in
                 ``overrides``.
+            ValueError: If the values provided through `overrides` do not comply with
+                column-level validation rules of the schema.
             ValueError: If no valid data frame can be found in the configured maximum
                 number of iterations.
 
@@ -255,6 +257,20 @@ class Schema(BaseSchema, ABC):
             #  we're using an empty data frame here and branch on the height of the data
             #  frame.
             values = pl.DataFrame()
+
+        # Check that the initial data frame complies with column-only rules
+        specified_columns = {
+            name: col for name, col in cls.columns().items() if name in values.columns
+        }
+        column_rules = _build_column_rules(specified_columns)
+        if len(column_rules) > 0:
+            evaluated_rules = cls._evaluate_rules(values.lazy(), column_rules)
+            if evaluated_rules.select(~pl.col("__final_valid__").any()).item():
+                counts = _compute_counts(evaluated_rules, list(column_rules.keys()))
+                raise ValueError(
+                    "The provided overrides do not comply with the column-level "
+                    f"rules of the schema. Rule violation counts: {counts}"
+                )
 
         # Prepare expressions for columns that need to be preprocessed during sampling
         # iterations.
@@ -534,18 +550,11 @@ class Schema(BaseSchema, ABC):
 
         # Then, we filter the data frame
         if len(rules) > 0:
-            lf_with_eval = lf.pipe(with_evaluation_rules, rules)
-
-            # At this point, `lf_with_eval` contains the following:
-            # - All relevant columns of the original data frame
+            # Evaluate the rules on the data frame
             #   - If `cast` is set to `True`, the columns with their original names are
             #     already cast and the original values are available in the columns
             #     prefixed with `ORIGINAL_COLUMN_PREFIX`.
-            # - One boolean column for each rule in `rules`
-            rule_columns = rules.keys()
-            df_evaluated = lf_with_eval.with_columns(
-                __final_valid__=pl.all_horizontal(pl.col(rule_columns).fill_null(True))
-            ).collect()
+            df_evaluated = cls._evaluate_rules(lf, rules)
 
             # For the output, partition `lf_evaluated` into the returned data frame `lf`
             # and the invalid data frame
@@ -555,7 +564,7 @@ class Schema(BaseSchema, ABC):
                 .drop(
                     "__final_valid__",
                     cs.starts_with(ORIGINAL_COLUMN_PREFIX),
-                    *rule_columns,
+                    *rules.keys(),
                 )
             )
         else:
@@ -565,6 +574,19 @@ class Schema(BaseSchema, ABC):
             lf.collect(),  # type: ignore
             df_evaluated,
         )
+
+    @staticmethod
+    def _evaluate_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.DataFrame:
+        lf_with_eval = lf.pipe(with_evaluation_rules, rules)
+
+        # At this point, `lf_with_eval` contains the following:
+        # - All relevant columns of the original data frame
+        # - One boolean column for each rule in `rules`
+        rule_columns = rules.keys()
+        df_evaluated = lf_with_eval.with_columns(
+            __final_valid__=pl.all_horizontal(pl.col(rule_columns).fill_null(True))
+        ).collect()
+        return df_evaluated
 
     # ------------------------------------ CASTING ----------------------------------- #
 
