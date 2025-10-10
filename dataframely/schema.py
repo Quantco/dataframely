@@ -260,18 +260,22 @@ class Schema(BaseSchema, ABC):
         specified_columns = {
             name: col for name, col in cls.columns().items() if name in values.columns
         }
-        # TODO make this accessible instead of copy-pasting
+        # TODO make this logic accessible and reuse it instead of copy-pasting
         column_rules = {
             f"{col_name}|{rule_name}": Rule(expr)
             for col_name, column in specified_columns.items()
             for rule_name, expr in column.validation_rules(pl.col(col_name)).items()
         }
-        # TODO do we need to cast here?
-        values_filtered, _ = cls._filter_raw(values, column_rules, cast=False)
-        if len(values_filtered) != len(values):
-            raise ValueError(
-                "The provided overrides do not comply with the column-level rules of the schema."
-            )
+        if len(column_rules) > 0:
+            lf_with_eval = values.lazy().pipe(with_evaluation_rules, column_rules)
+            rule_columns = column_rules.keys()
+            df_evaluated = lf_with_eval.with_columns(
+                __final_valid__=pl.all_horizontal(pl.col(rule_columns).fill_null(True))
+            ).collect()
+            if df_evaluated.select(~pl.col("__final_valid__").any()).item():
+                raise ValueError(
+                    "The provided overrides do not comply with the column-level rules of the schema."
+                )
 
         # Prepare expressions for columns that need to be preprocessed during sampling
         # iterations.
