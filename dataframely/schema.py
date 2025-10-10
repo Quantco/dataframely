@@ -39,7 +39,7 @@ from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
 from .config import Config
 from .exc import RuleValidationError, ValidationError, ValidationRequiredError
-from .failure import FailureInfo
+from .failure import FailureInfo, _compute_counts
 from .random import Generator
 
 if sys.version_info >= (3, 11):
@@ -266,9 +266,10 @@ class Schema(BaseSchema, ABC):
         if len(column_rules) > 0:
             evaluated_rules = cls._evaluate_rules(values.lazy(), column_rules)
             if evaluated_rules.select(~pl.col("__final_valid__").any()).item():
+                counts = _compute_counts(evaluated_rules, list(column_rules.keys()))
                 raise ValueError(
                     "The provided overrides do not comply with the column-level "
-                    "rules of the schema."
+                    f"rules of the schema. Rule violation counts: {counts}"
                 )
 
         # Prepare expressions for columns that need to be preprocessed during sampling

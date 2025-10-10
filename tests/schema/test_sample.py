@@ -1,5 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -93,6 +94,7 @@ class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
 
 class MyAdvancedSchema(dy.Schema):
     a = dy.Float64(min=20.0)
+    b = dy.String(regex=r"abc*")
 
 
 # --------------------------------------- TESTS -------------------------------------- #
@@ -212,9 +214,21 @@ def test_sample_raises_superfluous_column_override() -> None:
         SchemaWithIrrelevantColumnPreProcessing.sample(100)
 
 
-def test_sample_invalid_override_values_raises() -> None:
+@pytest.mark.parametrize(
+    "overrides,expected_violations",
+    [
+        ({"a": [0, 1], "b": ["abcd", "abc"]}, r"\{'a|min': 2\}"),
+        ({"a": [20], "b": ["invalid"]}, r"\{'b|regex': 1\}"),
+    ],
+)
+def test_sample_invalid_override_values_raises(
+    overrides: dict[str, Any], expected_violations: str
+) -> None:
     with pytest.raises(
         ValueError,
-        match=r"The provided overrides do not comply with the column-level rules of the schema.",
+        match=(
+            r"The provided overrides do not comply with the column-level "
+            r"rules of the schema. Rule violation counts:  " + expected_violations
+        ),
     ):
-        MyAdvancedSchema.sample(overrides={"a": [0, 1]})
+        MyAdvancedSchema.sample(overrides=overrides)
