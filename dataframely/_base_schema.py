@@ -45,12 +45,7 @@ def _build_rules(
         rules["primary_key"] = Rule(~pl.struct(primary_keys).is_duplicated())
 
     # Add column-specific rules
-    column_rules = {
-        f"{col_name}|{rule_name}": Rule(expr)
-        for col_name, column in columns.items()
-        for rule_name, expr in column.validation_rules(pl.col(col_name)).items()
-    }
-    rules.update(column_rules)
+    rules.update(_build_column_rules(columns))
 
     # Add casting rules if requested. Here, we can simply check whether the nullability
     # property of a column changes due to lenient dtype casting. Whenever casting fails,
@@ -68,6 +63,14 @@ def _build_rules(
         rules.update(casting_rules)
 
     return rules
+
+
+def _build_column_rules(columns: dict[str, Column]) -> dict[str, Rule]:
+    return {
+        f"{col_name}|{rule_name}": Rule(expr)
+        for col_name, column in columns.items()
+        for rule_name, expr in column.validation_rules(pl.col(col_name)).items()
+    }
 
 
 def _primary_keys(columns: dict[str, Column]) -> list[str]:
