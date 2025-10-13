@@ -328,12 +328,15 @@ class Schema(BaseSchema, ABC):
                     ],
                     how="vertical_relaxed",
                 )
-                _, failure_info = cls.filter(relevant_rows, cast=True)
+                validation_error = None
+                try:
+                    cls.validate(relevant_rows)
+                except ValidationError as e:
+                    validation_error = str(e)
                 raise ValueError(
                     f"After sampling for {Config.options['max_sampling_iterations']} "
-                    f"iterations, only {len(result)} valid rows were found. "
-                    f"The following rules were not satisfied by the remaining rows: "
-                    f"{failure_info.counts()}. Consider increasing the maximum number "
+                    f"iterations, {validation_error or 'no valid data frame was found'}. "
+                    f"Consider increasing the maximum number "
                     "of sampling iterations via `dy.Config` or implement your custom sampling "
                     "logic. Alternatively, passing predefined value to `overrides` "
                     "or implementing `_sampling_overrides` for your schema can also "

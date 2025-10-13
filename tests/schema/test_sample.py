@@ -232,21 +232,19 @@ def test_sample_with_inconsistent_overrides_keys_raises() -> None:
 
 
 @pytest.mark.parametrize(
-    "overrides,expected_violations",
+    "overrides,failed_column,failed_rule,failed_rows",
     [
-        ({"a": [0, 1], "b": ["abcd", "abc"]}, r"\{'a|min': 2\}"),
-        ({"a": [20], "b": ["invalid"]}, r"\{'b|regex': 1\}"),
+        ({"a": [0, 1], "b": ["abcd", "abc"]}, "a", "min", 2),
+        ({"a": [20], "b": ["invalid"]}, "b", "regex", 1),
     ],
 )
 def test_sample_invalid_override_values_raises(
-    overrides: dict[str, Any], expected_violations: str
+    overrides: dict[str, Any], failed_column: str, failed_rule: str, failed_rows: int
 ) -> None:
     with pytest.raises(
         ValueError,
         match=(
-            "After sampling for 100 iterations, only 0 valid rows were found. "
-            "The following rules were not satisfied by the remaining rows: "
-            + expected_violations
+            rf"After sampling for 100 iterations, 1 rules failed validation:\n \* Column '{failed_column}' failed validation for 1 rules:\n   - '{failed_rule}' failed for {failed_rows} rows."
         ),
     ):
         with dy.Config(max_sampling_iterations=100):  # speed up the test
