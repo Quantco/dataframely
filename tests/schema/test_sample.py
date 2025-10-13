@@ -244,7 +244,9 @@ def test_sample_invalid_override_values_raises(
     with pytest.raises(
         ValueError,
         match=(
-            rf"After sampling for 100 iterations, 1 rules failed validation:\n \* Column '{failed_column}' failed validation for 1 rules:\n   - '{failed_rule}' failed for {failed_rows} rows."
+            r"After sampling for 100 iterations, 1 rules failed validation:"
+            rf"\n \* Column '{failed_column}' failed validation for 1 rules:"
+            rf"\n   - '{failed_rule}' failed for {failed_rows} rows."
         ),
     ):
         with dy.Config(max_sampling_iterations=100):  # speed up the test
