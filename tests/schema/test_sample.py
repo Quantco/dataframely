@@ -218,15 +218,8 @@ def test_sample_with_inconsistent_overrides_keys_raises() -> None:
     ):
         MySimpleSchema.sample(
             overrides=[
-                {
-                    "a": 1,
-                    "b": "one",
-                },
-                {
-                    "a": 2,
-                },
-                {
-                    "b": 2,
-                },
+                {"a": 1, "b": "one"},
+                {"a": 2},
+                {"b": 2},
             ]
         )
