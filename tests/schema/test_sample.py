@@ -1,5 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -89,6 +90,11 @@ class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
     @classmethod
     def _sampling_overrides(cls) -> dict[str, pl.Expr]:
         return {"irrelevant_column": pl.col("irrelevant_column").cast(pl.String())}
+
+
+class MyAdvancedSchema(dy.Schema):
+    a = dy.Float64(min=20.0)
+    b = dy.String(regex=r"abc*")
 
 
 # --------------------------------------- TESTS -------------------------------------- #
@@ -223,3 +229,24 @@ def test_sample_with_inconsistent_overrides_keys_raises() -> None:
                 {"b": 2},
             ]
         )
+
+
+@pytest.mark.parametrize(
+    "overrides,expected_violations",
+    [
+        ({"a": [0, 1], "b": ["abcd", "abc"]}, r"\{'a|min': 2\}"),
+        ({"a": [20], "b": ["invalid"]}, r"\{'b|regex': 1\}"),
+    ],
+)
+def test_sample_invalid_override_values_raises(
+    overrides: dict[str, Any], expected_violations: str
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            "After sampling for 10000 iterations, only 0 valid rows were found. "
+            "The following rules were not satisfied by the remaining rows: "
+            + expected_violations
+        ),
+    ):
+        MyAdvancedSchema.sample(overrides=overrides)

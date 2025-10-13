@@ -209,8 +209,8 @@ class Schema(BaseSchema, ABC):
                 ``overrides``.
             ValueError: If ``overrides`` are specified as a sequence of mappings and
                 the mappings do not provide the same keys.
-            ValueError: If no valid data frame can be found in the configured maximum
-                number of iterations.
+            ValueError: If the data frame that is found after the configured
+                maximum number of iterations does not comply with the schema.
 
         Attention:
             Be aware that, due to sampling in a loop, the runtime of this method can be
@@ -316,10 +316,23 @@ class Schema(BaseSchema, ABC):
         sampling_rounds = 1
         while len(result) != num_rows:
             if sampling_rounds >= Config.options["max_sampling_iterations"]:
+                other_rows = pl.concat(
+                    [
+                        used_values.drop("__row_index__"),
+                        remaining_values.drop("__row_index__"),
+                    ],
+                    how="vertical_relaxed",
+                )
+                _, failure_info = cls.filter(
+                    pl.concat([result, other_rows]) if len(other_rows) else result,
+                    cast=True,
+                )
                 raise ValueError(
-                    f"Sampling exceeded {Config.options['max_sampling_iterations']} "
-                    "iterations. Consider increasing the maximum number of sampling "
-                    "iterations via `dy.Config` or implement your custom sampling "
+                    f"After sampling for {Config.options['max_sampling_iterations']} "
+                    f"iterations, only {len(result)} valid rows were found. "
+                    f"The following rules were not satisfied by the remaining rows: "
+                    f"{failure_info.counts()}. Consider increasing the maximum number "
+                    "of sampling iterations via `dy.Config` or implement your custom sampling "
                     "logic. Alternatively, passing predefined value to `overrides` "
                     "or implementing `_sampling_overrides` for your schema can also "
                     "help the sampling procedure find a valid data frame."
