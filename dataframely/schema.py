@@ -209,8 +209,8 @@ class Schema(BaseSchema, ABC):
                 ``overrides``.
             ValueError: If ``overrides`` are specified as a sequence of mappings and
                 the mappings do not provide the same keys.
-            ValueError: If the data frame that is found after the configured
-                maximum number of iterations does not comply with the schema.
+            ValueError: If no valid data frame can be found in the configured maximum
+                number of iterations.
 
         Attention:
             Be aware that, due to sampling in a loop, the runtime of this method can be
@@ -316,17 +316,19 @@ class Schema(BaseSchema, ABC):
         sampling_rounds = 1
         while len(result) != num_rows:
             if sampling_rounds >= Config.options["max_sampling_iterations"]:
-                other_rows = pl.concat(
+                relevant_rows = pl.concat(
                     [
-                        used_values.drop("__row_index__"),
-                        remaining_values.drop("__row_index__"),
+                        df
+                        for df in [
+                            result,
+                            used_values.drop("__row_index__"),
+                            remaining_values.drop("__row_index__"),
+                        ]
+                        if len(df)
                     ],
                     how="vertical_relaxed",
                 )
-                _, failure_info = cls.filter(
-                    pl.concat([result, other_rows]) if len(other_rows) else result,
-                    cast=True,
-                )
+                _, failure_info = cls.filter(relevant_rows, cast=True)
                 raise ValueError(
                     f"After sampling for {Config.options['max_sampling_iterations']} "
                     f"iterations, only {len(result)} valid rows were found. "

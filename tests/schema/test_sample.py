@@ -244,9 +244,10 @@ def test_sample_invalid_override_values_raises(
     with pytest.raises(
         ValueError,
         match=(
-            "After sampling for 10000 iterations, only 0 valid rows were found. "
+            "After sampling for 100 iterations, only 0 valid rows were found. "
             "The following rules were not satisfied by the remaining rows: "
             + expected_violations
         ),
     ):
-        MyAdvancedSchema.sample(overrides=overrides)
+        with dy.Config(max_sampling_iterations=100):  # speed up the test
+            MyAdvancedSchema.sample(overrides=overrides)
