@@ -316,10 +316,27 @@ class Schema(BaseSchema, ABC):
         sampling_rounds = 1
         while len(result) != num_rows:
             if sampling_rounds >= Config.options["max_sampling_iterations"]:
+                relevant_rows = pl.concat(
+                    [
+                        df
+                        for df in [
+                            result,
+                            used_values.drop("__row_index__"),
+                            remaining_values.drop("__row_index__"),
+                        ]
+                    ],
+                    how="diagonal",  # `used_values` and `remaining_values` only contain columns in `overrides`
+                )
+                validation_error = None
+                try:
+                    cls.validate(relevant_rows)
+                except ValidationError as e:
+                    validation_error = str(e)
                 raise ValueError(
-                    f"Sampling exceeded {Config.options['max_sampling_iterations']} "
-                    "iterations. Consider increasing the maximum number of sampling "
-                    "iterations via `dy.Config` or implement your custom sampling "
+                    f"After sampling for {Config.options['max_sampling_iterations']} "
+                    f"iterations, {validation_error or 'no valid data frame was found'}. "
+                    f"Consider increasing the maximum number "
+                    "of sampling iterations via `dy.Config` or implement your custom sampling "
                     "logic. Alternatively, passing predefined value to `overrides` "
                     "or implementing `_sampling_overrides` for your schema can also "
                     "help the sampling procedure find a valid data frame."

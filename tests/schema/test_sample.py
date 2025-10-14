@@ -1,5 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -89,6 +90,11 @@ class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
     @classmethod
     def _sampling_overrides(cls) -> dict[str, pl.Expr]:
         return {"irrelevant_column": pl.col("irrelevant_column").cast(pl.String())}
+
+
+class MyAdvancedSchema(dy.Schema):
+    a = dy.Float64(min=20.0)
+    b = dy.String(regex=r"abc*")
 
 
 # --------------------------------------- TESTS -------------------------------------- #
@@ -223,3 +229,26 @@ def test_sample_with_inconsistent_overrides_keys_raises() -> None:
                 {"b": 2},
             ]
         )
+
+
+@pytest.mark.parametrize(
+    "overrides,failed_column,failed_rule,failed_rows",
+    [
+        ({"a": [0, 1], "b": ["abcd", "abc"]}, "a", "min", 2),
+        ({"a": [0, 1]}, "a", "min", 2),
+        ({"a": [20], "b": ["invalid"]}, "b", "regex", 1),
+    ],
+)
+def test_sample_invalid_override_values_raises(
+    overrides: dict[str, Any], failed_column: str, failed_rule: str, failed_rows: int
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"After sampling for 100 iterations, 1 rules failed validation:"
+            rf"\n \* Column '{failed_column}' failed validation for 1 rules:"
+            rf"\n   - '{failed_rule}' failed for {failed_rows} rows."
+        ),
+    ):
+        with dy.Config(max_sampling_iterations=100):  # speed up the test
+            MyAdvancedSchema.sample(overrides=overrides)
