@@ -324,7 +324,7 @@ class Schema(BaseSchema, ABC):
                             used_values.drop("__row_index__"),
                             remaining_values.drop("__row_index__"),
                         ]
-                        if len(df)
+                        if not df.is_empty()
                     ],
                     how="vertical_relaxed",
                 )
