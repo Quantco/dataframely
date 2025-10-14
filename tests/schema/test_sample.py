@@ -235,6 +235,7 @@ def test_sample_with_inconsistent_overrides_keys_raises() -> None:
     "overrides,failed_column,failed_rule,failed_rows",
     [
         ({"a": [0, 1], "b": ["abcd", "abc"]}, "a", "min", 2),
+        ({"a": [0, 1]}, "a", "min", 2),
         ({"a": [20], "b": ["invalid"]}, "b", "regex", 1),
     ],
 )
