@@ -325,7 +325,7 @@ class Schema(BaseSchema, ABC):
                             remaining_values.drop("__row_index__"),
                         ]
                     ],
-                    how="diagonal",
+                    how="diagonal",  # `used_values` and `remaining_values` only contain columns in `overrides`
                 )
                 validation_error = None
                 try:
