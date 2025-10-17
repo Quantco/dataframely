@@ -76,7 +76,7 @@ def test_non_integer_dtype_fails(dtype: DataTypeClass) -> None:
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
 @pytest.mark.parametrize("inclusive", [True, False])
 def test_validate_min(column_type: type[_BaseInteger], inclusive: bool) -> None:
-    kwargs = {("min" if inclusive else "min_exclusive"): 3}
+    kwargs = {("min" if inclusive else "min_exclusive"): 3, "nullable": True}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -88,7 +88,7 @@ def test_validate_min(column_type: type[_BaseInteger], inclusive: bool) -> None:
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
 @pytest.mark.parametrize("inclusive", [True, False])
 def test_validate_max(column_type: type[_BaseInteger], inclusive: bool) -> None:
-    kwargs = {("max" if inclusive else "max_exclusive"): 3}
+    kwargs = {("max" if inclusive else "max_exclusive"): 3, "nullable": True}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -103,7 +103,7 @@ def test_validate_min_zero(column_type: type[_BaseInteger], inclusive: bool) -> 
     """Specific edge case where the minimum is `0`, which can lead to python bugs if we
     use `if value` instead of `if value is not None` somewhere."""
     key = "min" if inclusive else "min_exclusive"
-    kwargs = {key: 0}
+    kwargs = {key: 0, "nullable": True}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [-1]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -117,7 +117,7 @@ def test_validate_max_zero(column_type: type[_BaseInteger], inclusive: bool) -> 
     """Specific edge case where the maximum is `0`, which can lead to python bugs if we
     use `if value` instead of `if value is not None` somewhere."""
     key = "max" if inclusive else "max_exclusive"
-    kwargs = {key: 0}
+    kwargs = {key: 0, "nullable": True}
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -134,6 +134,7 @@ def test_validate_range(
     kwargs = {
         ("min" if min_inclusive else "min_exclusive"): 2,
         ("max" if max_inclusive else "max_exclusive"): 4,
+        "nullable": True,
     }
     column = column_type(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
@@ -151,7 +152,7 @@ def test_validate_range(
 
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
 def test_validate_is_in(column_type: type[_BaseInteger]) -> None:
-    column = column_type(is_in=[3, 5])
+    column = column_type(is_in=[3, 5], nullable=True)
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame({"is_in": [False, False, True, False, True]})

@@ -46,7 +46,11 @@ import dataframely as dy
             dy.String(check=[lambda x: x == "a"]),
             False,
         ),
-        (dy.Array(dy.Int32(), shape=(2, 2)), dy.Array(dy.Int32(), shape=(2, 2)), True),
+        (
+            dy.Array(dy.Int32(nullable=True), shape=(2, 2)),
+            dy.Array(dy.Int32(nullable=True), shape=(2, 2)),
+            True,
+        ),
         (dy.List(dy.Int32()), dy.List(dy.Int32()), True),
         (
             dy.Struct({"a": dy.Int32(check=lambda expr: expr > 4)}),

@@ -15,7 +15,7 @@ from dataframely.testing import create_schema
 class MySchema(dy.Schema):
     a = dy.Int64(primary_key=True)
     b = dy.String(nullable=False, max_length=5)
-    c = dy.String()
+    c = dy.String(nullable=True)
 
 
 class MyComplexSchema(dy.Schema):

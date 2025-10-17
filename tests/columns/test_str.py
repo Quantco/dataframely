@@ -25,7 +25,7 @@ def test_string_representation_list() -> None:
 
 
 def test_string_representation_array() -> None:
-    column = dy.Array(dy.String(), 1)
+    column = dy.Array(dy.String(nullable=True), 1)
     assert str(column) == dy.Array.__name__.lower()
 
 

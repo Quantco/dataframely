@@ -36,7 +36,7 @@ from dataframely.testing import create_schema
         (dy.UInt64(), pl.UInt64()),
         (dy.String(), pl.String()),
         (dy.List(dy.String()), pl.List(pl.String())),
-        (dy.Array(dy.String(), 1), pl.Array(pl.String(), 1)),
+        (dy.Array(dy.String(nullable=True), 1), pl.Array(pl.String(), 1)),
         (dy.Struct({"a": dy.String()}), pl.Struct({"a": pl.String()})),
         (dy.Enum(["a", "b"]), pl.Enum(["a", "b"])),
         (dy.Categorical(), pl.Categorical()),

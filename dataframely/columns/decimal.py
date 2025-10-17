@@ -27,7 +27,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         precision: int | None = None,
         scale: int = 0,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: decimal.Decimal | None = None,
         min_exclusive: decimal.Decimal | None = None,

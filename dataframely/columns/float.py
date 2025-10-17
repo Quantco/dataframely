@@ -26,7 +26,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         allow_inf_nan: bool = False,
         min: float | None = None,

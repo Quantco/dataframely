@@ -24,7 +24,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: int | None = None,
         min_exclusive: int | None = None,

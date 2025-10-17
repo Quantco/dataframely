@@ -26,7 +26,7 @@ class Enum(Column):
         self,
         categories: pl.Series | Iterable[str] | type[enum.Enum],
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,

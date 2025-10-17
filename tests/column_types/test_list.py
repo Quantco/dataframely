@@ -62,7 +62,7 @@ def test_nested_lists() -> None:
 def test_list_with_pk() -> None:
     schema = create_schema(
         "test",
-        {"a": dy.List(dy.String(), primary_key=True)},
+        {"a": dy.List(dy.String(nullable=True), primary_key=True)},
     )
     df = pl.DataFrame({"a": [["ab"], ["a", "ab"], [None], ["a", "b"], ["a", "b"]]})
     _, failures = schema.filter(df)
