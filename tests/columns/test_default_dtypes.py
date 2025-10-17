@@ -39,6 +39,7 @@ from dataframely.testing import create_schema
         (dy.Array(dy.String(), 1), pl.Array(pl.String(), 1)),
         (dy.Struct({"a": dy.String()}), pl.Struct({"a": pl.String()})),
         (dy.Enum(["a", "b"]), pl.Enum(["a", "b"])),
+        (dy.Categorical(), pl.Categorical()),
     ],
 )
 def test_default_dtype(column: Column, dtype: pl.DataType) -> None:

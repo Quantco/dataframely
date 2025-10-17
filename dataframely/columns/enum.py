@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import enum
+from collections.abc import Iterable
+from inspect import isclass
 from typing import Any
 
 import polars as pl
@@ -22,7 +24,7 @@ class Enum(Column):
 
     def __init__(
         self,
-        categories: Sequence[str],
+        categories: pl.Series | Iterable[str] | type[enum.Enum],
         *,
         nullable: bool | None = None,
         primary_key: bool = False,
@@ -32,7 +34,8 @@ class Enum(Column):
     ):
         """
         Args:
-            categories: The list of valid categories for the enum.
+            categories: The set of valid categories for the enum, or an existing Python
+                string-valued enum.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`
@@ -63,6 +66,8 @@ class Enum(Column):
             alias=alias,
             metadata=metadata,
         )
+        if isclass(categories) and issubclass(categories, enum.Enum):
+            categories = (item.value for item in categories)
         self.categories = list(categories)
 
     @property
@@ -82,9 +87,17 @@ class Enum(Column):
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return pa.dictionary(pa.uint32(), pa.large_string())
+        if len(self.categories) <= 2**8 - 2:
+            dtype = pa.uint8()
+        elif len(self.categories) <= 2**16 - 2:
+            dtype = pa.uint16()
+        else:
+            dtype = pa.uint32()
+        return pa.dictionary(dtype, pa.large_string())
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(
-            n, choices=self.categories, null_probability=self._null_probability
+            n,
+            choices=self.categories,
+            null_probability=self._null_probability,
         ).cast(self.dtype)

@@ -7,7 +7,7 @@ import inspect
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, TypeAlias, cast
 
 import polars as pl
@@ -27,8 +27,8 @@ else:
 
 Check: TypeAlias = (
     Callable[[pl.Expr], pl.Expr]
-    | list[Callable[[pl.Expr], pl.Expr]]
-    | dict[str, Callable[[pl.Expr], pl.Expr]]
+    | Sequence[Callable[[pl.Expr], pl.Expr]]
+    | Mapping[str, Callable[[pl.Expr], pl.Expr]]
 )
 
 # ------------------------------------------------------------------------------------ #
@@ -141,12 +141,14 @@ class Column(ABC):
             result["nullability"] = expr.is_not_null()
 
         if self.check is not None:
-            if isinstance(self.check, dict):
+            if isinstance(self.check, Mapping):
                 for rule_name, rule_callable in self.check.items():
                     result[f"check__{rule_name}"] = rule_callable(expr)
             else:
                 list_of_rules = (
-                    self.check if isinstance(self.check, list) else [self.check]
+                    list(self.check)
+                    if isinstance(self.check, Sequence)
+                    else [self.check]
                 )
                 # Get unique names for rules from callables
                 rule_names = self._derive_check_rule_names(list_of_rules)
@@ -378,6 +380,7 @@ class Column(ABC):
     ) -> bool:
         if name == "check":
             return _compare_checks(lhs, rhs, column_expr)
+
         return lhs == rhs
 
     # -------------------------------- DUNDER METHODS -------------------------------- #
@@ -423,9 +426,9 @@ def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
     match check:
         case None:
             return None
-        case list():
+        case Sequence():
             return [c(expr) for c in check]
-        case dict():
+        case Mapping():
             return {key: c(expr) for key, c in check.items()}
         case _ if callable(check):
             return check(expr)

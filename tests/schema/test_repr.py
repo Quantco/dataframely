@@ -52,3 +52,14 @@ def test_repr_with_rules() -> None:
             - "my_rule": [(col("a")) < (dyn int: 100)]
             - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']
         """)
+
+
+def test_repr_enum() -> None:
+    class SchemaNoRules(dy.Schema):
+        a = dy.Enum(["a"])
+
+    assert repr(SchemaNoRules) == textwrap.dedent("""\
+        [Schema "SchemaNoRules"]
+          Columns:
+            - "a": Enum(categories=['a'], nullable=True)
+        """)
