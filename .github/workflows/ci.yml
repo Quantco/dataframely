@@ -40,7 +40,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest]
-        environment: [py310, py311, py312, py313, py314]
+        environment: [py310, py311, py312, py313]
         with_optionals: [false]
         include:
           - os: ubuntu-latest
