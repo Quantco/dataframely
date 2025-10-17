@@ -9,7 +9,7 @@ from dataframely.testing import evaluate_rules, rules_from_exprs
 
 
 def test_validate_min_length() -> None:
-    column = dy.String(min_length=2)
+    column = dy.String(min_length=2, nullable=True)
     lf = pl.LazyFrame({"a": ["foo", "x"]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame({"min_length": [True, False]})
@@ -17,7 +17,7 @@ def test_validate_min_length() -> None:
 
 
 def test_validate_max_length() -> None:
-    column = dy.String(max_length=2)
+    column = dy.String(max_length=2, nullable=True)
     lf = pl.LazyFrame({"a": ["foo", "x"]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame({"max_length": [False, True]})
@@ -25,7 +25,7 @@ def test_validate_max_length() -> None:
 
 
 def test_validate_regex() -> None:
-    column = dy.String(regex="[0-9][a-z]$")
+    column = dy.String(regex="[0-9][a-z]$", nullable=True)
     lf = pl.LazyFrame({"a": ["33x", "3x", "44"]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame({"regex": [True, True, False]})
