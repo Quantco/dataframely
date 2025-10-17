@@ -90,9 +90,21 @@ collection.scan_parquet("/path/to/directory/")
 Just as for `Schema`, metadata is stored in the backend to encode the schema information.
 This includes the schemas of the member dataframes as well as collection-level constraints.
 
-## Configuring validation behavior on reads
+## What happens if the schema is missing or wrong?
 
 All scan / read operations allow the user to specify a `validation` keyword argument
-that can be used to define how `dataframely` should react if the schema information
-stored in the backend does not match the schema used for reading.
+that can be used to define how `dataframely` should react if there is no schema information
+found in the backend, or if the schema information does not match the the schema used for reading.
+By default, `dataframely` will run validation and emit a warning in this case, but the
+user may also choose to always force validation, or to silently ignore missing metadata.
 Refer to the API docs linked in the table above for details.
+
+```{note}
+Some schema information such as data types is trivial to serialize.
+However, we also serialize custom schema rules.
+For this, we rely on `polars.Expression.meta.serialize`, which is not currently guaranteed
+to be stable between polars version. As a result, it is possible that `polars`
+version updates can break our ability to recognize a stored schema, even if it still
+semantically matches the current schema. This situation is treated the same
+as if no stored schema was found.
+```
