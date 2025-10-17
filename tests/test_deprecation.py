@@ -18,5 +18,7 @@ def test_skip_if(monkeypatch: pytest.MonkeyPatch, env_var: str) -> None:
     def callable() -> None:
         raise ValueError()
 
+    with pytest.raises(ValueError):
+        callable()
     monkeypatch.setenv(variable_name, env_var)
     callable()
