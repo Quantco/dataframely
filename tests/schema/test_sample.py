@@ -12,8 +12,8 @@ from dataframely.random import Generator
 
 
 class MySimpleSchema(dy.Schema):
-    a = dy.Int64()
-    b = dy.String()
+    a = dy.Int64(nullable=True)
+    b = dy.String(nullable=True)
 
 
 class PrimaryKeySchema(dy.Schema):
