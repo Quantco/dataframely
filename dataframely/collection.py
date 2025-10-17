@@ -184,8 +184,8 @@ class Collection(BaseCollection, ABC):
 
         g = generator or Generator()
 
-        primary_keys = cls.common_primary_keys()
-        requires_dependent_sampling = len(cls.members()) > 1 and len(primary_keys) > 0
+        primary_key = cls.common_primary_key()
+        requires_dependent_sampling = len(cls.members()) > 1 and len(primary_key) > 0
 
         # 1) Preprocess all samples to make sampling efficient and ensure shared primary
         #    keys.
@@ -203,7 +203,7 @@ class Collection(BaseCollection, ABC):
         #    can properly sample members.
         if requires_dependent_sampling:
             if not all(
-                all(k in sample for k in primary_keys) for sample in processed_samples
+                all(k in sample for k in primary_key) for sample in processed_samples
             ):
                 raise ValueError("All samples must contain the common primary keys.")
 
@@ -215,7 +215,7 @@ class Collection(BaseCollection, ABC):
         for member, schema in cls.member_schemas().items():
             if (
                 not requires_dependent_sampling
-                or set(schema.primary_keys()) == set(primary_keys)
+                or set(schema.primary_key()) == set(primary_key)
                 or member_infos[member].ignored_in_filters
             ):
                 # If the primary keys are equal to the shared ones, each sample
@@ -229,7 +229,7 @@ class Collection(BaseCollection, ABC):
                         **(
                             {}
                             if member_infos[member].ignored_in_filters
-                            else _extract_keys_if_exist(sample, primary_keys)
+                            else _extract_keys_if_exist(sample, primary_key)
                         ),
                         **_extract_keys_if_exist(
                             (
@@ -247,7 +247,7 @@ class Collection(BaseCollection, ABC):
                 # observe values for the member
                 member_overrides = [
                     {
-                        **_extract_keys_if_exist(sample, primary_keys),
+                        **_extract_keys_if_exist(sample, primary_key),
                         **_extract_keys_if_exist(item, schema.column_names()),
                     }
                     for sample in processed_samples
@@ -345,13 +345,13 @@ class Collection(BaseCollection, ABC):
             has common primary keys, this sample **must** include **all** common
             primary keys.
         """
-        if len(cls.members()) > 1 and len(cls.common_primary_keys()) > 0:
+        if len(cls.members()) > 1 and len(cls.common_primary_key()) > 0:
             # If we have multiple members with a common primary key, we need to ensure
             # that the samples have a value set for all common primary key columns.
             # NOTE: This is experimental as we commit to a primary key that cannot be
             #  changed at a later point (e.g. due to primary key violations).
             first_member_columns = next(iter(cls.member_schemas().values())).columns()
-            for primary_key in cls.common_primary_keys():
+            for primary_key in cls.common_primary_key():
                 if primary_key in sample:
                     continue
 
@@ -480,11 +480,11 @@ class Collection(BaseCollection, ABC):
         filters = cls._filters()
         if len(filters) > 0:
             result_cls = cls._init(results)
-            primary_keys = cls.common_primary_keys()
+            primary_key = cls.common_primary_key()
 
             keep: dict[str, pl.DataFrame] = {}
             for name, filter in filters.items():
-                keep[name] = filter.logic(result_cls).select(primary_keys).collect()
+                keep[name] = filter.logic(result_cls).select(primary_key).collect()
 
             # Now we can iterate over the results and left-join onto each individual
             # filter to obtain independent boolean indicators of whether to keep the row
@@ -497,7 +497,7 @@ class Collection(BaseCollection, ABC):
                 for name, filter_keep in keep.items():
                     lf_with_eval = lf_with_eval.join(
                         filter_keep.lazy().with_columns(pl.lit(True).alias(name)),
-                        on=primary_keys,
+                        on=primary_key,
                         how="left",
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
@@ -606,7 +606,7 @@ class Collection(BaseCollection, ABC):
             {
                 key: lf.join(
                     primary_keys,
-                    on=self.common_primary_keys(),
+                    on=self.common_primary_key(),
                     how=how,
                     maintain_order=maintain_order,
                 )
