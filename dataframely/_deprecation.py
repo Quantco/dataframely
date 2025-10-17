@@ -37,7 +37,3 @@ def warn_nullable_default_change() -> None:
         FutureWarning,
         stacklevel=4,
     )
-
-
-def error_no_nullable_primary_key() -> None:
-    raise ValueError("Nullable primary key columns are not supported.")
