@@ -3,11 +3,17 @@
 
 from __future__ import annotations
 
+import sys
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any, Self
+from typing import Any
 
 import polars as pl
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 ValidationFunction = Callable[[], pl.Expr]
 
@@ -51,6 +57,14 @@ class Rule:
 
     def __repr__(self) -> str:
         return str(self.expr)
+
+
+class DtypeCastRule(Rule):
+    """Rule that evaluates whether casting a column to another dtype is successful.
+
+    The only purpose of this rule is to provide a runtime type to distinguish it from
+    other rules.
+    """
 
 
 class GroupRule(Rule):
@@ -141,7 +155,8 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
         while ``False`` indicates an issue.
     """
     # Rules must be distinguished into two types of rules:
-    #  1. Simple rules can simply be selected on the data frame
+    #  1. Simple rules can simply be selected on the data frame (this includes rules
+    #     that check whether dtype casts succeeded)
     #  2. "Group" rules require a `group_by` and a subsequent join
     simple_exprs = {
         name: rule.expr
@@ -154,13 +169,34 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
 
     # Before we can select all of the simple expressions, we need to turn the
     # group rules into something to use in a `select` statement as well.
-    return (
+    result = (
         # NOTE: A value of `null` always validates successfully as nullability should
         #  already be checked via dedicated rules.
         _with_group_rules(lf, group_rules).with_columns(
             **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
         )
     )
+
+    # If there is at least one rule that checks for successful dtype casting, we need
+    # to take an extra step: rules other than the "dtype rules" might not be reliable
+    # if casting failed, i.e. if any of the "dtype rules" evaluated to `False`. For
+    # this reason, we set all other rule evaluations to `null` in the case of dtype
+    # casting failure.
+    dtype_rule_names = [
+        name for name, rule in rules.items() if isinstance(rule, DtypeCastRule)
+    ]
+    if len(dtype_rule_names) > 0:
+        non_dtype_rule_names = [
+            name for name, rule in rules.items() if not isinstance(rule, DtypeCastRule)
+        ]
+        all_dtype_casts_valid = pl.all_horizontal(dtype_rule_names)
+        return result.with_columns(
+            pl.when(all_dtype_casts_valid)
+            .then(pl.col(non_dtype_rule_names))
+            .otherwise(pl.lit(None, dtype=pl.Boolean))
+        )
+
+    return result
 
 
 def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyFrame:
@@ -178,16 +214,12 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
         # We group by the group columns and apply all expressions
         group_evaluations[group_columns] = lf.group_by(group_columns).agg(**group_rules)
 
-    # Eventually, we apply the rule evaluations onto the input data frame. For this,
-    # we're using left-joins. This has two effects:
-    #  - We're essentially "broadcasting" the results within each group across rows
-    #    in the same group.
-    #  - While an inner-join would be semantically more accurate, the left-join
-    #    preserves the order of the left data frame.
+    # Eventually, we apply the rule evaluations onto the input data frame. For this, we
+    # "broadcast" the results within each group across rows in the same group.
     result = lf
     for group_columns, frame in group_evaluations.items():
         result = result.join(
-            frame, on=list(group_columns), how="left", nulls_equal=True
+            frame, on=list(group_columns), nulls_equal=True, maintain_order="left"
         )
     return result
 

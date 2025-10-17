@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 import math
+import sys
 from collections.abc import Sequence
-from typing import Any, Literal, Self, cast
+from typing import Any, Literal, cast
 
 import polars as pl
 
@@ -15,6 +16,11 @@ from dataframely.random import Generator
 from ._base import Check, Column
 from ._registry import column_from_dict, register
 from .struct import Struct
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 @register

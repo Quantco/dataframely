@@ -40,6 +40,7 @@ def test_simple_serialization() -> None:
         create_schema("test", {"a": dy.Int64(check=[lambda expr: expr > 5])}),
         create_schema("test", {"a": dy.Int64(check={"x": lambda expr: expr > 5})}),
         create_schema("test", {"a": dy.Int64(alias="foo")}),
+        create_schema("test", {"a": dy.Enum(["a"])}),
         create_schema("test", {"a": dy.Decimal(scale=2, min=Decimal("1.5"))}),
         create_schema("test", {"a": dy.Date(min=dt.date(2020, 1, 1))}),
         create_schema("test", {"a": dy.Datetime(min=dt.datetime(2020, 1, 1))}),

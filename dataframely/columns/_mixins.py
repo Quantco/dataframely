@@ -1,8 +1,9 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import sys
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Generic, Protocol, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 import polars as pl
 
@@ -12,6 +13,11 @@ if TYPE_CHECKING:  # pragma: no cover
     Base = Column
 else:
     Base = object
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 # ----------------------------------- ORDINAL MIXIN ---------------------------------- #
 
@@ -70,7 +76,7 @@ class OrdinalMixin(Generic[T], Base):
             result["min_exclusive"] = expr > self.min_exclusive  # type: ignore
         if self.max is not None:
             result["max"] = expr <= self.max  # type: ignore
-        if self.max_exclusive:
+        if self.max_exclusive is not None:
             result["max_exclusive"] = expr < self.max_exclusive  # type: ignore
         return result
 

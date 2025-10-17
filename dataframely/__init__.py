@@ -14,12 +14,18 @@ from . import random
 from ._base_collection import CollectionMember
 from ._filter import filter
 from ._rule import rule
-from ._typing import DataFrame, LazyFrame
-from .collection import Collection, deserialize_collection
+from ._typing import DataFrame, LazyFrame, Validation
+from .collection import (
+    Collection,
+    deserialize_collection,
+    read_parquet_metadata_collection,
+)
 from .columns import (
     Any,
     Array,
+    Binary,
     Bool,
+    Categorical,
     Column,
     Date,
     Datetime,
@@ -70,8 +76,11 @@ __all__ = [
     "Schema",
     "deserialize_schema",
     "read_parquet_metadata_schema",
+    "read_parquet_metadata_collection",
     "Any",
+    "Binary",
     "Bool",
+    "Categorical",
     "Column",
     "Date",
     "Datetime",
@@ -96,4 +105,5 @@ __all__ = [
     "List",
     "Array",
     "Object",
+    "Validation",
 ]

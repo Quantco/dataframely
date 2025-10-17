@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
+import sys
 import textwrap
 import typing
 from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Self, cast, get_args, get_origin
+from typing import Annotated, Any, cast, get_args, get_origin
 
 import polars as pl
 
@@ -16,6 +17,11 @@ from ._filter import Filter
 from ._typing import LazyFrame as TypedLazyFrame
 from .exc import AnnotationImplementationError, ImplementationError
 from .schema import Schema
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 _MEMBER_ATTR = "__dataframely_members__"
 _FILTER_ATTR = "__dataframely_filters__"
@@ -131,7 +137,7 @@ class CollectionMeta(ABCMeta):
                     for member in result.members.values()
                 ),
                 *(
-                    set(member.schema._validation_rules())
+                    set(member.schema._validation_rules(with_cast=True))
                     for member in result.members.values()
                 ),
             )

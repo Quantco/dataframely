@@ -147,13 +147,7 @@ def test_array_with_rules() -> None:
 def test_outer_nullability() -> None:
     schema = create_schema(
         "test",
-        {
-            "nullable": dy.Array(
-                inner=dy.Integer(),
-                shape=1,
-                nullable=True,
-            )
-        },
+        {"nullable": dy.Array(inner=dy.Integer(), shape=1, nullable=True)},
     )
     df = pl.DataFrame({"nullable": [None, None]})
     schema.validate(df, cast=True)

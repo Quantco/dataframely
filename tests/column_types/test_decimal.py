@@ -37,6 +37,19 @@ def test_args_consistency_min_max(kwargs: dict[str, Any]) -> None:
 @pytest.mark.parametrize(
     "kwargs",
     [
+        {"min": decimal.Decimal(-2), "max": decimal.Decimal(0)},
+        {"min_exclusive": decimal.Decimal(-2), "max": decimal.Decimal(0)},
+        {"min": decimal.Decimal(-2), "max_exclusive": decimal.Decimal(0)},
+        {"min_exclusive": decimal.Decimal(-2), "max_exclusive": decimal.Decimal(0)},
+    ],
+)
+def test_args_zero_and_negative_min_max(kwargs: dict[str, Any]) -> None:
+    dy.Decimal(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
         dict(scale=1, min=decimal.Decimal("3.14")),
         dict(scale=1, min_exclusive=decimal.Decimal("3.14")),
         dict(scale=1, max=decimal.Decimal("3.14")),
@@ -143,11 +156,11 @@ def test_validate_range(
     valid: dict[str, list[bool]],
 ) -> None:
     kwargs = {
-        ("min" if min_inclusive else "min_exclusive"): decimal.Decimal(2),
-        ("max" if max_inclusive else "max_exclusive"): decimal.Decimal(4),
+        ("min" if min_inclusive else "min_exclusive"): decimal.Decimal(0),
+        ("max" if max_inclusive else "max_exclusive"): decimal.Decimal(2),
     }
     column = dy.Decimal(**kwargs)  # type: ignore
-    lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
+    lf = pl.LazyFrame({"a": [-1, 0, 1, 2, 3]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     expected = pl.LazyFrame(valid)
     assert_frame_equal(actual, expected)
