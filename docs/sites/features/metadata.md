@@ -25,5 +25,5 @@ Metadata are never read by `dataframely` and merely enable users to provide cust
 in a structured way.
 
 ```{note}
-Experience has shown that user-provided metadata can be useful for code generation, where, for instance, SQL code is generated from `dataframely` schemas.
+User-provided metadata can be useful for code generation. For instance, one could specify metadata for columns, such as database column types or constraints, and override the built-in SQLAlchemy generation for more tailored SQL output.
 ```
