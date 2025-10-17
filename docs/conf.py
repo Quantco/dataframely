@@ -43,7 +43,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.linkcode",
     "sphinxcontrib.apidoc",
-    "sphinx.ext.intersphinx",
     "myst_parser",
 ]
 
