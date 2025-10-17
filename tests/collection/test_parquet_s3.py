@@ -1,7 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-import os
 import subprocess
 import uuid
 from collections.abc import Iterator
@@ -37,7 +36,7 @@ def s3_tmp_path(s3_server: str, s3_bucket: str, monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("AWS_ENDPOINT_URL", s3_server)
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
-    return os.path.join(s3_bucket, str(uuid.uuid4()))
+    return f"{s3_bucket}/{str(uuid.uuid4())}"
 
 
 # -------------------------------------- SCHEMAS ------------------------------------- #

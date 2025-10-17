@@ -1,7 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-import os
 from collections.abc import Iterable
 from typing import Any, cast
 
@@ -62,6 +61,7 @@ class ParquetStorageBackend(StorageBackend):
         return df, metadata
 
     # ------------------------------ Collections ---------------------------------------
+
     def sink_collection(
         self,
         dfs: dict[str, pl.LazyFrame],
@@ -76,11 +76,12 @@ class ParquetStorageBackend(StorageBackend):
             COLLECTION_METADATA_KEY: serialized_collection
         }
 
+        fs: AbstractFileSystem = url_to_fs(path)[0]
         for key, lf in dfs.items():
             destination = (
-                os.path.join(path, key)
+                fs.sep.join([path, key])
                 if "partition_by" in kwargs
-                else os.path.join(path, f"{key}.parquet")
+                else fs.sep.join([path, f"{key}.parquet"])
             )
             self.sink_frame(
                 lf,
@@ -103,11 +104,12 @@ class ParquetStorageBackend(StorageBackend):
             COLLECTION_METADATA_KEY: serialized_collection
         }
 
+        fs: AbstractFileSystem = url_to_fs(path)[0]
         for key, lf in dfs.items():
             destination = (
-                os.path.join(path, key)
+                fs.sep.join([path, key])
                 if "partition_by" in kwargs
-                else os.path.join(path, f"{key}.parquet")
+                else fs.sep.join([path, f"{key}.parquet"])
             )
             self.write_frame(
                 lf.collect(),
@@ -151,7 +153,7 @@ class ParquetStorageBackend(StorageBackend):
                 if fs.isfile(source_path):
                     collection_types.append(_read_serialized_collection(source_path))
                 else:
-                    for file in fs.glob(os.path.join(source_path, "**/*.parquet")):
+                    for file in fs.glob(fs.sep.join([source_path, "**/*.parquet"])):
                         collection_types.append(
                             _read_serialized_collection(cast(str, file))
                         )
@@ -159,7 +161,7 @@ class ParquetStorageBackend(StorageBackend):
         # Backward compatibility: If the parquets do not have schema information,
         # fall back to looking for schema.json
         if not any(collection_types) and fs.exists(
-            schema_file := os.path.join(path, "schema.json")
+            schema_file := fs.sep.join([path, "schema.json"])
         ):
             collection_types.append(fs.read_text(schema_file))
 
@@ -169,10 +171,10 @@ class ParquetStorageBackend(StorageBackend):
     def _member_source_path(
         cls, base_path: str, fs: AbstractFileSystem, name: str
     ) -> str | None:
-        if fs.exists(path := os.path.join(base_path, name)) and fs.isdir(base_path):
+        if fs.exists(path := fs.sep.join([base_path, name])) and fs.isdir(base_path):
             # We assume that the member is stored as a hive-partitioned dataset
             return path
-        if fs.exists(path := os.path.join(base_path, f"{name}.parquet")):
+        if fs.exists(path := fs.sep.join([base_path, f"{name}.parquet"])):
             # We assume that the member is stored as a single parquet file
             return path
         return None
