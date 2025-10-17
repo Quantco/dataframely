@@ -74,7 +74,7 @@ def test_collection_matches_different_filter_names() -> None:
     class MyCollection2(MyCollection1):
         @dy.filter()
         def test_filter(self) -> pl.LazyFrame:
-            return dy.filter_relationship_one_to_one(self.x, self.x, ["foo"])
+            return dy.require_relationship_one_to_one(self.x, self.x, ["foo"])
 
     # Should not match
     assert not MyCollection1.matches(MyCollection2)
@@ -93,12 +93,12 @@ def test_collection_matches_different_filter_logc() -> None:
     class MyCollection1(BaseCollection):
         @dy.filter()
         def test_filter(self) -> pl.LazyFrame:
-            return dy.filter_relationship_one_to_one(self.x, self.x, ["foo"])
+            return dy.require_relationship_one_to_one(self.x, self.x, ["foo"])
 
     class MyCollection2(BaseCollection):
         @dy.filter()
         def test_filter(self) -> pl.LazyFrame:
-            return dy.filter_relationship_one_to_at_least_one(self.x, self.x, ["foo"])
+            return dy.require_relationship_one_to_at_least_one(self.x, self.x, ["foo"])
 
     assert not MyCollection1.matches(MyCollection2)
 
