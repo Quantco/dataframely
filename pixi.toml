@@ -112,7 +112,7 @@ install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :a
 
 [environments]
 build = ["build"]
-default = ["dev", "lint", "optionals", "test"]
+default = ["dev", "lint", "optionals", "py313", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]

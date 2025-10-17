@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import os
 import subprocess
 import uuid
 from collections.abc import Iterator
@@ -18,7 +19,7 @@ import dataframely as dy
 def s3_server() -> Iterator[str]:
     process = subprocess.Popen(["moto_server", "--port", "9999"])
     yield "http://localhost:9999"
-    process.terminate()
+    process.kill()
     process.wait()
 
 
@@ -36,7 +37,7 @@ def s3_tmp_path(s3_server: str, s3_bucket: str, monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("AWS_ENDPOINT_URL", s3_server)
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
-    return f"{s3_bucket}/{str(uuid.uuid4())}"
+    return os.path.join(s3_bucket, str(uuid.uuid4()))
 
 
 # -------------------------------------- SCHEMAS ------------------------------------- #
