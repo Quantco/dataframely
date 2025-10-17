@@ -13,9 +13,6 @@ from typing import Any, TypeAlias, cast
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
-from dataframely._deprecation import (
-    error_no_nullable_primary_key,
-)
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -76,7 +73,7 @@ class Column(ABC):
         """
 
         if nullable and primary_key:
-            error_no_nullable_primary_key()
+            raise ValueError("Nullable primary key columns are not supported.")
 
         self.nullable = nullable
         self.primary_key = primary_key

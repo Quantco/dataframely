@@ -25,7 +25,3 @@ def skip_if(env: str) -> Callable:
         return wrapper
 
     return decorator
-
-
-def error_no_nullable_primary_key() -> None:
-    raise ValueError("Nullable primary key columns are not supported.")
