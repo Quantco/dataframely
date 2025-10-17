@@ -26,7 +26,12 @@ pixi run test
 
 You can adjust the `tests/` path to run tests in a specific directory or module.
 
-## Building the Documentation
+## Documentation
+
+We use [Sphinx](https://www.sphinx-doc.org/en/master/index.html) together
+with [MyST](https://myst-parser.readthedocs.io/), and write user documentation in markdown.
+If you are not yet familiar with this setup,
+the [MyST docs for Sphinx](https://myst-parser.readthedocs.io/en/v0.17.2/sphinx/intro.html) are a good starting point.
 
 When updating the documentation, you can compile a localized build of the
 documentation and then open it in your web browser using the commands below:
