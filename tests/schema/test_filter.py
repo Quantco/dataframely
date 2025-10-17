@@ -17,7 +17,7 @@ from dataframely.testing import create_schema, validation_mask
 
 class MySchema(dy.Schema):
     a = dy.Int64(primary_key=True)
-    b = dy.String(max_length=3)
+    b = dy.String(max_length=3, nullable=True)
 
 
 @pytest.mark.parametrize(
