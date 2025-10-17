@@ -207,6 +207,8 @@ class Schema(BaseSchema, ABC):
         Raises:
             ValueError: If ``num_rows`` is not equal to the length of the values in
                 ``overrides``.
+            ValueError: If ``overrides`` are specified as a sequence of mappings and
+                the mappings do not provide the same keys.
             ValueError: If no valid data frame can be found in the configured maximum
                 number of iterations.
 
@@ -225,6 +227,21 @@ class Schema(BaseSchema, ABC):
             override_keys = (
                 set(overrides) if isinstance(overrides, Mapping) else set(overrides[0])
             )
+            if isinstance(overrides, Sequence):
+                # Check that overrides entries are consistent. Not necessary for mapping
+                # overrides as polars checks the series lists upon data frame construction.
+                inconsistent_override_keys = [
+                    index
+                    for index, current in enumerate(overrides)
+                    if set(current) != override_keys
+                ]
+                if len(inconsistent_override_keys) > 0:
+                    raise ValueError(
+                        "The `overrides` entries at the following indices "
+                        "do not provide the same keys as the first entry: "
+                        f"{inconsistent_override_keys}."
+                    )
+
             column_names = set(cls.column_names())
             if not override_keys.issubset(column_names):
                 raise ValueError(
@@ -299,10 +316,27 @@ class Schema(BaseSchema, ABC):
         sampling_rounds = 1
         while len(result) != num_rows:
             if sampling_rounds >= Config.options["max_sampling_iterations"]:
+                relevant_rows = pl.concat(
+                    [
+                        df
+                        for df in [
+                            result,
+                            used_values.drop("__row_index__"),
+                            remaining_values.drop("__row_index__"),
+                        ]
+                    ],
+                    how="diagonal",  # `used_values` and `remaining_values` only contain columns in `overrides`
+                )
+                validation_error = None
+                try:
+                    cls.validate(relevant_rows)
+                except ValidationError as e:
+                    validation_error = str(e)
                 raise ValueError(
-                    f"Sampling exceeded {Config.options['max_sampling_iterations']} "
-                    "iterations. Consider increasing the maximum number of sampling "
-                    "iterations via `dy.Config` or implement your custom sampling "
+                    f"After sampling for {Config.options['max_sampling_iterations']} "
+                    f"iterations, {validation_error or 'no valid data frame was found'}. "
+                    f"Consider increasing the maximum number "
+                    "of sampling iterations via `dy.Config` or implement your custom sampling "
                     "logic. Alternatively, passing predefined value to `overrides` "
                     "or implementing `_sampling_overrides` for your schema can also "
                     "help the sampling procedure find a valid data frame."
@@ -414,26 +448,6 @@ class Schema(BaseSchema, ABC):
     def validate(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
     ) -> DataFrame[Self]:
-        """Validate that a data frame satisfies the schema.
-
-        Args:
-            df: The data frame to validate.
-            cast: Whether columns with a wrong data type in the input data frame are
-                cast to the schema's defined data type if possible.
-
-        Returns:
-            The (collected) input data frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence. The data frame is
-            guaranteed to maintain its order.
-
-        Raises:
-            ValidationError: If the input data frame does not satisfy the schema
-                definition.
-
-        Note:
-            This method _always_ collects the input data frame in order to raise
-            potential validation errors.
-        """
         # We can dispatch to the `filter` method and raise an error if any row cannot
         # be validated
         df_valid, failures = cls.filter(df, cast=cast)
@@ -1118,11 +1132,6 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def polars_schema(cls) -> pl.Schema:
-        """Obtain the polars schema for this schema.
-
-        Returns:
-            A :mod:`polars` schema that mirrors the schema defined by this class.
-        """
         return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
 
     @classmethod

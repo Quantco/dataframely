@@ -67,12 +67,8 @@ class Enum(Column):
             metadata=metadata,
         )
         if isclass(categories) and issubclass(categories, enum.Enum):
-            categories = pl.Series(
-                values=[getattr(v, "value", v) for v in categories.__members__.values()]
-            )
-        elif not isinstance(categories, pl.Series):
-            categories = pl.Series(values=categories)
-        self.categories = categories
+            categories = (item.value for item in categories)
+        self.categories = list(categories)
 
     @property
     def dtype(self) -> pl.DataType:
@@ -81,7 +77,7 @@ class Enum(Column):
     def validate_dtype(self, dtype: PolarsDataType) -> bool:
         if not isinstance(dtype, pl.Enum):
             return False
-        return self.categories.equals(dtype.categories)
+        return self.categories == dtype.categories.to_list()
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         category_lengths = [len(c) for c in self.categories]
@@ -102,6 +98,6 @@ class Enum(Column):
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(
             n,
-            choices=self.categories.to_list(),
+            choices=self.categories,
             null_probability=self._null_probability,
         ).cast(self.dtype)

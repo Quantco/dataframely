@@ -15,6 +15,7 @@ pytestmark = pytest.mark.with_optionals
     ("column", "datatype"),
     [
         (dy.Any(), "SQL_VARIANT"),
+        (dy.Binary(), "VARBINARY(max)"),
         (dy.Bool(), "BIT"),
         (dy.Date(), "DATE"),
         (dy.Datetime(), "DATETIME2(6)"),
@@ -61,6 +62,7 @@ def test_mssql_datatype(column: Column, datatype: str) -> None:
 @pytest.mark.parametrize(
     ("column", "datatype"),
     [
+        (dy.Binary(), "BYTEA"),
         (dy.Bool(), "BOOLEAN"),
         (dy.Date(), "DATE"),
         (dy.Datetime(), "TIMESTAMP WITHOUT TIME ZONE"),

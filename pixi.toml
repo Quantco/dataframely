@@ -28,13 +28,13 @@ ipython = "*"
 make = "*"
 # Needed for generating docs for dataframely.mypy
 mypy = "*"
+myst-parser = "*"
 nbsphinx = "*"
 numpydoc = "*"
 sphinx = "*"
 sphinx-copybutton = "*"
 sphinx_rtd_theme = "*"
 sphinxcontrib-apidoc = "*"
-
 [feature.docs.tasks]
 docs = "cd docs && make html"
 readthedocs = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html"
@@ -62,6 +62,8 @@ test-no-optional = "pytest -m 'not with_optionals'"
 [feature.optionals.dependencies]
 deltalake = "*"
 pyarrow = "*"
+pydantic = ">=2.11.9,<3"
+pydantic-core = ">=2.33.2,<3"
 sqlalchemy = ">=2"
 
 [feature.build.dependencies]
@@ -105,7 +107,7 @@ python = "3.12.*"
 python = "3.13.*"
 
 [feature.nightly.tasks]
-install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars"
+install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
 build = ["build"]

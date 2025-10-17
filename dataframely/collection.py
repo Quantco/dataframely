@@ -63,7 +63,7 @@ class Collection(BaseCollection, ABC):
     represent "semantic objects" which cannot be represented in a single data frame due
     to 1-N relationships that are managed in separate data frames.
 
-    A collection must only have type annotations for :class:`~dataframely.LazyFrame`s
+    A collection must only have type annotations for :class:`~dataframely.LazyFrame`
     with known schema:
 
     .. code:: python
@@ -786,20 +786,20 @@ class Collection(BaseCollection, ABC):
                 Parquet files may have been written with Hive partitioning.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the schema data from the parquet
+                - ``"allow"``: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
                   this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
                 - ``"skip"``: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. _Use this option
-                  carefully_.
+                  data, entrusting the user that the schema is valid. *Use this option
+                  carefully*.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.read_parquet`.
@@ -849,20 +849,20 @@ class Collection(BaseCollection, ABC):
                 Parquet files may have been written with Hive partitioning.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the schema data from the parquet
+                - ``"allow"``: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
                   this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
                 - ``"skip"``: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. _Use this option
-                  carefully_.
+                  data, entrusting the user that the schema is valid. *Use this option
+                  carefully*.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.scan_parquet` for all members.
@@ -947,20 +947,20 @@ class Collection(BaseCollection, ABC):
             source: The location or DeltaTable to read from.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the schema data from the parquet
+                - ``"allow"``: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
                   this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
                 - ``"skip"``: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. _Use this option
-                  carefully_.
+                  data, entrusting the user that the schema is valid. *Use this option
+                  carefully*.
 
             kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_delta`.
 
@@ -1010,20 +1010,20 @@ class Collection(BaseCollection, ABC):
             source: The location or DeltaTable to read from.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the schema data from the parquet
+                - ``"allow"``: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
                   this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
                 - ``"skip"``: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. _Use this option
-                  carefully_.
+                  data, entrusting the user that the schema is valid. *Use this option
+                  carefully*.
 
             kwargs: Additional keyword arguments passed directly to :meth:`polars.read_delta`.
 

@@ -1,6 +1,7 @@
 use crate::errdefs::Result;
 use rand::distr::weighted::WeightedIndex;
 use rand::prelude::*;
+use regex;
 use regex_syntax::hir::{Class, ClassBytesRange, ClassUnicodeRange, Hir, HirKind};
 
 pub struct Regex {
@@ -10,7 +11,8 @@ pub struct Regex {
 
 impl Regex {
     pub fn new(pattern: &str) -> Result<Self> {
-        let hir = regex_syntax::parse(pattern)?;
+        let p = sanitize_regex(pattern);
+        let hir = regex_syntax::parse(&p)?;
         Ok(Self { repr: hir })
     }
 
@@ -185,6 +187,57 @@ impl Range for ClassUnicodeRange {
         Bounds {
             start: self.start() as u32,
             end: self.end() as u32,
+        }
+    }
+}
+
+/// Sanitize the regex pattern to avoid constructs that lead to undesired behavior during sampling.
+fn sanitize_regex(pattern: &str) -> String {
+    // Replace unescaped \d with [0-9], as the regex_syntax crate's \d includes non-ASCII digits
+    // which we do not want to sample.
+    let re = regex::Regex::new(r"(?P<pre>[^\\]|^)(\\d)").unwrap();
+    let mut sanitized = pattern.to_string();
+    // Use a loop to repeatedly apply the replacement until no more changes occur,
+    // to handle consecutive (i.e., overlapping) \d correctly.
+    loop {
+        match re.replace_all(&sanitized, "${pre}[0-9]") {
+            std::borrow::Cow::Owned(new) => {
+                sanitized = new;
+            }
+            std::borrow::Cow::Borrowed(_) => return sanitized,
+        }
+    }
+}
+
+/* ------------------------------------------ TESTS ------------------------------------------- */
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(r"\d", "[0-9]")]
+    #[case(r"\\d", r"\\d")]
+    #[case(r"\d and \\d", r"[0-9] and \\d")]
+    #[case(r"\dabc", "[0-9]abc")]
+    #[case(r"abc\dxyz", "abc[0-9]xyz")]
+    #[case(r"a\d", "a[0-9]")]
+    #[case(r"\\\\d", r"\\\\d")]
+    #[case(r"\d\d\d", "[0-9][0-9][0-9]")]
+    fn test_sanitize_regex(#[case] pattern: &str, #[case] expected: &str) {
+        let sanitized = sanitize_regex(pattern);
+        assert_eq!(sanitized, expected);
+    }
+
+    #[rstest]
+    fn test_regex_sample_digits() {
+        let regex = Regex::new(r"\d\d\d").unwrap();
+        let mut rng = StdRng::seed_from_u64(42);
+        for _ in 0..100 {
+            let sample = regex.sample(&mut rng, 16).unwrap();
+            assert_eq!(sample.len(), 3);
+            assert!(sample.chars().all(|c| c.is_ascii_digit()));
         }
     }
 }
