@@ -40,7 +40,9 @@ def test_warning_deprecated_nullable_primary_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("DATAFRAMELY_NO_FUTURE_WARNINGS", "")
-    with pytest.warns(FutureWarning, match="Nullable primary keys are not supported"):
+    with pytest.warns(
+        FutureWarning, match=r"Nullable primary key columns are not supported"
+    ):
         deprecated_nullable_primary_key()
 
 

@@ -44,8 +44,8 @@ def test_nullability() -> None:
     assert columns["e"].nullable
 
 
-def test_primary_keys() -> None:
-    assert MySchema.primary_keys() == ["a", "b"]
+def test_primary_key() -> None:
+    assert MySchema.primary_key() == ["a", "b"]
 
 
 def test_no_rule_named_primary_key() -> None:

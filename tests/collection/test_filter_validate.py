@@ -29,13 +29,13 @@ class MyCollection(dy.Collection):
     second: dy.LazyFrame[MySecondSchema]
 
     @dy.filter()
-    def equal_primary_keys(self) -> pl.LazyFrame:
-        return self.first.join(self.second, on=self.common_primary_keys())
+    def equal_primary_key(self) -> pl.LazyFrame:
+        return self.first.join(self.second, on=self.common_primary_key())
 
     @dy.filter()
     def first_b_greater_second_b(self) -> pl.LazyFrame:
         return self.first.join(
-            self.second, on=self.common_primary_keys(), how="full", coalesce=True
+            self.second, on=self.common_primary_key(), how="full", coalesce=True
         ).filter((pl.col("b") > pl.col("b_right")).fill_null(True))
 
 
@@ -134,11 +134,11 @@ def test_filter_with_filter_without_rule_violation(
     assert_frame_equal(out.first, pl.LazyFrame({"a": [3], "b": [3]}))
     assert_frame_equal(out.second, pl.LazyFrame({"a": [3], "b": [2]}))
     assert failure["first"].counts() == {
-        "equal_primary_keys": 1,
+        "equal_primary_key": 1,
         "first_b_greater_second_b": 1,
     }
     assert failure["second"].counts() == {
-        "equal_primary_keys": 2,
+        "equal_primary_key": 2,
         "first_b_greater_second_b": 1,
     }
 
@@ -156,8 +156,8 @@ def test_filter_with_filter_with_rule_violation(
     assert isinstance(out, MyCollection)
     assert_frame_equal(out.first, pl.LazyFrame({"a": [3], "b": [3]}))
     assert_frame_equal(out.second, pl.LazyFrame({"a": [3], "b": [1]}))
-    assert failure["first"].counts() == {"equal_primary_keys": 2}
-    assert failure["second"].counts() == {"b|min": 1, "equal_primary_keys": 2}
+    assert failure["first"].counts() == {"equal_primary_key": 2}
+    assert failure["second"].counts() == {"b|min": 1, "equal_primary_key": 2}
 
 
 # -------------------------------- VALIDATE WITH DATA -------------------------------- #
@@ -213,10 +213,10 @@ def test_validate_with_filter_without_rule_violation(
         MyCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")
-    exc.match(r"'equal_primary_keys' failed validation for 1 rows")
+    exc.match(r"'equal_primary_key' failed validation for 1 rows")
     exc.match(r"'first_b_greater_second_b' failed validation for 1 rows")
     exc.match(r"Member 'second' failed validation")
-    exc.match(r"'equal_primary_keys' failed validation for 2 rows")
+    exc.match(r"'equal_primary_key' failed validation for 2 rows")
 
 
 def test_validate_with_filter_with_rule_violation(
@@ -234,7 +234,7 @@ def test_validate_with_filter_with_rule_violation(
         MyCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")
-    exc.match(r"'equal_primary_keys' failed validation for 2 rows")
+    exc.match(r"'equal_primary_key' failed validation for 2 rows")
     exc.match(r"Member 'second' failed validation")
     exc.match(r"'min' failed for 1 rows")
 
