@@ -198,15 +198,15 @@ fn sanitize_regex(pattern: &str) -> String {
     let re = regex::Regex::new(r"(?P<pre>[^\\]|^)(\\d)").unwrap();
     let mut sanitized = pattern.to_string();
     // Use a loop to repeatedly apply the replacement until no more changes occur,
-    // to handle consecutive \d correctly.
+    // to handle consecutive (i.e., overlapping) \d correctly.
     loop {
-        let new = re.replace_all(&sanitized, "${pre}[0-9]").to_string();
-        if new == sanitized {
-            break;
+        match re.replace_all(&sanitized, "${pre}[0-9]") {
+            std::borrow::Cow::Owned(new) => {
+                sanitized = new;
+            }
+            std::borrow::Cow::Borrowed(_) => return sanitized,
         }
-        sanitized = new;
     }
-    sanitized
 }
 
 /* ------------------------------------------ TESTS ------------------------------------------- */

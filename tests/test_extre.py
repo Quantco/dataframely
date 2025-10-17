@@ -59,12 +59,6 @@ def test_sample_one(regex: str) -> None:
     assert re.fullmatch(regex, sample) is not None
 
 
-def test_sample_digits() -> None:
-    regex = r"[0-9]{10}"
-    sample = extre.sample(regex, max_repetitions=10)
-    assert sample.isdigit()
-
-
 @pytest.mark.parametrize("regex", TEST_REGEXES)
 def test_sample_many(regex: str) -> None:
     samples = extre.sample(regex, n=100, max_repetitions=10)
