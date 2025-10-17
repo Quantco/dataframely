@@ -2,4 +2,5 @@
 
 ```{toctree}
 primary-keys
+serialization
 ```
