@@ -71,6 +71,15 @@ def test_name() -> None:
     assert MySchema.d.name == "e"
 
 
+def test_name_in_columns() -> None:
+    cols = MySchema.columns()
+    assert cols["a"].name == "a"
+    assert cols["b"].name == "b"
+    assert cols["c"].name == "c"
+    # The alias "e" is used for the key in the columns dict.
+    assert cols["e"].name == "e"
+
+
 def test_col_in_polars_expression() -> None:
     df = (
         pl.DataFrame({"a": [1, 2], "b": ["a", "b"], "c": [1.0, 2.0], "e": [None, None]})
@@ -86,3 +95,34 @@ def test_dunder_name() -> None:
 
 def test_dunder_name_with_rule() -> None:
     assert MySchemaWithRule.__name__ == "MySchemaWithRule"
+
+
+def test_non_column_member_is_allowed() -> None:
+    class MySchemaWithNonColumnMembers(dy.Schema):
+        a = dy.Int32(nullable=False)
+        version: int = 1
+        useful_tuple: tuple[int, int] = (1, 2)
+
+    columns = MySchemaWithNonColumnMembers.columns()
+    assert "a" in columns
+    assert "version" not in columns
+    assert "useful_tuple" not in columns
+    assert MySchemaWithNonColumnMembers.version == 1
+    assert MySchemaWithNonColumnMembers.useful_tuple == (1, 2)
+
+
+def test_user_error_tuple_column() -> None:
+    with pytest.raises(TypeError, match="tuple"):
+
+        class MySchemaWithTupleOfColumn(dy.Schema):
+            a = dy.Int32(nullable=False)
+            b = (dy.Int32(nullable=False),)  # User error: Trailing comma = tuple
+            c = dy.Int32(nullable=False)
+
+
+def test_user_error_column_type_not_instance() -> None:
+    with pytest.raises(TypeError, match="type, not an instance"):
+
+        class MySchemaWithColumnTypeNotInstance(dy.Schema):
+            a = dy.Int32(nullable=False, primary_key=True)
+            b = dy.Float64  # User error: Forgot parentheses!

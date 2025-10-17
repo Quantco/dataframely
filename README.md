@@ -8,6 +8,7 @@
   </h3>
 
 [![CI](https://img.shields.io/github/actions/workflow/status/quantco/dataframely/ci.yml?style=flat-square&branch=main)](https://github.com/quantco/dataframely/actions/workflows/ci.yml)
+[![Nightly CI](https://img.shields.io/github/actions/workflow/status/quantco/dataframely/nightly.yml?style=flat-square&branch=main)](https://github.com/quantco/dataframely/actions/workflows/nightly.yml)
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/dataframely?logoColor=white&logo=conda-forge&style=flat-square)](https://prefix.dev/channels/conda-forge/packages/dataframely)
 [![pypi-version](https://img.shields.io/pypi/v/dataframely.svg?logo=pypi&logoColor=white&style=flat-square)](https://pypi.org/project/dataframely)
 [![python-version](https://img.shields.io/pypi/pyversions/dataframely?logoColor=white&logo=python&style=flat-square)](https://pypi.org/project/dataframely)
@@ -51,7 +52,7 @@ class HouseSchema(dy.Schema):
     price = dy.Float64(nullable=False)
 
     @dy.rule()
-    def reasonable_bathroom_to_bedrooom_ratio() -> pl.Expr:
+    def reasonable_bathroom_to_bedroom_ratio() -> pl.Expr:
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 

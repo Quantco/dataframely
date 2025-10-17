@@ -5,7 +5,9 @@ from ._base import Column
 from ._registry import column_from_dict
 from .any import Any
 from .array import Array
+from .binary import Binary
 from .bool import Bool
+from .categorical import Categorical
 from .datetime import Date, Datetime, Duration, Time
 from .decimal import Decimal
 from .enum import Enum
@@ -21,7 +23,9 @@ __all__ = [
     "column_from_dict",
     "Any",
     "Array",
+    "Binary",
     "Bool",
+    "Categorical",
     "Date",
     "Datetime",
     "Decimal",

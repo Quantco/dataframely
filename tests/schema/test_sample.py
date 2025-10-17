@@ -1,5 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -54,6 +55,46 @@ class LimitedComplexSchema(dy.Schema):
     def minimum_two_per_a() -> pl.Expr:
         # We cannot generate more than 768 rows with this rule
         return pl.len() <= 3
+
+
+class OrderedSchema(dy.Schema):
+    a = dy.UInt8(primary_key=True)
+    b = dy.UInt8(primary_key=True)
+    iter = dy.Integer()
+
+    @dy.rule()
+    def iter_ordered() -> pl.Expr:
+        return (
+            pl.col("iter").rank(method="ordinal")
+            == pl.struct("a", "b").rank(method="ordinal")
+        ).all()
+
+    @classmethod
+    def _sampling_overrides(cls) -> dict[str, pl.Expr]:
+        # Ensure that the `iter` column is ordered
+        return {"iter": pl.struct("a", "b").rank(method="ordinal")}
+
+
+class SchemaWithTypeChangingOverrides(dy.Schema):
+    a = dy.UInt8()
+    b = dy.String()
+
+    @classmethod
+    def _sampling_overrides(cls) -> dict[str, pl.Expr]:
+        return {"a": pl.col("a").cast(pl.String())}
+
+
+class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
+    a = dy.UInt8()
+
+    @classmethod
+    def _sampling_overrides(cls) -> dict[str, pl.Expr]:
+        return {"irrelevant_column": pl.col("irrelevant_column").cast(pl.String())}
+
+
+class MyAdvancedSchema(dy.Schema):
+    a = dy.Float64(min=20.0)
+    b = dy.String(regex=r"abc*")
 
 
 # --------------------------------------- TESTS -------------------------------------- #
@@ -135,3 +176,79 @@ def test_sample_no_overrides_no_num_rows() -> None:
     df = MySimpleSchema.sample()
     MySimpleSchema.validate(df)
     assert len(df) == 1
+
+
+def test_sample_ordered_works_with_hook() -> None:
+    for _ in range(100):
+        df = OrderedSchema.sample(1000)
+        OrderedSchema.validate(df)
+        assert len(df) == 1000
+
+
+def test_sample_ordered_works_with_overrides() -> None:
+    df = OrderedSchema.sample(
+        overrides={
+            "a": [1, 4, 2, 5, 5],
+            "b": [1, 2, 3, 4, 0],
+            "iter": [2, 6, 4, 10, 8],
+        }
+    )
+    OrderedSchema.validate(df)
+    assert len(df) == 5
+    # Assert that the hook is not used (would create 1..5 permutation)
+    assert df.get_column("iter").to_list() == [2, 6, 4, 10, 8]
+
+
+def test_sample_preprocessing_data_type_change() -> None:
+    df = SchemaWithTypeChangingOverrides.sample(100)
+
+    SchemaWithTypeChangingOverrides.validate(df)
+    assert len(df) == 100
+
+
+def test_sample_raises_superfluous_column_override() -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"`_sampling_overrides` for columns that are not in the schema",
+    ):
+        SchemaWithIrrelevantColumnPreProcessing.sample(100)
+
+
+def test_sample_with_inconsistent_overrides_keys_raises() -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"The `overrides` entries at the following indices do not provide "
+            r"the same keys as the first entry: \[1, 2\]."
+        ),
+    ):
+        MySimpleSchema.sample(
+            overrides=[
+                {"a": 1, "b": "one"},
+                {"a": 2},
+                {"b": 2},
+            ]
+        )
+
+
+@pytest.mark.parametrize(
+    "overrides,failed_column,failed_rule,failed_rows",
+    [
+        ({"a": [0, 1], "b": ["abcd", "abc"]}, "a", "min", 2),
+        ({"a": [0, 1]}, "a", "min", 2),
+        ({"a": [20], "b": ["invalid"]}, "b", "regex", 1),
+    ],
+)
+def test_sample_invalid_override_values_raises(
+    overrides: dict[str, Any], failed_column: str, failed_rule: str, failed_rows: int
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"After sampling for 100 iterations, 1 rules failed validation:"
+            rf"\n \* Column '{failed_column}' failed validation for 1 rules:"
+            rf"\n   - '{failed_rule}' failed for {failed_rows} rows."
+        ),
+    ):
+        with dy.Config(max_sampling_iterations=100):  # speed up the test
+            MyAdvancedSchema.sample(overrides=overrides)

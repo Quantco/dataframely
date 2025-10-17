@@ -1,0 +1,36 @@
+name: Nightly CI
+on:
+  schedule:
+    - cron: "0 0 * * *" # Runs every day at midnight UTC
+  workflow_dispatch:
+
+# Automatically stop old builds on the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Unit Tests (${{ matrix.os == 'ubuntu-latest' && 'Linux' || 'Windows' }})
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@194d461b21b6c5717c722ffc597fa91ed2ff29fa # v0.9.1
+        with:
+          environments: nightly
+      - name: Install polars nightly
+        run: pixi run -e nightly install-polars-nightly
+      - name: Install repository
+        run: pixi run -e nightly postinstall
+      - name: Run pytest
+        run: pixi run -e nightly test-coverage --color=yes

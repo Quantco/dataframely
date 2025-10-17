@@ -10,16 +10,28 @@ authors = [
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
-dependencies = ["numpy", "polars>=1.30"]
+dependencies = [
+  "numpy",
+  "polars>=1.32",
+  # Conditional
+  'typing-extensions; python_version <= "3.10"',
+]
 description = "A declarative, polars-native data frame validation library"
 name = "dataframely"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 version = "0.0.0"
+
+[project.optional-dependencies]
+deltalake = ["deltalake"]
+sqlalchemy = ["sqlalchemy"]
+pyarrow = ["pyarrow"]
+pydantic = ["pydantic>=2"]
 
 [project.urls]
 Documentation = "https://dataframely.readthedocs.io/"
@@ -71,21 +83,29 @@ disallow_untyped_defs = true
 exclude = ["docs/"]
 explicit_package_bases = true
 no_implicit_optional = true
-plugins = ["dataframely.mypy"]
-python_version = '3.11'
+plugins = ["dataframely.mypy", "pydantic.mypy"]
+python_version = '3.10'
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pyarrow.*"]
+module = ["pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
+
+[tool.typos.default.extend-identifiers]
+plain_serializer_function_ser_schema = "plain_serializer_function_ser_schema"
 
 [tool.pytest.ini_options]
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib --benchmark-skip"
 filterwarnings = [
+  # By default, all warnings should yield errors
+  "error",
   # Almost all tests are oblivious to the value of `nullable`. Let's ignore the warning as long as it exists.
   "ignore:The 'nullable' argument was not explicitly set:FutureWarning",
 ]
 testpaths = ["tests"]
+markers = [
+  "with_optionals: Tests that require optional dependencies to be installed",
+]
 
 [tool.coverage.run]
 omit = ["dataframely/mypy.py", "dataframely/testing/generate.py"]

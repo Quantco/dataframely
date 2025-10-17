@@ -21,6 +21,8 @@ COLUMN_TYPES: list[type[dc.Column]] = [
     dc.UInt32,
     dc.UInt64,
     dc.String,
+    dc.Categorical,
+    dc.Binary,
 ]
 INTEGER_COLUMN_TYPES: list[type[dc.Column]] = [
     dc.Integer,

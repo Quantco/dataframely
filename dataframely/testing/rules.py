@@ -30,4 +30,4 @@ def evaluate_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFrame:
         The same return value as :meth:`with_evaluation_rules` only that the columns
         of the input data frame are dropped.
     """
-    return with_evaluation_rules(lf, rules).drop(lf.collect_schema())
+    return lf.pipe(with_evaluation_rules, rules).drop(lf.collect_schema().keys())

@@ -106,3 +106,7 @@ class AnnotationImplementationError(ImplementationError):
                 "`from __future__ import annotations` in the file that defines the collection."
             )
         super().__init__(message)
+
+
+class ValidationRequiredError(Exception):
+    """Error raised when validation is when reading a parquet file."""

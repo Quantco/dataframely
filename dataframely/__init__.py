@@ -14,12 +14,18 @@ from . import random
 from ._base_collection import CollectionMember
 from ._filter import filter
 from ._rule import rule
-from ._typing import DataFrame, LazyFrame
-from .collection import Collection
+from ._typing import DataFrame, LazyFrame, Validation
+from .collection import (
+    Collection,
+    deserialize_collection,
+    read_parquet_metadata_collection,
+)
 from .columns import (
     Any,
     Array,
+    Binary,
     Bool,
+    Categorical,
     Column,
     Date,
     Datetime,
@@ -51,7 +57,7 @@ from .functional import (
     filter_relationship_one_to_at_least_one,
     filter_relationship_one_to_one,
 )
-from .schema import Schema, deserialize_schema
+from .schema import Schema, deserialize_schema, read_parquet_metadata_schema
 
 __all__ = [
     "random",
@@ -61,6 +67,7 @@ __all__ = [
     "LazyFrame",
     "Collection",
     "CollectionMember",
+    "deserialize_collection",
     "Config",
     "FailureInfo",
     "concat_collection_members",
@@ -68,8 +75,12 @@ __all__ = [
     "filter_relationship_one_to_one",
     "Schema",
     "deserialize_schema",
+    "read_parquet_metadata_schema",
+    "read_parquet_metadata_collection",
     "Any",
+    "Binary",
     "Bool",
+    "Categorical",
     "Column",
     "Date",
     "Datetime",
@@ -94,4 +105,5 @@ __all__ = [
     "List",
     "Array",
     "Object",
+    "Validation",
 ]

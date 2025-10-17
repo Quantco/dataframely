@@ -1,15 +1,27 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-import importlib
+from __future__ import annotations
+
 import json
 from functools import cached_property
 from pathlib import Path
-from typing import IO, Generic, Self, TypeVar, cast
+from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
 
 import polars as pl
+from polars._typing import PartitioningScheme
 
 from dataframely._base_schema import BaseSchema
+from dataframely._compat import deltalake
+
+from ._storage import StorageBackend
+from ._storage.delta import DeltaStorageBackend
+from ._storage.parquet import ParquetStorageBackend
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .schema import Schema
+
+UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
 
 S = TypeVar("S", bound=BaseSchema)
 
@@ -73,52 +85,218 @@ class FailureInfo(Generic[S]):
 
     # ---------------------------------- PERSISTENCE --------------------------------- #
 
-    def write_parquet(self, file: str | Path | IO[bytes]) -> None:
-        """Write the failure info to a Parquet file.
+    def write_parquet(self, file: str | Path | IO[bytes], **kwargs: Any) -> None:
+        """Write the failure info to a parquet file.
 
         Args:
-            file: The file path or writable file-like object to write to.
+            file: The file path or writable file-like object to which to write the
+                parquet file. This should be a path to a directory if writing a
+                partitioned dataset.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
+                is a dictionary.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
         """
-        metadata_json = json.dumps(
-            {
-                "rule_columns": self._rule_columns,
-                "schema": f"{self.schema.__module__}.{self.schema.__name__}",
-            }
-        )
-        self._df.write_parquet(file, metadata={"dataframely": metadata_json})
+        self._write(ParquetStorageBackend(), file=file, **kwargs)
+
+    def sink_parquet(
+        self, file: str | Path | IO[bytes] | PartitioningScheme, **kwargs: Any
+    ) -> None:
+        """Stream the failure info to a parquet file.
+
+        Args:
+            file: The file path or writable file-like object to which to write the
+                parquet file. This should be a path to a directory if writing a
+                partitioned dataset.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.sink_parquet`. ``metadata`` may only be provided if it
+                is a dictionary.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
+        """
+        self._sink(ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
-    def scan_parquet(cls, source: str | Path | IO[bytes]) -> Self:
-        """Lazily read the parquet file with the failure info.
+    def read_parquet(
+        cls, source: str | Path | IO[bytes], **kwargs: Any
+    ) -> FailureInfo[Schema]:
+        """Read a parquet file with the failure info.
 
         Args:
-            source: The file path or readable file-like object to read from.
+            source: Path, directory, or file-like object from which to read the data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.read_parquet`.
 
         Returns:
             The failure info object.
+
+        Raises:
+            ValueError: If no appropriate metadata can be found.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`
         """
-        lf = pl.scan_parquet(source)
+        return cls._read(
+            backend=ParquetStorageBackend(), file=source, lazy=False, **kwargs
+        )
 
-        # We can read the rule columns either from the metadata of the Parquet file
-        # or, to remain backwards-compatible, from the last column of the lazy frame if
-        # the parquet file is missing metadata.
-        rule_columns: list[str]
-        schema_name: str
-        if (meta := pl.read_parquet_metadata(source).get("dataframely")) is not None:
-            metadata = json.loads(meta)
-            rule_columns = metadata["rule_columns"]
-            schema_name = metadata["schema"]
+    @classmethod
+    def scan_parquet(
+        cls, source: str | Path | IO[bytes], **kwargs: Any
+    ) -> FailureInfo[Schema]:
+        """Lazily read a parquet file with the failure info.
+
+        Args:
+            source: Path, directory, or file-like object from which to read the data.
+
+        Returns:
+            The failure info object.
+
+        Raises:
+            ValueError: If no appropriate metadata can be found.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`
+        """
+        return cls._read(
+            backend=ParquetStorageBackend(), file=source, lazy=True, **kwargs
+        )
+
+    def write_delta(
+        self,
+        /,
+        target: str | Path | deltalake.DeltaTable,
+        **kwargs: Any,
+    ) -> None:
+        """Write the failure info to a delta lake table.
+
+        Args:
+            target: The file path or DeltaTable to which to write the delta lake data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.write_delta`.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
+        """
+        self._write(DeltaStorageBackend(), target=target, **kwargs)
+
+    @classmethod
+    def read_delta(
+        cls, source: str | Path | deltalake.DeltaTable, **kwargs: Any
+    ) -> FailureInfo[Schema]:
+        """Read a delta lake table with the failure info.
+
+        Args:
+            source: Path or DeltaTable from which to read the data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.read_delta`.
+
+        Returns:
+            The failure info object.
+
+        Raises:
+            ValueError: If no appropriate metadata can be found.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
+        """
+        return cls._read(
+            backend=DeltaStorageBackend(), source=source, lazy=False, **kwargs
+        )
+
+    @classmethod
+    def scan_delta(
+        cls, source: str | Path | deltalake.DeltaTable, **kwargs: Any
+    ) -> FailureInfo[Schema]:
+        """Lazily read a delta lake table with the failure info.
+
+        Args:
+            source: Path or DeltaTable from which to read the data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.scan_delta`.
+
+        Returns:
+            The failure info object.
+
+        Raises:
+            ValueError: If no appropriate metadata can be found.
+
+        Attention:
+            Be aware that this method suffers from the same limitations as
+            :meth:`Schema.serialize`.
+        """
+        return cls._read(
+            backend=DeltaStorageBackend(), source=source, lazy=True, **kwargs
+        )
+
+    # -------------------------------- Storage --------------------------------------- #
+
+    def _sink(
+        self,
+        backend: StorageBackend,
+        **kwargs: Any,
+    ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        backend.sink_failure_info(
+            lf=self._lf,
+            serialized_rules=json.dumps(self._rule_columns),
+            serialized_schema=self.schema.serialize(),
+            **kwargs,
+        )
+
+    def _write(
+        self,
+        backend: StorageBackend,
+        **kwargs: Any,
+    ) -> None:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        backend.write_failure_info(
+            df=self._df,
+            serialized_rules=json.dumps(self._rule_columns),
+            serialized_schema=self.schema.serialize(),
+            **kwargs,
+        )
+
+    @classmethod
+    def _read(
+        cls,
+        backend: StorageBackend,
+        lazy: bool,
+        **kwargs: Any,
+    ) -> FailureInfo[Schema]:
+        # Utility method encapsulating the interaction with the StorageBackend
+
+        from .schema import Schema, deserialize_schema
+
+        if lazy:
+            lf, serialized_rules, serialized_schema = backend.scan_failure_info(
+                **kwargs
+            )
         else:
-            last_column = lf.collect_schema().names()[-1]
-            metadata = json.loads(last_column)
-            rule_columns = metadata["rule_columns"]
-            schema_name = metadata["schema"]
-            lf = lf.drop(last_column)
+            df, serialized_rules, serialized_schema = backend.read_failure_info(
+                **kwargs
+            )
+            lf = df.lazy()
 
-        *schema_module_parts, schema_name = schema_name.split(".")
-        module = importlib.import_module(".".join(schema_module_parts))
-        schema = cast(type[S], getattr(module, schema_name))
-        return cls(lf, rule_columns, schema=schema)
+        schema = deserialize_schema(serialized_schema, strict=False) or type(
+            UNKNOWN_SCHEMA_NAME, (Schema,), {}
+        )
+        return FailureInfo(
+            lf,
+            json.loads(serialized_rules),
+            schema=schema,
+        )
 
 
 # ------------------------------------ COMPUTATION ----------------------------------- #

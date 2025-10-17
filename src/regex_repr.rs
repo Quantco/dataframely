@@ -60,7 +60,7 @@ fn string_length_recursively(hir: &Hir) -> Result<(usize, Option<usize>)> {
                 .collect::<std::result::Result<Vec<_>, _>>()?;
             (
                 inner.iter().map(|x| x.0).min().unwrap_or(0),
-                inner.iter().map(|x| x.0).max(),
+                inner.iter().flat_map(|x| x.1).max(),
             )
         }
         // A class's length is always a single character and therefore has length 1

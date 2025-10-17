@@ -2,19 +2,20 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import pytest
-import sqlalchemy as sa
-from sqlalchemy.dialects.mssql.pyodbc import MSDialect_pyodbc
-from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 
 import dataframely as dy
+from dataframely._compat import Dialect, MSDialect_pyodbc, PGDialect_psycopg2
 from dataframely.columns import Column
 from dataframely.testing import COLUMN_TYPES, create_schema
+
+pytestmark = pytest.mark.with_optionals
 
 
 @pytest.mark.parametrize(
     ("column", "datatype"),
     [
         (dy.Any(), "SQL_VARIANT"),
+        (dy.Binary(), "VARBINARY(max)"),
         (dy.Bool(), "BIT"),
         (dy.Date(), "DATE"),
         (dy.Datetime(), "DATETIME2(6)"),
@@ -47,6 +48,7 @@ from dataframely.testing import COLUMN_TYPES, create_schema
         (dy.String(regex="^[abc]{1,3}d$"), "VARCHAR(4)"),
         (dy.Enum(["foo", "bar"]), "CHAR(3)"),
         (dy.Enum(["a", "abc"]), "VARCHAR(3)"),
+        (dy.Categorical(), "VARCHAR(max)"),
     ],
 )
 def test_mssql_datatype(column: Column, datatype: str) -> None:
@@ -60,6 +62,7 @@ def test_mssql_datatype(column: Column, datatype: str) -> None:
 @pytest.mark.parametrize(
     ("column", "datatype"),
     [
+        (dy.Binary(), "BYTEA"),
         (dy.Bool(), "BOOLEAN"),
         (dy.Date(), "DATE"),
         (dy.Datetime(), "TIMESTAMP WITHOUT TIME ZONE"),
@@ -106,7 +109,7 @@ def test_postgres_datatype(column: Column, datatype: str) -> None:
 @pytest.mark.parametrize("nullable", [True, False])
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc()])
 def test_sql_nullability(
-    column_type: type[Column], nullable: bool, dialect: sa.Dialect
+    column_type: type[Column], nullable: bool, dialect: Dialect
 ) -> None:
     schema = create_schema("test", {"a": column_type(nullable=nullable)})
     columns = schema.sql_schema(dialect)
@@ -118,7 +121,7 @@ def test_sql_nullability(
 @pytest.mark.parametrize("primary_key", [True, False])
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
 def test_sql_primary_key(
-    column_type: type[Column], primary_key: bool, dialect: sa.Dialect
+    column_type: type[Column], primary_key: bool, dialect: Dialect
 ) -> None:
     schema = create_schema("test", {"a": column_type(primary_key=primary_key)})
     columns = schema.sql_schema(dialect)
@@ -128,13 +131,13 @@ def test_sql_primary_key(
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_sql_multiple_columns(dialect: sa.Dialect) -> None:
+def test_sql_multiple_columns(dialect: Dialect) -> None:
     schema = create_schema("test", {"a": dy.Int32(nullable=False), "b": dy.Integer()})
     assert len(schema.sql_schema(dialect)) == 2
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_raise_for_list_column(dialect: sa.Dialect) -> None:
+def test_raise_for_list_column(dialect: Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'List' type."
     ):
@@ -142,7 +145,7 @@ def test_raise_for_list_column(dialect: sa.Dialect) -> None:
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_raise_for_array_column(dialect: sa.Dialect) -> None:
+def test_raise_for_array_column(dialect: Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'Array' type."
     ):
@@ -150,7 +153,7 @@ def test_raise_for_array_column(dialect: sa.Dialect) -> None:
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_raise_for_struct_column(dialect: sa.Dialect) -> None:
+def test_raise_for_struct_column(dialect: Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'Struct' type."
     ):
@@ -158,7 +161,7 @@ def test_raise_for_struct_column(dialect: sa.Dialect) -> None:
 
 
 @pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
-def test_raise_for_object_column(dialect: sa.Dialect) -> None:
+def test_raise_for_object_column(dialect: Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'Object' type."
     ):

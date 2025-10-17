@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
-from collections.abc import Iterable
 from typing import TypeVar
 
 import polars as pl
@@ -13,27 +12,6 @@ FrameType = TypeVar("FrameType", pl.DataFrame, pl.LazyFrame)
 
 EPOCH_DATETIME = dt.datetime(1970, 1, 1)
 SECONDS_PER_DAY = 86400
-
-# --------------------------------------- JOINS -------------------------------------- #
-
-
-def join_all_inner(dfs: Iterable[FrameType], on: str | list[str]) -> FrameType:
-    it = iter(dfs)
-    result = next(it)
-    while (df := next(it, None)) is not None:
-        result = result.join(df, on=on)
-    return result
-
-
-def join_all_outer(dfs: Iterable[FrameType], on: str | list[str]) -> FrameType:
-    it = iter(dfs)
-    result = next(it)
-    while (df := next(it, None)) is not None:
-        result = result.join(df, on=on, how="full", coalesce=True)
-    return result
-
-
-# ------------------------------------- DATETIMES ------------------------------------ #
 
 
 def date_matches_resolution(t: dt.date, resolution: str) -> bool:

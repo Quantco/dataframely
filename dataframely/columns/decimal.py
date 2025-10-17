@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import decimal
-import math
 from typing import Any
 
 import polars as pl
@@ -164,14 +163,16 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
 def _validate(
     value: decimal.Decimal, precision: int | None, scale: int, name: str
 ) -> None:
-    exponent = value.as_tuple().exponent
+    (_, digits, exponent) = value.as_tuple()
     if not isinstance(exponent, int):
         raise ValueError(f"Encountered 'inf' or 'NaN' for `{name}`.")
     if -exponent > scale:
         raise ValueError(f"Scale of `{name}` exceeds scale of column.")
-    if precision is not None and _num_digits(int(value)) > precision - scale:
+    if precision is not None and _num_digits(digits, exponent) > precision - scale:
         raise ValueError(f"`{name}` exceeds precision of column.")
 
 
-def _num_digits(i: int) -> int:
-    return int(math.log10(i) + 1)
+def _num_digits(digits: tuple[int, ...], exponent: int) -> int:
+    if exponent >= 0:
+        return len(digits) + exponent
+    return max(len(digits) + exponent, 1)
