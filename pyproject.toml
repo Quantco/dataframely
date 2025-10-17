@@ -91,7 +91,7 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["fsspec.*", "minio.*", "pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
+module = ["boto3.*", "fsspec.*", "pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
 
 [tool.typos.default.extend-identifiers]
 plain_serializer_function_ser_schema = "plain_serializer_function_ser_schema"

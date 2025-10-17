@@ -56,25 +56,10 @@ jobs:
         uses: prefix-dev/setup-pixi@194d461b21b6c5717c722ffc597fa91ed2ff29fa # v0.9.1
         with:
           environments: ${{ matrix.environment }}
-      - name: Start minio for s3 tests
-        if: matrix.os == 'ubuntu-latest'
-        run: docker compose up minio -d --wait
       - name: Install repository
         run: pixi run -e ${{ matrix.environment }} postinstall
-      - name: Derive test markers
-        id: markers
-        run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            echo 'marker=${{ matrix.with_optionals && '""' || '"not with_optionals"'}}' >> $GITHUB_OUTPUT
-          else
-            echo 'marker=${{ matrix.with_optionals && '"not s3"' || '"not with_optionals and not s3"' }}' >> $GITHUB_OUTPUT
-          fi
       - name: Run pytest
-        run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes -m ${{ steps.markers.outputs.marker }} --cov=dataframely --cov-report=xml
-        env:
-          AWS_SECRET_ACCESS_KEY: minioadmin
-          AWS_ACCESS_KEY_ID: minioadmin
-          AWS_ENDPOINT_URL: http://localhost:9000
+        run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m with_optionals' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
       - name: Upload codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:

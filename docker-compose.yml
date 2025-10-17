@@ -7,15 +7,3 @@ services:
       SA_PASSWORD: P@ssword1
     ports:
       - "1455:1433"
-
-  minio:
-    image: quay.io/minio/minio:latest
-    ports:
-      - "9009:9009"
-      - "9010:9010"
-    volumes:
-      - minio-data:/data
-    command: server /data --address ":9009" --console-address ":9010"
-
-volumes:
-  minio-data:
