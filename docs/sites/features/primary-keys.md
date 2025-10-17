@@ -10,7 +10,7 @@ Dataframely supports marking columns as part of the primary key when defining a 
 `primary_key=True` on the respective column(s).
 
 ```{note}
-Primary key columns must not be nullable.
+Primary key columns must not be nullable. Starting in `dataframely` version 2, attempts to declare a nullable primary key column raise an error.
 ```
 
 ### One-column primary keys
