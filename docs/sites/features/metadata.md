@@ -15,4 +15,7 @@ class UserSchema(dy.Schema):
 
 Metadata are never read by `dataframely` and merely enable users to provide custom information
 in a structured way.
+
+```{note}
 Experience has shown that user-provided metadata can be useful for code generation, where, for instance, SQL code is generated from `dataframely` schemas.
+```
