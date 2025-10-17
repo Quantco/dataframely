@@ -15,7 +15,6 @@ import polars as pl
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._deprecation import (
     error_no_nullable_primary_key,
-    warn_nullable_default_change,
 )
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
@@ -46,7 +45,7 @@ class Column(ABC):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,
@@ -56,8 +55,6 @@ class Column(ABC):
         Args:
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
-                In a future release, `nullable=False` will be the default if `nullable`
-                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
             check: A custom rule or multiple rules to run for this column. This can be:
@@ -80,13 +77,6 @@ class Column(ABC):
 
         if nullable and primary_key:
             error_no_nullable_primary_key()
-
-        if nullable is None:
-            if primary_key:
-                nullable = False
-            else:
-                warn_nullable_default_change()
-                nullable = True
 
         self.nullable = nullable
         self.primary_key = primary_key
