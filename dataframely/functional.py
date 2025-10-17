@@ -26,13 +26,13 @@ C = TypeVar("C", bound=BaseCollection)
 LEN_COLUMN = "__len__"
 
 
-def filter_relationship_one_to_one(
+def require_relationship_one_to_one(
     lhs: LazyFrame[S] | pl.LazyFrame,
     rhs: LazyFrame[T] | pl.LazyFrame,
     /,
     on: str | list[str],
     *,
-    keep_only_unique: bool = False,
+    filter_unique: bool = True,
 ) -> pl.LazyFrame:
     """Express a 1:1 mapping between data frames for a collection filter.
 
@@ -40,44 +40,67 @@ def filter_relationship_one_to_one(
         lhs: The first data frame in the 1:1 mapping.
         rhs: The second data frame in the 1:1 mapping.
         on: The columns to join the data frames on.
-        keep_only_unique: If `True`, drop non-unique rows from both data frames.
-            This is useful when the join columns do not already uniquely identify rows.
+        filter_unique: If set to `True`, drops rows that are not uniquely identified by the
+            join columns specified with `on`. If set to `False`, skips uniqueness checks
+            and avoids performance penalties. Use with caution, as this may lead to unexpected
+            results if rows in one or both of the data frames are not unique in the join columns.
+
+    Returns:
+        A data frame representing the inner join of the two inputs on the specified
+        columns, filtered to ensure a 1:1 relationship.
     """
-    if keep_only_unique:
-        return (
+    if filter_unique:
+        lhs = (
             lhs.group_by(on)
             .len(LEN_COLUMN)
             .filter(pl.col(LEN_COLUMN) == 1)
             .drop(LEN_COLUMN)
-            .join(
-                rhs.group_by(on)
-                .len(LEN_COLUMN)
-                .filter(pl.col(LEN_COLUMN) == 1)
-                .drop(LEN_COLUMN),
-                on=on,
-                how="inner",
-            )
         )
-    else:
-        return lhs.join(rhs, on=on)
+        rhs = (
+            rhs.group_by(on)
+            .len(LEN_COLUMN)
+            .filter(pl.col(LEN_COLUMN) == 1)
+            .drop(LEN_COLUMN)
+        )
+
+    return lhs.join(rhs, on=on)
 
 
 # ------------------------------- RELATIONSHIP 1:{1,N} ------------------------------- #
 
 
-def filter_relationship_one_to_at_least_one(
+def require_relationship_one_to_at_least_one(
     lhs: LazyFrame[S] | pl.LazyFrame,
     rhs: LazyFrame[T] | pl.LazyFrame,
     /,
     on: str | list[str],
+    *,
+    filter_unique: bool = True,
 ) -> pl.LazyFrame:
     """Express a 1:{1,N} mapping between data frames for a collection filter.
 
     Args:
-        lhs: The data frame with exactly one occurrence for a set of key columns.
-        rhs: The data frame with at least one occurrence for a set of key columns.
+        lhs: The data frame with exactly one occurrence for the set of join columns.
+        rhs: The data frame with at least one occurrence for the set of join columns.
         on: The columns to join the data frames on.
+        filter_unique: If set to `True`, drops rows in `lhs` that are not uniquely
+            identified by the join columns specified with `on`. If set to `False`,
+            skips uniqueness checks and avoids performance penalties. Use with
+            caution, as this may lead to unexpected results if rows in `lhs` are
+            not unique in the join columns.
+
+    Returns:
+        A data frame representing the inner join of the two inputs on the specified
+        columns, filtered to ensure a 1:{1,N} relationship.
     """
+    if filter_unique:
+        lhs = (
+            lhs.group_by(on)
+            .len(LEN_COLUMN)
+            .filter(pl.col(LEN_COLUMN) == 1)
+            .drop(LEN_COLUMN)
+        )
+
     return lhs.join(rhs.unique(on), on=on)
 
 

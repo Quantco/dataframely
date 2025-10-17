@@ -49,7 +49,7 @@ class SingleFilterCollection(dy.Collection):
 
     @dy.filter()
     def one_to_one(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_one(self.first, self.second, on="idx")
+        return dy.require_relationship_one_to_one(self.first, self.second, on="idx")
 
 
 @pytest.mark.benchmark(group="collection-filter-single")
@@ -79,17 +79,17 @@ class MultiFilterCollection(dy.Collection):
 
     @dy.filter()
     def one_to_one(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_one(self.first, self.second, on="idx")
+        return dy.require_relationship_one_to_one(self.first, self.second, on="idx")
 
     @dy.filter()
     def one_to_at_least_one(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_at_least_one(
+        return dy.require_relationship_one_to_at_least_one(
             self.first, self.second, on="idx"
         )
 
     @dy.filter()
     def one_to_at_least_one_reverse(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_at_least_one(
+        return dy.require_relationship_one_to_at_least_one(
             self.second, self.first, on="idx"
         )
 

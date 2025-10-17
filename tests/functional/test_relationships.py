@@ -57,25 +57,30 @@ def employees() -> dy.LazyFrame[EmployeeSchema]:
 # ------------------------------------------------------------------------------------ #
 
 
+@pytest.mark.parametrize("filter_unique", [True, False])
 def test_one_to_one(
     departments: dy.LazyFrame[DepartmentSchema],
     managers: dy.LazyFrame[ManagerSchema],
+    filter_unique: bool,
 ) -> None:
-    actual = dy.filter_relationship_one_to_one(
-        departments, managers, on="department_id"
+    actual = dy.require_relationship_one_to_one(
+        departments,
+        managers,
+        on="department_id",
+        filter_unique=filter_unique,
     )
     assert actual.select("department_id").collect().to_series().to_list() == [1]
 
 
-def test_one_to_one_keep_only_unique(
+def test_one_to_one_filter_unique(
     departments: dy.LazyFrame[DepartmentSchema],
     employees: dy.LazyFrame[EmployeeSchema],
 ) -> None:
-    actual = dy.filter_relationship_one_to_one(
+    actual = dy.require_relationship_one_to_one(
         departments,
         employees,
         on="department_id",
-        keep_only_unique=True,
+        filter_unique=True,
     )
     assert actual.select("department_id").collect().to_series().to_list() == [3]
 
@@ -84,7 +89,7 @@ def test_one_to_at_least_one(
     departments: dy.LazyFrame[DepartmentSchema],
     employees: dy.LazyFrame[EmployeeSchema],
 ) -> None:
-    actual = dy.filter_relationship_one_to_at_least_one(
-        departments, employees, on="department_id"
+    actual = dy.require_relationship_one_to_at_least_one(
+        departments, employees, on="department_id", filter_unique=False
     )
     assert actual.select("department_id").collect().to_series().to_list() == [2, 3]
