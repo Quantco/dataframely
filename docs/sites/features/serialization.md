@@ -63,7 +63,7 @@ if the `Schema` class we use for reading matches the stored metadata in the file
 If it does, we do not need to run validation again,
 but we can infer that the data in the file already matches the schema, which saves us time.
 
-## Serialization in {class}`dy.Collection`
+## Serialization in {class}`~dataframely.Collection`
 
 Serialization in collections works analogously to schemas. The only difference is that
 we now have to handle multiple dataframes instead of a single one.
