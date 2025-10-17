@@ -50,17 +50,18 @@ def require_relationship_one_to_one(
         columns, filtered to ensure a 1:1 relationship.
     """
     if filter_unique:
-        lhs = (
+        return (
             lhs.group_by(on)
             .len(LEN_COLUMN)
             .filter(pl.col(LEN_COLUMN) == 1)
             .drop(LEN_COLUMN)
-        )
-        rhs = (
-            rhs.group_by(on)
-            .len(LEN_COLUMN)
-            .filter(pl.col(LEN_COLUMN) == 1)
-            .drop(LEN_COLUMN)
+            .join(
+                rhs.group_by(on)
+                .len(LEN_COLUMN)
+                .filter(pl.col(LEN_COLUMN) == 1)
+                .drop(LEN_COLUMN),
+                on=on,
+            )
         )
 
     return lhs.join(rhs, on=on)
@@ -94,11 +95,12 @@ def require_relationship_one_to_at_least_one(
         columns, filtered to ensure a 1:{1,N} relationship.
     """
     if filter_unique:
-        lhs = (
+        return (
             lhs.group_by(on)
             .len(LEN_COLUMN)
             .filter(pl.col(LEN_COLUMN) == 1)
             .drop(LEN_COLUMN)
+            .join(rhs.unique(on), on=on)
         )
 
     return lhs.join(rhs.unique(on), on=on)
