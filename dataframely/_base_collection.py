@@ -192,12 +192,11 @@ class CollectionMeta(ABCMeta):
 
         # Get all members via the annotations
         annotations = {}
-        if sys.version_info >= (3, 14):
+        if "__annotations__" in source:
+            annotations = source["__annotations__"]
+        elif sys.version_info >= (3, 14):
             if "__annotate_func__" in source:
                 annotations = source["__annotate_func__"](Format.VALUE)
-        else:
-            if "__annotations__" in source:
-                annotations = source["__annotations__"]
         for attr, kls in annotations.items():
             result.members[attr] = CollectionMeta._derive_member_info(
                 attr, kls, CollectionMember()
