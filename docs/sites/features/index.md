@@ -1,6 +1,6 @@
 # Features
 
 ```{toctree}
-metadata
+column-metadata
 primary-keys
 ```

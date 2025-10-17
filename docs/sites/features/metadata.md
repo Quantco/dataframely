@@ -1,7 +1,7 @@
-# Metadata
+# Column Metadata
 
 Sometimes it can be useful to attach user-provided metadata to columns of tables.
-The `metadata` parameter is available for all column types and takes a dictionary of arbitrary objects.
+The `metadata` parameter is available for all column types and accepts a dictionary of arbitrary objects.
 For instance, one may use the `metadata` parameter to mark a column as pseudonymized or provide other context-specific information.
 
 ```python
