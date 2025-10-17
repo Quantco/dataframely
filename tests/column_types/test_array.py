@@ -12,8 +12,8 @@ from dataframely.testing import create_schema
 @pytest.mark.parametrize(
     "inner",
     [
-        (dy.Int64()),
-        (dy.Integer()),
+        (dy.Int64(nullable=True)),
+        (dy.Integer(nullable=True)),
     ],
 )
 def test_integer_array(inner: Column) -> None:
@@ -49,52 +49,52 @@ def test_invalid_shape() -> None:
     ("column", "dtype", "is_valid"),
     [
         (
-            dy.Array(dy.Int64(), 1),
+            dy.Array(dy.Int64(nullable=True), 1),
             pl.Array(pl.Int64(), 1),
             True,
         ),
         (
-            dy.Array(dy.String(), 1),
+            dy.Array(dy.String(nullable=True), 1),
             pl.Array(pl.Int64(), 1),
             False,
         ),
         (
-            dy.Array(dy.String(), 1),
+            dy.Array(dy.String(nullable=True), 1),
             pl.Array(pl.Int64(), 2),
             False,
         ),
         (
-            dy.Array(dy.Int64(), (1,)),
+            dy.Array(dy.Int64(nullable=True), (1,)),
             pl.Array(pl.Int64(), (1,)),
             True,
         ),
         (
-            dy.Array(dy.Int64(), (1,)),
+            dy.Array(dy.Int64(nullable=True), (1,)),
             pl.Array(pl.Int64(), (2,)),
             False,
         ),
         (
-            dy.Array(dy.String(), 1),
-            dy.Array(dy.String(), 1),
+            dy.Array(dy.String(nullable=True), 1),
+            dy.Array(dy.String(nullable=True), 1),
             False,
         ),
         (
-            dy.Array(dy.String(), 1),
+            dy.Array(dy.String(nullable=True), 1),
             dy.String(),
             False,
         ),
         (
-            dy.Array(dy.String(), 1),
+            dy.Array(dy.String(nullable=True), 1),
             pl.String(),
             False,
         ),
         (
-            dy.Array(dy.Array(dy.String(), 1), 1),
+            dy.Array(dy.Array(dy.String(nullable=True), 1), 1),
             pl.Array(pl.String(), (1, 1)),
             True,
         ),
         (
-            dy.Array(dy.String(), (1, 1)),
+            dy.Array(dy.String(nullable=True), (1, 1)),
             pl.Array(pl.Array(pl.String(), 1), 1),
             True,
         ),
