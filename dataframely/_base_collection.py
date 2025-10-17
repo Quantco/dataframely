@@ -23,6 +23,9 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 14):
+    from annotationlib import Format
+
 _MEMBER_ATTR = "__dataframely_members__"
 _FILTER_ATTR = "__dataframely_filters__"
 
@@ -188,11 +191,17 @@ class CollectionMeta(ABCMeta):
         result = Metadata()
 
         # Get all members via the annotations
-        if "__annotations__" in source:
-            for attr, kls in source["__annotations__"].items():
-                result.members[attr] = CollectionMeta._derive_member_info(
-                    attr, kls, CollectionMember()
-                )
+        annotations = {}
+        if sys.version_info >= (3, 14):
+            if "__annotate_func__" in source:
+                annotations = source["__annotate_func__"](Format.VALUE)
+        else:
+            if "__annotations__" in source:
+                annotations = source["__annotations__"]
+        for attr, kls in annotations.items():
+            result.members[attr] = CollectionMeta._derive_member_info(
+                attr, kls, CollectionMember()
+            )
 
         # Get all filters by traversing the source
         for attr, value in {
@@ -230,12 +239,14 @@ class CollectionMeta(ABCMeta):
             if not any(get_origin(arg) is None for arg in union_args):
                 raise AnnotationImplementationError(attr, type_annotation)
 
-            [not_none_arg] = [arg for arg in union_args if get_origin(arg) is not None]
-            if not issubclass(get_origin(not_none_arg), TypedLazyFrame):
+            not_none_args = [arg for arg in union_args if get_origin(arg) is not None]
+            if len(not_none_args) == 0 or not issubclass(
+                get_origin(not_none_args[0]), TypedLazyFrame
+            ):
                 raise AnnotationImplementationError(attr, type_annotation)
 
             return MemberInfo(
-                schema=get_args(not_none_arg)[0],
+                schema=get_args(not_none_args[0])[0],
                 is_optional=True,
                 ignored_in_filters=collection_member.ignored_in_filters,
                 inline_for_sampling=collection_member.inline_for_sampling,
