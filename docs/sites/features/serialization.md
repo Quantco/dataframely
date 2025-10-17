@@ -18,8 +18,8 @@ supported.
 
 ## Serialization in {class}`~dataframely.Schema`
 
-A {class}`~dataframely.Schema` controls the contents of a single dataframe. In this case, serialization
-means that we store a single dataframe in the storage backend and attach a string representation
+A {class}`~dataframely.Schema` controls the contents of a single data frame. In this case, serialization
+means that we store a single data frame in the storage backend and attach a string representation
 of the schema as metadata.
 
 ```python
@@ -29,7 +29,7 @@ class MySchema(dy.Schema):
 
 df: dy.DataFrame[MySchema] = MySchema.validate(
     pl.DataFrame(
-        {"x"[1, 2, 3]}
+        {"x": [1, 2, 3]}
     )
 )
 
@@ -58,7 +58,7 @@ new_df: dy.DataFrame[MySchema] = MySchema.read_delta("/path/to/table")
 new_lf: dy.LazyFrame[MySchema] = MySchema.scan_delta("/path/to/table")
 ```
 
-The role of the metadata is that when reading, `dataframely` can internally check
+Using the stored metadata, `dataframely` can internally check
 if the `Schema` class we use for reading matches the stored metadata in the file.
 If it does, we do not need to run validation again,
 but we can infer that the data in the file already matches the schema, which saves us time.
@@ -66,8 +66,8 @@ but we can infer that the data in the file already matches the schema, which sav
 ## Serialization in {class}`~dataframely.Collection`
 
 Serialization in collections works analogously to schemas. The only difference is that
-we now have to handle multiple dataframes instead of a single one.
-`dataframely` will therefore have to create multiple tables in the storage backend
+we now have to handle multiple data frames instead of a single one.
+`dataframely` will therefore create multiple tables in the storage backend
 (e.g. multiple parquet files, or multiple delta tables).
 
 ```python
@@ -80,7 +80,7 @@ class MyCollection:
 collection: MyCollection = MyCollection.validate(...)
 
 # Writes and reads work the same as for Schema, except that the argument is adapted
-# to allow for multiple dataframes,
+# to allow for multiple data frames,
 # e.g. for parquet: Pass a directory instead of a path to a single parquet
 collection.write_parquet("/path/to/directory/")
 collection.read_parquet("/path/to/directory/")
@@ -88,16 +88,29 @@ collection.scan_parquet("/path/to/directory/")
 ```
 
 Just as for `Schema`, metadata is stored in the backend to encode the schema information.
-This includes the schemas of the member dataframes as well as collection-level constraints.
+This includes the schemas of the member data frames as well as collection-level constraints.
 
 ## What happens if the stored metadata is missing or wrong?
 
 All scan / read operations allow the user to specify a `validation` keyword argument
 that can be used to define how `dataframely` should react if there is no schema information
 found in the backend, or if the schema information does not match the the schema used for reading.
-By default, `dataframely` will run validation and emit a warning in this case, but the
-user may also choose to always force validation, or to silently ignore missing metadata.
-Refer to the API docs linked in the table above for details.
+By default, `dataframely` will run validation and emit a warning in this case.
+If you instead
+
+Refer to the API docs linked in the table above for details. If you want to avoid the warning,
+pass `validation="allow"`, e.g.:
+
+```python
+# Will not warn and only validate if necessary
+MySchema.read_parquet("my.parquet", validation="allow")
+
+# Will raise an error if validation cannot be skipped
+MySchema.read_parquet("my.parquet", validation="forbid")
+
+# Dangerous: Will never validate. It's possible to load data that violates the schema!
+MySchema.read_parquet("my.parquet", validation="forbid")
+```
 
 ```{note}
 Some schema information such as data types is trivial to serialize.
