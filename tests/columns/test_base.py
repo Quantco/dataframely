@@ -9,6 +9,4 @@ import dataframely as dy
 @pytest.mark.parametrize("column_type", [dy.Int64, dy.String, dy.Float32, dy.Decimal])
 def test_no_nullable_primary_key(column_type: type[dy.Column]) -> None:
     with pytest.raises(ValueError):
-
-        class MySchema(dy.Schema):
-            x = column_type(primary_key=True, nullable=True)
+        column_type(primary_key=True, nullable=True)
