@@ -121,3 +121,83 @@ version updates can break our ability to recognize a stored schema, even if it s
 semantically matches the current schema. This situation is treated the same
 as if no stored schema was found.
 ```
+
+## Under the hood: what does the metadata look like?
+
+Both `Schema`s and `Collection`s implement public methods `serialize` that return a string-serialized version of the
+metadata for this object. In addition to the internal usage of these methods in `dataframely`, they can also be useful
+if you want an easily parseable representation of your schema,
+for example to generate schema diffs.
+
+Here's an example schema:
+
+```python
+class HouseSchema(dy.Schema):
+    zip_code = dy.String(nullable=False, min_length=3)
+    num_bedrooms = dy.UInt8(nullable=False)
+    num_bathrooms = dy.UInt8(nullable=False)
+    price = dy.Float64(nullable=False)
+
+    @dy.rule()
+    def reasonable_bathroom_to_bedrooom_ratio() -> pl.Expr:
+        ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
+        return (ratio >= 1 / 3) & (ratio <= 3)
+
+
+```
+
+Calling {meth}`~dataframely.Schema.serialize` returns a string-encoded JSON representation of the schema:
+
+```python
+json.loads(HouseSchema.serialize())
+
+{'columns': {'num_bathrooms': {'check': None,
+                               'column_type': 'UInt8',
+                               'is_in': None,
+                               'max': None,
+                               'max_exclusive': None,
+                               'metadata': None,
+                               'min': None,
+                               'min_exclusive': None,
+                               'nullable': False,
+                               'primary_key': False},
+             'num_bedrooms': {'check': None,
+                              'column_type': 'UInt8',
+                              'is_in': None,
+                              'max': None,
+                              'max_exclusive': None,
+                              'metadata': None,
+                              'min': None,
+                              'min_exclusive': None,
+                              'nullable': False,
+                              'primary_key': False},
+             'price': {'allow_inf_nan': False,
+                       'check': None,
+                       'column_type': 'Float64',
+                       'max': None,
+                       'max_exclusive': None,
+                       'metadata': None,
+                       'min': None,
+                       'min_exclusive': None,
+                       'nullable': False,
+                       'primary_key': False},
+             'zip_code': {'check': None,
+                          'column_type': 'String',
+                          'max_length': None,
+                          'metadata': None,
+                          'min_length': 3,
+                          'nullable': False,
+                          'primary_key': False,
+                          'regex': None}},
+ 'name': 'HouseSchema',
+ 'rules': {'reasonable_bathroom_to_bedrooom_ratio': {'expr': {'__type__': 'expression',
+                                                              'value': 'gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gaZDb2x1bW6tbnVtX2JhdGhyb29tc6JvcKpUcnVlRGl2aWRlpXJpZ2h0gaZDb2x1bW6sbnVtX2JlZHJvb21zom9wpEd0RXGlcmlnaHSBp0xpdGVyYWyBo0R5boGlRmxvYXTLP9VVVVVVVVWib3CjQW5kpXJpZ2h0gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gaZDb2x1bW6tbnVtX2JhdGhyb29tc6JvcKpUcnVlRGl2aWRlpXJpZ2h0gaZDb2x1bW6sbnVtX2JlZHJvb21zom9wpEx0RXGlcmlnaHSBp0xpdGVyYWyBo0R5boGjSW50xBAAAAAAAAAAAAAAAAAAAAAD'},
+                                                     'rule_type': 'Rule'}},
+ 'versions': {'dataframely': '2.0.0', 'format': '1', 'polars': '1.33.1'}}
+```
+
+Note that while most of the serialized schema is straightforward, the encoding of rules requires serialization of polars
+expression.
+See {class}`~dataframely._serialization.SchemaJSONEncoder` for implementation details.
+
+This functionality works equivalently for {meth}`~dataframely.Collection.serialize`.
