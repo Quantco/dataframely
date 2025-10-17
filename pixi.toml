@@ -54,7 +54,8 @@ scikit-learn = "*"
 pyarrow = "*"
 sqlalchemy = ">=2"
 deltalake = "*"
-
+pydantic = ">=2.11.9,<3"
+pydantic-core = ">=2.33.2,<3"
 
 [feature.test.tasks]
 test = "pytest"
@@ -103,7 +104,7 @@ python = "3.12.*"
 python = "3.13.*"
 
 [feature.nightly.tasks]
-install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars"
+install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
 build = ["build"]

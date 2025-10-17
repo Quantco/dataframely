@@ -54,6 +54,19 @@ try:
 except ImportError:  # pragma: no cover
     pa = _DummyModule("pyarrow")
 
+
+# -------------------------------------- PYDANTIC ------------------------------------ #
+
+try:
+    import pydantic
+except ImportError:  # pragma: no cover
+    pydantic = _DummyModule("pydantic")  # type: ignore
+
+try:
+    from pydantic_core import core_schema as pydantic_core_schema  # pragma: no cover
+except ImportError:
+    pydantic_core_schema = _DummyModule("pydantic_core_schema")  # type: ignore
+
 # ------------------------------------------------------------------------------------ #
 
 __all__ = [
@@ -64,4 +77,6 @@ __all__ = [
     "pa",
     "MSDialect_pyodbc",
     "PGDialect_psycopg2",
+    "pydantic",
+    "pydantic_core_schema",
 ]
