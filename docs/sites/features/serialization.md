@@ -90,7 +90,7 @@ collection.scan_parquet("/path/to/directory/")
 Just as for `Schema`, metadata is stored in the backend to encode the schema information.
 This includes the schemas of the member dataframes as well as collection-level constraints.
 
-## What happens if the schema is missing or wrong?
+## What happens if the stored metadata is missing or wrong?
 
 All scan / read operations allow the user to specify a `validation` keyword argument
 that can be used to define how `dataframely` should react if there is no schema information
