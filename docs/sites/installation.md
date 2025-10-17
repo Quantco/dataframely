@@ -3,6 +3,6 @@
 To install `dataframely`, use your favorite package manager, e.g., using `pixi` or `pip`:
 
 ```bash
-    pixi add dataframely
-    pip install dataframely
+pixi add dataframely
+pip install dataframely
 ```

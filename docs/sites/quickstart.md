@@ -44,7 +44,6 @@ bedrooms should not be too high.
 In `dataframely`, we can do this by adding a custom rule to our schema:
 
 ```python
-
 import dataframely as dy
 
 
@@ -113,7 +112,6 @@ To validate data against a schema, we can use the `validate` method of the schem
 the data set above as follows:
 
 ```python
-
 import polars as pl
 
 df = pl.DataFrame({
@@ -161,7 +159,7 @@ If you call `isinstance()` checking for `dy.DataFrame`, it will *always* evaluat
 The run-time type of the data frame is still a `pl.DataFrame`.
 ```
 
-# Using soft-validation to introspect validation failures
+## Using soft-validation to introspect validation failures
 
 While `validate` is useful for ensuring that the entire dataset meets expectations,
 it is not always useful in production systems where invalid rows should be ignored while all valid rows should be
@@ -170,7 +168,7 @@ salvaged.
 To this end, `dataframely` provides the `filter` method that performs "soft-validation":
 
 ```python
-    # Filter the data and cast columns to expected types
+# Filter the data and cast columns to expected types
 good, failure = HouseSchema.filter(df, cast=True)
 
 # Inspect the reasons for the failed rows
@@ -232,15 +230,15 @@ df_concat = HouseSchema.cast(pl.concat([df1, df2]))
 Lastly, `dataframely` schemas can be used to integrate with external tools:
 
 - `HouseSchema.create_empty()` creates an empty `dy.DataFrame[HouseSchema]` that can be used for testing
-- `HouseSchema.sql_schema()` provides a list of `sqlalchemy <https://www.sqlalchemy.org>`\_ columns that can be used to
+- `HouseSchema.sql_schema()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be used to
   create SQL tables using types and constraints in line with the schema
-- `HouseSchema.pyarrow_schema()` provides a `pyarrow <https://arrow.apache.org/docs/python/index.html>`\_ schema with
+- `HouseSchema.pyarrow_schema()` provides a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema with
   appropriate column dtypes and nullability information
 - You can use `dy.DataFrame[HouseSchema]` (or the `LazyFrame` equivalent) as fields in
-  `pydantic <https://pydantic.dev>`\_ models, including support for validation and serialization. Integration with
+  [pydantic](https://pydantic.dev) models, including support for validation and serialization. Integration with
   pydantic is unstable.
 
 ## Outlook
 
 This concludes the quickstart guide. For more information, please see the
-`real-world example <examples/real-world.ipynb>`\_\_ or dive into the API documentation.
+[real-world example](examples/real-world.ipynb) or dive into the API documentation.
