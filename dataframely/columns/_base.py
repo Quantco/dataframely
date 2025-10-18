@@ -14,7 +14,6 @@ import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._deprecation import (
-    warn_no_nullable_primary_key,
     warn_nullable_default_change,
 )
 from dataframely._polars import PolarsDataType
@@ -79,8 +78,7 @@ class Column(ABC):
         """
 
         if nullable and primary_key:
-            warn_no_nullable_primary_key()
-            nullable = False
+            raise ValueError("Nullable primary key columns are not supported.")
 
         if nullable is None:
             if primary_key:

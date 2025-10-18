@@ -1,7 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-import os
 import subprocess
 import uuid
 from collections.abc import Iterator
@@ -17,10 +16,18 @@ import dataframely as dy
 
 @pytest.fixture(scope="session")
 def s3_server() -> Iterator[str]:
+    # FIXME: Replace with the commented-out code below once
+    #  https://github.com/pola-rs/polars/pull/24922 is released.
     process = subprocess.Popen(["moto_server", "--port", "9999"])
     yield "http://localhost:9999"
-    process.kill()
+    process.terminate()
     process.wait()
+
+    # server = ThreadedMotoServer(port=0)
+    # server.start()
+    # host, port = server.get_host_and_port()
+    # yield f"http://{host}:{port}"
+    # server.stop()
 
 
 @pytest.fixture(scope="session")

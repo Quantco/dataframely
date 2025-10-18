@@ -107,12 +107,15 @@ python = "3.12.*"
 [feature.py313.dependencies]
 python = "3.13.*"
 
+[feature.py314.dependencies]
+python = "3.14.*"
+
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
 build = ["build"]
-default = ["dev", "lint", "optionals", "py313", "test"]
+default = ["dev", "lint", "optionals", "py314", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]
@@ -120,4 +123,5 @@ py310 = ["py310", "test"]
 py311 = ["py311", "test"]
 py312 = ["py312", "test"]
 py313 = ["py313", "test"]
-py313-optionals = ["optionals", "py313", "test"]
+py314 = ["py314", "test"]
+py314-optionals = ["optionals", "py314", "test"]
