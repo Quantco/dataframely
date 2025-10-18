@@ -14,6 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
   "numpy",
@@ -29,9 +30,9 @@ version = "0.0.0"
 
 [project.optional-dependencies]
 deltalake = ["deltalake"]
-sqlalchemy = ["sqlalchemy"]
 pyarrow = ["pyarrow"]
 pydantic = ["pydantic>=2"]
+sqlalchemy = ["sqlalchemy"]
 
 [project.urls]
 Documentation = "https://dataframely.readthedocs.io/"
@@ -102,10 +103,10 @@ filterwarnings = [
   # Almost all tests are oblivious to the value of `nullable`. Let's ignore the warning as long as it exists.
   "ignore:The 'nullable' argument was not explicitly set:FutureWarning",
 ]
-testpaths = ["tests"]
 markers = [
   "with_optionals: Tests that require optional dependencies to be installed",
 ]
+testpaths = ["tests"]
 
 [tool.coverage.run]
 omit = ["dataframely/mypy.py", "dataframely/testing/generate.py"]
