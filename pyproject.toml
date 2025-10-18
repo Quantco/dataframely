@@ -18,7 +18,7 @@ classifiers = [
 dependencies = [
   "fsspec",
   "numpy",
-  "polars>=1.32",
+  "polars>=1.34",
   # Conditional
   'typing-extensions; python_version <= "3.10"',
 ]
