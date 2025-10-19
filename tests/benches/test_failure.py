@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
-from dataframely.failure import _compute_cooccurrence_counts, _compute_counts
+from dataframely.filter_result import _compute_cooccurrence_counts, _compute_counts
 
 
 @pytest.fixture()

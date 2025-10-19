@@ -23,6 +23,7 @@ except ImportError:  # pragma: no cover
 
     class DeltaTable:  # type: ignore # noqa: N801
         pass
+
 # ------------------------------------ SQLALCHEMY ------------------------------------ #
 
 try:
@@ -47,6 +48,7 @@ except ImportError:  # pragma: no cover
 
     class Dialect:  # type: ignore # noqa: N801
         pass
+
 # -------------------------------------- PYARROW ------------------------------------- #
 
 try:
@@ -71,12 +73,14 @@ except ImportError:
 
 __all__ = [
     "deltalake",
-    "sa",
+    "DeltaTable",
+    "Dialect",
+    "MSDialect_pyodbc",
+    "pa",
+    "PGDialect_psycopg2",
+    "pydantic_core_schema",
+    "pydantic",
     "sa_mssql",
     "sa_TypeEngine",
-    "pa",
-    "MSDialect_pyodbc",
-    "PGDialect_psycopg2",
-    "pydantic",
-    "pydantic_core_schema",
+    "sa",
 ]

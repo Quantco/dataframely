@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from functools import cached_property
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
+from typing import IO, TYPE_CHECKING, Any, Generic, NamedTuple, TypeVar
 
 import polars as pl
 from polars._typing import PartitioningScheme
@@ -17,6 +17,7 @@ from dataframely._compat import deltalake
 from ._storage import StorageBackend
 from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
+from ._typing import DataFrame, LazyFrame
 
 if TYPE_CHECKING:  # pragma: no cover
     from .schema import Schema
@@ -24,6 +25,56 @@ if TYPE_CHECKING:  # pragma: no cover
 UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
 
 S = TypeVar("S", bound=BaseSchema)
+
+# ----------------------------------- FILTER RESULT ---------------------------------- #
+
+
+class FilterResult(NamedTuple, Generic[S]):
+    """Container for results of calling :meth:`Schema.filter` on a data frame."""
+
+    #: The rows that passed validation.
+    result: DataFrame[S]
+    #: Information about the rows that failed validation.
+    failure: FailureInfo[S]
+
+
+class LazyFilterResult(NamedTuple, Generic[S]):
+    """Container for results of calling :meth:`Schema.filter` on a lazy frame."""
+
+    #: The rows that passed validation.
+    result: LazyFrame[S]
+    #: Information about the rows that failed validation.
+    failure: FailureInfo[S]
+
+    def collect_all(self, **kwargs: Any) -> FilterResult[S]:
+        """Collect the results from the filter operation.
+
+        Using this method is more efficient than individually calling :meth:`collect` on
+        both the `result` and `failure` objects as this method takes advantage of
+        common subplan elimination.
+
+        Args:
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all`.
+
+        Returns:
+            The collected filter result.
+
+        Attention:
+            Until https://github.com/pola-rs/polars/pull/24129 is released, the
+            performance advantage of this method is limited.
+        """
+        result_df, failure_df = pl.collect_all(
+            [self.result.lazy(), self.failure._lf], **kwargs
+        )
+        return FilterResult(
+            result=result_df,  # type: ignore
+            failure=FailureInfo(
+                failure_df.lazy(), self.failure._rule_columns, self.failure.schema
+            ),
+        )
+
+
+# ----------------------------------- FAILURE INFO ----------------------------------- #
 
 
 class FailureInfo(Generic[S]):

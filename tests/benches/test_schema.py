@@ -119,14 +119,14 @@ class SingleGroupBySchema(dy.Schema):
 def test_single_group_by_validate(
     benchmark: BenchmarkFixture, dataset: pl.DataFrame
 ) -> None:
-    benchmark(SingleGroupBySchema.validate, dataset.lazy())
+    benchmark(SingleGroupBySchema.validate, dataset)
 
 
 @pytest.mark.benchmark(group="schema-group-by-single")
 def test_single_group_by_filter(
     benchmark: BenchmarkFixture, dataset: pl.DataFrame
 ) -> None:
-    benchmark(SingleGroupBySchema.filter, dataset.lazy())
+    benchmark(SingleGroupBySchema.filter, dataset)
 
 
 # ---------------------------------- MULTI GROUP-BY ---------------------------------- #

@@ -9,7 +9,7 @@ import numpy as np
 import polars as pl
 from polars._typing import TimeUnit
 
-from ._extre import sample as extre_sample
+from ._native import regex_sample
 from ._polars import (
     EPOCH_DATETIME,
     SECONDS_PER_DAY,
@@ -143,7 +143,7 @@ class Generator:
         Returns:
             A series with ``n`` elements of dtype ``String``.
         """
-        samples = extre_sample(regex, n, seed=self.sample_seed())
+        samples = regex_sample(regex, n, seed=self.sample_seed())
         return self._apply_null_mask(
             pl.Series(samples, dtype=pl.String), null_probability
         )

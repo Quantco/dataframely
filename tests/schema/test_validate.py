@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
+import polars.exceptions as plexc
 import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely._rule import GroupRule
-from dataframely.exc import DtypeValidationError, RuleValidationError, ValidationError
+from dataframely.exc import SchemaError
 from dataframely.random import Generator
 from dataframely.testing import create_schema
 
@@ -49,35 +50,41 @@ class MyComplexSchemaWithLazyRules(dy.Schema):
 SOME_CONSTANT_DEFINED_LATER = 1
 
 
-# -------------------------------------- COLUMNS ------------------------------------- #
+def _validate_and_collect(
+    schema: type[dy.Schema], df: pl.DataFrame | pl.LazyFrame, cast: bool = False
+) -> pl.DataFrame:
+    result = schema.validate(df, cast=cast)
+    if isinstance(result, pl.LazyFrame):
+        return result.collect()
+    return result
+
+
+# -------------------------------------- SCHEMA -------------------------------------- #
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_missing_columns(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1], "b": [""]})
-    with pytest.raises(ValidationError):
-        MySchema.validate(df)
+    with pytest.raises(SchemaError, match=r"Schema 'MySchema' is missing 1 columns"):
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
-
-
-# -------------------------------------- DTYPES -------------------------------------- #
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_invalid_dtype(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1], "b": [1], "c": [1]})
-    try:
-        MySchema.validate(df)
-        assert False  # above should raise
-    except DtypeValidationError as exc:
-        assert len(exc.errors) == 2
+    with pytest.raises(
+        SchemaError,
+        match=r"Schema 'MySchema' encountered invalid dtypes for 2 columns",
+    ):
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_invalid_dtype_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1], "b": [1], "c": [1]})
-    actual = MySchema.validate(df, cast=True)
+    actual = _validate_and_collect(MySchema, df, cast=True)
     expected = pl.DataFrame({"a": [1], "b": ["1"], "c": ["1"]})
     assert_frame_equal(actual, expected)
     assert MySchema.is_valid(df, cast=True)
@@ -91,36 +98,24 @@ def test_invalid_column_contents(
     df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
     df = df_type({"a": [1, 2, 3], "b": ["x", "longtext", None], "c": ["1", None, "3"]})
-    try:
-        MySchema.validate(df)
-        assert False  # above should raise
-    except RuleValidationError as exc:
-        assert len(exc.schema_errors) == 0
-        assert exc.column_errors == {"b": {"nullability": 1, "max_length": 1}}
+    with pytest.raises(plexc.ComputeError, match=r"2 rules failed validation"):
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_invalid_primary_key(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1, 1], "b": ["x", "y"], "c": ["1", "2"]})
-    try:
-        MySchema.validate(df)
-        assert False  # above should raise
-    except RuleValidationError as exc:
-        assert exc.schema_errors == {"primary_key": 2}
-        assert len(exc.column_errors) == 0
+    with pytest.raises(plexc.ComputeError, match=r"1 rules failed validation"):
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_violated_custom_rule(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     df = df_type({"a": [1, 1, 2, 3, 3], "b": [2, 2, 2, 4, 5]})
-    try:
-        MyComplexSchema.validate(df)
-        assert False  # above should raise
-    except RuleValidationError as exc:
-        assert exc.schema_errors == {"b_greater_a": 1, "b_unique_within_a": 2}
-        assert len(exc.column_errors) == 0
+    with pytest.raises(plexc.ComputeError, match=r"2 rules failed validation"):
+        _validate_and_collect(MyComplexSchema, df)
     assert not MyComplexSchema.is_valid(df)
 
 
@@ -131,7 +126,7 @@ def test_success_multi_row_strip_cast(
     df = df_type(
         {"a": [1, 2, 3], "b": ["x", "y", "z"], "c": [1, None, None], "d": [1, 2, 3]}
     )
-    actual = MySchema.validate(df, cast=True)
+    actual = _validate_and_collect(MySchema, df, cast=True)
     expected = pl.DataFrame(
         {"a": [1, 2, 3], "b": ["x", "y", "z"], "c": ["1", None, None]}
     )
@@ -147,8 +142,8 @@ def test_group_rule_on_nulls(
 ) -> None:
     # The schema is violated because we have multiple "b" values for the same "a" value
     df = df_type({"a": [None, None], "b": [1, 2]})
-    with pytest.raises(RuleValidationError):
-        schema.validate(df, cast=True)
+    with pytest.raises(plexc.ComputeError, match=r"1 rules failed validation"):
+        _validate_and_collect(schema, df, cast=True)
     assert not schema.is_valid(df, cast=True)
 
 

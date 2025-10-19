@@ -51,7 +51,7 @@ from .columns import (
     UInt64,
 )
 from .config import Config
-from .failure import FailureInfo
+from .filter_result import FailureInfo
 from .functional import (
     concat_collection_members,
     filter_relationship_one_to_at_least_one,

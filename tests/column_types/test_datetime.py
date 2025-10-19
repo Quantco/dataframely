@@ -11,7 +11,7 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely.columns import Column
-from dataframely.exc import DtypeValidationError
+from dataframely.exc import SchemaError
 from dataframely.random import Generator
 from dataframely.testing import evaluate_rules, rules_from_exprs
 from dataframely.testing.factory import create_schema
@@ -418,7 +418,7 @@ def test_sample(column: dy.Column) -> None:
         (
             pl.Datetime(time_zone="America/New_York"),
             dy.Datetime(time_zone="Etc/UTC"),
-            r"1 columns have an invalid dtype.*\n.*got dtype 'Datetime\(time_unit='us', time_zone='America/New_York'\)' but expected 'Datetime\(time_unit='us', time_zone='Etc/UTC'\)'",
+            r"Schema 'test' encountered invalid dtypes for 1 columns",
         ),
         (
             pl.Datetime(time_zone="Etc/UTC"),
@@ -437,6 +437,6 @@ def test_dtype_time_zone_validation(
     if error is None:
         schema.validate(df)
     else:
-        with pytest.raises(DtypeValidationError) as exc:
+        with pytest.raises(SchemaError) as exc:
             schema.validate(df)
         assert re.match(error, str(exc.value))

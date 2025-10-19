@@ -5,11 +5,10 @@ name = "dataframely"
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
 [tasks]
-postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -e ."
+postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -v -e ."
 
 [dependencies]
 python = ">=3.10"
-rust = "=1.85"
 
 numpy = "*"
 polars = ">=1.32"
@@ -51,11 +50,11 @@ pytest-md = "*"
 scikit-learn = "*"
 
 [feature.optionals.dependencies]
-pyarrow = "*"
-sqlalchemy = ">=2"
 deltalake = "*"
+pyarrow = "*"
 pydantic = ">=2.11.9,<3"
 pydantic-core = ">=2.33.2,<3"
+sqlalchemy = ">=2"
 
 [feature.test.tasks]
 test = "pytest"
@@ -108,12 +107,12 @@ install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :a
 
 [environments]
 build = ["build"]
-default = ["dev", "lint", "test", "optionals"]
+default = ["dev", "lint", "optionals", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
-nightly = ["nightly", "test", "optionals"]
+nightly = ["nightly", "optionals", "test"]
 py310 = ["py310", "test"]
 py311 = ["py311", "test"]
 py312 = ["py312", "test"]
 py313 = ["py313", "test"]
-py313-optionals = ["py313", "test", "optionals"]
+py313-optionals = ["optionals", "py313", "test"]

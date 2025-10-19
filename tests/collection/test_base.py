@@ -3,6 +3,7 @@
 
 import polars as pl
 import pytest
+from polars.testing import assert_frame_equal
 
 import dataframely as dy
 
@@ -77,7 +78,7 @@ def test_to_dict(expected: dict[str, pl.LazyFrame]) -> None:
     observed = collection.to_dict()
     assert set(expected.keys()) == set(observed.keys())
     for key in expected.keys():
-        pl.testing.assert_frame_equal(expected[key], observed[key])
+        assert_frame_equal(expected[key], observed[key])
 
     # Make sure that "roundtrip" validation works
     assert MyCollection.is_valid(observed)

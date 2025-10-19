@@ -1,13 +1,12 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-
 import polars as pl
+import polars.exceptions as plexc
 import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely.exc import MemberValidationError
 
 # ------------------------------------------------------------------------------------ #
 #                                        SCHEMA                                        #
@@ -187,10 +186,8 @@ def test_validate_without_filter_with_rule_violation(
     }
     assert not SimpleCollection.is_valid(data)
 
-    with pytest.raises(
-        MemberValidationError, match=r"2 members failed validation"
-    ) as exc:
-        SimpleCollection.validate(data)
+    with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
+        SimpleCollection.validate(data).collect_all()
 
     exc.match(r"Member 'first' failed validation")
     exc.match(r"'primary_key' failed validation for 2 rows")
@@ -207,10 +204,8 @@ def test_validate_with_filter_without_rule_violation(
     }
     assert not MyCollection.is_valid(data)
 
-    with pytest.raises(
-        MemberValidationError, match=r"2 members failed validation"
-    ) as exc:
-        MyCollection.validate(data)
+    with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
+        MyCollection.validate(data).collect_all()
 
     exc.match(r"Member 'first' failed validation")
     exc.match(r"'equal_primary_keys' failed validation for 1 rows")
@@ -228,10 +223,8 @@ def test_validate_with_filter_with_rule_violation(
     }
     assert not MyCollection.is_valid(data)
 
-    with pytest.raises(
-        MemberValidationError, match=r"2 members failed validation"
-    ) as exc:
-        MyCollection.validate(data)
+    with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
+        MyCollection.validate(data).collect_all()
 
     exc.match(r"Member 'first' failed validation")
     exc.match(r"'equal_primary_keys' failed validation for 2 rows")

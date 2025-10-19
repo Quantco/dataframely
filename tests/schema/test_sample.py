@@ -245,7 +245,8 @@ def test_sample_invalid_override_values_raises(
     with pytest.raises(
         ValueError,
         match=(
-            r"After sampling for 100 iterations, 1 rules failed validation:"
+            r"After sampling for 100 iterations, the plugin failed with message: "
+            r"\n1 rules failed validation:"
             rf"\n \* Column '{failed_column}' failed validation for 1 rules:"
             rf"\n   - '{failed_rule}' failed for {failed_rows} rows."
         ),

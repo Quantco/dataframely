@@ -8,7 +8,7 @@ from typing import Any
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
-from dataframely._extre import matching_string_length as extre_matching_string_length
+from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 
 from ._base import Check, Column
@@ -99,7 +99,7 @@ class String(Column):
         ):
             # If the string is constrained by a fully anchored regex, we can use this
             # information to specify the length of the string column
-            min_length, max_length = extre_matching_string_length(self.regex)
+            min_length, max_length = regex_matching_string_length(self.regex)
             if max_length is not None:
                 if min_length == max_length:
                     return sa.CHAR(max_length)

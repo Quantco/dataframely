@@ -23,7 +23,7 @@ else:
 
 
 if TYPE_CHECKING:
-    from ._typing import DataFrame
+    pass
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
@@ -238,32 +238,6 @@ class BaseSchema(metaclass=SchemaMeta):
     def primary_keys(cls) -> list[str]:
         """The primary key columns in this schema (possibly empty)."""
         return _primary_keys(cls.columns())
-
-    @classmethod
-    @abstractmethod
-    def validate(
-        cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
-    ) -> DataFrame[Self]:
-        """Validate that a data frame satisfies the schema.
-
-        Args:
-            df: The data frame to validate.
-            cast: Whether columns with a wrong data type in the input data frame are
-                cast to the schema's defined data type if possible.
-
-        Returns:
-            The (collected) input data frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence. The data frame is
-            guaranteed to maintain its order.
-
-        Raises:
-            ValidationError: If the input data frame does not satisfy the schema
-                definition.
-
-        Note:
-            This method _always_ collects the input data frame in order to raise
-            potential validation errors.
-        """
 
     @classmethod
     def _validation_rules(cls, *, with_cast: bool) -> dict[str, Rule]:

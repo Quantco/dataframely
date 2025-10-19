@@ -172,7 +172,7 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
     result = (
         # NOTE: A value of `null` always validates successfully as nullability should
         #  already be checked via dedicated rules.
-        _with_group_rules(lf, group_rules).with_columns(
+        lf.pipe(_with_group_rules, group_rules).with_columns(
             **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
         )
     )

@@ -14,13 +14,14 @@ from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
-import polars.selectors as cs
 from polars._typing import FileSource, PartitioningScheme
 
 from dataframely._compat import deltalake
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
+from ._match_to_schema import match_to_schema
+from ._plugin import all_rules, all_rules_horizontal, all_rules_required
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
     SERIALIZATION_FORMAT_VERSION,
@@ -35,11 +36,10 @@ from ._storage.parquet import (
     ParquetStorageBackend,
 )
 from ._typing import DataFrame, LazyFrame, Validation
-from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
 from .config import Config
-from .exc import RuleValidationError, ValidationError, ValidationRequiredError
-from .failure import FailureInfo
+from .exc import SchemaError, ValidationRequiredError
+from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
 
 if sys.version_info >= (3, 11):
@@ -47,6 +47,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+
+_COLUMN_VALID = "__DATAFRAMELY_VALID__"
 
 # ------------------------------------------------------------------------------------ #
 #                                   SCHEMA DEFINITION                                  #
@@ -330,7 +332,7 @@ class Schema(BaseSchema, ABC):
                 validation_error = None
                 try:
                     cls.validate(relevant_rows)
-                except ValidationError as e:
+                except Exception as e:
                     validation_error = str(e)
                 raise ValueError(
                     f"After sampling for {Config.options['max_sampling_iterations']} "
@@ -400,28 +402,28 @@ class Schema(BaseSchema, ABC):
 
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules(with_cast=False)
-        filtered, evaluated = cls._filter_raw(combined_dataframe, rules, cast=False)
+        if not rules:
+            # We surely included all items from `remaining_values`
+            return combined_dataframe, remaining_values, remaining_values.head(0)
 
-        if evaluated is None:
-            # When `evaluated` is None, there are no rules and we surely included all
-            # items from `remaining_values`
-            return filtered, remaining_values, remaining_values.slice(0, 0)
+        evaluated = combined_dataframe.lazy().pipe(cls._with_evaluated_rules, rules)
+        filtered = evaluated.filter(_COLUMN_VALID).select(cls.column_names())
 
         concat_values = pl.concat([used_values, remaining_values])
-
         if concat_values.height == 0:
             # If we didn't provide any values, we can simply return empty data frames
             # with the right schema for used and remaining values
-            return filtered, concat_values, concat_values
+            return filtered.collect(), concat_values, concat_values
 
         # NOTE: We can filter `concat_values` using the bitmask from the above filter
         #  operation as the ordering of the custom values is guaranteed to be the
         #  same: `previous_result` and `used_values` contain the same values. Similarly,
         #  `sampled` and `remaining_values` have the same values.
+        filtered_df, evaluated_df = pl.collect_all([filtered, evaluated])
         return (
-            filtered,
-            concat_values.filter(evaluated.get_column("__final_valid__")),
-            concat_values.filter(~evaluated.get_column("__final_valid__")),
+            filtered_df,
+            concat_values.filter(evaluated_df.get_column(_COLUMN_VALID)),
+            concat_values.filter(~evaluated_df.get_column(_COLUMN_VALID)),
         )
 
     @classmethod
@@ -444,27 +446,80 @@ class Schema(BaseSchema, ABC):
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
+    @overload
+    @classmethod
+    def validate(
+        cls, df: pl.DataFrame, /, *, cast: bool = False
+    ) -> DataFrame[Self]: ...
+
+    @overload
+    @classmethod
+    def validate(
+        cls, df: pl.LazyFrame, /, *, cast: bool = False
+    ) -> LazyFrame[Self]: ...
+
     @classmethod
     def validate(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
-    ) -> DataFrame[Self]:
-        # We can dispatch to the `filter` method and raise an error if any row cannot
-        # be validated
-        df_valid, failures = cls.filter(df, cast=cast)
-        if len(failures) > 0:
-            raise RuleValidationError(failures.counts())
-        return df_valid
+    ) -> DataFrame[Self] | LazyFrame[Self]:
+        """Validate that a data frame satisfies the schema.
+
+        If an eager data frame is passed as input, validation is performed within this
+        function. If a lazy frame is passed, the lazy frame is simply extended with the
+        validation logic. The logic will only be executed (and potentially raise an
+        error) once :meth:`~polars.LazyFrame.collect` is called on it.
+
+        Args:
+            df: The data frame to validate.
+            cast: Whether columns with a wrong data type in the input data frame are
+                cast to the schema's defined data type if possible.
+
+        Returns:
+            The input eager or lazy frame, wrapped in a generic version of the
+            input's data frame type to reflect schema adherence. The data frame is
+            guaranteed to maintain its order.
+
+        Raises:
+            SchemaError: If an eager data frame is passed as the input data frame and
+                it misses columns or ``cast=False`` and any data type mismatches the
+                definition in this schema. Only raised upon collection if a lazy frame
+                is passed as input.
+            ComputeError: If an eager data frame is passed as the input data frame and
+                any rule in the schema is violated, i.e. the data does not pass the
+                validation. Only raised upon collection if a lazy frame is passed as
+                input.
+            InvalidOperationError: If an eager data frame is passed as the input data
+                frame, ``cast=True``, and the cast fails for any value in the data. Only
+                raised upon collection if a lazy frame is passed as input.
+        """
+        lf = df.lazy().pipe(
+            match_to_schema, cls, casting=("strict" if cast else "none")
+        )
+        if rules := cls._validation_rules(with_cast=False):
+            lf = (
+                lf.pipe(with_evaluation_rules, rules)
+                .filter(all_rules_required(rules.keys(), schema_name=cls.__name__))
+                .drop(rules.keys())
+            )
+        return lf.pipe(_collect_if, isinstance(df, pl.DataFrame))  # type: ignore
 
     @classmethod
     def is_valid(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
     ) -> bool:
-        """Utility method to check whether :meth:`validate` raises an exception.
+        """Check whether a data frame satisfies the schema.
+
+        This method has two major differences to :meth:`validate`:
+
+        - It always collects the input to eagerly evaluate validity and return a boolean
+          value.
+        - It does not raise any of the documented exceptions for :meth:`validate` and
+          instead returns a value of ``False``. Note that it still raises an exception
+          if a lazy frame is provided as input and any logic prior to the validation
+          causes an exception.
 
         Args:
             df: The data frame to check for validity.
-            allow_extra_columns: Whether to allow the data frame to contain columns
-                that are not defined in the schema.
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type before running validation. If set
                 to ``False``, a wrong data type will result in a return value of
@@ -472,42 +527,50 @@ class Schema(BaseSchema, ABC):
 
         Returns:
             Whether the provided dataframe can be validated with this schema.
+
+        Notes:
+            If you want to customize the engine being used for collecting the result
+            within this method, consider wrapping the call in a context manager that
+            sets the ``engine_affinity`` in the :class:`polars.Config`.
         """
+        # NOTE: We need to perform "lenient" casting to catch issues resulting from
+        #  invalid target data types where casting fails for the data.
+        lf = df.lazy().pipe(
+            match_to_schema, cls, casting=("lenient" if cast else "none")
+        )
         try:
-            cls.validate(df, cast=cast)
-            return True
-        except (ValidationError, plexc.InvalidOperationError):
+            if rules := cls._validation_rules(with_cast=cast):
+                return (
+                    lf.pipe(with_evaluation_rules, rules)
+                    .select(all_rules(rules.keys()))
+                    .collect()
+                    .item()
+                )
+            # NOTE: We cannot simply return `True` here as, otherwise, we wouldn't
+            #  validate the schema.
+            return lf.select(pl.lit(True)).collect().item()
+        except SchemaError:
+            # If we encounter a schema error, we gracefully handle this as 'invalid'
             return False
-        except Exception as e:  # pragma: no cover
-            raise e
-
-    @classmethod
-    def _validate_schema(
-        cls,
-        lf: pl.LazyFrame,
-        *,
-        casting: DtypeCasting,
-    ) -> pl.LazyFrame:
-        schema = lf.collect_schema()
-        lf = validate_columns(lf, actual=schema.keys(), expected=cls.column_names())
-
-        if casting == "lenient":
-            # Keep around original nullability info to use this information to evaluate
-            # whether casting succeeded.
-            # NOTE: This code path is only executed from the `filter` method.
-            lf = lf.with_columns(
-                pl.col(cls.column_names()).name.prefix(ORIGINAL_COLUMN_PREFIX)
-            )
-
-        lf = validate_dtypes(lf, actual=schema, expected=cls.columns(), casting=casting)
-        return lf
 
     # ----------------------------------- FILTERING ---------------------------------- #
+
+    @overload
+    @classmethod
+    def filter(
+        cls, df: pl.DataFrame, /, *, cast: bool = False
+    ) -> FilterResult[Self]: ...
+
+    @overload
+    @classmethod
+    def filter(
+        cls, df: pl.LazyFrame, /, *, cast: bool = False
+    ) -> LazyFilterResult[Self]: ...
 
     @classmethod
     def filter(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
-    ) -> tuple[DataFrame[Self], FailureInfo[Self]]:
+    ) -> FilterResult[Self] | LazyFilterResult[Self]:
         """Filter the data frame by the rules of this schema.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
@@ -538,66 +601,47 @@ class Schema(BaseSchema, ABC):
         Note:
             This method preserves the ordering of the input data frame.
         """
-        rules = cls._validation_rules(with_cast=cast)
-        df_filtered, df_evaluated = cls._filter_raw(df, rules, cast)
-        if df_evaluated is not None:
-            failure_lf = (
-                df_evaluated.lazy()
-                .filter(~pl.col("__final_valid__"))
-                .drop("__final_valid__")
+        lf = df.lazy().pipe(
+            match_to_schema, cls, casting=("lenient" if cast else "none")
+        )
+        if rules := cls._validation_rules(with_cast=cast):
+            evaluated = lf.pipe(cls._with_evaluated_rules, rules)
+            filtered = evaluated.filter(pl.col(_COLUMN_VALID)).select(
+                cls.column_names()
             )
+            failure_lf = evaluated.filter(~pl.col(_COLUMN_VALID)).drop(_COLUMN_VALID)
             if cast:
                 # If we cast, we kept the original values around. In the failure info,
                 # we must return the original values instead of the casted ones.
-                failure_lf = failure_lf.with_columns(
-                    pl.col(f"{ORIGINAL_COLUMN_PREFIX}{name}").alias(name)
-                    for name in cls.column_names()
-                ).drop(f"{ORIGINAL_COLUMN_PREFIX}{name}" for name in cls.column_names())
-            return (
-                df_filtered,
-                FailureInfo(lf=failure_lf, rule_columns=list(rules.keys()), schema=cls),
-            )
-        return df_filtered, FailureInfo(lf=pl.LazyFrame(), rule_columns=[], schema=cls)
+                failure_lf = failure_lf.pipe(
+                    _restore_original_columns, cls.column_names()
+                )
+        else:
+            filtered = lf
+            failure_lf = pl.LazyFrame()
+
+        # Build the result objects
+        failure_info = FailureInfo(
+            lf=failure_lf, rule_columns=list(rules.keys()), schema=cls
+        )
+        result = LazyFilterResult(filtered, failure_info)  # type: ignore
+        if isinstance(df, pl.DataFrame):
+            return result.collect_all()
+        return result
 
     @classmethod
-    def _filter_raw(
-        cls, df: pl.DataFrame | pl.LazyFrame, rules: dict[str, Rule], cast: bool
-    ) -> tuple[DataFrame[Self], pl.DataFrame | None]:
-        # First, we check for the schema of the data frame
-        lf = cls._validate_schema(df.lazy(), casting=("lenient" if cast else "none"))
-
-        # Then, we filter the data frame
-        if len(rules) > 0:
-            lf_with_eval = lf.pipe(with_evaluation_rules, rules)
-
-            # At this point, `lf_with_eval` contains the following:
-            # - All relevant columns of the original data frame
-            #   - If `cast` is set to `True`, the columns with their original names are
-            #     already cast and the original values are available in the columns
-            #     prefixed with `ORIGINAL_COLUMN_PREFIX`.
-            # - One boolean column for each rule in `rules`
-            rule_columns = rules.keys()
-            df_evaluated = lf_with_eval.with_columns(
-                __final_valid__=pl.all_horizontal(pl.col(rule_columns).fill_null(True))
-            ).collect()
-
-            # For the output, partition `lf_evaluated` into the returned data frame `lf`
-            # and the invalid data frame
-            lf = (
-                df_evaluated.lazy()
-                .filter("__final_valid__")
-                .drop(
-                    "__final_valid__",
-                    cs.starts_with(ORIGINAL_COLUMN_PREFIX),
-                    *rule_columns,
-                )
-            )
-        else:
-            df_evaluated = None
-
-        return (
-            lf.collect(),  # type: ignore
-            df_evaluated,
+    def _with_evaluated_rules(
+        cls, lf: pl.LazyFrame, rules: dict[str, Rule]
+    ) -> pl.LazyFrame:
+        # The resulting lazy frame contains:
+        #  - The output columns
+        #  - The input columns IF `cast=True`, prefixed with a constant
+        #  - One boolean column per rule
+        #  - One boolean column aggregating all rules
+        return lf.pipe(with_evaluation_rules, rules).with_columns(
+            all_rules_horizontal(
+                pl.col(rule).fill_null(True) for rule in rules.keys()
+            ).alias(_COLUMN_VALID)
         )
 
     # ------------------------------------ CASTING ----------------------------------- #
@@ -1267,3 +1311,17 @@ def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:
             **{name: rule_from_dict(rule) for name, rule in data["rules"].items()},
         },
     )
+
+
+def _collect_if(lf: pl.LazyFrame, condition: bool) -> pl.DataFrame | pl.LazyFrame:
+    """Collect a lazy frame if the original was eager, otherwise return the lazy
+    frame."""
+    if condition:
+        return lf.collect()
+    return lf
+
+
+def _restore_original_columns(lf: pl.LazyFrame, columns: list[str]) -> pl.LazyFrame:
+    return lf.with_columns(
+        pl.col(f"{ORIGINAL_COLUMN_PREFIX}{name}").alias(name) for name in columns
+    ).drop(f"{ORIGINAL_COLUMN_PREFIX}{name}" for name in columns)

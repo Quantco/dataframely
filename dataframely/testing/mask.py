@@ -3,7 +3,7 @@
 
 import polars as pl
 
-from dataframely.failure import FailureInfo
+from dataframely.filter_result import FailureInfo
 
 
 def validation_mask(df: pl.DataFrame | pl.LazyFrame, failure: FailureInfo) -> pl.Series:

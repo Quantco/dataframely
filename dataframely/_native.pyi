@@ -1,6 +1,6 @@
 from typing import overload
 
-def matching_string_length(regex: str) -> tuple[int, int | None]:
+def regex_matching_string_length(regex: str) -> tuple[int, int | None]:
     """
     Compute the minimum and maximum length (if available) of strings matching a regular expression.
 
@@ -18,7 +18,7 @@ def matching_string_length(regex: str) -> tuple[int, int | None]:
     """
 
 @overload
-def sample(
+def regex_sample(
     regex: str, n: int, max_repetitions: int = 16, seed: int | None = None
 ) -> list[str]:
     """
@@ -46,7 +46,7 @@ def sample(
     """
 
 @overload
-def sample(
+def regex_sample(
     regex: str,
     n: None = None,
     max_repetitions: int = 16,

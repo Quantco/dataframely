@@ -1,5 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+
 from __future__ import annotations
 
 import json
@@ -19,6 +20,7 @@ from dataframely._compat import deltalake
 
 from ._base_collection import BaseCollection, CollectionMember
 from ._filter import Filter
+from ._plugin import all_rules_required
 from ._polars import FrameType
 from ._serialization import (
     SERIALIZATION_FORMAT_VERSION,
@@ -31,13 +33,8 @@ from ._storage.constants import COLLECTION_METADATA_KEY
 from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
 from ._typing import LazyFrame, Validation
-from .exc import (
-    MemberValidationError,
-    RuleValidationError,
-    ValidationError,
-    ValidationRequiredError,
-)
-from .failure import FailureInfo
+from .exc import ValidationRequiredError
+from .filter_result import FailureInfo
 from .random import Generator
 from .schema import _schema_from_dict
 
@@ -386,15 +383,38 @@ class Collection(BaseCollection, ABC):
             collection did not remove rows from any member. The input order of each
             member is maintained.
         """
-        out, failure = cls.filter(data, cast=cast)
-        if any(len(fail) > 0 for fail in failure.values()):
-            raise MemberValidationError(
-                {
-                    name: RuleValidationError(fail.counts())
-                    for name, fail in failure.items()
-                }
-            )
-        return out
+        cls._validate_input_keys(data)
+        members: dict[str, pl.LazyFrame] = {
+            name: member.schema.validate(data[name].lazy(), cast=cast)
+            for name, member in cls.members().items()
+            if name in data
+        }
+
+        if filters := cls._filters():
+            result_cls = cls._init(members)
+            primary_key = cls.common_primary_keys()
+            filter_names = list(filters.keys())
+            keep = [
+                filter.logic(result_cls).select(*primary_key, pl.lit(True).alias(name))
+                for name, filter in filters.items()
+            ]
+            members = {
+                name: (
+                    _join_all(lf, *keep, on=primary_key, how="left")
+                    .filter(
+                        all_rules_required(
+                            filter_names, null_is_valid=False, schema_name=name
+                        )
+                    )
+                    .drop(filter_names)
+                )
+                for name, lf in members.items()
+            }
+
+        result = cls._init(members)
+        if any(isinstance(df, pl.DataFrame) for df in data.values()):
+            return result.collect_all()
+        return result
 
     @classmethod
     def is_valid(cls, data: Mapping[str, FrameType], /, *, cast: bool = False) -> bool:
@@ -415,11 +435,30 @@ class Collection(BaseCollection, ABC):
             ValueError: If an insufficient set of input data frames is provided, i.e. if
                 any required member of this collection is missing in the input.
         """
-        try:
-            cls.validate(data, cast=cast)
-            return True
-        except (ValidationError, plexc.InvalidOperationError):
-            return False
+        cls._validate_input_keys(data)
+
+        # Check that all individual members are valid
+        members: dict[str, pl.LazyFrame] = {}
+        for member, schema in cls.member_schemas().items():
+            if member in data:
+                if not schema.is_valid(data[member], cast=cast):
+                    return False
+                members[member] = data[member].lazy()
+
+        # Make sure that inner-joining all filters does not remove any rows
+        if filters := cls._filters().values():
+            result_cls = cls._init(members)
+            primary_key = cls.common_primary_keys()
+            keep = [filter.logic(result_cls).select(primary_key) for filter in filters]
+            joined = _join_all(*keep, on=primary_key, how="inner")
+            removed_rows = pl.collect_all(
+                data[member].lazy().join(joined, on=primary_key, how="anti")
+                for member in cls.members()
+                if member in data
+            )
+            return all(df.is_empty() for df in removed_rows)
+
+        return True
 
     # ----------------------------------- FILTERING ---------------------------------- #
 
@@ -465,14 +504,14 @@ class Collection(BaseCollection, ABC):
 
         # First, we iterate over all members in this collection and filter them
         # independently. We keep failure infos around such that we can extend them later.
-        results: dict[str, pl.DataFrame] = {}
+        results: dict[str, pl.LazyFrame] = {}
         failures: dict[str, FailureInfo] = {}
         for member_name, member in cls.members().items():
             if member.is_optional and member_name not in data:
                 continue
 
             results[member_name], failures[member_name] = member.schema.filter(
-                data[member_name], cast=cast
+                data[member_name].lazy(), cast=cast
             )
 
         # Once we've done that, we can apply the filters on this collection. To this end,
@@ -482,9 +521,9 @@ class Collection(BaseCollection, ABC):
             result_cls = cls._init(results)
             primary_keys = cls.common_primary_keys()
 
-            keep: dict[str, pl.DataFrame] = {}
+            keep: dict[str, pl.LazyFrame] = {}
             for name, filter in filters.items():
-                keep[name] = filter.logic(result_cls).select(primary_keys).collect()
+                keep[name] = filter.logic(result_cls).select(primary_keys)  # .cache()
 
             # Now we can iterate over the results and left-join onto each individual
             # filter to obtain independent boolean indicators of whether to keep the row
@@ -502,12 +541,10 @@ class Collection(BaseCollection, ABC):
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
 
-                result_with_eval = lf_with_eval.collect()
-
                 # Filtering `result_with_eval` by the rows for which all joins
                 # "succeeded", we can identify the rows that pass all the filters. We
                 # keep these rows for the result.
-                results[member_name] = result_with_eval.filter(
+                results[member_name] = lf_with_eval.filter(
                     pl.all_horizontal(keep.keys())
                 ).drop(keep.keys())
 
@@ -522,7 +559,7 @@ class Collection(BaseCollection, ABC):
                 #  | ...         | NULL                  | <filled>                         |
                 #
                 failure = failures[member_name]
-                filtered_failure = result_with_eval.filter(
+                filtered_failure = lf_with_eval.filter(
                     ~pl.all_horizontal(keep.keys())
                 ).lazy()
 
@@ -668,7 +705,7 @@ class Collection(BaseCollection, ABC):
             collection's members are still "lazy". However, they are "shallow-lazy",
             meaning they are obtained by calling ``.collect().lazy()``.
         """
-        dfs = pl.collect_all([lf for lf in self.to_dict().values()])
+        dfs = pl.collect_all(self.to_dict().values())
         return self._init(
             {key: dfs[i].lazy() for i, key in enumerate(self.to_dict().keys())}
         )
@@ -1132,16 +1169,6 @@ class Collection(BaseCollection, ABC):
     # ----------------------------------- UTILITIES ---------------------------------- #
 
     @classmethod
-    def _init(cls, data: Mapping[str, FrameType], /) -> Self:
-        out = cls()
-        for member_name, member in cls.members().items():
-            if member.is_optional and member_name not in data:
-                setattr(out, member_name, None)
-            else:
-                setattr(out, member_name, data[member_name].lazy())
-        return out
-
-    @classmethod
     def _validate_input_keys(cls, data: Mapping[str, FrameType], /) -> None:
         actual = set(data)
 
@@ -1232,6 +1259,17 @@ def deserialize_collection(data: str) -> type[Collection]:
 
 
 # --------------------------------------- UTILS -------------------------------------- #
+
+
+def _join_all(
+    *dfs: pl.LazyFrame,
+    on: list[str],
+    how: Literal["inner", "left"] = "inner",
+) -> pl.LazyFrame:
+    result = dfs[0]
+    for df in dfs[1:]:
+        result = result.join(df, on=on, how=how)
+    return result
 
 
 def _extract_keys_if_exist(
