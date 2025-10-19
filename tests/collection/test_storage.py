@@ -13,7 +13,7 @@ from polars.testing import assert_frame_equal
 import dataframely as dy
 from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
-from dataframely.collection import _reconcile_collection_types
+from dataframely.collection.collection import _reconcile_collection_types
 from dataframely.exc import ValidationRequiredError
 from dataframely.testing.storage import (
     CollectionStorageTester,

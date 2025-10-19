@@ -17,26 +17,26 @@ import polars as pl
 import polars.exceptions as plexc
 
 from dataframely._compat import deltalake
-
-from ._base_collection import BaseCollection, CollectionMember
-from ._filter import Filter
-from ._plugin import all_rules_required
-from ._polars import FrameType
-from ._serialization import (
+from dataframely._filter import Filter
+from dataframely._plugin import all_rules_required
+from dataframely._polars import FrameType
+from dataframely._serialization import (
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
     serialization_versions,
 )
-from ._storage import StorageBackend
-from ._storage.constants import COLLECTION_METADATA_KEY
-from ._storage.delta import DeltaStorageBackend
-from ._storage.parquet import ParquetStorageBackend
-from ._typing import LazyFrame, Validation
-from .exc import ValidationRequiredError
-from .filter_result import FailureInfo
-from .random import Generator
-from .schema import _schema_from_dict
+from dataframely._storage import StorageBackend
+from dataframely._storage.constants import COLLECTION_METADATA_KEY
+from dataframely._storage.delta import DeltaStorageBackend
+from dataframely._storage.parquet import ParquetStorageBackend
+from dataframely._typing import LazyFrame, Validation
+from dataframely.exc import ValidationRequiredError
+from dataframely.filter_result import FailureInfo
+from dataframely.random import Generator
+from dataframely.schema import _schema_from_dict
+
+from ._base import BaseCollection, CollectionMember
 
 if sys.version_info >= (3, 11):
     from typing import Self

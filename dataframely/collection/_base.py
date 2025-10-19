@@ -13,11 +13,11 @@ from typing import Annotated, Any, cast, get_args, get_origin
 
 import polars as pl
 
-from ._filter import Filter
-from ._polars import FrameType
-from ._typing import LazyFrame as TypedLazyFrame
-from .exc import AnnotationImplementationError, ImplementationError
-from .schema import Schema
+from dataframely._filter import Filter
+from dataframely._polars import FrameType
+from dataframely._typing import LazyFrame as TypedLazyFrame
+from dataframely.exc import AnnotationImplementationError, ImplementationError
+from dataframely.schema import Schema
 
 if sys.version_info >= (3, 11):
     from typing import Self

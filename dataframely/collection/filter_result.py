@@ -8,8 +8,9 @@ from typing import Any, Generic, NamedTuple, TypeVar
 
 import polars as pl
 
-from dataframely._base_collection import BaseCollection
 from dataframely.filter_result import FailureInfo
+
+from ._base import BaseCollection
 
 C = TypeVar("C", bound=BaseCollection)
 

@@ -6,8 +6,8 @@ from typing import TypeVar
 
 import polars as pl
 
-from ._base_collection import BaseCollection
 from ._typing import LazyFrame
+from .collection import BaseCollection
 from .schema import Schema
 
 S = TypeVar("S", bound=Schema)
