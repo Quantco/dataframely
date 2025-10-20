@@ -633,7 +633,7 @@ class Schema(BaseSchema, ABC):
 
         Note:
             If you only require a generic data frame for the type checker, consider
-            using :func:`python:typing.cast` instead of this method.
+            using :func:`typing.cast` instead of this method.
 
         Attention:
             For lazy frames, casting is not performed eagerly. This prevents collecting
