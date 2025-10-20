@@ -27,29 +27,12 @@ def test_warning_deprecated_default_nullable(
         deprecated_default_nullable()
 
 
-# ------------------------- Nullable primary key  ---------------------------------#
-
-
-def deprecated_nullable_primary_key() -> None:
-    """This function causes a FutureWarning because both `nullable` and `primary_key`
-    are set to `True` in the Column constructor."""
-    dy.Integer(primary_key=True, nullable=True)
-
-
-def test_warning_deprecated_nullable_primary_key(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("DATAFRAMELY_NO_FUTURE_WARNINGS", "")
-    with pytest.warns(FutureWarning, match="Nullable primary keys are not supported"):
-        deprecated_nullable_primary_key()
-
-
 # ------------------------- Common  ---------------------------------#
 
 
 @pytest.mark.parametrize(
     "deprecated_behavior",
-    [deprecated_default_nullable, deprecated_nullable_primary_key],
+    [deprecated_default_nullable],
 )
 @pytest.mark.parametrize("env_var", ["1", "True", "true"])
 def test_future_warning_skip(

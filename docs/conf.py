@@ -43,8 +43,15 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.linkcode",
     "sphinxcontrib.apidoc",
+    "myst_parser",
 ]
 
+myst_parser_config = {"myst_enable_extensions": ["rst_eval_roles"]}
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".txt": "markdown",
+    ".md": "markdown",
+}
 numpydoc_class_members_toctree = False
 
 apidoc_module_dir = "../dataframely"
