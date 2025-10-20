@@ -34,7 +34,7 @@ class Date(OrdinalMixin[dt.date], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.date | None = None,
         min_exclusive: dt.date | None = None,
@@ -157,7 +157,7 @@ class Time(OrdinalMixin[dt.time], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.time | None = None,
         min_exclusive: dt.time | None = None,
@@ -286,7 +286,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.datetime | None = None,
         min_exclusive: dt.datetime | None = None,
@@ -433,7 +433,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.timedelta | None = None,
         min_exclusive: dt.timedelta | None = None,

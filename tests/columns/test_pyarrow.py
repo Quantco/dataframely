@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+from typing import TypeVar
+
 import pytest
 from polars._typing import TimeUnit
 
@@ -17,9 +19,19 @@ from dataframely.testing import (
 pytestmark = pytest.mark.with_optionals
 
 
+T = TypeVar("T", bound=dy.Column)
+
+
+def _nullable(column_type: type[T]) -> T:
+    # dy.Any doesn't have the `nullable` parameter.
+    if column_type == dy.Any:
+        return column_type()
+    return column_type(nullable=True)
+
+
 @pytest.mark.parametrize("column_type", ALL_COLUMN_TYPES)
 def test_equal_to_polars_schema(column_type: type[Column]) -> None:
-    schema = create_schema("test", {"a": column_type()})
+    schema = create_schema("test", {"a": _nullable(column_type)})
     actual = schema.pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
@@ -39,7 +51,7 @@ def test_equal_to_polars_schema(column_type: type[Column]) -> None:
     ],
 )
 def test_equal_polars_schema_enum(categories: list[str]) -> None:
-    schema = create_schema("test", {"a": dy.Enum(categories)})
+    schema = create_schema("test", {"a": dy.Enum(categories, nullable=True)})
     actual = schema.pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
@@ -49,11 +61,14 @@ def test_equal_polars_schema_enum(categories: list[str]) -> None:
     "inner",
     [c() for c in ALL_COLUMN_TYPES]
     + [dy.List(t()) for t in ALL_COLUMN_TYPES]
-    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [
+        dy.Array(t() if t == dy.Any else t(nullable=True), 1)
+        for t in NO_VALIDATION_COLUMN_TYPES
+    ]
     + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES],
 )
 def test_equal_polars_schema_list(inner: Column) -> None:
-    schema = create_schema("test", {"a": dy.List(inner)})
+    schema = create_schema("test", {"a": dy.List(inner, nullable=True)})
     actual = schema.pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
@@ -61,10 +76,13 @@ def test_equal_polars_schema_list(inner: Column) -> None:
 
 @pytest.mark.parametrize(
     "inner",
-    [c() for c in NO_VALIDATION_COLUMN_TYPES]
-    + [dy.List(t()) for t in NO_VALIDATION_COLUMN_TYPES]
-    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
-    + [dy.Struct({"a": t()}) for t in NO_VALIDATION_COLUMN_TYPES],
+    [_nullable(c) for c in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.List(_nullable(t), nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.Array(_nullable(t), 1, nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [
+        dy.Struct({"a": _nullable(t)}, nullable=True)
+        for t in NO_VALIDATION_COLUMN_TYPES
+    ],
 )
 @pytest.mark.parametrize(
     "shape",
@@ -83,13 +101,16 @@ def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) 
 
 @pytest.mark.parametrize(
     "inner",
-    [c() for c in ALL_COLUMN_TYPES]
-    + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES]
-    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
-    + [dy.List(t()) for t in ALL_COLUMN_TYPES],
+    [_nullable(c) for c in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.List(_nullable(t), nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.Array(_nullable(t), 1, nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [
+        dy.Struct({"a": _nullable(t)}, nullable=True)
+        for t in NO_VALIDATION_COLUMN_TYPES
+    ],
 )
 def test_equal_polars_schema_struct(inner: Column) -> None:
-    schema = create_schema("test", {"a": dy.Struct({"a": inner})})
+    schema = create_schema("test", {"a": dy.Struct({"a": inner}, nullable=True)})
     actual = schema.pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
@@ -110,10 +131,13 @@ def test_nullability_information_enum(nullable: bool) -> None:
 
 @pytest.mark.parametrize(
     "inner",
-    [c() for c in ALL_COLUMN_TYPES]
-    + [dy.List(t()) for t in ALL_COLUMN_TYPES]
-    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
-    + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES],
+    [_nullable(c) for c in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.List(_nullable(t), nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.Array(_nullable(t), 1, nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [
+        dy.Struct({"a": _nullable(t)}, nullable=True)
+        for t in NO_VALIDATION_COLUMN_TYPES
+    ],
 )
 @pytest.mark.parametrize("nullable", [True, False])
 def test_nullability_information_list(inner: Column, nullable: bool) -> None:
@@ -123,10 +147,13 @@ def test_nullability_information_list(inner: Column, nullable: bool) -> None:
 
 @pytest.mark.parametrize(
     "inner",
-    [c() for c in ALL_COLUMN_TYPES]
-    + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES]
-    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
-    + [dy.List(t()) for t in ALL_COLUMN_TYPES],
+    [_nullable(c) for c in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.List(_nullable(t), nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [dy.Array(_nullable(t), 1, nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
+    + [
+        dy.Struct({"a": _nullable(t)}, nullable=True)
+        for t in NO_VALIDATION_COLUMN_TYPES
+    ],
 )
 @pytest.mark.parametrize("nullable", [True, False])
 def test_nullability_information_struct(inner: Column, nullable: bool) -> None:
@@ -135,11 +162,15 @@ def test_nullability_information_struct(inner: Column, nullable: bool) -> None:
 
 
 def test_multiple_columns() -> None:
-    schema = create_schema("test", {"a": dy.Int32(nullable=False), "b": dy.Integer()})
+    schema = create_schema(
+        "test", {"a": dy.Int32(nullable=False), "b": dy.Integer(nullable=True)}
+    )
     assert str(schema.pyarrow_schema()).split("\n") == ["a: int32 not null", "b: int64"]
 
 
 @pytest.mark.parametrize("time_unit", ["ns", "us", "ms"])
 def test_datetime_time_unit(time_unit: TimeUnit) -> None:
-    schema = create_schema("test", {"a": dy.Datetime(time_unit=time_unit)})
+    schema = create_schema(
+        "test", {"a": dy.Datetime(time_unit=time_unit, nullable=True)}
+    )
     assert str(schema.pyarrow_schema()) == f"a: timestamp[{time_unit}]"

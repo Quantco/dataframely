@@ -17,7 +17,7 @@ from dataframely.testing import create_schema, validation_mask
 
 class MySchema(dy.Schema):
     a = dy.Int64(primary_key=True)
-    b = dy.String(max_length=3)
+    b = dy.String(max_length=3, nullable=True)
 
 
 @pytest.mark.parametrize(
@@ -106,7 +106,7 @@ def test_filter_failure(
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_filter_no_rules(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
-    schema = create_schema("test", {"a": dy.Int64()})
+    schema = create_schema("test", {"a": dy.Int64(nullable=True)})
     df = df_type({"a": [1, 2, 3]})
     df_valid, failures = schema.filter(df)
     assert isinstance(df_valid, pl.DataFrame)

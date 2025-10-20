@@ -12,8 +12,8 @@ from dataframely.random import Generator
 
 
 class MySimpleSchema(dy.Schema):
-    a = dy.Int64()
-    b = dy.String()
+    a = dy.Int64(nullable=True)
+    b = dy.String(nullable=True)
 
 
 class PrimaryKeySchema(dy.Schema):
@@ -93,8 +93,8 @@ class SchemaWithIrrelevantColumnPreProcessing(dy.Schema):
 
 
 class MyAdvancedSchema(dy.Schema):
-    a = dy.Float64(min=20.0)
-    b = dy.String(regex=r"abc*")
+    a = dy.Float64(min=20.0, nullable=True)
+    b = dy.String(regex=r"abc*", nullable=True)
 
 
 # --------------------------------------- TESTS -------------------------------------- #
