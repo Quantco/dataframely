@@ -3,7 +3,7 @@
 Whenever you find out something that you were surprised by or needed some non-trivial
 thinking, please add it here.
 
-## How do I define additional unique keys in a :class:`~dataframely.Schema`?
+## How do I define additional unique keys in a {class}`~dataframely.Schema`?
 
 By default, `dataframely` only supports defining a single non-nullable (composite) primary key in :class:
 `~dataframely.Schema`.
