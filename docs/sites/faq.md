@@ -3,9 +3,10 @@
 Whenever you find out something that you were surprised by or needed some non-trivial
 thinking, please add it here.
 
-## How do I define additional unique keys in a `dy.Schema`?
+## How do I define additional unique keys in a :class:`~dataframely.Schema`?
 
-By default, `dataframely` only supports defining a single non-nullable (composite) primary key in `dy.Schema`.
+By default, `dataframely` only supports defining a single non-nullable (composite) primary key in :class:
+`~dataframely.Schema`.
 However, in some scenarios it may be useful to define additional unique keys (which support nullable fields and/or which
 are additionally unique).
 
