@@ -40,9 +40,9 @@ def _build_rules(
     rules: dict[str, Rule] = copy(custom)
 
     # Add primary key validation to the list of rules if applicable
-    primary_keys = _primary_keys(columns)
-    if len(primary_keys) > 0:
-        rules["primary_key"] = Rule(~pl.struct(primary_keys).is_duplicated())
+    primary_key = _primary_key(columns)
+    if len(primary_key) > 0:
+        rules["primary_key"] = Rule(~pl.struct(primary_key).is_duplicated())
 
     # Add column-specific rules
     column_rules = {
@@ -70,7 +70,7 @@ def _build_rules(
     return rules
 
 
-def _primary_keys(columns: dict[str, Column]) -> list[str]:
+def _primary_key(columns: dict[str, Column]) -> list[str]:
     return list(k for k, col in columns.items() if col.primary_key)
 
 
@@ -235,9 +235,9 @@ class BaseSchema(metaclass=SchemaMeta):
         """
 
     @classmethod
-    def primary_keys(cls) -> list[str]:
+    def primary_key(cls) -> list[str]:
         """The primary key columns in this schema (possibly empty)."""
-        return _primary_keys(cls.columns())
+        return _primary_key(cls.columns())
 
     @classmethod
     def _validation_rules(cls, *, with_cast: bool) -> dict[str, Rule]:

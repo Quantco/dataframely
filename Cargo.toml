@@ -23,6 +23,10 @@ rayon = "*"
 regex-syntax = "0.8"
 serde = "*"
 thiserror = "2.0"
+regex = "*"
+
+[dev-dependencies]
+rstest = "*"
 
 [profile.release]
 codegen-units = 1

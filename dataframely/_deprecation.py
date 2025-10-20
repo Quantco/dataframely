@@ -37,14 +37,3 @@ def warn_nullable_default_change() -> None:
         FutureWarning,
         stacklevel=4,
     )
-
-
-@skip_if(env="DATAFRAMELY_NO_FUTURE_WARNINGS")
-def warn_no_nullable_primary_keys() -> None:
-    warnings.warn(
-        "Nullable primary keys are not supported. "
-        "Setting `nullable=True` on a primary key column is ignored "
-        "and will raise an error in a future release.",
-        FutureWarning,
-        stacklevel=4,
-    )

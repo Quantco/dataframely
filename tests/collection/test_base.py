@@ -22,8 +22,8 @@ class MyCollection(dy.Collection):
     second: dy.LazyFrame[MySecondSchema] | None
 
 
-def test_common_primary_keys() -> None:
-    assert MyCollection.common_primary_keys() == ["a"]
+def test_common_primary_key() -> None:
+    assert MyCollection.common_primary_key() == ["a"]
 
 
 def test_members() -> None:

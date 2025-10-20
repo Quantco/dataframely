@@ -24,6 +24,9 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 14):
+    from annotationlib import Format
+
 _MEMBER_ATTR = "__dataframely_members__"
 _FILTER_ATTR = "__dataframely_filters__"
 
@@ -67,8 +70,8 @@ class CollectionMember:
 # --------------------------------------- UTILS -------------------------------------- #
 
 
-def _common_primary_keys(schemas: Iterable[type[Schema]]) -> set[str]:
-    return set.intersection(*[set(schema.primary_keys()) for schema in schemas])
+def _common_primary_key(columns: Iterable[type[Schema]]) -> set[str]:
+    return set.intersection(*[set(schema.primary_key()) for schema in columns])
 
 
 # ------------------------------------------------------------------------------------ #
@@ -124,7 +127,7 @@ class CollectionMeta(ABCMeta):
         # 1) Check that there are overlapping primary keys that allow the application
         # of filters.
         if len(non_ignored_member_schemas) > 0 and len(result.filters) > 0:
-            if len(_common_primary_keys(non_ignored_member_schemas)) == 0:
+            if len(_common_primary_key(non_ignored_member_schemas)) == 0:
                 raise ImplementationError(
                     "Members of a collection must have an overlapping primary key "
                     "but did not find any."
@@ -152,11 +155,11 @@ class CollectionMeta(ABCMeta):
 
         # 3) Check that inlining for sampling is configured correctly.
         if len(non_ignored_member_schemas) > 0:
-            common_primary_keys = _common_primary_keys(non_ignored_member_schemas)
+            common_primary_key = _common_primary_key(non_ignored_member_schemas)
             inlined_columns: set[str] = set()
             for member, info in result.members.items():
                 if info.inline_for_sampling:
-                    if set(info.schema.primary_keys()) != common_primary_keys:
+                    if set(info.schema.primary_key()) != common_primary_key:
                         raise ImplementationError(
                             f"Member '{member}' is inlined for sampling but its primary "
                             "key is a superset of the common primary key. Such a member "
@@ -164,7 +167,7 @@ class CollectionMeta(ABCMeta):
                             "for a single combination of the common primary key."
                         )
                     non_primary_key_columns = (
-                        set(info.schema.column_names()) - common_primary_keys
+                        set(info.schema.column_names()) - common_primary_key
                     )
                     if len(inlined_columns & non_primary_key_columns):
                         raise ImplementationError(
@@ -189,11 +192,16 @@ class CollectionMeta(ABCMeta):
         result = Metadata()
 
         # Get all members via the annotations
+        annotations = {}
         if "__annotations__" in source:
-            for attr, kls in source["__annotations__"].items():
-                result.members[attr] = CollectionMeta._derive_member_info(
-                    attr, kls, CollectionMember()
-                )
+            annotations = source["__annotations__"]
+        elif sys.version_info >= (3, 14):
+            if "__annotate_func__" in source:
+                annotations = source["__annotate_func__"](Format.VALUE)
+        for attr, kls in annotations.items():
+            result.members[attr] = CollectionMeta._derive_member_info(
+                attr, kls, CollectionMember()
+            )
 
         # Get all filters by traversing the source
         for attr, value in {
@@ -231,12 +239,14 @@ class CollectionMeta(ABCMeta):
             if not any(get_origin(arg) is None for arg in union_args):
                 raise AnnotationImplementationError(attr, type_annotation)
 
-            [not_none_arg] = [arg for arg in union_args if get_origin(arg) is not None]
-            if not issubclass(get_origin(not_none_arg), TypedLazyFrame):
+            not_none_args = [arg for arg in union_args if get_origin(arg) is not None]
+            if len(not_none_args) == 0 or not issubclass(
+                get_origin(not_none_args[0]), TypedLazyFrame
+            ):
                 raise AnnotationImplementationError(attr, type_annotation)
 
             return MemberInfo(
-                schema=get_args(not_none_arg)[0],
+                schema=get_args(not_none_args[0])[0],
                 is_optional=True,
                 ignored_in_filters=collection_member.ignored_in_filters,
                 inline_for_sampling=collection_member.inline_for_sampling,
@@ -324,10 +334,10 @@ class BaseCollection(metaclass=CollectionMeta):
         }
 
     @classmethod
-    def common_primary_keys(cls) -> list[str]:
+    def common_primary_key(cls) -> list[str]:
         """The primary keys shared by non ignored members of the collection."""
         return sorted(
-            _common_primary_keys(
+            _common_primary_key(
                 [
                     member.schema
                     for member in cls.members().values()
