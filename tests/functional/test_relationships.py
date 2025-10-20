@@ -35,7 +35,7 @@ def departments() -> dy.LazyFrame[DepartmentSchema]:
 @pytest.fixture()
 def managers() -> dy.LazyFrame[ManagerSchema]:
     return ManagerSchema.cast(
-        pl.LazyFrame({"department_id": [1], "name": ["Donald Duck"]})
+        pl.LazyFrame({"department_id": [1, 3], "name": ["Donald Duck", "Minnie Mouse"]})
     )
 
 
@@ -69,16 +69,29 @@ def test_one_to_one(
         on="department_id",
         filter_unique=filter_unique,
     )
-    assert actual.select("department_id").collect().to_series().to_list() == [1]
+    assert set(actual.select("department_id").collect().to_series().to_list()) == {1, 3}
 
 
-def test_one_to_one_filter_unique(
+def test_one_to_one_filter_unique_rhs(
     departments: dy.LazyFrame[DepartmentSchema],
     employees: dy.LazyFrame[EmployeeSchema],
 ) -> None:
     actual = dy.require_relationship_one_to_one(
         departments,
         employees,
+        on="department_id",
+        filter_unique=True,
+    )
+    assert actual.select("department_id").collect().to_series().to_list() == [3]
+
+
+def test_one_to_one_filter_unique_lhs(
+    employees: dy.LazyFrame[EmployeeSchema],
+    managers: dy.LazyFrame[ManagerSchema],
+) -> None:
+    actual = dy.require_relationship_one_to_one(
+        employees,
+        managers,
         on="department_id",
         filter_unique=True,
     )
@@ -92,4 +105,4 @@ def test_one_to_at_least_one(
     actual = dy.require_relationship_one_to_at_least_one(
         departments, employees, on="department_id", filter_unique=False
     )
-    assert actual.select("department_id").collect().to_series().to_list() == [2, 3]
+    assert set(actual.select("department_id").collect().to_series().to_list()) == {2, 3}
