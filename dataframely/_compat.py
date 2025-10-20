@@ -18,7 +18,7 @@ class _DummyModule:  # pragma: no cover
 try:
     import deltalake
     from deltalake import DeltaTable
-except ImportError:  # pragma: no cover
+except ImportError:
     deltalake = _DummyModule("deltalake")  # type: ignore
 
     class DeltaTable:  # type: ignore # noqa: N801
@@ -33,7 +33,7 @@ try:
     from sqlalchemy.dialects.mssql.pyodbc import MSDialect_pyodbc
     from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
     from sqlalchemy.sql.type_api import TypeEngine as sa_TypeEngine
-except ImportError:  # pragma: no cover
+except ImportError:
     sa = _DummyModule("sqlalchemy")  # type: ignore
     sa_mssql = _DummyModule("sqlalchemy")  # type: ignore
 
@@ -53,7 +53,7 @@ except ImportError:  # pragma: no cover
 
 try:
     import pyarrow as pa
-except ImportError:  # pragma: no cover
+except ImportError:
     pa = _DummyModule("pyarrow")
 
 
@@ -61,11 +61,11 @@ except ImportError:  # pragma: no cover
 
 try:
     import pydantic
-except ImportError:  # pragma: no cover
+except ImportError:
     pydantic = _DummyModule("pydantic")  # type: ignore
 
 try:
-    from pydantic_core import core_schema as pydantic_core_schema  # pragma: no cover
+    from pydantic_core import core_schema as pydantic_core_schema
 except ImportError:
     pydantic_core_schema = _DummyModule("pydantic_core_schema")  # type: ignore
 

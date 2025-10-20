@@ -85,14 +85,17 @@ def data_with_filter_with_rule_violation() -> tuple[pl.LazyFrame, pl.LazyFrame]:
 # -------------------------------------- FILTER -------------------------------------- #
 
 
+@pytest.mark.parametrize("eager", [True, False])
 def test_filter_without_filter_without_rule_violation(
     data_without_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+    eager: bool,
 ) -> None:
     out, failure = SimpleCollection.filter(
         {
             "first": data_without_filter_without_rule_violation[0],
             "second": data_without_filter_without_rule_violation[1],
-        }
+        },
+        eager=eager,
     )
 
     assert isinstance(out, SimpleCollection)
@@ -102,14 +105,17 @@ def test_filter_without_filter_without_rule_violation(
     assert len(failure["second"]) == 0
 
 
+@pytest.mark.parametrize("eager", [True, False])
 def test_filter_without_filter_with_rule_violation(
     data_without_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+    eager: bool,
 ) -> None:
     out, failure = SimpleCollection.filter(
         {
             "first": data_without_filter_with_rule_violation[0],
             "second": data_without_filter_with_rule_violation[1],
-        }
+        },
+        eager=eager,
     )
 
     assert isinstance(out, SimpleCollection)
@@ -119,14 +125,17 @@ def test_filter_without_filter_with_rule_violation(
     assert failure["second"].counts() == {"b|min": 1}
 
 
+@pytest.mark.parametrize("eager", [True, False])
 def test_filter_with_filter_without_rule_violation(
     data_with_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+    eager: bool,
 ) -> None:
     out, failure = MyCollection.filter(
         {
             "first": data_with_filter_without_rule_violation[0],
             "second": data_with_filter_without_rule_violation[1],
-        }
+        },
+        eager=eager,
     )
 
     assert isinstance(out, MyCollection)
@@ -142,14 +151,17 @@ def test_filter_with_filter_without_rule_violation(
     }
 
 
+@pytest.mark.parametrize("eager", [True, False])
 def test_filter_with_filter_with_rule_violation(
     data_with_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+    eager: bool,
 ) -> None:
     out, failure = MyCollection.filter(
         {
             "first": data_with_filter_with_rule_violation[0],
             "second": data_with_filter_with_rule_violation[1],
-        }
+        },
+        eager=eager,
     )
 
     assert isinstance(out, MyCollection)
@@ -162,22 +174,24 @@ def test_filter_with_filter_with_rule_violation(
 # -------------------------------- VALIDATE WITH DATA -------------------------------- #
 
 
+@pytest.mark.parametrize("eager", [True, False])
 def test_validate_without_filter_without_rule_violation(
     data_without_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+    eager: bool,
 ) -> None:
     data = {
         "first": data_without_filter_without_rule_violation[0],
         "second": data_without_filter_without_rule_violation[1],
     }
     assert SimpleCollection.is_valid(data)
-    out = SimpleCollection.validate(data)
+    out = SimpleCollection.validate(data, eager=eager)
 
     assert isinstance(out, SimpleCollection)
     assert_frame_equal(out.first, data_without_filter_without_rule_violation[0])
     assert_frame_equal(out.second, data_without_filter_without_rule_violation[1])
 
 
-def test_validate_without_filter_with_rule_violation(
+def test_validate_without_filter_with_rule_violation_eager(
     data_without_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
 ) -> None:
     data = {
@@ -187,15 +201,29 @@ def test_validate_without_filter_with_rule_violation(
     assert not SimpleCollection.is_valid(data)
 
     with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
-        SimpleCollection.validate(data).collect_all()
+        SimpleCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")
-    exc.match(r"'primary_key' failed validation for 2 rows")
+    exc.match(r"'primary_key' failed for 2 rows")
     exc.match(r"Member 'second' failed validation")
     exc.match(r"'min' failed for 1 rows")
 
 
-def test_validate_with_filter_without_rule_violation(
+def test_validate_without_filter_with_rule_violation_lazy(
+    data_without_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+) -> None:
+    data = {
+        "first": data_without_filter_with_rule_violation[0],
+        "second": data_without_filter_with_rule_violation[1],
+    }
+    assert not SimpleCollection.is_valid(data)
+
+    validated = SimpleCollection.validate(data, eager=False)
+    with pytest.raises(plexc.ComputeError):
+        validated.collect_all()
+
+
+def test_validate_with_filter_without_rule_violation_eager(
     data_with_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
 ) -> None:
     data = {
@@ -205,16 +233,30 @@ def test_validate_with_filter_without_rule_violation(
     assert not MyCollection.is_valid(data)
 
     with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
-        MyCollection.validate(data).collect_all()
+        MyCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")
-    exc.match(r"'equal_primary_keys' failed validation for 1 rows")
-    exc.match(r"'first_b_greater_second_b' failed validation for 1 rows")
+    exc.match(r"'equal_primary_keys' failed for 1 rows")
+    exc.match(r"'first_b_greater_second_b' failed for 1 rows")
     exc.match(r"Member 'second' failed validation")
-    exc.match(r"'equal_primary_keys' failed validation for 2 rows")
+    exc.match(r"'equal_primary_keys' failed for 2 rows")
 
 
-def test_validate_with_filter_with_rule_violation(
+def test_validate_with_filter_without_rule_violation_lazy(
+    data_with_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+) -> None:
+    data = {
+        "first": data_with_filter_without_rule_violation[0],
+        "second": data_with_filter_without_rule_violation[1],
+    }
+    assert not MyCollection.is_valid(data)
+
+    validated = MyCollection.validate(data, eager=False)
+    with pytest.raises(plexc.ComputeError):
+        validated.collect_all()
+
+
+def test_validate_with_filter_with_rule_violation_eager(
     data_with_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
 ) -> None:
     data = {
@@ -224,12 +266,26 @@ def test_validate_with_filter_with_rule_violation(
     assert not MyCollection.is_valid(data)
 
     with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
-        MyCollection.validate(data).collect_all()
+        MyCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")
-    exc.match(r"'equal_primary_keys' failed validation for 2 rows")
+    exc.match(r"'equal_primary_keys' failed for 2 rows")
     exc.match(r"Member 'second' failed validation")
     exc.match(r"'min' failed for 1 rows")
+
+
+def test_validate_with_filter_with_rule_violation_lazy(
+    data_with_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
+) -> None:
+    data = {
+        "first": data_with_filter_with_rule_violation[0],
+        "second": data_with_filter_with_rule_violation[1],
+    }
+    assert not MyCollection.is_valid(data)
+
+    validated = MyCollection.validate(data, eager=False)
+    with pytest.raises(plexc.ComputeError):
+        validated.collect_all()
 
 
 def test_maintain_order() -> None:

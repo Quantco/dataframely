@@ -22,6 +22,7 @@ from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
 from ._match_to_schema import match_to_schema
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
+from ._polars import collect_if
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
 from ._serialization import (
     SERIALIZATION_FORMAT_VERSION,
@@ -449,18 +450,33 @@ class Schema(BaseSchema, ABC):
     @overload
     @classmethod
     def validate(
-        cls, df: pl.DataFrame, /, *, cast: bool = False
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[True] = True,
     ) -> DataFrame[Self]: ...
 
     @overload
     @classmethod
     def validate(
-        cls, df: pl.LazyFrame, /, *, cast: bool = False
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[False],
     ) -> LazyFrame[Self]: ...
 
     @classmethod
     def validate(
-        cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool = True,
     ) -> DataFrame[Self] | LazyFrame[Self]:
         """Validate that a data frame satisfies the schema.
 
@@ -473,24 +489,25 @@ class Schema(BaseSchema, ABC):
             df: The data frame to validate.
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible.
+            eager: Whether the validation should be performed eagerly and this method
+                should raise upon failure. If ``False``, the returned lazy frame will
+                fail to collect if the validation does not pass.
 
         Returns:
             The input eager or lazy frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence. The data frame is
-            guaranteed to maintain its order.
+            input's data frame type to reflect schema adherence. This operation is
+            guaranteed to maintain input ordering of rows.
 
         Raises:
-            SchemaError: If an eager data frame is passed as the input data frame and
-                it misses columns or ``cast=False`` and any data type mismatches the
-                definition in this schema. Only raised upon collection if a lazy frame
-                is passed as input.
-            ComputeError: If an eager data frame is passed as the input data frame and
-                any rule in the schema is violated, i.e. the data does not pass the
-                validation. Only raised upon collection if a lazy frame is passed as
-                input.
-            InvalidOperationError: If an eager data frame is passed as the input data
-                frame, ``cast=True``, and the cast fails for any value in the data. Only
-                raised upon collection if a lazy frame is passed as input.
+            SchemaError: If ``eager=True`` and the input data frame misses columns or
+                ``cast=False`` and any data type mismatches the definition in this
+                schema. Only raised upon collection if ``eager=False``.
+            ComputeError: If ``eager=True`` and in any rule in the schema is violated,
+                i.e. the data does not pass the validation. Only raised upon collection
+                if ``eager=False``.
+            InvalidOperationError: If ``eager=True``, ``cast=True``, and the cast fails
+                for any value in the data. Only raised upon collection if
+                ``eager=False``.
         """
         lf = df.lazy().pipe(
             match_to_schema, cls, casting=("strict" if cast else "none")
@@ -501,7 +518,7 @@ class Schema(BaseSchema, ABC):
                 .filter(all_rules_required(rules.keys(), schema_name=cls.__name__))
                 .drop(rules.keys())
             )
-        return lf.pipe(_collect_if, isinstance(df, pl.DataFrame))  # type: ignore
+        return lf.pipe(collect_if, eager)  # type: ignore
 
     @classmethod
     def is_valid(
@@ -558,18 +575,44 @@ class Schema(BaseSchema, ABC):
     @overload
     @classmethod
     def filter(
-        cls, df: pl.DataFrame, /, *, cast: bool = False
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[True] = True,
     ) -> FilterResult[Self]: ...
 
     @overload
     @classmethod
     def filter(
-        cls, df: pl.LazyFrame, /, *, cast: bool = False
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[False],
     ) -> LazyFilterResult[Self]: ...
+
+    @overload
+    @classmethod
+    def filter(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool,
+    ) -> FilterResult[Self] | LazyFilterResult[Self]: ...
 
     @classmethod
     def filter(
-        cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool = True,
     ) -> FilterResult[Self] | LazyFilterResult[Self]:
         """Filter the data frame by the rules of this schema.
 
@@ -585,6 +628,9 @@ class Schema(BaseSchema, ABC):
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible. Rows for which the
                 cast fails for any column are filtered out.
+            eager: Whether the filter operation should be performed eagerly. If ``False``, the
+                returned lazy frame will
+                fail to collect if the validation does not pass.
 
         Returns:
             A tuple of the validated rows in the input data frame (potentially
@@ -625,7 +671,7 @@ class Schema(BaseSchema, ABC):
             lf=failure_lf, rule_columns=list(rules.keys()), schema=cls
         )
         result = LazyFilterResult(filtered, failure_info)  # type: ignore
-        if isinstance(df, pl.DataFrame):
+        if eager:
             return result.collect_all()
         return result
 
@@ -1311,14 +1357,6 @@ def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:
             **{name: rule_from_dict(rule) for name, rule in data["rules"].items()},
         },
     )
-
-
-def _collect_if(lf: pl.LazyFrame, condition: bool) -> pl.DataFrame | pl.LazyFrame:
-    """Collect a lazy frame if the original was eager, otherwise return the lazy
-    frame."""
-    if condition:
-        return lf.collect()
-    return lf
 
 
 def _restore_original_columns(lf: pl.LazyFrame, columns: list[str]) -> pl.LazyFrame:

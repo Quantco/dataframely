@@ -11,6 +11,7 @@ use validation_error::RuleValidationError;
 
 use rule_failure::{compute_rule_failures, RuleFailure};
 use utils::as_bool;
+pub use validation_error::format_rule_failures;
 
 /* ---------------------------------------- COMBINATION ---------------------------------------- */
 
@@ -85,5 +86,5 @@ pub fn all_rules_required(
 
     // Aggregate failure counts into a validation error.
     let error = RuleValidationError::new(failures);
-    Err(polars_err!(ComputeError: error.to_string(&kwargs.schema_name)))
+    Err(polars_err!(ComputeError: error.to_string(Some(&kwargs.schema_name))))
 }

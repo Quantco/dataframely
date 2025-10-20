@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use num_format::{Locale, ToFormattedString};
-use pyo3::{create_exception, exceptions::PyException};
+use polars::prelude::*;
+use pyo3::{create_exception, exceptions::PyException, prelude::*};
 
 use super::RuleFailure;
 
@@ -38,11 +39,15 @@ impl<'a> RuleValidationError<'a> {
         }
     }
 
-    pub fn to_string(&self, schema: &str) -> String {
-        let mut result = format!(
-            "\n{} rules failed validation for schema '{schema}':",
-            self.num_rule_failures
-        );
+    pub fn to_string(&self, schema: Option<&str>) -> String {
+        let mut result = if let Some(schema) = schema {
+            format!(
+                "\n{} rules failed validation for schema '{schema}':",
+                self.num_rule_failures
+            )
+        } else {
+            format!("\n{} rules failed validation:", self.num_rule_failures)
+        };
         self.schema_errors.iter().for_each(|failure| {
             result += format!(
                 "\n - '{}' failed for {} rows",
@@ -68,4 +73,18 @@ impl<'a> RuleValidationError<'a> {
         });
         result
     }
+}
+
+#[pyfunction]
+pub fn format_rule_failures(failures: Vec<(String, IdxSize)>) -> String {
+    let validation_error = RuleValidationError::new(
+        failures
+            .iter()
+            .map(|(rule, count)| RuleFailure {
+                rule: rule,
+                count: *count,
+            })
+            .collect(),
+    );
+    return validation_error.to_string(None);
 }

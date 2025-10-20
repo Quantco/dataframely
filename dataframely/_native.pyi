@@ -1,5 +1,18 @@
 from typing import overload
 
+def format_rule_failures(failures: list[tuple[str, int]]) -> str:
+    """
+    Format rule failures with the same logic that produces validation errors from the
+    polars plugin.
+
+    Args:
+        failures: The name of the failures and their counts. This should only include
+            failures with a count of at least 1.
+
+    Returns:
+        The formatted rule failures.
+    """
+
 def regex_matching_string_length(regex: str) -> tuple[int, int | None]:
     """
     Compute the minimum and maximum length (if available) of strings matching a regular expression.
