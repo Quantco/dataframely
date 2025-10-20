@@ -54,8 +54,8 @@ from .config import Config
 from .filter_result import FailureInfo
 from .functional import (
     concat_collection_members,
-    filter_relationship_one_to_at_least_one,
-    filter_relationship_one_to_one,
+    require_relationship_one_to_at_least_one,
+    require_relationship_one_to_one,
 )
 from .schema import Schema, deserialize_schema, read_parquet_metadata_schema
 
@@ -71,8 +71,8 @@ __all__ = [
     "Config",
     "FailureInfo",
     "concat_collection_members",
-    "filter_relationship_one_to_at_least_one",
-    "filter_relationship_one_to_one",
+    "require_relationship_one_to_at_least_one",
+    "require_relationship_one_to_one",
     "Schema",
     "deserialize_schema",
     "read_parquet_metadata_schema",

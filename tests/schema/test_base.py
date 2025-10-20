@@ -13,7 +13,7 @@ from dataframely.testing import create_schema
 class MySchema(dy.Schema):
     a = dy.Integer(primary_key=True)
     b = dy.String(primary_key=True)
-    c = dy.Float64()
+    c = dy.Float64(nullable=True)
     d = dy.Any(alias="e")
 
 

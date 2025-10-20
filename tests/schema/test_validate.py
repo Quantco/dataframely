@@ -16,12 +16,12 @@ from dataframely.testing import create_schema
 class MySchema(dy.Schema):
     a = dy.Int64(primary_key=True)
     b = dy.String(nullable=False, max_length=5)
-    c = dy.String()
+    c = dy.String(nullable=True)
 
 
 class MyComplexSchema(dy.Schema):
-    a = dy.Int64()
-    b = dy.Int64()
+    a = dy.Int64(nullable=True)
+    b = dy.Int64(nullable=True)
 
     @dy.rule()
     def b_greater_a() -> pl.Expr:
@@ -33,8 +33,8 @@ class MyComplexSchema(dy.Schema):
 
 
 class MyComplexSchemaWithLazyRules(dy.Schema):
-    a = dy.Int64()
-    b = dy.Int64()
+    a = dy.Int64(nullable=True)
+    b = dy.Int64(nullable=True)
 
     @dy.rule()
     def b_greater_a() -> pl.Expr:

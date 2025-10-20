@@ -1,12 +1,12 @@
 # Primary keys
 
-## Defining primary keys in `dy.Schema`
+## Defining primary keys in {class}`~dataframely.Schema`
 
 When working with tabular data, it is often useful to define a [primary key](https://en.wikipedia.org/wiki/Primary_key).
 A primary key is a set of one or multiple columns, the combined values of which form a unique identifier for every
 record in a table.
 
-Dataframely supports marking columns as part of the primary key when defining a `dy.Schema` by setting
+Dataframely supports marking columns as part of the primary key when defining a {class}`~dataframely.Schema` by setting
 `primary_key=True` on the respective column(s).
 
 ```{note}
@@ -42,10 +42,15 @@ class LineItemSchema(dy.Schema):
 
 Validation will now ensure that all pairs of (`invoice_id`, `item_id`) are unique.
 
-## Primary keys in `dy.Collection`
+## Primary keys in {class}`~dataframely.Collection`
 
-The central idea behind `dy.Collection` is to unify multiple tables relating to the same set of underlying entities.
-This is useful because it allows us to write `dy.filter`s that use information from multiple tables to identify whether
-the underlying entity is valid or not. If any `dy.filter`s are defined, dataframely requires the tables in a
-`dy.Collection` to have an overlapping primary key (i.e., there must be at least one column that is a primary key in all
+The central idea behind {class}`~dataframely.Collection` is to unify multiple tables relating to the same set of
+underlying entities.
+This is useful because it allows us to write {func}`~dataframely.filter`s that use information from multiple tables to
+identify
+whether
+the underlying entity is valid or not. If any {func}`~dataframely.filter`s are defined, dataframely requires the tables
+in a
+{class}`~dataframely.Collection` to have an overlapping primary key (i.e., there must be at least one column that is a
+primary key in all
 tables).

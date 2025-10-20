@@ -19,7 +19,7 @@ from dataframely.testing import create_schema, validation_mask
 
 class MySchema(dy.Schema):
     a = dy.Int64(primary_key=True)
-    b = dy.String(max_length=3)
+    b = dy.String(max_length=3, nullable=True)
 
 
 S = TypeVar("S", bound=dy.Schema)
@@ -142,7 +142,7 @@ def test_filter_failure(
 def test_filter_no_rules(
     df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
 ) -> None:
-    schema = create_schema("test", {"a": dy.Int64()})
+    schema = create_schema("test", {"a": dy.Int64(nullable=True)})
     df = df_type({"a": [1, 2, 3]})
     df_valid, failures = _filter_and_collect(schema, df, eager=eager)
     assert_frame_equal(df.lazy().collect(), df_valid)

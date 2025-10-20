@@ -92,8 +92,9 @@ class Schema(BaseSchema, ABC):
         """Create an empty data or lazy frame from this schema.
 
         Args:
-            lazy: Whether to create a lazy data frame. If ``True``, returns a lazy frame
-                with this Schema. Otherwise, returns an eager frame.
+            lazy: Whether to create a lazy data frame.
+                If ``True``, returns a lazy frame with this :class:`Schema`.
+                Otherwise, returns an eager frame.
 
         Returns:
             An instance of :class:`polars.DataFrame` or :class:`polars.LazyFrame` with
@@ -144,11 +145,12 @@ class Schema(BaseSchema, ABC):
         frame or return the input as lazy or eager frame.
 
         Args:
-            df: The data frame to check for ``None``. If it is not ``None``, it is
-                returned as lazy or eager frame. Otherwise, a schema-compliant data
-                or lazy frame with no rows is returned.
-            lazy: Whether to return a lazy data frame. If ``True``, returns a lazy frame
-                with this Schema. Otherwise, returns an eager frame.
+            df: The data frame to check for ``None``.
+                If it is not ``None``, it is returned as lazy or eager frame.
+                Otherwise, a schema-compliant data or lazy frame with no rows is returned.
+            lazy: Whether to return a lazy data frame.
+                If ``True``, returns a lazy frame with this :class:`Schema`.
+                Otherwise, returns an eager frame.
 
         Returns:
             The given data frame ``df`` as lazy or eager frame, if it is not ``None``.
@@ -622,10 +624,11 @@ class Schema(BaseSchema, ABC):
         succeeds.
 
         Args:
-            df: The data frame to filter for valid rows. The data frame is collected
-                within this method, regardless of whether a :class:`~polars.DataFrame`
-                or :class:`~polars.LazyFrame` is passed.
-            cast: Whether columns with a wrong data type in the input data frame are
+            df: The data frame to filter for valid rows.
+                The data frame is collected within this method, regardless of whether
+                a :class:`~polars.DataFrame` or :class:`~polars.LazyFrame` is passed.
+            cast:
+                Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible. Rows for which the
                 cast fails for any column are filtered out.
             eager: Whether the filter operation should be performed eagerly. If ``False``, the
@@ -721,11 +724,11 @@ class Schema(BaseSchema, ABC):
 
         Note:
             If you only require a generic data frame for the type checker, consider
-            using :meth:`typing.cast` instead of this method.
+            using :func:`typing.cast` instead of this method.
 
         Attention:
             For lazy frames, casting is not performed eagerly. This prevents collecting
-            the lazy frame's schema but also means that a call to :meth:`collect`
+            the lazy frame's schema but also means that a call to :meth:`polars.LazyFrame.collect`
             further down the line might fail because of the cast and/or missing columns.
         """
         lf = df.lazy().select(
@@ -858,12 +861,12 @@ class Schema(BaseSchema, ABC):
             source: Path, directory, or file-like object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - ``"allow"``: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
                   runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
@@ -880,7 +883,8 @@ class Schema(BaseSchema, ABC):
             The data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read from the
+            ValidationRequiredError:
+                If no schema information can be read from the
                 source and ``validation`` is set to ``"forbid"``.
 
         Attention:
@@ -913,12 +917,12 @@ class Schema(BaseSchema, ABC):
             source: Path, directory, or file-like object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - ``"allow"``: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
                   runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
@@ -935,7 +939,8 @@ class Schema(BaseSchema, ABC):
             The data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read from the
+            ValidationRequiredError:
+                If no schema information can be read from the
                 source and ``validation`` is set to ``"forbid"``.
 
         Note:
@@ -1044,12 +1049,12 @@ class Schema(BaseSchema, ABC):
             source: Path or DeltaTable object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - ``"allow"``: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
                   runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
@@ -1065,8 +1070,9 @@ class Schema(BaseSchema, ABC):
             The lazy data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read
-            from the source and ``validation`` is set to ``"forbid"``.
+            ValidationRequiredError:
+                If no schema information can be read
+                from the source and ``validation`` is set to ``"forbid"``.
 
         Attention:
             Schema metadata is stored as custom commit metadata. Only the schema
@@ -1105,12 +1111,12 @@ class Schema(BaseSchema, ABC):
             source: Path or DeltaTable object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - ``"allow"``: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
                   runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
                   it prints a warning if validation is necessary.
                 - ``"forbid"``: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
@@ -1126,8 +1132,9 @@ class Schema(BaseSchema, ABC):
             The data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read
-            from the source and ``validation`` is set to ``"forbid"``.
+            ValidationRequiredError:
+                If no schema information can be read from the source
+                and ``validation`` is set to ``"forbid"``.
 
         Attention:
             Schema metadata is stored as custom commit metadata. Only the schema

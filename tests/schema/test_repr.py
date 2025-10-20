@@ -9,7 +9,7 @@ import dataframely as dy
 
 def test_repr_no_rules() -> None:
     class SchemaNoRules(dy.Schema):
-        a = dy.Integer()
+        a = dy.Integer(nullable=True)
 
     assert repr(SchemaNoRules) == textwrap.dedent("""\
         [Schema "SchemaNoRules"]
@@ -20,7 +20,7 @@ def test_repr_no_rules() -> None:
 
 def test_repr_only_column_rules() -> None:
     class SchemaColumnRules(dy.Schema):
-        a = dy.Integer(min=10)
+        a = dy.Integer(min=10, nullable=True)
 
     assert repr(SchemaColumnRules) == textwrap.dedent("""\
         [Schema "SchemaColumnRules"]
@@ -46,8 +46,8 @@ def test_repr_with_rules() -> None:
     assert repr(SchemaWithRules) == textwrap.dedent("""\
         [Schema "SchemaWithRules"]
           Columns:
-            - "a": Integer(nullable=True, min=10)
-            - "b2": String(nullable=False, primary_key=True, regex='^[A-Z]{3}$')
+            - "a": Integer(min=10)
+            - "b2": String(primary_key=True, regex='^[A-Z]{3}$')
           Rules:
             - "my_rule": [(col("a")) < (dyn int: 100)]
             - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']
@@ -56,7 +56,7 @@ def test_repr_with_rules() -> None:
 
 def test_repr_enum() -> None:
     class SchemaNoRules(dy.Schema):
-        a = dy.Enum(["a"])
+        a = dy.Enum(["a"], nullable=True)
 
     assert repr(SchemaNoRules) == textwrap.dedent("""\
         [Schema "SchemaNoRules"]
