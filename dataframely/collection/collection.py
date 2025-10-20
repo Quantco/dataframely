@@ -21,7 +21,7 @@ from dataframely._compat import deltalake
 from dataframely._filter import Filter
 from dataframely._native import format_rule_failures
 from dataframely._plugin import all_rules_required
-from dataframely._polars import FrameType
+from dataframely._polars import FrameType, collect_if
 from dataframely._serialization import (
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
@@ -541,9 +541,10 @@ class Collection(BaseCollection, ABC):
             if member.is_optional and member_name not in data:
                 continue
 
-            results[member_name], failures[member_name] = member.schema.filter(
-                data[member_name].lazy(), cast=cast, eager=False
+            member_result, failures[member_name] = member.schema.filter(
+                data[member_name].lazy(), cast=cast, eager=eager
             )
+            results[member_name] = member_result.lazy()
 
         # Once we've done that, we can apply the filters on this collection. To this end,
         # we iterate over all filters and store the filter results.
@@ -554,7 +555,12 @@ class Collection(BaseCollection, ABC):
 
             keep: dict[str, pl.LazyFrame] = {}
             for name, filter in filters.items():
-                keep[name] = filter.logic(result_cls).select(primary_key)
+                keep[name] = (
+                    filter.logic(result_cls)
+                    .select(primary_key)
+                    .pipe(collect_if, eager)
+                    .lazy()
+                )
 
             # Now we can iterate over the results and left-join onto each individual
             # filter to obtain independent boolean indicators of whether to keep the row
@@ -572,14 +578,16 @@ class Collection(BaseCollection, ABC):
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
 
-                # Filtering `result_with_eval` by the rows for which all joins
+                lf_with_eval = lf_with_eval.pipe(collect_if, eager).lazy()
+
+                # Filtering `lf_with_eval` by the rows for which all joins
                 # "succeeded", we can identify the rows that pass all the filters. We
                 # keep these rows for the result.
                 results[member_name] = lf_with_eval.filter(
                     pl.all_horizontal(keep.keys())
                 ).drop(keep.keys())
 
-                # Filtering `result_with_eval` with the inverse condition, we find all
+                # Filtering `lf_with_eval` with the inverse condition, we find all
                 # the problematic rows. We can build a single failure info object by
                 # simply concatenating diagonally with the already existing failure. The
                 # resulting failure info looks as follows:

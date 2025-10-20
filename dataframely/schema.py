@@ -651,7 +651,9 @@ class Schema(BaseSchema, ABC):
             match_to_schema, cls, casting=("lenient" if cast else "none")
         )
         if rules := cls._validation_rules(with_cast=cast):
-            evaluated = lf.pipe(cls._with_evaluated_rules, rules)
+            evaluated = (
+                lf.pipe(cls._with_evaluated_rules, rules).pipe(collect_if, eager).lazy()
+            )
             filtered = evaluated.filter(pl.col(_COLUMN_VALID)).select(
                 cls.column_names()
             )
