@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from collections.abc import Iterable
-from typing import Any, cast
+from typing import Any
 
 import polars as pl
 from fsspec import AbstractFileSystem, url_to_fs
@@ -145,17 +145,28 @@ class ParquetStorageBackend(StorageBackend):
         fs: AbstractFileSystem = url_to_fs(path)[0]
         for key in members:
             if (source_path := self._member_source_path(path, fs, key)) is not None:
+                is_file = fs.isfile(source_path)
+                scan_path = source_path if is_file else fs.sep.join([source_path, ""])
                 data[key] = (
-                    pl.scan_parquet(source_path, **kwargs)
+                    pl.scan_parquet(scan_path, **kwargs)
                     if scan
-                    else pl.read_parquet(source_path, **kwargs).lazy()
+                    else pl.read_parquet(scan_path, **kwargs).lazy()
                 )
-                if fs.isfile(source_path):
+                if is_file:
                     collection_types.append(_read_serialized_collection(source_path))
                 else:
-                    for file in fs.glob(fs.sep.join([source_path, "**/*.parquet"])):
+                    prefix = (
+                        ""
+                        if fs.protocol == "file"
+                        else (
+                            f"{fs.protocol}://"
+                            if isinstance(fs.protocol, str)
+                            else f"{fs.protocol[0]}://"
+                        )
+                    )
+                    for file in fs.glob(fs.sep.join([source_path, "**", "*.parquet"])):
                         collection_types.append(
-                            _read_serialized_collection(cast(str, file))
+                            _read_serialized_collection(f"{prefix}{file}")
                         )
 
         # Backward compatibility: If the parquets do not have schema information,

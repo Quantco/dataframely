@@ -7,11 +7,6 @@ from collections.abc import Iterator
 
 import boto3
 import pytest
-from polars.testing import assert_frame_equal
-
-import dataframely as dy
-
-# ------------------------------------- FIXTURES ------------------------------------- #
 
 
 @pytest.fixture(scope="session")
@@ -44,39 +39,11 @@ def s3_tmp_path(s3_server: str, s3_bucket: str, monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("AWS_ENDPOINT_URL", s3_server)
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_ALLOW_HTTP", "true")
+    monkeypatch.setenv("AWS_S3_ALLOW_UNSAFE_RENAME", "true")
     return f"{s3_bucket}/{str(uuid.uuid4())}"
 
 
-# -------------------------------------- SCHEMAS ------------------------------------- #
-
-
-class MyFirstSchema(dy.Schema):
-    a = dy.UInt16(primary_key=True)
-
-
-class MySecondSchema(dy.Schema):
-    x = dy.UInt16(primary_key=True)
-    y = dy.Integer()
-
-
-class MyCollection(dy.Collection):
-    first: dy.LazyFrame[MyFirstSchema]
-    second: dy.LazyFrame[MySecondSchema] | None
-
-
-# --------------------------------------- TESTS -------------------------------------- #
-
-
-def test_read_write_parquet(s3_tmp_path: str) -> None:
-    # Arrange
-    collection = MyCollection.sample(100)
-    collection.write_parquet(s3_tmp_path)
-
-    # Act
-    read_collection = MyCollection.read_parquet(s3_tmp_path)
-
-    # Assert
-    assert_frame_equal(collection.first, read_collection.first)
-    assert collection.second is not None
-    assert read_collection.second is not None
-    assert_frame_equal(collection.second, read_collection.second)
+@pytest.fixture()
+def any_tmp_path(request: pytest.FixtureRequest) -> str:
+    return str(request.getfixturevalue(request.param))

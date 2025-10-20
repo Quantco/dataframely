@@ -108,7 +108,7 @@ filterwarnings = [
   "ignore::DeprecationWarning:botocore.*:",
 ]
 markers = [
-  "s3: tests that require access to S3-compatible storage",
+  "s3: tests that run against and S3 backend",
   "with_optionals: tests that require optional dependencies to be installed",
 ]
 testpaths = ["tests"]
