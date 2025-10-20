@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 import json
+import sys
 from functools import cached_property
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Generic, NamedTuple, TypeVar
+from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
 
 import polars as pl
 from polars._typing import PartitioningScheme
@@ -18,6 +19,11 @@ from ._storage import StorageBackend
 from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame
+
+if sys.version_info >= (3, 11):
+    from typing import NamedTuple
+else:
+    from typing_extensions import NamedTuple
 
 if TYPE_CHECKING:  # pragma: no cover
     from .schema import Schema
