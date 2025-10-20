@@ -57,22 +57,22 @@ def employees() -> dy.LazyFrame[EmployeeSchema]:
 # ------------------------------------------------------------------------------------ #
 
 
-@pytest.mark.parametrize("drop_unique", [True, False])
+@pytest.mark.parametrize("drop_duplicates", [True, False])
 def test_one_to_one(
     departments: dy.LazyFrame[DepartmentSchema],
     managers: dy.LazyFrame[ManagerSchema],
-    drop_unique: bool,
+    drop_duplicates: bool,
 ) -> None:
     actual = dy.require_relationship_one_to_one(
         departments,
         managers,
         on="department_id",
-        drop_unique=drop_unique,
+        drop_duplicates=drop_duplicates,
     )
     assert set(actual.select("department_id").collect().to_series().to_list()) == {1, 3}
 
 
-def test_one_to_one_drop_unique_rhs(
+def test_one_to_one_drop_duplicates_rhs(
     departments: dy.LazyFrame[DepartmentSchema],
     employees: dy.LazyFrame[EmployeeSchema],
 ) -> None:
@@ -80,12 +80,12 @@ def test_one_to_one_drop_unique_rhs(
         departments,
         employees,
         on="department_id",
-        drop_unique=True,
+        drop_duplicates=True,
     )
     assert actual.select("department_id").collect().to_series().to_list() == [3]
 
 
-def test_one_to_one_drop_unique_lhs(
+def test_one_to_one_drop_duplicates_lhs(
     employees: dy.LazyFrame[EmployeeSchema],
     managers: dy.LazyFrame[ManagerSchema],
 ) -> None:
@@ -93,7 +93,7 @@ def test_one_to_one_drop_unique_lhs(
         employees,
         managers,
         on="department_id",
-        drop_unique=True,
+        drop_duplicates=True,
     )
     assert actual.select("department_id").collect().to_series().to_list() == [3]
 
@@ -103,6 +103,6 @@ def test_one_to_at_least_one(
     employees: dy.LazyFrame[EmployeeSchema],
 ) -> None:
     actual = dy.require_relationship_one_to_at_least_one(
-        departments, employees, on="department_id", drop_unique=False
+        departments, employees, on="department_id", drop_duplicates=False
     )
     assert set(actual.select("department_id").collect().to_series().to_list()) == {2, 3}

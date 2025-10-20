@@ -23,8 +23,6 @@ C = TypeVar("C", bound=BaseCollection)
 
 # --------------------------------- RELATIONSHIP 1:1 --------------------------------- #
 
-LEN_COLUMN = "__len__"
-
 
 def require_relationship_one_to_one(
     lhs: LazyFrame[S] | pl.LazyFrame,
@@ -32,7 +30,7 @@ def require_relationship_one_to_one(
     /,
     on: str | list[str],
     *,
-    drop_unique: bool = True,
+    drop_duplicates: bool = True,
 ) -> pl.LazyFrame:
     """Express a 1:1 mapping between data frames for a collection filter.
 
@@ -40,7 +38,7 @@ def require_relationship_one_to_one(
         lhs: The first data frame in the 1:1 mapping.
         rhs: The second data frame in the 1:1 mapping.
         on: The columns to join the data frames on.
-        drop_unique: If set to `True`, drops rows that are not uniquely identified by the
+        drop_duplicates: If set to `True`, drops rows that are not uniquely identified by the
             join columns specified with `on`. If set to `False`, skips uniqueness checks
             and avoids performance penalties. Use with caution, as this may lead to unexpected
             results if rows in one or both of the data frames are not unique in the join columns.
@@ -49,7 +47,7 @@ def require_relationship_one_to_one(
         A data frame representing the inner join of the two inputs on the specified
         columns, filtered to ensure a 1:1 relationship.
     """
-    if drop_unique:
+    if drop_duplicates:
         return lhs.unique(on, keep="none").join(
             rhs.unique(on, keep="none"),
             on=on,
@@ -67,7 +65,7 @@ def require_relationship_one_to_at_least_one(
     /,
     on: str | list[str],
     *,
-    drop_unique: bool = True,
+    drop_duplicates: bool = True,
 ) -> pl.LazyFrame:
     """Express a 1:{1,N} mapping between data frames for a collection filter.
 
@@ -75,7 +73,7 @@ def require_relationship_one_to_at_least_one(
         lhs: The data frame with exactly one occurrence for the set of join columns.
         rhs: The data frame with at least one occurrence for the set of join columns.
         on: The columns to join the data frames on.
-        drop_unique: If set to `True`, drops rows in `lhs` that are not uniquely
+        drop_duplicates: If set to `True`, drops rows in `lhs` that are not uniquely
             identified by the join columns specified with `on`. If set to `False`,
             skips uniqueness checks and avoids performance penalties. Use with
             caution, as this may lead to unexpected results if rows in `lhs` are
@@ -85,7 +83,7 @@ def require_relationship_one_to_at_least_one(
         A data frame representing the inner join of the two inputs on the specified
         columns, filtered to ensure a 1:{1,N} relationship.
     """
-    if drop_unique:
+    if drop_duplicates:
         return lhs.unique(on, keep="none").join(rhs.unique(on), on=on)
 
     return lhs.join(rhs.unique(on), on=on)
