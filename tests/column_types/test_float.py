@@ -173,7 +173,7 @@ def test_validate_inf_nan(inf: Any, nan: Any) -> None:
 @pytest.mark.parametrize("inf", [np.inf, -np.inf, float("inf"), float("-inf")])
 @pytest.mark.parametrize("nan", [np.nan, float("nan"), float("NaN")])
 def test_validate_allow_inf_nan(inf: Any, nan: Any) -> None:
-    column = dy.Float(allow_inf_nan=True)
+    column = dy.Float(allow_inf_nan=True, nullable=True)
     lf = pl.LazyFrame({"a": pl.Series([inf, 2.0, nan, 4.0, 5.0])})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     assert len(actual.collect_schema().names()) == 0, (

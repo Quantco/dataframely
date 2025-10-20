@@ -53,7 +53,7 @@ def test_simple_serialization() -> None:
             {"a": dy.Int64()},
             rules={"test": GroupRule(pl.len() > 2, group_columns=["a"])},
         ),
-        create_schema("test", {"a": dy.Array(dy.Int64(), shape=(2, 2))}),
+        create_schema("test", {"a": dy.Array(dy.Int64(nullable=True), shape=(2, 2))}),
         create_schema("test", {"a": dy.List(dy.Int64(min=5))}),
         create_schema(
             "test",

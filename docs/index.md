@@ -1,6 +1,6 @@
 # Dataframely
 
-Dataframely is a Python package to validate the schema and content of [polars](https://pola.rs/)\_ data frames.
+Dataframely is a Python package to validate the schema and content of [polars](https://pola.rs/) data frames.
 Its purpose is to make data pipelines more robust by ensuring that data meet expectations and more readable by adding
 schema information to data frame type hints.
 

@@ -89,7 +89,10 @@ def test_non_decimal_dtype_fails(dtype: DataTypeClass) -> None:
     ],
 )
 def test_validate_min(inclusive: bool, valid: dict[str, list[bool]]) -> None:
-    kwargs = {("min" if inclusive else "min_exclusive"): decimal.Decimal(3)}
+    kwargs = {
+        ("min" if inclusive else "min_exclusive"): decimal.Decimal(3),
+        "nullable": True,
+    }
     column = dy.Decimal(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -105,7 +108,10 @@ def test_validate_min(inclusive: bool, valid: dict[str, list[bool]]) -> None:
     ],
 )
 def test_validate_max(inclusive: bool, valid: dict[str, list[bool]]) -> None:
-    kwargs = {("max" if inclusive else "max_exclusive"): decimal.Decimal(3)}
+    kwargs = {
+        ("max" if inclusive else "max_exclusive"): decimal.Decimal(3),
+        "nullable": True,
+    }
     column = dy.Decimal(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [1, 2, 3, 4, 5]})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
@@ -158,6 +164,7 @@ def test_validate_range(
     kwargs = {
         ("min" if min_inclusive else "min_exclusive"): decimal.Decimal(0),
         ("max" if max_inclusive else "max_exclusive"): decimal.Decimal(2),
+        "nullable": True,
     }
     column = dy.Decimal(**kwargs)  # type: ignore
     lf = pl.LazyFrame({"a": [-1, 0, 1, 2, 3]})
