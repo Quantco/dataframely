@@ -41,12 +41,19 @@ extensions = [
     "numpydoc",
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
     "sphinxcontrib.apidoc",
     "myst_parser",
+    "sphinx.ext.napoleon",
 ]
-
 myst_parser_config = {"myst_enable_extensions": ["rst_eval_roles"]}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "polars": ("https://docs.pola.rs/py-polars/html/", None),
+    "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
+}
+
 source_suffix = {
     ".rst": "restructuredtext",
     ".txt": "markdown",
