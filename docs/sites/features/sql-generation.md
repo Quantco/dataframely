@@ -28,8 +28,27 @@ columns: list[sa.Column] = MySchema.sql_schema(engine.dialect)
 You can then do with the columns what you please. Most likely, you want to create a table with them:
 
 ```python
-my_table = sa.Table("myTable", *columns)
+my_table = sa.Table("myTable", sa.MetaData(), *columns)
 my_table.create(engine)
+```
+
+You can also inspect the SQL code that `sqlalchemy` would execute:
+
+```python
+from sqlalchemy.schema import CreateTable
+
+print(CreateTable(my_table).compile())
+```
+
+In the example case, this renders to:
+
+```SQL
+CREATE TABLE "myTable"
+(
+    x BIGINT  NOT NULL,
+    y VARCHAR NOT NULL,
+    PRIMARY KEY (x)
+)
 ```
 
 Uploading data can then be handled by {meth}`polars.DataFrame.write_database`:
@@ -49,11 +68,17 @@ df.write_database(
 ```
 
 ```{note}
-**Implementation:** The choice of `sqlalchemy` type is implemented in {meth}`~dataframely.Column.sqlalchemy_dtype`, which is overwritten by each of the subtypes of {class}`~dataframely.Column`. For for example, the implementation for {class}`~dataframely.Date` is {meth}`~dataframely.Date.sqlalchemy_dtype`.
+**Implementation:** The choice of `sqlalchemy` type is implemented in {meth}`~dataframely.Column.sqlalchemy_dtype`, which is overwritten by each of the subtypes of {class}`~dataframely.Column`. For example, the implementation for {class}`~dataframely.Date` is {meth}`~dataframely.Date.sqlalchemy_dtype`.
 ```
 
 ```{note}
 **Constraints:** The nullability and primary key constraints you define in `dataframely` are translated to SQL. Custom filters and rules are not.
+```
+
+```{note}
+**Length of string columns:** For string columns, `dataframely` will attempt to pass information about the maximal length into the SQL definition. This is trivial if `max_length` is set. Otherwise, if a `regex` is provided,
+the maximal length of the string is inferred from the regular expression if possible. Note that having inferable
+maximal lengths can be particularly important for primary key columns. Some database systems, such as Microsoft SQL Server, do not allow `VARCHAR(max)` columns (unbounded strings) to be used as primary keys.
 ```
 
 ## Collections of multiple tables
