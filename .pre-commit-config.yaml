@@ -48,6 +48,22 @@ repos:
         language: system
         types: [python]
         require_serial: true
+      # cargo-fmt
+      - id: cargo-fmt
+        name: cargo-fmt
+        entry: cargo fmt
+        language: system
+        types: [rust]
+        require_serial: true
+        pass_filenames: false
+      # cargo-clippy
+      - id: cargo-clippy
+        name: cargo-clippy
+        entry: cargo clippy --all-targets
+        language: system
+        types: [rust]
+        require_serial: true
+        pass_filenames: false
       # prettier
       - id: prettier
         name: prettier

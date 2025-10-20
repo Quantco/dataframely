@@ -27,6 +27,10 @@ jobs:
         uses: prefix-dev/setup-pixi@194d461b21b6c5717c722ffc597fa91ed2ff29fa # v0.9.1
         with:
           environments: default lint
+      - name: Install Rust
+        run: rustup show
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
       - name: Install repository
         run: pixi run -e default postinstall
       - name: pre-commit
@@ -56,6 +60,10 @@ jobs:
         uses: prefix-dev/setup-pixi@194d461b21b6c5717c722ffc597fa91ed2ff29fa # v0.9.1
         with:
           environments: ${{ matrix.environment }}
+      - name: Install Rust
+        run: rustup show
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
       - name: Install repository
         run: pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
