@@ -23,6 +23,7 @@ T = TypeVar("T", bound=dy.Column)
 
 
 def _nullable(column_type: type[T]) -> T:
+    # dy.Any doesn't have the `nullable` parameter.
     if column_type == dy.Any:
         return column_type()
     return column_type(nullable=True)
