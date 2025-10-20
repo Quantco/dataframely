@@ -11,7 +11,7 @@ postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-
 python = ">=3.10"
 rust = "=1.85"
 
-fsspec = "*"
+fsspec = ">=2025.9"
 numpy = "*"
 polars = ">=1.32"
 
@@ -51,7 +51,7 @@ pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
 pytest-mock = ">=3.14.1,<4"
-s3fs = ">=2025.09"
+s3fs = ">=2025.9"
 scikit-learn = "*"
 
 [feature.test.tasks]
