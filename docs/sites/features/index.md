@@ -4,4 +4,5 @@
 column-metadata
 primary-keys
 serialization
+sql-generation
 ```
