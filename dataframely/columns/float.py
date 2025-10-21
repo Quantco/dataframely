@@ -28,7 +28,8 @@ class _BaseFloat(OrdinalMixin[float], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
-        allow_inf_nan: bool = False,
+        allow_inf: bool = False,
+        allow_nan: bool = False,
         min: float | None = None,
         min_exclusive: float | None = None,
         max: float | None = None,
@@ -45,7 +46,8 @@ class _BaseFloat(OrdinalMixin[float], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If ``True``, ``nullable`` is automatically set to ``False``.
-            allow_inf_nan: Whether this column may contain NaN and infinity values.
+            allow_inf: Whether this column may contain infinity values.
+            allow_nan: Whether this column may contain NaN values.
             min: The minimum value for floats in this column (inclusive).
             min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
                 is specified and vice versa.
@@ -74,7 +76,8 @@ class _BaseFloat(OrdinalMixin[float], Column):
         if max is not None and max > self.max_value:
             raise ValueError("Maximum value is too big for the data type.")
 
-        self.allow_inf_nan = allow_inf_nan
+        self.allow_inf = allow_inf
+        self.allow_nan = allow_nan
 
         super().__init__(
             nullable=nullable,
@@ -101,17 +104,19 @@ class _BaseFloat(OrdinalMixin[float], Column):
     @property
     def _nan_probability(self) -> float:
         """Private utility for the null probability used during sampling."""
-        return 0.05 if self.allow_inf_nan else 0
+        return 0.05 if self.allow_nan else 0
 
     @property
     def _inf_probability(self) -> float:
         """Private utility for the null probability used during sampling."""
-        return 0.05 if self.allow_inf_nan else 0
+        return 0.05 if self.allow_inf else 0
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         result = super().validation_rules(expr)
-        if not self.allow_inf_nan:
-            result["inf_nan"] = ~(expr.is_infinite() | expr.is_nan())
+        if not self.allow_inf:
+            result["inf"] = ~expr.is_infinite()
+        if not self.allow_nan:
+            result["nan"] = ~expr.is_nan()
         return result
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:

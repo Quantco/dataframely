@@ -20,7 +20,7 @@ from dataframely.testing import (
 def test_rule_count_nullability(column_type: type[Column], nullable: bool) -> None:
     column = column_type(nullable=nullable)
     assert len(column.validation_rules(pl.col("a"))) == int(not nullable) + (
-        1 if isinstance(column, _BaseFloat) else 0
+        2 if isinstance(column, _BaseFloat) else 0
     )
 
 
@@ -28,9 +28,9 @@ def test_rule_count_nullability(column_type: type[Column], nullable: bool) -> No
 def test_nullability_rule_for_primary_key(column_type: type[Column]) -> None:
     column = column_type(primary_key=True)
     assert len(column.validation_rules(pl.col("a"))) == (
-        2
+        3
         if isinstance(column, _BaseFloat)
-        else 1  # floats additionally have nan/inf rules
+        else 1  # floats additionally have nan+inf rules
     )
 
 
