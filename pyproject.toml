@@ -17,8 +17,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "fsspec>=2025.9",
   "numpy",
-  "polars>=1.32",
+  "polars>=1.34",
   # Conditional
   'typing-extensions; python_version <= "3.10"',
 ]
@@ -32,6 +33,7 @@ version = "0.0.0"
 deltalake = ["deltalake"]
 pyarrow = ["pyarrow"]
 pydantic = ["pydantic>=2"]
+s3 = ["s3fs>=2025.9"]
 sqlalchemy = ["sqlalchemy"]
 
 [project.urls]
@@ -89,21 +91,24 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
+module = ["boto3.*", "fsspec.*", "pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
 
 [tool.typos.default.extend-identifiers]
 plain_serializer_function_ser_schema = "plain_serializer_function_ser_schema"
 
 [tool.pytest.ini_options]
-addopts = "--import-mode=importlib --benchmark-skip"
+addopts = "--import-mode=importlib --benchmark-skip -m 'not s3'"
 filterwarnings = [
   # By default, all warnings should yield errors
   "error",
   # Almost all tests are oblivious to the value of `nullable`. Let's ignore the warning as long as it exists.
   "ignore:The 'nullable' argument was not explicitly set:FutureWarning",
+  # boto3 still uses .utcnow()
+  "ignore::DeprecationWarning:botocore.*:",
 ]
 markers = [
-  "with_optionals: Tests that require optional dependencies to be installed",
+  "s3: tests that run against and S3 backend",
+  "with_optionals: tests that require optional dependencies to be installed",
 ]
 testpaths = ["tests"]
 

@@ -10,9 +10,9 @@ postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-
 [dependencies]
 python = ">=3.10"
 
+fsspec = ">=2025.9"
 numpy = "*"
 polars = ">=1.32"
-pytest-mock = ">=3.14.1,<4"
 
 [host-dependencies]
 maturin = ">=1.7,<2"
@@ -39,6 +39,8 @@ docs = "cd docs && make html"
 readthedocs = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html"
 
 [feature.test.dependencies]
+boto3 = "*"
+moto = "*"
 mypy = ">=1.13"
 pandas = "*"
 pandas-stubs = "*"
@@ -47,7 +49,15 @@ pytest = ">=6"
 pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
+pytest-mock = ">=3.14.1,<4"
+s3fs = ">=2025.9"
 scikit-learn = "*"
+
+[feature.test.tasks]
+test = "pytest"
+test-bench = "pytest tests/benches --benchmark-only --benchmark-sort mean --benchmark-columns min,max,mean,rounds"
+test-coverage = "pytest --cov=dataframely --cov-report=xml --cov-report=term-missing"
+test-no-optional = "pytest -m 'not with_optionals'"
 
 [feature.optionals.dependencies]
 deltalake = "*"
@@ -55,12 +65,6 @@ pyarrow = "*"
 pydantic = ">=2.11.9,<3"
 pydantic-core = ">=2.33.2,<3"
 sqlalchemy = ">=2"
-
-[feature.test.tasks]
-test = "pytest"
-test-bench = "pytest tests/benches --benchmark-only --benchmark-sort mean --benchmark-columns min,max,mean,rounds"
-test-coverage = "pytest --cov=dataframely --cov-report=xml --cov-report=term-missing"
-test-no-optional = "pytest -m 'not with_optionals'"
 
 [feature.build.dependencies]
 python-build = "*"

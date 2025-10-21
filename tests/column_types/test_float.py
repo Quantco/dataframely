@@ -163,17 +163,22 @@ def test_validate_range(
 @pytest.mark.parametrize("inf", [np.inf, -np.inf, float("inf"), float("-inf")])
 @pytest.mark.parametrize("nan", [np.nan, float("nan"), float("NaN")])
 def test_validate_inf_nan(inf: Any, nan: Any) -> None:
-    column = dy.Float(allow_inf_nan=False)
+    column = dy.Float()
     lf = pl.LazyFrame({"a": pl.Series([inf, 2.0, nan, 4.0, 5.0])})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
-    expected = pl.LazyFrame({"inf_nan": [False, True, False, True, True]})
-    assert_frame_equal(actual.select("inf_nan"), expected)
+    expected = pl.LazyFrame(
+        {
+            "inf": [False, True, True, True, True],
+            "nan": [True, True, False, True, True],
+        }
+    )
+    assert_frame_equal(actual.select("inf", "nan"), expected)
 
 
 @pytest.mark.parametrize("inf", [np.inf, -np.inf, float("inf"), float("-inf")])
 @pytest.mark.parametrize("nan", [np.nan, float("nan"), float("NaN")])
 def test_validate_allow_inf_nan(inf: Any, nan: Any) -> None:
-    column = dy.Float(allow_inf_nan=True, nullable=True)
+    column = dy.Float(allow_inf=True, allow_nan=True, nullable=True)
     lf = pl.LazyFrame({"a": pl.Series([inf, 2.0, nan, 4.0, 5.0])})
     actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
     assert len(actual.collect_schema().names()) == 0, (
@@ -188,21 +193,21 @@ def test_sample_unchecked_min_0() -> None:
 
 
 def test_sample_unchecked_nan() -> None:
-    column = dy.Float(min=0, max=10, allow_inf_nan=True)
+    column = dy.Float(min=0, max=10, allow_nan=True)
     actual = column._sample_unchecked(dy.random.Generator(), n=10000)
     nan_count = actual.is_nan().sum()
     assert 0.01 * len(actual) < nan_count < 0.1 * len(actual)
 
 
 def test_sample_unchecked_unbounded() -> None:
-    column = dy.Float(allow_inf_nan=False)
+    column = dy.Float()
     actual = column._sample_unchecked(dy.random.Generator(), n=10000)
     assert actual.is_nan().sum() == 0
     assert actual.is_infinite().sum() == 0
 
 
 def test_sample_unchecked_inf() -> None:
-    column = dy.Float(allow_inf_nan=True)
+    column = dy.Float(allow_inf=True)
     actual = column._sample_unchecked(dy.random.Generator(), n=10000)
     inf_count = actual.is_infinite().sum()
     assert 0.01 * len(actual) < inf_count < 0.1 * len(actual)
