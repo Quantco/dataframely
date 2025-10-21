@@ -1143,7 +1143,7 @@ class Schema(BaseSchema, ABC):
         return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
 
     @classmethod
-    def sqlalchemy_schema(cls, dialect: sa.Dialect) -> list[sa.Column]:
+    def sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
         """Obtain the SQLAlchemy schema for a particular dialect for this schema.
 
         Args:
