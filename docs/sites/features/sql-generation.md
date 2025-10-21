@@ -22,7 +22,7 @@ class MySchema(dy.Schema):
 
 
 engine = sa.create_engine(...)
-columns: list[sa.Column] = MySchema.sql_schema(engine.dialect)
+columns: list[sa.Column] = MySchema.sqlalchemy_schema(engine.dialect)
 ```
 
 You can then do with the columns what you please. Most likely, you want to create a table with them:
@@ -93,7 +93,7 @@ for name, dy_schema in MyCollection.member_schemas().items():
     sa.Table(
         name,
         meta,
-        *dy_schema.sql_schema(dialect=engine.dialect),
+        *dy_schema.sqlalchemy_schema(dialect=engine.dialect),
     )
 meta.create_all()
 ```
