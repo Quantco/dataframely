@@ -86,5 +86,5 @@ pub fn all_rules_required(
 
     // Aggregate failure counts into a validation error.
     let error = RuleValidationError::new(failures);
-    Err(polars_err!(ComputeError: error.to_string(Some(&kwargs.schema_name))))
+    Err(polars_err!(ComputeError: format!("\n{}", error.to_string(Some(&kwargs.schema_name)))))
 }

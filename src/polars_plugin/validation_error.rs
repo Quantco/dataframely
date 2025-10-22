@@ -42,11 +42,11 @@ impl<'a> RuleValidationError<'a> {
     pub fn to_string(&self, schema: Option<&str>) -> String {
         let mut result = if let Some(schema) = schema {
             format!(
-                "\n{} rules failed validation for schema '{schema}':",
+                "{} rules failed validation for schema '{schema}':",
                 self.num_rule_failures
             )
         } else {
-            format!("\n{} rules failed validation:", self.num_rule_failures)
+            format!("{} rules failed validation:", self.num_rule_failures)
         };
         self.schema_errors.iter().for_each(|failure| {
             result += format!(

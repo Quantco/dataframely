@@ -33,7 +33,7 @@ from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
 from dataframely._storage.parquet import ParquetStorageBackend
 from dataframely._typing import LazyFrame, Validation
-from dataframely.exc import ValidationRequiredError
+from dataframely.exc import ValidationError, ValidationRequiredError
 from dataframely.filter_result import FailureInfo
 from dataframely.random import Generator
 from dataframely.schema import _schema_from_dict
@@ -416,7 +416,7 @@ class Collection(BaseCollection, ABC):
                 message = "\n".join(
                     [f"{len(errors)} members failed validation:"] + details
                 )
-                raise plexc.ComputeError(message)
+                raise ValidationError(message)
             return filtered
         else:
             # If we do NOT perform the validation eagerly, we can perform it more

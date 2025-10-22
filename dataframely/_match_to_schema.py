@@ -16,6 +16,9 @@ def match_to_schema(
     *,
     casting: Literal["none", "lenient", "strict"],
 ) -> pl.LazyFrame:
+    """Ensure that a lazy frame contains the columns of the schema with the dtypes
+    specified by the schema."""
+
     def cast_none(lf: pl.LazyFrame, schema: pl.Schema) -> pl.LazyFrame:
         _validate_columns_exist(schema, target)
         _validate_dtypes(schema, target)
@@ -57,8 +60,8 @@ def _validate_columns_exist(actual: pl.Schema, target: type[BaseSchema]) -> None
     target_columns = set(target.column_names())
     if missing := target_columns - actual_columns:
         raise SchemaError(
-            f"Schema '{target.__name__}' is missing {len(missing)} "
-            "columns: " + ", ".join(f"'{c}'" for c in sorted(missing))
+            f"{len(missing)} missing columns for schema '{target.__name__}': "
+            + ", ".join(f"'{c}'" for c in sorted(missing))
         )
 
 
@@ -70,8 +73,7 @@ def _validate_dtypes(actual: pl.Schema, target: type[BaseSchema]) -> None:
     }
     if failures:
         raise SchemaError(
-            f"Schema '{target.__name__}' encountered invalid dtypes for "
-            f"{len(failures)} columns:\n"
+            f"{len(failures)} columns with invalid dtype for schema '{target.__name__}': "
             + "\n".join(
                 f" - '{name}', got: {actual[name]}, expected: {column}"
                 for name, column in failures.items()

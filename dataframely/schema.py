@@ -21,6 +21,7 @@ from dataframely._compat import deltalake
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
 from ._match_to_schema import match_to_schema
+from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
 from ._polars import collect_if
 from ._rule import Rule, rule_from_dict, with_evaluation_rules
@@ -39,7 +40,7 @@ from ._storage.parquet import (
 from ._typing import DataFrame, LazyFrame, Validation
 from .columns import Column, column_from_dict
 from .config import Config
-from .exc import SchemaError, ValidationRequiredError
+from .exc import SchemaError, ValidationError, ValidationRequiredError
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
 
@@ -471,6 +472,17 @@ class Schema(BaseSchema, ABC):
         eager: Literal[False],
     ) -> LazyFrame[Self]: ...
 
+    @overload
+    @classmethod
+    def validate(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool,
+    ) -> DataFrame[Self] | LazyFrame[Self]: ...
+
     @classmethod
     def validate(
         cls,
@@ -511,16 +523,24 @@ class Schema(BaseSchema, ABC):
                 for any value in the data. Only raised upon collection if
                 ``eager=False``.
         """
-        lf = df.lazy().pipe(
-            match_to_schema, cls, casting=("strict" if cast else "none")
-        )
-        if rules := cls._validation_rules(with_cast=False):
-            lf = (
-                lf.pipe(with_evaluation_rules, rules)
-                .filter(all_rules_required(rules.keys(), schema_name=cls.__name__))
-                .drop(rules.keys())
+        if eager:
+            out, failure = cls.filter(df, cast=cast, eager=True)
+            if len(failure) > 0:
+                raise ValidationError(
+                    format_rule_failures(list(failure.counts().items()))
+                )
+            return out
+        else:
+            lf = df.lazy().pipe(
+                match_to_schema, cls, casting=("strict" if cast else "none")
             )
-        return lf.pipe(collect_if, eager)  # type: ignore
+            if rules := cls._validation_rules(with_cast=False):
+                lf = (
+                    lf.pipe(with_evaluation_rules, rules)
+                    .filter(all_rules_required(rules.keys(), schema_name=cls.__name__))
+                    .drop(rules.keys())
+                )
+            return lf  # type: ignore
 
     @classmethod
     def is_valid(
@@ -943,11 +963,6 @@ class Schema(BaseSchema, ABC):
                 If no schema information can be read from the
                 source and ``validation`` is set to ``"forbid"``.
 
-        Note:
-            Due to current limitations in dataframely, this method actually reads the
-            parquet file into memory if ``validation`` is ``"warn"`` or ``"allow"`` and
-            validation is required.
-
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
@@ -1079,11 +1094,6 @@ class Schema(BaseSchema, ABC):
             information from the last commit is used, so any table modifications
             that are not through dataframely will result in losing the metadata.
 
-            Be aware that appending to an existing table via mode="append" may result
-            in violation of group constraints that dataframely cannot catch
-            without re-validating. Only use appends if you are certain that they do not
-            break your schema.
-
             This method suffers from the same limitations as :meth:`serialize`.
         """
         return cls._read(
@@ -1191,30 +1201,27 @@ class Schema(BaseSchema, ABC):
         cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
     ) -> LazyFrame[Self] | DataFrame[Self]:
         # Load
+        read: pl.DataFrame | pl.LazyFrame
         if lazy:
-            lf, serialized_schema = backend.scan_frame(**kwargs)
+            read, serialized_schema = backend.scan_frame(**kwargs)
         else:
-            df, serialized_schema = backend.read_frame(**kwargs)
-            lf = df.lazy()
+            read, serialized_schema = backend.read_frame(**kwargs)
 
-        validated = cls._validate_if_needed(
-            lf=lf,
+        return cls._validate_if_needed(
+            df=read,
             serialized_schema=serialized_schema,
             validation=validation,
             source=kwargs["source"],
         )
-        if lazy:
-            return validated
-        return validated.collect()
 
     @classmethod
     def _validate_if_needed(
         cls,
-        lf: pl.LazyFrame,
+        df: pl.DataFrame | pl.LazyFrame,
         serialized_schema: SerializedSchema | None,
         validation: Validation,
         source: str,
-    ) -> LazyFrame[Self]:
+    ) -> DataFrame[Self] | LazyFrame[Self]:
         deserialized_schema = (
             deserialize_schema(serialized_schema) if serialized_schema else None
         )
@@ -1223,9 +1230,9 @@ class Schema(BaseSchema, ABC):
         if cls._requires_validation_for_reading_parquet(
             deserialized_schema, validation, source=source
         ):
-            return cls.validate(lf, cast=True).lazy()
+            return df.pipe(cls.validate, cast=True, eager=isinstance(df, pl.DataFrame))
 
-        return cls.cast(lf)
+        return cls.cast(df)
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 

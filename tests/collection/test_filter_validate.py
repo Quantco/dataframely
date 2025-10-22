@@ -7,6 +7,7 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
+from dataframely.exc import ValidationError
 
 # ------------------------------------------------------------------------------------ #
 #                                        SCHEMA                                        #
@@ -200,7 +201,7 @@ def test_validate_without_filter_with_rule_violation_eager(
     }
     assert not SimpleCollection.is_valid(data)
 
-    with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
+    with pytest.raises(ValidationError, match=r"2 members failed validation") as exc:
         SimpleCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")
@@ -232,7 +233,7 @@ def test_validate_with_filter_without_rule_violation_eager(
     }
     assert not MyCollection.is_valid(data)
 
-    with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
+    with pytest.raises(ValidationError, match=r"2 members failed validation") as exc:
         MyCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")
@@ -265,7 +266,7 @@ def test_validate_with_filter_with_rule_violation_eager(
     }
     assert not MyCollection.is_valid(data)
 
-    with pytest.raises(plexc.ComputeError, match=r"2 members failed validation") as exc:
+    with pytest.raises(ValidationError, match=r"2 members failed validation") as exc:
         MyCollection.validate(data)
 
     exc.match(r"Member 'first' failed validation")

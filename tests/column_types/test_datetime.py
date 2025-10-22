@@ -422,7 +422,7 @@ def test_sample(column: dy.Column) -> None:
         (
             pl.Datetime(time_zone="America/New_York"),
             dy.Datetime(time_zone="Etc/UTC"),
-            r"Schema 'test' encountered invalid dtypes for 1 columns",
+            r"1 columns with invalid dtype for schema 'test'",
         ),
         (
             pl.Datetime(time_zone="Etc/UTC"),

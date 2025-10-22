@@ -17,7 +17,7 @@ from dataframely.testing import create_schema
 def test_missing_columns(casting: Literal["none", "lenient", "strict"]) -> None:
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     lf = pl.LazyFrame({"a": [1, 2, 3]})
-    with pytest.raises(SchemaError, match=r"Schema 'test' is missing 1 columns"):
+    with pytest.raises(SchemaError, match=r"1 missing columns for schema 'test'"):
         match_to_schema(lf, schema, casting=casting).collect()
 
 
@@ -25,7 +25,7 @@ def test_invalid_dtype() -> None:
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     lf = pl.LazyFrame({"a": [1, 2, 3], "b": [1, 2, 3]})
     with pytest.raises(
-        SchemaError, match=r"Schema 'test' encountered invalid dtypes for 1 columns"
+        SchemaError, match=r"1 columns with invalid dtype for schema 'test'"
     ):
         match_to_schema(lf, schema, casting="none").collect()
 

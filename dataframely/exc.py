@@ -2,11 +2,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 
-# -------------------------------------- SCHEMA -------------------------------------- #
+# ------------------------------------ VALIDATION ------------------------------------ #
 
 
 class SchemaError(Exception):
     """Error raised when the data frame schema does not match the dataframely schema."""
+
+
+class ValidationError(Exception):
+    """Error raised when data fails eager validation against a schema."""
 
 
 # ---------------------------------- IMPLEMENTATION ---------------------------------- #
