@@ -1139,11 +1139,16 @@ class Schema(BaseSchema, ABC):
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
     @classmethod
-    def polars_schema(cls) -> pl.Schema:
+    def to_polars_schema(cls) -> pl.Schema:
+        """Obtain the polars schema for this schema.
+
+        Returns:
+            A :mod:`polars` schema that mirrors the schema defined by this class.
+        """
         return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
 
     @classmethod
-    def sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
+    def to_sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
         """Obtain the SQLAlchemy schema for a particular dialect for this schema.
 
         Args:
@@ -1159,7 +1164,7 @@ class Schema(BaseSchema, ABC):
         ]
 
     @classmethod
-    def pyarrow_schema(cls) -> pa.Schema:
+    def to_pyarrow_schema(cls) -> pa.Schema:
         """Obtain the pyarrow schema for this schema.
 
         Returns:
