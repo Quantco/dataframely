@@ -194,8 +194,8 @@ def test_get_diabetes_invoice_amounts() -> None:
         }
     ])
     expected = OutputSchema.validate(pl.DataFrame({
-        "invoice_id": "1",
-        "amount": 1500.0,
+        "invoice_id": ["1"],
+        "amount": [1500.0],
     }), cast=True)
 
     # Act
