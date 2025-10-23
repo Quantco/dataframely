@@ -511,12 +511,26 @@ class Schema(BaseSchema, ABC):
     def filter(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
     ) -> tuple[DataFrame[Self], FailureInfo[Self]]:
-        """Filter the data frame by the rules of this schema.
+        """Filter the data frame by the rules of this schema, returning `(valid,
+        failures)`.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
         While :meth:`validate` raises an exception when a row does not adhere to the
         rules defined in the schema, this method simply filters out these rows and
         succeeds.
+
+        Example:
+            ```python
+            # Filter the data and cast columns to expected types
+            good, failure = HouseSchema.filter(df, cast=True)
+
+            # Inspect the reasons for the failed rows
+            print(failure.counts())
+
+            # Inspect the failed rows
+            failed_df = failure.invalid()
+            print(failed_df)
+            ```
 
         Args:
             df: The data frame to filter for valid rows.
