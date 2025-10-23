@@ -37,13 +37,13 @@ jobs:
         run: pixi run pre-commit-run --color=always --show-diff-on-failure
 
   unit-tests:
-    name: Unit Tests (${{ matrix.os == 'ubuntu-latest' && 'Linux' || 'Windows' }}) - ${{ matrix.environment }}
+    name: Unit Tests (${{ contains(matrix.os, 'ubuntu') && 'Linux' || (contains(matrix.os, 'windows') && 'Windows' || 'macOS') }}) - ${{ matrix.environment }}
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         environment: [py310, py311, py312, py313, py314]
         with_optionals: [false]
         include:
@@ -51,6 +51,9 @@ jobs:
             environment: py314-optionals
             with_optionals: true
           - os: windows-latest
+            environment: py314-optionals
+            with_optionals: true
+          - os: macos-latest
             environment: py314-optionals
             with_optionals: true
     steps:
