@@ -23,7 +23,7 @@ df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.create_empty()
 
 While there is technically no data generation involved here, it can still be useful to create empty data frames with correct data types and type hints.
 
-## Generating random data
+### Generating random data
 
 To generate synthetic (random) data for a schema, one can call {meth}`~dataframely.Schema.sample` on any schema:
 
@@ -102,7 +102,7 @@ df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(overrides=[
 
 ### Providing custom column overrides
 
-Complex validation rules (such as dependencies between columns or ordering criteria) can cause sampling to require excessively long or fail. Specifying additional `overrides` individually in such cases can be tedious. Instead, the {meth}`~dataframely.Schema._sampling_overrides` hook on a schema can be used to specify polars expressions for columns in the schema that will be applied before generated data is filtered during sampling.
+Complex validation rules (such as dependencies between columns or ordering criteria) can cause sampling to run excessively long or fail. Specifying additional `overrides` individually in such cases can be tedious. Instead, the {meth}`~dataframely.Schema._sampling_overrides` hook on a schema can be used to specify polars expressions for columns in the schema that will be applied before generated data is filtered during sampling.
 
 ```python
 import polars as pl
