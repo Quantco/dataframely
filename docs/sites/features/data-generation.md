@@ -89,7 +89,7 @@ Similar to schemas, you can call {meth}`~dataframely.Collection.sample` on any c
 ```python
 class DiagnosisSchema(dy.Schema):
     invoice_id = dy.String(primary_key=True)
-    diagnosis_code = dy.String(nullable=False, regex=r"[A-Z][0-9]{2,4}")
+    code = dy.String(nullable=False, regex=r"[A-Z][0-9]{2,4}")
 
 class HospitalInvoiceData(dy.Collection):
     invoice: dy.LazyFrame[InvoiceSchema]
@@ -100,12 +100,12 @@ invoice_data: HospitalInvoiceData = HospitalInvoiceData.sample(num_rows=10)
 
 While this works out of the box for 1:1 relationships between tables, dataframely cannot automatically infer other relations, e.g., 1:N,
 that are expressed through `@dy.filter`s in the collection.
-Say, for instance, `diagnosis_code` was part of the primary key for `DiagnosisSchema`, and there could be 1 to N diagnoses for an invoice:
+Say, for instance, `code` was part of the primary key for `DiagnosisSchema`, and there could be 1 to N diagnoses for an invoice:
 
 ```python
 class DiagnosisSchema(dy.Schema):
     invoice_id = dy.String(primary_key=True)
-    diagnosis_code = dy.String(primary_key=True, regex=r"[A-Z][0-9]{2,4}")
+    code = dy.String(primary_key=True, regex=r"[A-Z][0-9]{2,4}")
 
 class HospitalInvoiceData(dy.Collection):
     invoice: dy.LazyFrame[InvoiceSchema]
@@ -171,38 +171,59 @@ consider the following example.
 Here, we want to test a function `get_diabetes_invoice_amounts`:
 
 ```python
-from polars.testing import assert_frame_equals
+from polars.testing import assert_frame_equal
+
+
+class OutputSchema(dy.Schema):
+    invoice_id = dy.String(primary_key=True)
+    amount = dy.Decimal(nullable=False)
+
 
 # function under test
-def get_diabetes_invoice_amounts(invoice_data: HospitalInvoiceData) -> dy.LazyFrame[OutputSchema]: ...
+def get_diabetes_invoice_amounts(
+    invoice_data: HospitalClaims,
+) -> dy.LazyFrame[OutputSchema]:
+    return OutputSchema.cast(
+        invoice_data.diagnosis.filter(DiagnosisSchema.code.col.str.starts_with("E11"))
+        .unique(DiagnosisSchema.invoice_id.col)
+        .join(invoice_data.invoice, on="invoice_id", how="inner")
+    )
+
 
 # pytest test case
 def test_get_diabetes_invoice_amounts() -> None:
     # Arrange
-    invoice_data = HospitalInvoiceData.sample(overrides=[
-        # Invoice with diabetes diagnosis
-        {
-            "invoice_id": "1",
-            "invoice": {"amount": 1500.0},
-            "diagnosis": [{"diagnosis": "E11.2"}]
-        },
-        # Invoice without diabetes diagnosis
-        {
-            "invoice_id": "2",
-            "invoice": {"amount": 1000.0},
-            "diagnosis": [{"diagnosis": "J45.909"}]
-        }
-    ])
-    expected = OutputSchema.validate(pl.DataFrame({
-        "invoice_id": ["1"],
-        "amount": [1500.0],
-    }), cast=True)
+    invoice_data = HospitalClaims.sample(
+        overrides=[
+            # Invoice with diabetes diagnosis
+            {
+                "invoice_id": "1",
+                "invoice": {"amount": 1500.0},
+                "diagnosis": [{"code": "E11.2"}],
+            },
+            # Invoice without diabetes diagnosis
+            {
+                "invoice_id": "2",
+                "invoice": {"amount": 1000.0},
+                "diagnosis": [{"code": "J45.909"}],
+            },
+        ]
+    )
+    expected = OutputSchema.validate(
+        pl.DataFrame(
+            {
+                "invoice_id": ["1"],
+                "amount": [1500.0],
+            }
+        ),
+        cast=True,
+    ).lazy()
 
     # Act
     actual = get_diabetes_invoice_amounts(invoice_data)
 
     # Assert
-    assert_frame_equals(actual, expected)
+    assert_frame_equal(actual, expected)
 ```
 
 Dataframely allows us to define test data at the invoice-level, which is easy and intuitive to think about instead of a set of related tables.
