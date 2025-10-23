@@ -149,7 +149,7 @@ class HospitalInvoiceData(dy.Collection):
         if "invoice_id" not in sample:
             sample["invoice_id"] = str(index)
 
-        # Satisfy filters by adding 1-10 diagnoses.
+        # Satisfy filter by adding 1-10 diagnoses.
         if "diagnosis" not in sample:
             # NOTE: Every key in the `sample` corresponds to one member of the collection.
             # In this case, diagnoses contains a list of N diagnoses.
