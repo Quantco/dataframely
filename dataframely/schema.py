@@ -1149,7 +1149,8 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def to_sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
-        """Obtain the SQLAlchemy schema for a particular dialect for this schema.
+        """Obtain the SQLAlchemy column definitions for a particular dialect for this
+        schema.
 
         Args:
             dialect: The dialect for which to obtain the SQL schema. Note that column
