@@ -1,12 +1,12 @@
 # Data Generation
 
 Testing data pipelines can be challenging because assessing a pipeline's functionality, performance, or robustness often requires realistic data.
-Dataframely supports generating synthetic data that adheres to a schema or a collection of schemas.
+Dataframely supports generating synthetic data that adheres to a schema or a collection of schemas by _sampling_ the schema or collection.
 This can make testing considerably easier, for instance, when availability of real data is limited to certain environments, say client infrastructure; or when crafting unit tests that specifically test one edge case which may or may not be present in a real data sample.
 
 ## Empty data frames with correct schema
 
-To create an empty data frame with a valid schema, one can call {meth}`~dataframely.Schema.create_empty` on any schema:
+To create an empty data or lazy frame with a valid schema, one can call {meth}`~dataframely.Schema.create_empty` on any schema:
 
 ```python
 class InvoiceSchema(dy.Schema):
@@ -58,16 +58,18 @@ df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(num_rows=100)
 
 ```{note}
 Dataframely will perform "fuzzy sampling" in the presence of custom rules and primary key constraints: it samples in a loop until it finds a data frame of length `num_rows` which adhere to the schema.
-The maximum number of sampling rounds is configured via {meth}`~dataframely.Config.set_max_sampling_iterations`.
+The maximum number of sampling rounds is configured via {meth}`~dataframely.Config.set_max_sampling_iterations` and sampling will fail if no valid data frame can be found within this number of rounds.
 By fixing this setting to 1, it is only possible to reliably sample from schemas without custom rules and without primary key constraints.
 ```
 
-### Overriding/excluding specific values during sampling
+### Sampling data frames with specific values
 
 Oftentimes, one may want to sample data for some columns while explicitly specifying values for other columns.
 For instance, when writing unit tests for wide data frames with many columns, one is usually only interested in a subset of columns.
 Therefore, dataframely provides the `overrides` parameter in {meth}`~dataframely.Schema.sample`, which can be used to manually "override" the values of certain columns while all other columns are sampled as before.
-
+Specifying `overrides` can also be used to allow dataframely to find valid data frames faster, 
+especially for complex schemas. If `overrides` are specified, `num_rows` can be omitted. 
+Overrides can be specified in two ways. The column-wise specification specifies an iterable of values for each specified column: 
 ```python
 from datetime import date
 
@@ -193,7 +195,7 @@ def get_diabetes_invoice_amounts(
 # pytest test case
 def test_get_diabetes_invoice_amounts() -> None:
     # Arrange
-    invoice_data = HospitalClaims.sample(
+    invoice_data = HospitalInvoiceData.sample(
         overrides=[
             # Invoice with diabetes diagnosis
             {
