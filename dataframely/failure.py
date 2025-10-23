@@ -55,6 +55,13 @@ class FailureInfo(Generic[S]):
         """The rows of the original data frame containing the invalid rows."""
         return self._df.drop(self._rule_columns)
 
+    def df(self) -> pl.DataFrame:
+        """The rows of the original data frame containing the invalid rows.
+
+        Alias for `invalid()`.
+        """
+        return self.invalid()
+
     def counts(self) -> dict[str, int]:
         """The number of validation failures for each individual rule.
 
