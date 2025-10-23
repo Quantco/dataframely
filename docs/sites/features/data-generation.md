@@ -205,11 +205,6 @@ class HospitalInvoiceData(dy.Collection):
         return sample
 ```
 
-## Customizing data generation
-
-Dataframely allows customizing the data generation process, if the default mechanisms to generate data are not suitable.
-To customize the data generation, one can subclass {class}`~dataframely.random.Generator` and override any of the `sample_*` functions.
-
 ## Unit testing
 
 To demonstrate the power of data generation for unit testing,
@@ -306,3 +301,8 @@ HospitalInvoiceData.sample(overrides=[
 ```
 
 ````
+
+## Customizing data generation
+
+Dataframely allows customizing the data generation process, if the default mechanisms to generate data are not suitable.
+To customize the data generation, one can subclass {class}`~dataframely.random.Generator` and override any of the `sample_*` functions.
