@@ -1,6 +1,6 @@
 # Data Generation
 
-Testing data pipelines can be challenging because assessing the pipeline's functionality, performance, or robustness requires realistic data.
+Testing data pipelines can be challenging because assessing a pipeline's functionality, performance, or robustness often requires realistic data.
 Dataframely supports generating synthetic data that adheres to a schema or a collection of schemas.
 This can make testing considerably easier, for instance, when availability of real data is limited to certain environments, say client infrastructure; or when crafting unit tests that specifically test one edge case which may or may not be present in a real data sample.
 
@@ -98,8 +98,8 @@ class HospitalInvoiceData(dy.Collection):
 invoice_data: HospitalInvoiceData = HospitalInvoiceData.sample(num_rows=10)
 ```
 
-While this works out-of-the-box for 1:1 relationships between tables, dataframely cannot automatically infer other relations, e.g., 1:N,
-that are expressed as `@dy.filter`s in the collection.
+While this works out of the box for 1:1 relationships between tables, dataframely cannot automatically infer other relations, e.g., 1:N,
+that are expressed through `@dy.filter`s in the collection.
 Say, for instance, `diagnosis_code` was part of the primary key for `DiagnosisSchema`, and there could be 1 to N diagnoses for an invoice:
 
 ```python
