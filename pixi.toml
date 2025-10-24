@@ -1,4 +1,4 @@
-[project]
+[workspace]
 channels = ["conda-forge"]
 description = "A declarative, polars-native data frame validation library."
 name = "dataframely"
@@ -15,7 +15,6 @@ fsspec = ">=2025.9"
 numpy = "*"
 polars = ">=1.32"
 
-[host-dependencies]
 maturin = ">=1.7,<2"
 pip = "*"
 
