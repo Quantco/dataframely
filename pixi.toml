@@ -5,7 +5,8 @@ name = "dataframely"
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
 [tasks]
-postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -v -e ."
+postinstall = "maturin develop"
+postinstall-release = "pip install --no-build-isolation --no-deps --disable-pip-version-check -v -e ."
 
 [dependencies]
 python = ">=3.10"
@@ -35,8 +36,8 @@ sphinx-copybutton = "*"
 sphinx_rtd_theme = "*"
 sphinxcontrib-apidoc = "*"
 [feature.docs.tasks]
-docs = "cd docs && sphinx-build -M html . _build"
-readthedocs = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html"
+docs = { cmd = "sphinx-build -M html . _build", cwd = "docs", depends-on = "postinstall" }
+readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
 
 [feature.test.dependencies]
 boto3 = "*"
