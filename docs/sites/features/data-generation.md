@@ -51,7 +51,7 @@ class InvoiceSchema(dy.Schema):
     amount = dy.Decimal(nullable=False)
 
     @dy.rule()
-    def discharge_after_admission() -> pl.Expr:
+    def discharge_after_admission(cls) -> pl.Expr:
         return InvoiceSchema.discharge_date.col >= InvoiceSchema.admission_date.col
 
 # `@dy.rule`s will be respected as well for data generation.
@@ -115,7 +115,7 @@ class OrderedSchema(dy.Schema):
     b = dy.Int32(nullable=False)
 
     @dy.rule()
-    def iter_order_correct() -> pl.Expr:
+    def iter_order_correct(cls) -> pl.Expr:
         return pl.col("iter").rank(method="ordinal") == pl.struct(pl.col("a"), pl.col("b")).rank(method="ordinal")
 
     @classmethod

@@ -75,6 +75,9 @@ select = [
   "UP",
 ]
 
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["dataframely.rule"]
+
 [tool.ruff.format]
 indent-style = "space"
 quote-style = "double"
@@ -85,7 +88,7 @@ disallow_untyped_defs = true
 exclude = ["docs/"]
 explicit_package_bases = true
 no_implicit_optional = true
-plugins = ["dataframely.mypy", "pydantic.mypy"]
+plugins = ["pydantic.mypy"]
 python_version = '3.10'
 warn_unused_ignores = true
 

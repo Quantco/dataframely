@@ -24,11 +24,11 @@ class MyComplexSchema(dy.Schema):
     b = dy.Int64(nullable=True)
 
     @dy.rule()
-    def b_greater_a() -> pl.Expr:
+    def b_greater_a(cls) -> pl.Expr:
         return pl.col("b") > pl.col("a")
 
     @dy.rule(group_by=["a"])
-    def b_unique_within_a() -> pl.Expr:
+    def b_unique_within_a(cls) -> pl.Expr:
         return pl.col("b").n_unique() == 1
 
 
@@ -37,14 +37,12 @@ class MyComplexSchemaWithLazyRules(dy.Schema):
     b = dy.Int64(nullable=True)
 
     @dy.rule()
-    def b_greater_a() -> pl.Expr:
-        return MyComplexSchemaWithLazyRules.b.col > MyComplexSchemaWithLazyRules.a.col
+    def b_greater_a(cls) -> pl.Expr:
+        return cls.b.col > cls.a.col
 
     @dy.rule(group_by=["a"])
-    def b_unique_within_a() -> pl.Expr:
-        return (
-            MyComplexSchemaWithLazyRules.b.col.n_unique() == SOME_CONSTANT_DEFINED_LATER
-        )
+    def b_unique_within_a(cls) -> pl.Expr:
+        return cls.b.col.n_unique() == SOME_CONSTANT_DEFINED_LATER
 
 
 SOME_CONSTANT_DEFINED_LATER = 1

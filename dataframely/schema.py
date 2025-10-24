@@ -24,7 +24,7 @@ from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
 from ._polars import collect_if
-from ._rule import Rule, rule_from_dict, with_evaluation_rules
+from ._rule import Rule, RuleFactory, rule_from_dict, with_evaluation_rules
 from ._serialization import (
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
@@ -1377,7 +1377,10 @@ def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:
         (Schema,),
         {
             **{name: column_from_dict(col) for name, col in data["columns"].items()},
-            **{name: rule_from_dict(rule) for name, rule in data["rules"].items()},
+            **{
+                name: RuleFactory.from_rule(rule_from_dict(rule))
+                for name, rule in data["rules"].items()
+            },
         },
     )
 

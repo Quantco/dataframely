@@ -12,7 +12,7 @@ from typing import Any
 
 import polars as pl
 
-from ._rule import DtypeCastRule, GroupRule, Rule
+from ._rule import DtypeCastRule, GroupRule, Rule, RuleFactory
 from .columns import Column
 from .exc import ImplementationError
 
@@ -81,7 +81,7 @@ class Metadata:
     """Utility class to gather columns and rules associated with a schema."""
 
     columns: dict[str, Column] = field(default_factory=dict)
-    rules: dict[str, Rule] = field(default_factory=dict)
+    rules: dict[str, RuleFactory] = field(default_factory=dict)
 
     def update(self, other: Self) -> None:
         self.columns.update(other.columns)
@@ -102,7 +102,11 @@ class SchemaMeta(ABCMeta):
             result.update(mcs._get_metadata_recursively(base))
         result.update(mcs._get_metadata(namespace))
         namespace[_COLUMN_ATTR] = result.columns
-        namespace[_RULE_ATTR] = result.rules
+        cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
+
+        # Assign rules retroactively as we only encounter rule factories in the result
+        rules = {name: factory.make(cls) for name, factory in result.rules.items()}
+        setattr(cls, _RULE_ATTR, rules)
 
         # At this point, we already know all columns and custom rules. We want to run
         # some checks...
@@ -111,7 +115,7 @@ class SchemaMeta(ABCMeta):
         # we assume that users cast dtypes, i.e. additional rules for dtype casting
         # are also checked.
         all_column_names = set(result.columns)
-        all_rule_names = set(_build_rules(result.rules, result.columns, with_cast=True))
+        all_rule_names = set(_build_rules(rules, result.columns, with_cast=True))
         common_names = all_column_names & all_rule_names
         if len(common_names) > 0:
             common_list = ", ".join(sorted(f"'{col}'" for col in common_names))
@@ -121,7 +125,7 @@ class SchemaMeta(ABCMeta):
             )
 
         # 2) Check that the columns referenced in the group rules exist.
-        for rule_name, rule in result.rules.items():
+        for rule_name, rule in rules.items():
             if isinstance(rule, GroupRule):
                 missing_columns = set(rule.group_columns) - set(result.columns)
                 if len(missing_columns) > 0:
@@ -138,6 +142,7 @@ class SchemaMeta(ABCMeta):
         for attr, value in namespace.items():
             if attr.startswith("__"):
                 continue
+
             # Check for tuple of column (commonly caused by trailing comma)
             if (
                 isinstance(value, tuple)
@@ -157,7 +162,7 @@ class SchemaMeta(ABCMeta):
                     f"Did you forget to add parentheses?"
                 )
 
-        return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
+        return cls
 
     def __getattribute__(cls, name: str) -> Any:
         val = super().__getattribute__(name)
@@ -182,7 +187,7 @@ class SchemaMeta(ABCMeta):
         }.items():
             if isinstance(value, Column):
                 result.columns[value.alias or attr] = value
-            if isinstance(value, Rule):
+            if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
                     raise ImplementationError(

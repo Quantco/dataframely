@@ -54,7 +54,7 @@ class HouseSchema(dy.Schema):
     price = dy.Float64(nullable=False)
 
     @dy.rule()
-    def reasonable_bathroom_to_bedrooom_ratio() -> pl.Expr:
+    def reasonable_bathroom_to_bedrooom_ratio(cls) -> pl.Expr:
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 ```
@@ -81,12 +81,12 @@ class HouseSchema(dy.Schema):
     price = dy.Float64(nullable=False)
 
     @dy.rule()
-    def reasonable_bathroom_to_bedrooom_ratio() -> pl.Expr:
+    def reasonable_bathroom_to_bedrooom_ratio(cls) -> pl.Expr:
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 
     @dy.rule(group_by=["zip_code"])
-    def minimum_zip_code_count() -> pl.Expr:
+    def minimum_zip_code_count(cls) -> pl.Expr:
         return pl.len() >= 2
 ```
 

@@ -26,8 +26,6 @@ jupyter = "*"
 furo = "*"
 ipython = "*"
 make = "*"
-# Needed for generating docs for dataframely.mypy
-mypy = "*"
 myst-parser = "*"
 nbsphinx = "*"
 numpydoc = "*"

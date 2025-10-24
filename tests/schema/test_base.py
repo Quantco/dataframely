@@ -19,7 +19,7 @@ class MySchema(dy.Schema):
 
 class MySchemaWithRule(MySchema):
     @dy.rule()
-    def a_greater_than_c() -> pl.Expr:
+    def a_greater_than_c(cls) -> pl.Expr:
         return pl.col("a") > pl.col("c")
 
 
