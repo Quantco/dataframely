@@ -42,7 +42,7 @@ def df() -> pl.DataFrame:
             "y": [4, 5, 6],
             "comment": ["a", "b", "c"],
         },
-        schema=Schema.polars_schema(),
+        schema=Schema.to_polars_schema(),
     )
 
 
@@ -54,7 +54,7 @@ def invalid_df() -> pl.DataFrame:
             "y": [4],
             "comment": ["a"],
         },
-        schema=Schema.polars_schema(),
+        schema=Schema.to_polars_schema(),
     )
 
 

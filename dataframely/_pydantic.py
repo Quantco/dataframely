@@ -20,7 +20,7 @@ _S = TypeVar("_S", bound=BaseSchema)
 def _dict_to_df(schema_type: type[BaseSchema], data: dict) -> pl.DataFrame:
     return pl.from_dict(
         data,
-        schema=schema_type.polars_schema(),
+        schema=schema_type.to_polars_schema(),
     )
 
 

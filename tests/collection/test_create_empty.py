@@ -23,7 +23,7 @@ class MyCollection(dy.Collection):
 def test_create_empty() -> None:
     collection = MyCollection.create_empty()
     assert collection.first.collect().height == 0
-    assert collection.first.collect_schema() == MyFirstSchema.polars_schema()
+    assert collection.first.collect_schema() == MyFirstSchema.to_polars_schema()
     assert collection.second is not None
     assert collection.second.collect().height == 0
-    assert collection.second.collect_schema() == MySecondSchema.polars_schema()
+    assert collection.second.collect_schema() == MySecondSchema.to_polars_schema()

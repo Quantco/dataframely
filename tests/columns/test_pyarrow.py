@@ -32,7 +32,7 @@ def _nullable(column_type: type[T]) -> T:
 @pytest.mark.parametrize("column_type", ALL_COLUMN_TYPES)
 def test_equal_to_polars_schema(column_type: type[Column]) -> None:
     schema = create_schema("test", {"a": _nullable(column_type)})
-    actual = schema.pyarrow_schema()
+    actual = schema.to_pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
 
@@ -52,7 +52,7 @@ def test_equal_to_polars_schema(column_type: type[Column]) -> None:
 )
 def test_equal_polars_schema_enum(categories: list[str]) -> None:
     schema = create_schema("test", {"a": dy.Enum(categories, nullable=True)})
-    actual = schema.pyarrow_schema()
+    actual = schema.to_pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
 
@@ -69,7 +69,7 @@ def test_equal_polars_schema_enum(categories: list[str]) -> None:
 )
 def test_equal_polars_schema_list(inner: Column) -> None:
     schema = create_schema("test", {"a": dy.List(inner, nullable=True)})
-    actual = schema.pyarrow_schema()
+    actual = schema.to_pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
 
@@ -94,7 +94,7 @@ def test_equal_polars_schema_list(inner: Column) -> None:
 )
 def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) -> None:
     schema = create_schema("test", {"a": dy.Array(inner, shape)})
-    actual = schema.pyarrow_schema()
+    actual = schema.to_pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
 
@@ -111,7 +111,7 @@ def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) 
 )
 def test_equal_polars_schema_struct(inner: Column) -> None:
     schema = create_schema("test", {"a": dy.Struct({"a": inner}, nullable=True)})
-    actual = schema.pyarrow_schema()
+    actual = schema.to_pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
 
@@ -120,13 +120,13 @@ def test_equal_polars_schema_struct(inner: Column) -> None:
 @pytest.mark.parametrize("nullable", [True, False])
 def test_nullability_information(column_type: type[Column], nullable: bool) -> None:
     schema = create_schema("test", {"a": column_type(nullable=nullable)})
-    assert ("not null" in str(schema.pyarrow_schema())) != nullable
+    assert ("not null" in str(schema.to_pyarrow_schema())) != nullable
 
 
 @pytest.mark.parametrize("nullable", [True, False])
 def test_nullability_information_enum(nullable: bool) -> None:
     schema = create_schema("test", {"a": dy.Enum(["a", "b"], nullable=nullable)})
-    assert ("not null" in str(schema.pyarrow_schema())) != nullable
+    assert ("not null" in str(schema.to_pyarrow_schema())) != nullable
 
 
 @pytest.mark.parametrize(
@@ -142,7 +142,7 @@ def test_nullability_information_enum(nullable: bool) -> None:
 @pytest.mark.parametrize("nullable", [True, False])
 def test_nullability_information_list(inner: Column, nullable: bool) -> None:
     schema = create_schema("test", {"a": dy.List(inner, nullable=nullable)})
-    assert ("not null" in str(schema.pyarrow_schema())) != nullable
+    assert ("not null" in str(schema.to_pyarrow_schema())) != nullable
 
 
 @pytest.mark.parametrize(
@@ -158,14 +158,17 @@ def test_nullability_information_list(inner: Column, nullable: bool) -> None:
 @pytest.mark.parametrize("nullable", [True, False])
 def test_nullability_information_struct(inner: Column, nullable: bool) -> None:
     schema = create_schema("test", {"a": dy.Struct({"a": inner}, nullable=nullable)})
-    assert ("not null" in str(schema.pyarrow_schema())) != nullable
+    assert ("not null" in str(schema.to_pyarrow_schema())) != nullable
 
 
 def test_multiple_columns() -> None:
     schema = create_schema(
         "test", {"a": dy.Int32(nullable=False), "b": dy.Integer(nullable=True)}
     )
-    assert str(schema.pyarrow_schema()).split("\n") == ["a: int32 not null", "b: int64"]
+    assert str(schema.to_pyarrow_schema()).split("\n") == [
+        "a: int32 not null",
+        "b: int64",
+    ]
 
 
 @pytest.mark.parametrize("time_unit", ["ns", "us", "ms"])
@@ -173,4 +176,4 @@ def test_datetime_time_unit(time_unit: TimeUnit) -> None:
     schema = create_schema(
         "test", {"a": dy.Datetime(time_unit=time_unit, nullable=True)}
     )
-    assert str(schema.pyarrow_schema()) == f"a: timestamp[{time_unit}]"
+    assert str(schema.to_pyarrow_schema()) == f"a: timestamp[{time_unit}]"

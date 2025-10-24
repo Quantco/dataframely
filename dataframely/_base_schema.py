@@ -223,15 +223,6 @@ class BaseSchema(metaclass=SchemaMeta):
         return columns
 
     @classmethod
-    @abstractmethod
-    def polars_schema(cls) -> pl.Schema:
-        """Obtain the polars schema for this schema.
-
-        Returns:
-            A :mod:`polars` schema that mirrors the schema defined by this class.
-        """
-
-    @classmethod
     def primary_key(cls) -> list[str]:
         """The primary key columns in this schema (possibly empty)."""
         return _primary_key(cls.columns())

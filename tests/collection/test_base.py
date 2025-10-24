@@ -54,9 +54,9 @@ def test_cast() -> None:
             "second": pl.LazyFrame({"a": [1, 2, 3], "b": [4, 5, 6]}),
         },
     )
-    assert collection.first.collect_schema() == MyFirstSchema.polars_schema()
+    assert collection.first.collect_schema() == MyFirstSchema.to_polars_schema()
     assert collection.second is not None
-    assert collection.second.collect_schema() == MySecondSchema.polars_schema()
+    assert collection.second.collect_schema() == MySecondSchema.to_polars_schema()
 
 
 @pytest.mark.parametrize(
