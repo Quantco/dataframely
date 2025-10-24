@@ -7,16 +7,17 @@ import sys
 import textwrap
 import typing
 from abc import ABCMeta
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Annotated, Any, cast, get_args, get_origin
 
 import polars as pl
 
-from ._filter import Filter
-from ._typing import LazyFrame as TypedLazyFrame
-from .exc import AnnotationImplementationError, ImplementationError
-from .schema import Schema
+from dataframely._filter import Filter
+from dataframely._polars import FrameType
+from dataframely._typing import LazyFrame as TypedLazyFrame
+from dataframely.exc import AnnotationImplementationError, ImplementationError
+from dataframely.schema import Schema
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -356,3 +357,13 @@ class BaseCollection(metaclass=CollectionMeta):
             for member in self.member_schemas()
             if getattr(self, member) is not None
         }
+
+    @classmethod
+    def _init(cls, data: Mapping[str, FrameType], /) -> Self:
+        out = cls()
+        for member_name, member in cls.members().items():
+            if member.is_optional and member_name not in data:
+                setattr(out, member_name, None)
+            else:
+                setattr(out, member_name, data[member_name].lazy())
+        return out

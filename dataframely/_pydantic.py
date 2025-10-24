@@ -9,7 +9,6 @@ import polars as pl
 
 from ._base_schema import BaseSchema
 from ._compat import pydantic, pydantic_core_schema
-from .exc import ValidationError
 
 if TYPE_CHECKING:
     from ._typing import DataFrame, LazyFrame
@@ -26,10 +25,9 @@ def _dict_to_df(schema_type: type[BaseSchema], data: dict) -> pl.DataFrame:
 
 
 def _validate_df_schema(schema_type: type[_S], df: pl.DataFrame) -> DataFrame[_S]:
-    try:
-        return schema_type.validate(df, cast=False)
-    except ValidationError as e:
-        raise ValueError("DataFrame violates schema") from e
+    if not schema_type.is_valid(df):
+        raise ValueError("DataFrame violates schema")
+    return df  # type: ignore
 
 
 def _serialize_df(df: pl.DataFrame) -> dict:

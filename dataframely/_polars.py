@@ -39,3 +39,11 @@ def time_matches_resolution(t: dt.time, resolution: str) -> bool:
 
 def timedelta_matches_resolution(d: dt.timedelta, resolution: str) -> bool:
     return datetime_matches_resolution(EPOCH_DATETIME + d, resolution)
+
+
+def collect_if(lf: pl.LazyFrame, condition: bool) -> pl.DataFrame | pl.LazyFrame:
+    """Collect a lazy frame if the original was eager, otherwise return the lazy
+    frame."""
+    if condition:
+        return lf.collect()
+    return lf

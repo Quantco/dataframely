@@ -41,8 +41,7 @@ Documentation = "https://dataframely.readthedocs.io/"
 Repository = "https://github.com/quantco/dataframely"
 
 [tool.maturin]
-module-name = "dataframely._extre"
-profile = "release"
+module-name = "dataframely._native"
 
 [tool.setuptools.packages.find]
 include = ["dataframely"]

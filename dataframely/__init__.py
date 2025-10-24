@@ -11,12 +11,12 @@ except importlib.metadata.PackageNotFoundError as e:  # pragma: no cover
     __version__ = "unknown"
 
 from . import random
-from ._base_collection import CollectionMember
 from ._filter import filter
 from ._rule import rule
 from ._typing import DataFrame, LazyFrame, Validation
 from .collection import (
     Collection,
+    CollectionMember,
     deserialize_collection,
     read_parquet_metadata_collection,
 )
@@ -51,7 +51,7 @@ from .columns import (
     UInt64,
 )
 from .config import Config
-from .failure import FailureInfo
+from .filter_result import FailureInfo
 from .functional import (
     concat_collection_members,
     require_relationship_one_to_at_least_one,

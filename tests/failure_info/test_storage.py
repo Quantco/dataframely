@@ -8,7 +8,7 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely._storage.constants import RULE_METADATA_KEY, SCHEMA_METADATA_KEY
-from dataframely.failure import UNKNOWN_SCHEMA_NAME
+from dataframely.filter_result import UNKNOWN_SCHEMA_NAME
 from dataframely.testing.storage import (
     DeltaFailureInfoStorageTester,
     FailureInfoStorageTester,

@@ -5,11 +5,10 @@ name = "dataframely"
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
 [tasks]
-postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -e ."
+postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -v -e ."
 
 [dependencies]
 python = ">=3.10"
-rust = "=1.85"
 
 fsspec = ">=2025.9"
 numpy = "*"

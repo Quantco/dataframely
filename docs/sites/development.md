@@ -3,11 +3,19 @@
 Thanks for deciding to work on `dataframely`!
 You can create a development environment with the following steps:
 
+## Install Tooling
+
+To work on dataframely, you'll need to install
+
+- [`pixi`](https://pixi.sh/latest/) to manage the Python environment
+- [`rustup`](https://rustup.rs/) to manage the Rust toolchain for compiling dataframely
+
 ## Environment Installation
 
 ```bash
 git clone https://github.com/Quantco/dataframely
 cd dataframely
+rustup show
 pixi install
 ```
 

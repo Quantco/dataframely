@@ -1,4 +1,4 @@
-use crate::errdefs::Result;
+use super::errdefs::Result;
 use rand::distr::weighted::WeightedIndex;
 use rand::prelude::*;
 use regex;

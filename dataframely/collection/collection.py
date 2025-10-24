@@ -1,9 +1,11 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
+
 from __future__ import annotations
 
 import json
 import sys
+import textwrap
 import warnings
 from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
@@ -16,30 +18,28 @@ import polars as pl
 import polars.exceptions as plexc
 
 from dataframely._compat import deltalake
-
-from ._base_collection import BaseCollection, CollectionMember
-from ._filter import Filter
-from ._polars import FrameType
-from ._serialization import (
+from dataframely._filter import Filter
+from dataframely._native import format_rule_failures
+from dataframely._plugin import all_rules_required
+from dataframely._polars import FrameType, collect_if
+from dataframely._serialization import (
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
     SchemaJSONEncoder,
     serialization_versions,
 )
-from ._storage import StorageBackend
-from ._storage.constants import COLLECTION_METADATA_KEY
-from ._storage.delta import DeltaStorageBackend
-from ._storage.parquet import ParquetStorageBackend
-from ._typing import LazyFrame, Validation
-from .exc import (
-    MemberValidationError,
-    RuleValidationError,
-    ValidationError,
-    ValidationRequiredError,
-)
-from .failure import FailureInfo
-from .random import Generator
-from .schema import _schema_from_dict
+from dataframely._storage import StorageBackend
+from dataframely._storage.constants import COLLECTION_METADATA_KEY
+from dataframely._storage.delta import DeltaStorageBackend
+from dataframely._storage.parquet import ParquetStorageBackend
+from dataframely._typing import LazyFrame, Validation
+from dataframely.exc import ValidationError, ValidationRequiredError
+from dataframely.filter_result import FailureInfo
+from dataframely.random import Generator
+from dataframely.schema import _schema_from_dict
+
+from ._base import BaseCollection, CollectionMember
+from .filter_result import CollectionFilterResult
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -361,7 +361,9 @@ class Collection(BaseCollection, ABC):
     # ---------------------------------- VALIDATION ---------------------------------- #
 
     @classmethod
-    def validate(cls, data: Mapping[str, FrameType], /, *, cast: bool = False) -> Self:
+    def validate(
+        cls, data: Mapping[str, FrameType], /, *, cast: bool = False, eager: bool = True
+    ) -> Self:
         """Validate that a set of data frames satisfy the collection's invariants.
 
         Args:
@@ -370,13 +372,25 @@ class Collection(BaseCollection, ABC):
                 the member as key.
             cast: Whether columns with a wrong data type in the member data frame are
                 cast to their schemas' defined data types if possible.
+            eager: Whether the validation should be performed eagerly. If ``True``, this
+                method raises a validation error and the returned collection contains
+                "shallow" lazy frames, i.e., lazy frames by simply calling
+                :meth:`~polars.DataFrame.lazy` on the validated data frame. If
+                ``False``, this method only raises a ``ValueError`` if ``data`` does
+                not contain data for all required members. The returned collection
+                contains "true" lazy frames that will be validated upon calling
+                :meth:`~polars.LazyFrame.collect` on the individual member or
+                :meth:`collect_all` on the collection. Note that, in the latter case,
+                information from error messages is limited.
 
         Raises:
             ValueError: If an insufficient set of input data frames is provided, i.e. if
                 any required member of this collection is missing in the input.
-            ValidationError: If any of the input data frames does not satisfy its schema
-                definition or the filters on this collection result in the removal of at
-                least one row across any of the input data frames.
+            ValidationError: If ``eager=True`` and any of the input data frames does not
+                satisfy its schema definition or the filters on this collection result
+                in the removal of at least one row across any of the input data frames.
+                If ``eager=False``, a :class:`~polars.exceptions.ComputeError` is raised
+                upon collecting.
 
         Returns:
             An instance of the collection. All members of the collection are guaranteed
@@ -384,15 +398,64 @@ class Collection(BaseCollection, ABC):
             collection did not remove rows from any member. The input order of each
             member is maintained.
         """
-        out, failure = cls.filter(data, cast=cast)
-        if any(len(fail) > 0 for fail in failure.values()):
-            raise MemberValidationError(
-                {
-                    name: RuleValidationError(fail.counts())
-                    for name, fail in failure.items()
+        cls._validate_input_keys(data)
+
+        if eager:
+            # If we perform the validation eagerly, we call filter and check the failure
+            # information to properly construct a useful error message.
+            filtered, failures = cls.filter(data, cast=cast, eager=True)
+            if any(len(failure) > 0 for failure in failures.values()):
+                errors = {
+                    member: format_rule_failures(list(failure.counts().items()))
+                    for member, failure in failures.items()
+                    if len(failure) > 0
                 }
-            )
-        return out
+                details = [
+                    f" > Member '{member}' failed validation:\n"
+                    + textwrap.indent(error, "   ")
+                    for member, error in errors.items()
+                ]
+                message = "\n".join(
+                    [f"{len(errors)} members failed validation:"] + details
+                )
+                raise ValidationError(message)
+            return filtered
+        else:
+            # If we do NOT perform the validation eagerly, we can perform it more
+            # efficiently as we cannot easily propagate error messages from different
+            # members anyways.
+            members: dict[str, pl.LazyFrame] = {
+                name: member.schema.validate(data[name].lazy(), cast=cast, eager=False)
+                for name, member in cls.members().items()
+                if name in data
+            }
+
+            if filters := cls._filters():
+                result_cls = cls._init(members)
+                primary_key = cls.common_primary_key()
+                filter_names = list(filters.keys())
+                keep = [
+                    filter.logic(result_cls).select(
+                        *primary_key, pl.lit(True).alias(name)
+                    )
+                    for name, filter in filters.items()
+                ]
+                members = {
+                    name: (
+                        _join_all(
+                            lf, *keep, on=primary_key, how="left", maintain_order="left"
+                        )
+                        .filter(
+                            all_rules_required(
+                                filter_names, null_is_valid=False, schema_name=name
+                            )
+                        )
+                        .drop(filter_names)
+                    )
+                    for name, lf in members.items()
+                }
+
+            return cls._init(members)
 
     @classmethod
     def is_valid(cls, data: Mapping[str, FrameType], /, *, cast: bool = False) -> bool:
@@ -412,18 +475,37 @@ class Collection(BaseCollection, ABC):
             ValueError: If an insufficient set of input data frames is provided,
                 i.e. if any required member of this collection is missing in the input.
         """
-        try:
-            cls.validate(data, cast=cast)
-            return True
-        except (ValidationError, plexc.InvalidOperationError):
-            return False
+        cls._validate_input_keys(data)
+
+        # Check that all individual members are valid
+        members: dict[str, pl.LazyFrame] = {}
+        for member, schema in cls.member_schemas().items():
+            if member in data:
+                if not schema.is_valid(data[member], cast=cast):
+                    return False
+                members[member] = data[member].lazy()
+
+        # Make sure that inner-joining all filters does not remove any rows
+        if filters := cls._filters().values():
+            result_cls = cls._init(members)
+            primary_key = cls.common_primary_key()
+            keep = [filter.logic(result_cls).select(primary_key) for filter in filters]
+            joined = _join_all(*keep, on=primary_key, how="inner")
+            removed_rows = pl.collect_all(
+                data[member].lazy().join(joined, on=primary_key, how="anti")
+                for member in cls.members()
+                if member in data
+            )
+            return all(df.is_empty() for df in removed_rows)
+
+        return True
 
     # ----------------------------------- FILTERING ---------------------------------- #
 
     @classmethod
     def filter(
-        cls, data: Mapping[str, FrameType], /, *, cast: bool = False
-    ) -> tuple[Self, dict[str, FailureInfo]]:
+        cls, data: Mapping[str, FrameType], /, *, cast: bool = False, eager: bool = True
+    ) -> CollectionFilterResult[Self]:
         """Filter the members data frame by their schemas and the collection's filters.
 
         Args:
@@ -435,43 +517,35 @@ class Collection(BaseCollection, ABC):
                 :class:`~polars.LazyFrame`.
             cast: Whether columns with a wrong data type in the member data frame are
                 cast to their schemas' defined data types if possible.
+            eager: Whether the filter operation should be performed eagerly.
+                Note that until https://github.com/pola-rs/polars/pull/24129 is
+                released, eagerly filtering can provide significant speedups.
 
         Returns:
-            A tuple of two items:
-
-            - An instance of the collection which contains a subset of each of the input
-              data frames with the rows which passed member-wise validation and were not
-              filtered out by any of the collection's filters. While collection members
-              are always instances of :class:`~polars.LazyFrame`, the members of the
-              returned collection are essentially eager as they are constructed by
-              calling :meth:`polars.DataFrame.lazy()` on eager data frames.
-              Just like in polars' native :meth:`~polars.DataFrame.filter`,
-              the order of rows is maintained in all returned data frames.
-            - A mapping from member name to a :class:`~dataframely.FailureInfo` object
-              which provides details on why individual rows had been removed.
-              Optional members are only included in this dictionary if they were
-              provided in the input.
+            A named tuple with fields ``result`` and ``failure``. The ``result`` field
+            provides a collection with all members filtered for the rows passing
+            validation. Just like for validation, all members are guaranteed to maintain
+            their input order. The ``failure`` field provides a dictionary mapping member
+            names to their respective failure information.
 
         Raises:
-            ValueError: If an insufficient set of input data frames is provided,
-                i.e. if any required member of this collection is missing in the input.
-            ValidationError: If the columns of any of the input data frames are invalid.
-                This happens only if a data frame misses a column defined in its schema
-                or a column has an invalid dtype while ``cast`` is set to ``False``.
+            ValueError: If an insufficient set of input data frames is provided, i.e. if
+                any required member of this collection is missing in the input.
         """
         cls._validate_input_keys(data)
 
         # First, we iterate over all members in this collection and filter them
         # independently. We keep failure infos around such that we can extend them later.
-        results: dict[str, pl.DataFrame] = {}
+        results: dict[str, pl.LazyFrame] = {}
         failures: dict[str, FailureInfo] = {}
         for member_name, member in cls.members().items():
             if member.is_optional and member_name not in data:
                 continue
 
-            results[member_name], failures[member_name] = member.schema.filter(
-                data[member_name], cast=cast
+            member_result, failures[member_name] = member.schema.filter(
+                data[member_name].lazy(), cast=cast, eager=eager
             )
+            results[member_name] = member_result.lazy()
 
         # Once we've done that, we can apply the filters on this collection. To this end,
         # we iterate over all filters and store the filter results.
@@ -480,9 +554,14 @@ class Collection(BaseCollection, ABC):
             result_cls = cls._init(results)
             primary_key = cls.common_primary_key()
 
-            keep: dict[str, pl.DataFrame] = {}
+            keep: dict[str, pl.LazyFrame] = {}
             for name, filter in filters.items():
-                keep[name] = filter.logic(result_cls).select(primary_key).collect()
+                keep[name] = (
+                    filter.logic(result_cls)
+                    .select(primary_key)
+                    .pipe(collect_if, eager)
+                    .lazy()
+                )
 
             # Now we can iterate over the results and left-join onto each individual
             # filter to obtain independent boolean indicators of whether to keep the row
@@ -500,16 +579,16 @@ class Collection(BaseCollection, ABC):
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
 
-                result_with_eval = lf_with_eval.collect()
+                lf_with_eval = lf_with_eval.pipe(collect_if, eager).lazy()
 
-                # Filtering `result_with_eval` by the rows for which all joins
+                # Filtering `lf_with_eval` by the rows for which all joins
                 # "succeeded", we can identify the rows that pass all the filters. We
                 # keep these rows for the result.
-                results[member_name] = result_with_eval.filter(
+                results[member_name] = lf_with_eval.filter(
                     pl.all_horizontal(keep.keys())
                 ).drop(keep.keys())
 
-                # Filtering `result_with_eval` with the inverse condition, we find all
+                # Filtering `lf_with_eval` with the inverse condition, we find all
                 # the problematic rows. We can build a single failure info object by
                 # simply concatenating diagonally with the already existing failure. The
                 # resulting failure info looks as follows:
@@ -520,7 +599,7 @@ class Collection(BaseCollection, ABC):
                 #  | ...         | NULL                  | <filled>                         |
                 #
                 failure = failures[member_name]
-                filtered_failure = result_with_eval.filter(
+                filtered_failure = lf_with_eval.filter(
                     ~pl.all_horizontal(keep.keys())
                 ).lazy()
 
@@ -562,7 +641,10 @@ class Collection(BaseCollection, ABC):
                     schema=failure.schema,
                 )
 
-        return cls._init(results), failures
+        result = CollectionFilterResult(cls._init(results), failures)
+        if eager:
+            return result.collect_all()
+        return result
 
     def join(
         self,
@@ -670,7 +752,7 @@ class Collection(BaseCollection, ABC):
             collection's members are still "lazy". However, they are "shallow-lazy",
             meaning they are obtained by calling ``.collect().lazy()``.
         """
-        dfs = pl.collect_all([lf for lf in self.to_dict().values()])
+        dfs = pl.collect_all(self.to_dict().values())
         return self._init(
             {key: dfs[i].lazy() for i, key in enumerate(self.to_dict().keys())}
         )
@@ -1137,16 +1219,6 @@ class Collection(BaseCollection, ABC):
     # ----------------------------------- UTILITIES ---------------------------------- #
 
     @classmethod
-    def _init(cls, data: Mapping[str, FrameType], /) -> Self:
-        out = cls()
-        for member_name, member in cls.members().items():
-            if member.is_optional and member_name not in data:
-                setattr(out, member_name, None)
-            else:
-                setattr(out, member_name, data[member_name].lazy())
-        return out
-
-    @classmethod
     def _validate_input_keys(cls, data: Mapping[str, FrameType], /) -> None:
         actual = set(data)
 
@@ -1237,6 +1309,18 @@ def deserialize_collection(data: str) -> type[Collection]:
 
 
 # --------------------------------------- UTILS -------------------------------------- #
+
+
+def _join_all(
+    *dfs: pl.LazyFrame,
+    on: list[str],
+    how: Literal["inner", "left"] = "inner",
+    maintain_order: Literal["left"] | None = None,
+) -> pl.LazyFrame:
+    result = dfs[0]
+    for df in dfs[1:]:
+        result = result.join(df, on=on, how=how, maintain_order=maintain_order)
+    return result
 
 
 def _extract_keys_if_exist(

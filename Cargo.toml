@@ -8,11 +8,22 @@ crate-type = ["cdylib"]
 name = "dataframely"
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["abi3-py310", "extension-module"] }
+itertools = "*"
+num-format = "*"
+polars = { version = ">=0.50", default-features = false, features = [] }
+polars-arrow = ">=0.50"
+polars-core = { version = ">=0.50", features = [
+  "dtype-array",
+  "dtype-struct",
+], default-features = false }
+pyo3 = { version = ">=0.25", features = ["abi3-py310", "extension-module"] }
+pyo3-polars = { version = ">=0.23.1", features = ["derive"] }
 rand = { version = "0.9", features = ["std_rng"] }
-regex-syntax = "0.8"
-thiserror = "2.0"
+rayon = "*"
 regex = "*"
+regex-syntax = "0.8"
+serde = "*"
+thiserror = "2.0"
 
 [dev-dependencies]
 rstest = "*"
