@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import sys
 import textwrap
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
 from typing import Any
