@@ -23,7 +23,7 @@ def create_schema(
         columns: The columns to set on the schema. When properly defining the schema,
             this would be the annotations that define the column types.
         rules: The custom non-column-specific validation rules. When properly defining
-            the schema, this would be the functions annotated with ``@dy.rule``.
+            the schema, this would be the functions annotated with `@dy.rule`.
 
     Returns:
         The dynamically created schema.

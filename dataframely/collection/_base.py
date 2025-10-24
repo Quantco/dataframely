@@ -37,7 +37,7 @@ class CollectionMember:
 
     Members:
         ignored_in_filters: Indicates that a member should be ignored in the
-            ``@dy.filter`` methods of a collection. This also affects the computation
+            `@dy.filter` methods of a collection. This also affects the computation
             of the shared primary key in the collection.
 
     Example:

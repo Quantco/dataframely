@@ -52,16 +52,16 @@ class Date(OrdinalMixin[dt.date], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum date for dates in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum date for dates in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that dates in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1mo`` expects all dates to be on the first of the
+                formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1mo` expects all dates to be on the first of the
                 month. Note that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -175,16 +175,16 @@ class Time(OrdinalMixin[dt.time], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum time for times in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum time for times in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that times in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1h`` expects all times to be full hours. Note
+                formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1h` expects all times to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -306,21 +306,21 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum datetime for datetimes in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum datetime for datetimes in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that datetimes in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1h`` expects all datetimes to be full hours. Note
+                the formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1h` expects all datetimes to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             time_zone: The time zone that datetimes in the column must have. The time
-                zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
-                ``America/New_York``.
-            time_unit: Unit of time. Defaults to ``us`` (microseconds).
+                zone must use a valid IANA time zone name identifier e.x. `Etc/UTC` or
+                `America/New_York`.
+            time_unit: Unit of time. Defaults to `us` (microseconds).
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -451,16 +451,16 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum duration for durations in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum duration for durations in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that durations in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1h`` expects all durations to be full hours. Note
+                the formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1h` expects all durations to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.

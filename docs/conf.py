@@ -78,6 +78,9 @@ html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_favicon = "_static/favicon.ico"
 
+# Render docstring text in `single backticks` as code.
+default_role = "code"
+
 
 # Copied and adapted from
 # https://github.com/pandas-dev/pandas/blob/4a14d064187367cacab3ff4652a12a0e45d0711b/doc/source/conf.py#L613-L659

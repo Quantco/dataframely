@@ -20,11 +20,11 @@ def column_from_dict(data: dict[str, Any]) -> Column:
 
     Args:
         data: The dictionary that was created by calling :meth:`~Column.as_dict` on a
-            column object. The dictionary must contain a key ``"column_type"`` that
+            column object. The dictionary must contain a key `"column_type"` that
             indicates which column type to instantiate.
 
     Returns:
-        The column object as read from ``data``.
+        The column object as read from `data`.
     """
     name = data["column_type"]
     if name not in _TYPE_MAPPING:

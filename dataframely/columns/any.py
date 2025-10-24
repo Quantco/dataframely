@@ -17,7 +17,7 @@ from ._registry import register
 class Any(Column):
     """A column with arbitrary type.
 
-    As a column with arbitrary type is commonly mapped to the ``Null`` type (this is the
+    As a column with arbitrary type is commonly mapped to the `Null` type (this is the
     default in :mod:`polars` and :mod:`pyarrow` for empty columns), dataframely also
     requires this column to be nullable. Hence, it cannot be used as a primary key.
     """

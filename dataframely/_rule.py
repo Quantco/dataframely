@@ -97,7 +97,7 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
 
     The name of the function will be used as the name of the rule. The function should
     return an expression providing a boolean value whether a row is valid wrt. the rule.
-    A value of ``true`` indicates validity.
+    A value of `true` indicates validity.
 
     Rules should be used only in the following two circumstances:
 
@@ -113,12 +113,12 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
         group_by: An optional list of columns to group by for rules operating on groups
             of rows. If this list is provided, the returned expression must return a
             single boolean value, i.e. some kind of aggregation function must be used
-            (e.g. ``sum``, ``any``, ...).
+            (e.g. `sum`, `any`, ...).
 
     Note:
-        You'll need to explicitly handle ``null`` values in your columns when defining
-        rules. By default, any rule that evaluates to ``null`` because one of the
-        columns used in the rule is ``null`` is interpreted as ``true``, i.e. the row
+        You'll need to explicitly handle `null` values in your columns when defining
+        rules. By default, any rule that evaluates to `null` because one of the
+        columns used in the rule is `null` is interpreted as `true`, i.e. the row
         is assumed to be valid.
 
     Attention:
@@ -151,8 +151,8 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
 
     Returns:
         The input lazy frame along with one boolean column for each rule with the name
-        of the rule. For each rule, a value of ``True`` indicates successful validation
-        while ``False`` indicates an issue.
+        of the rule. For each rule, a value of `True` indicates successful validation
+        while `False` indicates an issue.
     """
     # Rules must be distinguished into two types of rules:
     #  1. Simple rules can simply be selected on the data frame (this includes rules
@@ -239,11 +239,11 @@ def rule_from_dict(data: dict[str, Any]) -> Rule:
 
     Args:
         data: The dictionary obtained by calling :meth:`~Rule.asdict` on a rule object.
-            The dictionary must contain a key ``"rule_type"`` that indicates which rule
+            The dictionary must contain a key `"rule_type"` that indicates which rule
             type to instantiate.
 
     Returns:
-        The rule object as read from ``data``.
+        The rule object as read from `data`.
     """
     name = data["rule_type"]
     if name not in _TYPE_MAPPING:

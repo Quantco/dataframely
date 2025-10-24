@@ -41,11 +41,11 @@ class List(Column):
     ):
         """
         Args:
-            inner: The inner column type. If this type has ``primary_key=True`` set, all
+            inner: The inner column type. If this type has `primary_key=True` set, all
                 list items are required to be unique. If the inner type is a struct and
-                any of the struct fields have ``primary_key=True`` set, these fields
+                any of the struct fields have `primary_key=True` set, these fields
                 must be unique across all list items. Note that if the struct itself has
-                ``primary_key=True`` set, the fields' settings do not take effect.
+                `primary_key=True` set, the fields' settings do not take effect.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`

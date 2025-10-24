@@ -76,7 +76,7 @@ class Collection(BaseCollection, ABC):
     methods.
 
     Attention:
-        Do NOT use this class in combination with ``from __future__ import annotations``
+        Do NOT use this class in combination with `from __future__ import annotations`
         as it requires the proper schema definitions to ensure that the collection is
         implemented correctly.
     """
@@ -87,7 +87,7 @@ class Collection(BaseCollection, ABC):
     def create_empty(cls) -> Self:
         """Create an empty collection without any data.
 
-        This method simply calls :meth:``~dataframely.Schema.create_empty`` on all member schemas,
+        This method simply calls :meth:`~dataframely.Schema.create_empty` on all member schemas,
         including non-optional ones.
 
         Returns:
@@ -118,7 +118,7 @@ class Collection(BaseCollection, ABC):
 
         Args:
             num_rows: The number of rows to sample for each member.
-                If this is set to ``None``, the number of rows is inferred from the length of the
+                If this is set to `None`, the number of rows is inferred from the length of the
                 overrides.
             overrides: The overrides to set values in member schemas.
                 The overrides must be provided as a list of samples.
@@ -144,10 +144,10 @@ class Collection(BaseCollection, ABC):
 
                 *Any* member/value can be left out and will be sampled automatically.
                 Note that overrides for columns of members that are annotated with
-                ``inline_for_sampling=True`` can be supplied on the top-level instead
+                `inline_for_sampling=True` can be supplied on the top-level instead
                 of in a nested dictionary.
             generator: The (seeded) generator to use for sampling data.
-                If ``None``, a generator with random seed is automatically created.
+                If `None`, a generator with random seed is automatically created.
 
         Returns:
             A collection where all members (including optional ones) have been sampled
@@ -372,11 +372,11 @@ class Collection(BaseCollection, ABC):
                 the member as key.
             cast: Whether columns with a wrong data type in the member data frame are
                 cast to their schemas' defined data types if possible.
-            eager: Whether the validation should be performed eagerly. If ``True``, this
+            eager: Whether the validation should be performed eagerly. If `True`, this
                 method raises a validation error and the returned collection contains
                 "shallow" lazy frames, i.e., lazy frames by simply calling
                 :meth:`~polars.DataFrame.lazy` on the validated data frame. If
-                ``False``, this method only raises a ``ValueError`` if ``data`` does
+                `False`, this method only raises a `ValueError` if `data` does
                 not contain data for all required members. The returned collection
                 contains "true" lazy frames that will be validated upon calling
                 :meth:`~polars.LazyFrame.collect` on the individual member or
@@ -386,10 +386,10 @@ class Collection(BaseCollection, ABC):
         Raises:
             ValueError: If an insufficient set of input data frames is provided, i.e. if
                 any required member of this collection is missing in the input.
-            ValidationError: If ``eager=True`` and any of the input data frames does not
+            ValidationError: If `eager=True` and any of the input data frames does not
                 satisfy its schema definition or the filters on this collection result
                 in the removal of at least one row across any of the input data frames.
-                If ``eager=False``, a :class:`~polars.exceptions.ComputeError` is raised
+                If `eager=False`, a :class:`~polars.exceptions.ComputeError` is raised
                 upon collecting.
 
         Returns:
@@ -522,10 +522,10 @@ class Collection(BaseCollection, ABC):
                 released, eagerly filtering can provide significant speedups.
 
         Returns:
-            A named tuple with fields ``result`` and ``failure``. The ``result`` field
+            A named tuple with fields `result` and `failure`. The `result` field
             provides a collection with all members filtered for the rows passing
             validation. Just like for validation, all members are guaranteed to maintain
-            their input order. The ``failure`` field provides a dictionary mapping member
+            their input order. The `failure` field provides a dictionary mapping member
             names to their respective failure information.
 
         Raises:
@@ -750,7 +750,7 @@ class Collection(BaseCollection, ABC):
         Note:
             As all collection members are required to be lazy frames, the returned
             collection's members are still "lazy". However, they are "shallow-lazy",
-            meaning they are obtained by calling ``.collect().lazy()``.
+            meaning they are obtained by calling `.collect().lazy()`.
         """
         dfs = pl.collect_all(self.to_dict().values())
         return self._init(
@@ -817,7 +817,7 @@ class Collection(BaseCollection, ABC):
         """Write the members of this collection to parquet files in a directory.
 
         This method writes one parquet file per member into the provided directory.
-        Each parquet file is named ``<member>.parquet``. No file is written for optional
+        Each parquet file is named `<member>.parquet`. No file is written for optional
         members which are not provided in the current collection.
 
         Args:
@@ -825,7 +825,7 @@ class Collection(BaseCollection, ABC):
                 If the directory does not exist, it is created automatically,
                 including all of its parents.
             kwargs: Additional keyword arguments passed to :meth:`polars.DataFrame.write_parquet`.
-                ``metadata`` may only be provided if it is a dictionary.
+                `metadata` may only be provided if it is a dictionary.
 
         Attention:
             This method suffers from the same limitations as :meth:`~dataframely.Schema.serialize`.
@@ -836,7 +836,7 @@ class Collection(BaseCollection, ABC):
         """Stream the members of this collection into parquet files in a directory.
 
         This method writes one parquet file per member into the provided directory.
-        Each parquet file is named ``<member>.parquet``. No file is written for optional
+        Each parquet file is named `<member>.parquet`. No file is written for optional
         members which are not provided in the current collection.
 
         Args:
@@ -844,7 +844,7 @@ class Collection(BaseCollection, ABC):
                 the directory does not exist, it is created automatically, including all
                 of its parents.
             kwargs: Additional keyword arguments passed to :meth:`polars.LazyFrame.sink_parquet`.
-                ``metadata`` may only be provided if it is a dictionary.
+                `metadata` may only be provided if it is a dictionary.
 
         Attention:
             This method suffers from the same limitations as :meth:`~dataframely.Schema.serialize`.
@@ -861,7 +861,7 @@ class Collection(BaseCollection, ABC):
     ) -> Self:
         """Read all collection members from parquet files in a directory.
 
-        This method searches for files named ``<member>.parquet`` in the provided
+        This method searches for files named `<member>.parquet` in the provided
         directory for all required and optional members of the collection.
 
         Args:
@@ -869,18 +869,18 @@ class Collection(BaseCollection, ABC):
                 Parquet files may have been written with Hive partitioning.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"``: The method tries to read the schema data from the parquet
+                - `"allow"`: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
+                  this method automatically runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
-                - ``"skip"``: The method never runs validation and simply reads the
+                - `"skip"`: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. *Use this option
                   carefully*.
 
@@ -893,7 +893,7 @@ class Collection(BaseCollection, ABC):
         Raises:
             ValidationRequiredError:
                 If no collection schema can be read from the
-                directory and ``validation`` is set to ``"forbid"``.
+                directory and `validation` is set to `"forbid"`.
             ValueError:
                 If the provided directory does not contain parquet files for
                 all required members.
@@ -926,7 +926,7 @@ class Collection(BaseCollection, ABC):
     ) -> Self:
         """Lazily read all collection members from parquet files in a directory.
 
-        This method searches for files named ``<member>.parquet`` in the provided
+        This method searches for files named `<member>.parquet` in the provided
         directory for all required and optional members of the collection.
 
         Args:
@@ -934,18 +934,18 @@ class Collection(BaseCollection, ABC):
                 Parquet files may have been written with Hive partitioning.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"``: The method tries to read the schema data from the parquet
+                - `"allow"`: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
+                  this method automatically runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
-                - ``"skip"``: The method never runs validation and simply reads the
+                - `"skip"`: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. *Use this option
                   carefully*.
 
@@ -957,13 +957,13 @@ class Collection(BaseCollection, ABC):
 
         Raises:
             ValidationRequiredError: If no collection schema can be read from the
-                directory and ``validation`` is set to ``"forbid"``.
+                directory and `validation` is set to `"forbid"`.
             ValueError: If the provided directory does not contain parquet files for
                 all required members.
 
         Note:
             Due to current limitations in dataframely, this method actually reads the
-            parquet file into memory if ``"validation"`` is ``"warn"`` or ``"allow"``
+            parquet file into memory if `"validation"` is `"warn"` or `"allow"`
             and validation is required.
 
         Note: This method is backward compatible with older versions of dataframely
@@ -1032,18 +1032,18 @@ class Collection(BaseCollection, ABC):
             source: The location or DeltaTable to read from.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"``: The method tries to read the schema data from the parquet
+                - `"allow"`: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
+                  this method automatically runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
-                - ``"skip"``: The method never runs validation and simply reads the
+                - `"skip"`: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. *Use this option
                   carefully*.
 
@@ -1054,12 +1054,12 @@ class Collection(BaseCollection, ABC):
 
         Raises:
             ValidationRequiredError:
-                If no collection schema can be read from the source and ``validation`` is set to ``"forbid"``.
+                If no collection schema can be read from the source and `validation` is set to `"forbid"`.
             ValueError:
                 If the provided source does not contain Delta tables for all required members.
 
         Note:
-            Due to current limitations in dataframely, this method may read the Delta table into memory if ``validation`` is ``"warn"`` or ``"allow"`` and validation is required.
+            Due to current limitations in dataframely, this method may read the Delta table into memory if `validation` is `"warn"` or `"allow"` and validation is required.
 
         Attention:
             Schema metadata is stored as custom commit metadata. Only the schema
@@ -1097,18 +1097,18 @@ class Collection(BaseCollection, ABC):
             source: The location or DeltaTable to read from.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"``: The method tries to read the schema data from the parquet
+                - `"allow"`: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
                   schema mismatches this schema no metadata can be found in
                   the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with ``cast=True``.
-                - ``"warn"``: The method behaves similarly to ``"allow"``. However,
+                  this method automatically runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the metadata stores a collection schema that matches
                   this collection.
-                - ``"skip"``: The method never runs validation and simply reads the
+                - `"skip"`: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. *Use this option
                   carefully*.
 
@@ -1118,7 +1118,7 @@ class Collection(BaseCollection, ABC):
             The initialized collection.
 
         Raises:
-            ValidationRequiredError: If no collection schema can be read from the source and ``validation`` is set to ``"forbid"``.
+            ValidationRequiredError: If no collection schema can be read from the source and `validation` is set to `"forbid"`.
             ValueError: If the provided source does not contain Delta tables for all required members.
             ValidationError: If the collection cannot be validated.
 
@@ -1238,7 +1238,7 @@ def read_parquet_metadata_collection(
         source: Path to a parquet file or a file-like object that contains the metadata.
 
     Returns:
-        The collection that was serialized to the metadata. ``None`` if no collection
+        The collection that was serialized to the metadata. `None` if no collection
         metadata is found or the deserialization fails.
     """
     metadata = pl.read_parquet_metadata(source)

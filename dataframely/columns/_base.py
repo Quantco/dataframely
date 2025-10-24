@@ -53,7 +53,7 @@ class Column(ABC):
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -119,7 +119,7 @@ class Column(ABC):
         Returns:
             A mapping from validation rule names to expressions that provide exactly
             one boolean value per column item indicating whether validation with respect
-            to the rule is successful. A value of ``False`` indicates invalid data, i.e.
+            to the rule is successful. A value of `False` indicates invalid data, i.e.
             unsuccessful validation.
         """
         result = {}

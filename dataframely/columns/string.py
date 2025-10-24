@@ -41,7 +41,7 @@ class String(Column):
             min_length: The minimum byte-length of string values in this column.
             max_length: The maximum byte-length of string values in this column.
             regex: A regex that the string values in this column must match. If the
-                regex does not use start and end anchors (i.e. ``^`` and ``$``), the
+                regex does not use start and end anchors (i.e. `^` and `$`), the
                 regex must only be _contained_ in the string.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
