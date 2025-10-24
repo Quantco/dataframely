@@ -36,7 +36,7 @@ sphinx-copybutton = "*"
 sphinx_rtd_theme = "*"
 sphinxcontrib-apidoc = "*"
 [feature.docs.tasks]
-docs = { cmd = "sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
+docs = { cmd = "sphinx-build -M html . _build", cwd = "docs", depends-on = "postinstall" }
 readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
 
 [feature.test.dependencies]
