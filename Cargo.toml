@@ -20,10 +20,10 @@ pyo3 = { version = ">=0.25", features = ["abi3-py310", "extension-module"] }
 pyo3-polars = { version = ">=0.23.1", features = ["derive"] }
 rand = { version = "0.9", features = ["std_rng"] }
 rayon = "*"
+regex = "*"
 regex-syntax = "0.8"
 serde = "*"
 thiserror = "2.0"
-regex = "*"
 
 [dev-dependencies]
 rstest = "*"

@@ -336,7 +336,7 @@ class Schema(BaseSchema, ABC):
                 validation_error = None
                 try:
                     cls.validate(relevant_rows)
-                except Exception as e:
+                except ValidationError as e:
                     validation_error = str(e)
                 raise ValueError(
                     f"After sampling for {Config.options['max_sampling_iterations']} "
@@ -516,9 +516,10 @@ class Schema(BaseSchema, ABC):
             SchemaError: If ``eager=True`` and the input data frame misses columns or
                 ``cast=False`` and any data type mismatches the definition in this
                 schema. Only raised upon collection if ``eager=False``.
-            ComputeError: If ``eager=True`` and in any rule in the schema is violated,
-                i.e. the data does not pass the validation. Only raised upon collection
-                if ``eager=False``.
+            ValidationError: If ``eager=True`` and in any rule in the schema is
+                violated, i.e. the data does not pass the validation. When
+                ``eager=False``, a :class:`~polars.exceptions.ComputeError` is raised
+                upon collecting.
             InvalidOperationError: If ``eager=True``, ``cast=True``, and the cast fails
                 for any value in the data. Only raised upon collection if
                 ``eager=False``.

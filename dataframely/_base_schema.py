@@ -8,7 +8,7 @@ import textwrap
 from abc import ABCMeta, abstractmethod
 from copy import copy
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import polars as pl
 
@@ -21,9 +21,6 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-
-if TYPE_CHECKING:
-    pass
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"

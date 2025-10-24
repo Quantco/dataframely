@@ -374,11 +374,11 @@ class Collection(BaseCollection, ABC):
                 cast to their schemas' defined data types if possible.
             eager: Whether the validation should be performed eagerly. If ``True``, this
                 method raises a validation error and the returned collection contains
-                "shallow" lazy frames, i.e. lazy frames by simply calling
+                "shallow" lazy frames, i.e., lazy frames by simply calling
                 :meth:`~polars.DataFrame.lazy` on the validated data frame. If
-                ``False``, this method only raises if ``data`` does not contain data for
-                all required members. The returned collection contains "true" lazy
-                frames that will be validated upon calling
+                ``False``, this method only raises a ``ValueError`` if ``data`` does
+                not contain data for all required members. The returned collection
+                contains "true" lazy frames that will be validated upon calling
                 :meth:`~polars.LazyFrame.collect` on the individual member or
                 :meth:`collect_all` on the collection. Note that, in the latter case,
                 information from error messages is limited.
@@ -386,9 +386,11 @@ class Collection(BaseCollection, ABC):
         Raises:
             ValueError: If an insufficient set of input data frames is provided, i.e. if
                 any required member of this collection is missing in the input.
-            ComputeError: If ``eager=True`` and any of the input data frames does not
+            ValidationError: If ``eager=True`` and any of the input data frames does not
                 satisfy its schema definition or the filters on this collection result
                 in the removal of at least one row across any of the input data frames.
+                If ``eager=False``, a :class:`~polars.exceptions.ComputeError` is raised
+                upon collecting.
 
         Returns:
             An instance of the collection. All members of the collection are guaranteed
@@ -440,7 +442,9 @@ class Collection(BaseCollection, ABC):
                 ]
                 members = {
                     name: (
-                        _join_all(lf, *keep, on=primary_key, how="left")
+                        _join_all(
+                            lf, *keep, on=primary_key, how="left", maintain_order="left"
+                        )
                         .filter(
                             all_rules_required(
                                 filter_names, null_is_valid=False, schema_name=name
@@ -519,7 +523,7 @@ class Collection(BaseCollection, ABC):
 
         Returns:
             A named tuple with fields ``result`` and ``failure``. The ``result`` field
-            provides a collection with all members filtered for the ones passing
+            provides a collection with all members filtered for the rows passing
             validation. Just like for validation, all members are guaranteed to maintain
             their input order. The ``failure`` field provides a dictionary mapping member
             names to their respective failure information.
@@ -1311,10 +1315,11 @@ def _join_all(
     *dfs: pl.LazyFrame,
     on: list[str],
     how: Literal["inner", "left"] = "inner",
+    maintain_order: Literal["left"] | None = None,
 ) -> pl.LazyFrame:
     result = dfs[0]
     for df in dfs[1:]:
-        result = result.join(df, on=on, how=how)
+        result = result.join(df, on=on, how=how, maintain_order=maintain_order)
     return result
 
 
