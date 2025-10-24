@@ -25,12 +25,12 @@ T = TypeVar("T")
 class Generator:
     """Type that allows to sample primitive types using a random number generator.
 
-    All generator methods are called ``sample_<type>`` and, if applicable, allow
+    All generator methods are called `sample_<type>` and, if applicable, allow
     specifying a lower (inclusive) and an upper (exclusive) bound for the type to be
     sampled.
 
     These methods can be used to sample higher-level types. To this end, users may
-    also directly access the underlying ``numpy_generator`` to reuse the generator's
+    also directly access the underlying `numpy_generator` to reuse the generator's
     seeding.
     """
 
@@ -47,7 +47,7 @@ class Generator:
         """Sample a single integer that can be used as a seed for other RNGs.
 
         Returns:
-            A seed of type ``uint32``.
+            A seed of type `uint32`.
         """
         return self.numpy_generator.integers(0, 2**32, dtype=int)
 
@@ -62,10 +62,10 @@ class Generator:
             n: The number of integers to sample.
             min: The minimum integer to sample (inclusive).
             max: The maximum integer to sample (exclusive).
-            null_probability: The probability of an element being ``null``.
+            null_probability: The probability of an element being `null`.
 
         Returns:
-            A series with ``n`` elements of dtype ``Int64``.
+            A series with `n` elements of dtype `Int64`.
         """
         data = self.numpy_generator.integers(min, max, size=n)
         return self._apply_null_mask(pl.Series(data, dtype=pl.Int64), null_probability)
@@ -77,12 +77,12 @@ class Generator:
 
         Args:
             n: The number of booleans to sample.
-            null_probability: The probability of an element being ``null``.
+            null_probability: The probability of an element being `null`.
             p_true: Sampling probability for `True` within non-null samples.
                 Default: 0.5 (uniform sampling)
 
         Returns:
-            A series with ``n`` elements of dtype ``Boolean``.
+            A series with `n` elements of dtype `Boolean`.
         """
         return self.sample_float(
             n, min=0, max=1, null_probability=null_probability
@@ -104,12 +104,12 @@ class Generator:
             n: The number of floats to sample.
             min: The minimum float to sample (inclusive).
             max: The maximum float to sample (exclusive).
-            null_probability: The probability of an element being ``null``.
-            nan_probability: The probability of an element being ``nan``.
-            inf_probability: The probability of an element being ``inf``.
+            null_probability: The probability of an element being `null`.
+            nan_probability: The probability of an element being `nan`.
+            inf_probability: The probability of an element being `inf`.
 
         Returns:
-            A series with ``n`` elements of dtype ``Float64``.
+            A series with `n` elements of dtype `Float64`.
         """
         # Use associativity of multiplication to avoid overflow:
         # norm_rand * (max - min) + min = norm_rand * max + (1 - norm_rand) * min
@@ -138,10 +138,10 @@ class Generator:
         Args:
             n: The number of strings to sample.
             regex: The regex that all elements have to adhere to.
-            null_probability: The probability of an element being ``null``.
+            null_probability: The probability of an element being `null`.
 
         Returns:
-            A series with ``n`` elements of dtype ``String``.
+            A series with `n` elements of dtype `String`.
         """
         samples = regex_sample(regex, n, seed=self.sample_seed())
         return self._apply_null_mask(
@@ -162,10 +162,10 @@ class Generator:
             n: The number of binary values to sample.
             min_bytes: The minimum number of bytes for each value.
             max_bytes: The maximum number of bytes for each value.
-            null_probability: The probability of an element being ``null``.
+            null_probability: The probability of an element being `null`.
 
         Returns:
-            A series with ``n`` elements of dtype ``Binary``.
+            A series with `n` elements of dtype `Binary`.
         """
         lengths = self.numpy_generator.integers(min_bytes, max_bytes + 1, size=n)
         samples = [self.numpy_generator.bytes(length) for length in lengths]
@@ -186,11 +186,11 @@ class Generator:
         Args:
             n: The number of elements to sample.
             choices: The choices to sample from.
-            null_probability: The probability of an element being ``null``.
+            null_probability: The probability of an element being `null`.
             weights: A ordered weight vector for the different choices
 
         Returns:
-            A series with ``n`` elements of auto-inferred dtype.
+            A series with `n` elements of auto-inferred dtype.
         """
         norm_weights: np.ndarray | None = None
         if weights:
@@ -225,13 +225,13 @@ class Generator:
         Args:
             n: The number of times to sample.
             min: The minimum time to sample (inclusive).
-            max: The maximum time to sample (exclusive). Midnight when ``None``.
+            max: The maximum time to sample (exclusive). Midnight when `None`.
             resolution: The resolution that times in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime ``round`` method.
-            null_probability: The probability of an element being ``null``.
+                formatting language used by :mod:`polars` datetime `round` method.
+            null_probability: The probability of an element being `null`.
 
         Returns:
-            A series with ``n`` elements of dtype ``Time``.
+            A series with `n` elements of dtype `Time`.
         """
         if resolution is not None:
             if not time_matches_resolution(min, resolution):
@@ -281,13 +281,13 @@ class Generator:
         Args:
             n: The number of dates to sample.
             min: The minimum date to sample (inclusive).
-            max: The maximum date to sample (exclusive). '10000-01-01' when ``None``.
+            max: The maximum date to sample (exclusive). '10000-01-01' when `None`.
             resolution: The resolution that dates in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime ``round`` method.
-            null_probability: The probability of an element being ``null``.
+                formatting language used by :mod:`polars` datetime `round` method.
+            null_probability: The probability of an element being `null`.
 
         Returns:
-            A series with ``n`` elements of dtype ``Date``.
+            A series with `n` elements of dtype `Date`.
         """
         if resolution is not None:
             if not date_matches_resolution(min, resolution):
@@ -329,18 +329,18 @@ class Generator:
         Args:
             n: The number of datetimes to sample.
             min: The minimum datetime to sample (inclusive).
-            max: The maximum datetime to sample (exclusive). '10000-01-01' when ``None``.
+            max: The maximum datetime to sample (exclusive). '10000-01-01' when `None`.
             resolution: The resolution that datetimes in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime ``round``
+                the formatting language used by :mod:`polars` datetime `round`
                 method.
-            time_unit: The time unit of the datetime column. Defaults to ``us`` (microseconds).
+            time_unit: The time unit of the datetime column. Defaults to `us` (microseconds).
             time_zone: The time zone that datetimes in the column must have. The time
-                zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
-                ``America/New_York``.
-            null_probability: The probability of an element being ``null``.
+                zone must use a valid IANA time zone name identifier e.x. `Etc/UTC` or
+                `America/New_York`.
+            null_probability: The probability of an element being `null`.
 
         Returns:
-            A series with ``n`` elements of dtype ``Datetime``.
+            A series with `n` elements of dtype `Datetime`.
         """
         if resolution is not None:
             if not datetime_matches_resolution(min, resolution):
@@ -385,11 +385,11 @@ class Generator:
             min: The minimum duration to sample (inclusive).
             max: The maximum duration to sample (exclusive).
             resolution: The resolution that durations in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime ``round`` method.
-            null_probability: The probability of an element being ``null``.
+                the formatting language used by :mod:`polars` datetime `round` method.
+            null_probability: The probability of an element being `null`.
 
         Returns:
-            A series with ``n`` elements of dtype ``Duration``.
+            A series with `n` elements of dtype `Duration`.
         """
         if resolution is not None:
             if not timedelta_matches_resolution(min, resolution):

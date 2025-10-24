@@ -89,8 +89,8 @@ class FailureInfo(Generic[S]):
 
     #: The subset of the input data frame containing the *invalid* rows along with
     #: all boolean columns used for validation. Each of these boolean columns describes
-    #: a single rule where a value of ``False``` indicates unsuccessful validation.
-    #: Thus, at least one value per row is ``False``.
+    #: a single rule where a value of `False``` indicates unsuccessful validation.
+    #: Thus, at least one value per row is `False`.
     _lf: pl.LazyFrame
     #: The columns in `_lf` which are used for validation.
     _rule_columns: list[str]
@@ -150,7 +150,7 @@ class FailureInfo(Generic[S]):
                 parquet file. This should be a path to a directory if writing a
                 partitioned dataset.
             kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
+                :meth:`polars.write_parquet`. `metadata` may only be provided if it
                 is a dictionary.
 
         Attention:
@@ -169,7 +169,7 @@ class FailureInfo(Generic[S]):
                 parquet file. This should be a path to a directory if writing a
                 partitioned dataset.
             kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.sink_parquet`. ``metadata`` may only be provided if it
+                :meth:`polars.sink_parquet`. `metadata` may only be provided if it
                 is a dictionary.
 
         Attention:

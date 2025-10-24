@@ -38,9 +38,9 @@ class Struct(Column):
         """
         Args:
             inner: The dictionary of struct fields. Struct fields may have
-                ``primary_key=True`` set but this setting only takes effect if the
+                `primary_key=True` set but this setting only takes effect if the
                 struct is nested inside a list. In this case, the list items must be
-                unique wrt. the struct fields that have ``primary_key=True`` set.
+                unique wrt. the struct fields that have `primary_key=True` set.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`

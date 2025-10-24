@@ -12,19 +12,12 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   dataframely.collection
    dataframely.columns
    dataframely.testing
 
 Submodules
 ----------
-
-dataframely.collection module
------------------------------
-
-.. automodule:: dataframely.collection
-   :members:
-   :show-inheritance:
-   :undoc-members:
 
 dataframely.config module
 -------------------------
@@ -42,10 +35,10 @@ dataframely.exc module
    :show-inheritance:
    :undoc-members:
 
-dataframely.failure module
---------------------------
+dataframely.filter\_result module
+---------------------------------
 
-.. automodule:: dataframely.failure
+.. automodule:: dataframely.filter_result
    :members:
    :show-inheritance:
    :undoc-members:

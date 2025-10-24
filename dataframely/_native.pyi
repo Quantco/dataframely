@@ -23,8 +23,8 @@ def regex_matching_string_length(regex: str) -> tuple[int, int | None]:
 
     Returns:
         A tuple of the minimum of maximum length of the matching strings. While the minimum
-        length is guaranteed to be available, the maximum length may be ``None`` if ``regex``
-        matches strings of potentially infinite length (e.g. due to the use of ``+`` or ``*``).
+        length is guaranteed to be available, the maximum length may be `None` if `regex`
+        matches strings of potentially infinite length (e.g. due to the use of `+` or `*`).
 
     Raises:
         ValueError: If the regex cannot be parsed or analyzed.
@@ -40,21 +40,21 @@ def regex_sample(
     Args:
         regex: The regular expression generated strings must match. The regular
             expression must not contain any lookaround operators.
-        n: The number of random strings to generate or ``None`` if a single one should
+        n: The number of random strings to generate or `None` if a single one should
             be generated.
-        max_repetitions: The maximum number of repetitions for ``+`` and ``*``
+        max_repetitions: The maximum number of repetitions for `+` and `*`
             quantifiers.
         seed: The seed to use for the random sampling procedure.
 
     Returns:
-        A single randomly generated string if ``n is None`` or a list of randomly
-        generated strings if ``n`` is an integer.
+        A single randomly generated string if `n is None` or a list of randomly
+        generated strings if `n` is an integer.
 
     Raises:
         ValueError: If the regex cannot be parsed.
 
     Attention:
-        Using wildcards (i.e. ``.``) really means _any_ valid Unicode character.
+        Using wildcards (i.e. `.`) really means _any_ valid Unicode character.
         Consider using more precise regular expressions if this is undesired.
     """
 

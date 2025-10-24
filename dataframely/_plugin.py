@@ -63,7 +63,7 @@ def all_rules_required(
 
     Contrary to :meth:`all_rules`, this method raises a
     :mod:`~polars.exceptions.ComputeError` at execution time if any rule indicates a
-    validation failure. The ``ComputeError`` includes a helpful error message.
+    validation failure. The `ComputeError` includes a helpful error message.
 
     Args:
         rules: The rules to evaluate.

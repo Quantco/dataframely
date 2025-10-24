@@ -34,7 +34,7 @@ class DataFrame(pl.DataFrame, Generic[S]):
     """Generic wrapper around a :class:`polars.DataFrame` to attach schema information.
 
     This class is merely used for the type system and never actually instantiated. This
-    means that it won't exist at runtime and ``isinstance(PoalrsDataFrame, <var>)`` will
+    means that it won't exist at runtime and `isinstance(PoalrsDataFrame, <var>)` will
     always fail. Accordingly, users should not try to create instances of this class.
     """
 
@@ -91,8 +91,8 @@ class LazyFrame(pl.LazyFrame, Generic[S]):
     """Generic wrapper around a :class:`polars.LazyFrame` to attach schema information.
 
     This class is merely used for the type system and never actually instantiated. This
-    means that it won't exist at runtime and ``isinstance(LazyFrame, <var>)`` will
-    always fail. Accordingly, users should not try to create instances of this class.
+    means that it won't exist at runtime and `isinstance(LazyFrame, <var>)` will always
+    fail. Accordingly, users should not try to create instances of this class.
     """
 
     # NOTE: Code in this class will never be executed.
