@@ -20,12 +20,12 @@ class UserSchema(dy.Schema):
     email = dy.String(nullable=True)  # Must be unique, or null.
 
     @dy.rule(group_by=["username"])
-    def unique_username() -> pl.Expr:
+    def unique_username(cls) -> pl.Expr:
         """Username, a non-nullable field, must be total unique."""
         return pl.len() == 1
 
     @dy.rule()
-    def unique_email_or_null() -> pl.Expr:
+    def unique_email_or_null(cls) -> pl.Expr:
         """Email must be unique, if provided."""
         return pl.col("email").is_null() | pl.col("email").is_unique()
 ```
