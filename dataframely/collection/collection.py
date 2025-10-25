@@ -1328,11 +1328,8 @@ def _deserialize_types(
     for t in serialized_collection_types:
         if t is None:
             continue
-        try:
-            collection_type = deserialize_collection(t)
-            collection_types.append(collection_type)
-        except (JSONDecodeError, plexc.ComputeError):
-            pass
+        collection_type = deserialize_collection(t)
+        collection_types.append(collection_type)
 
     return collection_types
 

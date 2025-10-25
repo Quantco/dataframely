@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import warnings
 from typing import Any
 
 import polars as pl
@@ -387,6 +388,38 @@ def test_reconcile_collection_types(
 
 
 # ---------------------------- PARQUET SPECIFICS ---------------------------------- #
+
+
+@pytest.mark.parametrize("validation", ["allow", "warn"])
+@pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize(
+    "any_tmp_path",
+    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
+    indirect=True,
+)
+def test_read_write_parquet_schema_json_fallback_corrupt(
+    any_tmp_path: str, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    """If schema information is present, but corrupt, we should always fall back to
+    validating."""
+    # Arrange
+    collection = MyCollection.create_empty()
+    tester = ParquetCollectionStorageTester()
+    tester.write_untyped(
+        collection,
+        any_tmp_path,
+        lazy,
+        metadata={COLLECTION_METADATA_KEY: "} this is not a valid JSON {"},
+    )
+
+    # Act
+    spy = mocker.spy(MyCollection, "validate")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
+
+    # Assert
+    spy.assert_called_once()
 
 
 @pytest.mark.parametrize("metadata", [None, {COLLECTION_METADATA_KEY: "invalid"}])
