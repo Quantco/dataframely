@@ -23,20 +23,22 @@ pip = "*"
 jupyter = "*"
 
 [feature.docs.dependencies]
+autodocsumm = "*"
 furo = "*"
 ipython = "*"
 make = "*"
+pydata-sphinx-theme = "*"
 # Needed for generating docs for dataframely.mypy
 mypy = "*"
 myst-parser = "*"
 nbsphinx = "*"
 numpydoc = "*"
-sphinx = "*"
+sphinx = ">=8.2"
 sphinx-copybutton = "*"
-sphinx_rtd_theme = "*"
-sphinxcontrib-apidoc = "*"
+sphinx-design = "*"
+sphinx-toolbox = "*"
 [feature.docs.tasks]
-docs = { cmd = "sphinx-build -M html . _build", cwd = "docs", depends-on = "postinstall" }
+docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
 readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
 
 [feature.test.dependencies]

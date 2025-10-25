@@ -1,0 +1,4 @@
+/* fix visited link colour */
+a:visited {
+    color: var(--pst-color-link);
+}
