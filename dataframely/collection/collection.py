@@ -899,11 +899,6 @@ class Collection(BaseCollection, ABC):
                 all required members.
             ValidationError: If the collection cannot be validated.
 
-        Note:
-            This method is backward compatible with older versions of dataframely
-            in which the schema metadata was saved to `schema.json` files instead of
-            being encoded into the parquet files.
-
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
@@ -965,10 +960,6 @@ class Collection(BaseCollection, ABC):
             Due to current limitations in dataframely, this method actually reads the
             parquet file into memory if `"validation"` is `"warn"` or `"allow"`
             and validation is required.
-
-        Note: This method is backward compatible with older versions of dataframely
-            in which the schema metadata was saved to `schema.json` files instead of
-            being encoded into the parquet files.
 
         Attention:
             Be aware that this method suffers from the same limitations as

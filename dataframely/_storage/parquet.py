@@ -169,13 +169,6 @@ class ParquetStorageBackend(StorageBackend):
                             _read_serialized_collection(f"{prefix}{file}")
                         )
 
-        # Backward compatibility: If the parquets do not have schema information,
-        # fall back to looking for schema.json
-        if not any(collection_types) and fs.exists(
-            schema_file := fs.sep.join([path, "schema.json"])
-        ):
-            collection_types.append(fs.read_text(schema_file))
-
         return data, collection_types
 
     @classmethod
