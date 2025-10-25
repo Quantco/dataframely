@@ -69,6 +69,8 @@ jobs:
         run: rustup show
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+      - name: Clean coverage
+        run: cargo llvm-cov clean --workspace
       - name: Install repository and ensure that coverage can be collected
         run: |
           source <(cargo llvm-cov show-env --export-prefix)
