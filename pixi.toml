@@ -24,9 +24,7 @@ jupyter = "*"
 
 [feature.docs.dependencies]
 autodocsumm = "*"
-furo = "*"
 ipython = "*"
-make = "*"
 pydata-sphinx-theme = "*"
 # Needed for generating docs for dataframely.mypy
 mypy = "*"
