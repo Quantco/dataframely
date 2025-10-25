@@ -41,6 +41,7 @@ readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html
 
 [feature.test.dependencies]
 boto3 = "*"
+cargo-llvm-cov = "*"
 moto = "*"
 mypy = ">=1.13"
 pandas = "*"

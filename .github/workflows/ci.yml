@@ -69,12 +69,16 @@ jobs:
         run: rustup show
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
-      - name: Install repository
-        run: pixi run -e ${{ matrix.environment }} postinstall
+      - name: Install repository and ensure that coverage can be collected
+        run: |
+          source <(cargo llvm-cov show-env --export-prefix)
+          pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m with_optionals' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
+      - name: Generate Rust coverage
+        run: cargo llvm-cov report --lcov --output-path coverage.lcov
       - name: Upload codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
-          files: ./coverage.xml
+          files: ./coverage.xml,./coverage.lcov
           token: ${{ secrets.CODECOV_TOKEN }}
