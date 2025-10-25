@@ -174,7 +174,9 @@ def hide_class_signature(
     return_annotation: str,
 ) -> tuple[str, str] | None:
     if what == "class" and (
-        name.endswith("FilterResult") or name.endswith("FailureInfo")
+        name.endswith("FilterResult")
+        or name.endswith("FailureInfo")
+        or name.endswith("AnnotationImplementationError")
     ):
         # Return empty signature (no args after the class name)
         return "", return_annotation
