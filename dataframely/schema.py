@@ -893,9 +893,9 @@ class Schema(BaseSchema, ABC):
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
                 - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.read_parquet` to convey the purpose better_.
+                  :meth:`polars.read_parquet` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.read_parquet`.
@@ -949,9 +949,9 @@ class Schema(BaseSchema, ABC):
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
                 - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.scan_parquet` to convey the purpose better_.
+                  :meth:`polars.scan_parquet` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.scan_parquet`.
@@ -1076,9 +1076,9 @@ class Schema(BaseSchema, ABC):
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
                 - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.scan_delta` to convey the purpose better_.
+                  :meth:`polars.scan_delta` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_delta`.
 
@@ -1133,9 +1133,9 @@ class Schema(BaseSchema, ABC):
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
                 - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.read_delta` to convey the purpose better_.
+                  :meth:`polars.read_delta` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to :meth:`polars.read_delta`.
 

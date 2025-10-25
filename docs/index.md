@@ -18,32 +18,10 @@ schema information to data frame type hints.
 - Integrate schemas with external tools (e.g., `sqlalchemy` or `pyarrow`)
 - Generate test data that comply with a schema or collection of schemas and its validation rules
 
-## Contents
-
 ```{toctree}
-:caption: Contents
 :maxdepth: 2
+:hidden:
 
-sites/installation
-sites/quickstart
-sites/examples/real-world
-sites/features/index.md
-sites/faq.md
-sites/development.md
-sites/versioning.md
-```
-
-## API Documentation
-
-```{toctree}
-    :caption: API Documentation
-    :maxdepth: 1
-
-    Collection <_api/dataframely.collection>
-    Column Types <_api/dataframely.columns>
-    Config <_api/dataframely.config>
-    Random Data Generation <_api/dataframely.random>
-    Failure Information <_api/dataframely.failure>
-    Schema <_api/dataframely.schema>
-
+guides/index
+api/index
 ```
