@@ -73,6 +73,7 @@ jobs:
         run: |
           pixi run -e ${{ matrix.environment }} cargo llvm-cov clean --workspace
           echo "$(pixi run -e ${{ matrix.environment }} cargo llvm-cov show-env | tr -d "'")" >> $GITHUB_ENV
+        shell: bash
       - name: Install repository
         run: pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
