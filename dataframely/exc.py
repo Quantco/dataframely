@@ -40,4 +40,4 @@ class AnnotationImplementationError(ImplementationError):
 
 
 class ValidationRequiredError(Exception):
-    """Error raised when validation is when reading a parquet file."""
+    """Error raised when validation is required when reading a parquet file."""
