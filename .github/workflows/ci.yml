@@ -73,13 +73,13 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} cargo llvm-cov clean --workspace
       - name: Install repository and ensure that coverage can be collected
         run: |
-          eval "$(cargo llvm-cov show-env --export-prefix)"
+          eval "$(pixi run -e ${{ matrix.environment }} cargo llvm-cov show-env --export-prefix)"
           pixi run -e ${{ matrix.environment }} postinstall
         shell: bash
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m with_optionals' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
       - name: Generate Rust coverage
-        run: cargo llvm-cov report --lcov --output-path coverage.lcov
+        run: pixi run -e ${{ matrix.environment }} cargo llvm-cov report --lcov --output-path coverage.lcov
       - name: Upload codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
