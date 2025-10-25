@@ -1,6 +1,6 @@
-=============
-Filter Result
-=============
+============
+FilterResult
+============
 
 .. currentmodule:: dataframely
 .. autosummary::
