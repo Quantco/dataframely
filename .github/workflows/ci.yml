@@ -73,7 +73,7 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} cargo llvm-cov clean --workspace
       - name: Install repository and ensure that coverage can be collected
         run: |
-          source <(cargo llvm-cov show-env --export-prefix)
+          eval "$(cargo llvm-cov show-env --export-prefix)"
           pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m with_optionals' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
