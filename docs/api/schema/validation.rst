@@ -10,3 +10,4 @@ Validation
     Schema.filter
     Schema.is_valid
     Schema.cast
+    rule

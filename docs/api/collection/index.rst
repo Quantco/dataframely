@@ -11,7 +11,6 @@ Collection
     generation
     operations
     metadata
-    filters
 
 .. currentmodule:: dataframely
 .. autoclass:: Collection
