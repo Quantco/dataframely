@@ -390,41 +390,6 @@ def test_reconcile_collection_types(
 # ---------------------------- PARQUET SPECIFICS ---------------------------------- #
 
 
-@pytest.mark.parametrize("validation", ["warn", "allow", "forbid", "skip"])
-@pytest.mark.parametrize("lazy", [True, False])
-@pytest.mark.parametrize(
-    "any_tmp_path",
-    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
-    indirect=True,
-)
-def test_read_write_parquet_fallback_schema_json_success(
-    any_tmp_path: str, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
-) -> None:
-    # In https://github.com/Quantco/dataframely/pull/107, the
-    # mechanism for storing collection metadata was changed.
-    # Prior to this change, the metadata was stored in a `schema.json` file.
-    # After this change, the metadata was moved into the parquet files.
-    # This test verifies that the change was implemented a backward compatible manner:
-    # The new code can still read parquet files that do not contain the metadata,
-    # and will not call `validate` if the `schema.json` file is present.
-
-    # Arrange
-    tester = ParquetCollectionStorageTester()
-    collection = MyCollection.create_empty()
-    tester.write_untyped(collection, any_tmp_path, lazy)
-
-    fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
-    with fs.open(fs.sep.join([any_tmp_path, "schema.json"]), "w") as f:
-        f.write(collection.serialize())
-
-    # Act
-    spy = mocker.spy(MyCollection, "validate")
-    tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
-
-    # Assert
-    spy.assert_not_called()
-
-
 @pytest.mark.parametrize("validation", ["allow", "warn"])
 @pytest.mark.parametrize("lazy", [True, False])
 @pytest.mark.parametrize(
@@ -435,16 +400,17 @@ def test_read_write_parquet_fallback_schema_json_success(
 def test_read_write_parquet_schema_json_fallback_corrupt(
     any_tmp_path: str, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
 ) -> None:
-    """If the schema.json file is present, but corrupt, we should always fall back to
+    """If schema information is present, but corrupt, we should always fall back to
     validating."""
     # Arrange
     collection = MyCollection.create_empty()
     tester = ParquetCollectionStorageTester()
-    tester.write_untyped(collection, any_tmp_path, lazy)
-
-    fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
-    with fs.open(fs.sep.join([any_tmp_path, "schema.json"]), "w") as f:
-        f.write("} this is not a valid JSON {")
+    tester.write_untyped(
+        collection,
+        any_tmp_path,
+        lazy,
+        metadata={COLLECTION_METADATA_KEY: "} this is not a valid JSON {"},
+    )
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
