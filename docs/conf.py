@@ -96,6 +96,7 @@ intersphinx_mapping = {
 
 ## myst_parser
 myst_parser_config = {"myst_enable_extensions": ["rst_eval_roles"]}
+nitpick_ignore = [("myst", "group-rules")]
 
 ## numpydoc
 numpydoc_class_members_toctree = False
