@@ -111,7 +111,7 @@ python = "3.14.*"
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
-build = ["build"]
+build = ["build", "py310"]
 default = ["dev", "lint", "optionals", "py314", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }

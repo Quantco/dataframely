@@ -55,13 +55,14 @@ jobs:
         uses: prefix-dev/setup-pixi@194d461b21b6c5717c722ffc597fa91ed2ff29fa # v0.9.1
         with:
           environments: build
+          activate-environment: true
       - name: Set version
         run: pixi run -e build set-version
       - name: Build wheel
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           command: build
-          args: --out dist -i python3.10 --release
+          args: --out dist -i python --release
           manylinux: auto
           sccache: true
       - name: Check package
