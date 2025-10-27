@@ -78,4 +78,4 @@ df = pl.DataFrame({
 validated_df: dy.DataFrame[HouseSchema] = HouseSchema.validate(df, cast=True)
 ```
 
-See more advanced usage examples in the [documentation](https://dataframely.readthedocs.io/en/latest/).
+See more advanced usage examples in the [documentation](https://dataframely.readthedocs.io/stable/).
