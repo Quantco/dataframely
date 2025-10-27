@@ -956,11 +956,6 @@ class Collection(BaseCollection, ABC):
             ValueError: If the provided directory does not contain parquet files for
                 all required members.
 
-        Note:
-            Due to current limitations in dataframely, this method actually reads the
-            parquet file into memory if `"validation"` is `"warn"` or `"allow"`
-            and validation is required.
-
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
@@ -1048,9 +1043,6 @@ class Collection(BaseCollection, ABC):
                 If no collection schema can be read from the source and `validation` is set to `"forbid"`.
             ValueError:
                 If the provided source does not contain Delta tables for all required members.
-
-        Note:
-            Due to current limitations in dataframely, this method may read the Delta table into memory if `validation` is `"warn"` or `"allow"` and validation is required.
 
         Attention:
             Schema metadata is stored as custom commit metadata. Only the schema

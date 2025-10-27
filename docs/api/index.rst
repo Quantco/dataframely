@@ -25,6 +25,15 @@ API Reference
 
            columns/index
 
+.. grid::
+
+    .. grid-item-card::
+
+        .. toctree::
+           :maxdepth: 1
+
+           errors/index
+
     .. grid-item-card::
 
         .. toctree::

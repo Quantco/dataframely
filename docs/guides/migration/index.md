@@ -1,4 +1,13 @@
-# Versioning policy and breaking changes
+# Migration Guides
+
+```{toctree}
+:maxdepth: 1
+:hidden:
+
+v1-v2
+```
+
+## Versioning policy and breaking changes
 
 Dataframely uses [semantic versioning](https://semver.org/).
 This versioning scheme is designed to make it easy for users to anticipate what types of change they can expect from a

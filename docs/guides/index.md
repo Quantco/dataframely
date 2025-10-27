@@ -8,7 +8,7 @@ quickstart
 examples/index
 features/index
 development
-versioning
+migration/index
 faq
 ```
 
