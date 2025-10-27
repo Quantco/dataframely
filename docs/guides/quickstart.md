@@ -95,12 +95,11 @@ in order to produce exactly one value per group:
 in group rules, the "input" that the expression is evaluated on is a set of rows.
 
 ````{note}
-If you are using `mypy` to type check your code, the usage of rules requires you to use the dataframely `mypy` plugin.
-In order to use it, add the following to your `pyproject.toml`:
+If you are using [`ruff`](https://docs.astral.sh/ruff/) to lint your code, you'll need to tell `ruff` to treat rules like classmethods. To this end, you can add the following to your `pyproject.toml`:
 
 ```toml
-    [tool.mypy]
-    plugins = ["dataframely.mypy"]
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["dataframely.rule"]
 ```
 
 ````
