@@ -60,6 +60,7 @@ jobs:
       - name: Get Python version interpreter path
         id: interpreter
         run: echo "path=$(pixi run -e build which python)" >> $GITHUB_OUTPUT
+        shell: bash
       - name: Build wheel
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
