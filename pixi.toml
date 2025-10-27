@@ -24,12 +24,10 @@ jupyter = "*"
 [feature.docs.dependencies]
 autodocsumm = "*"
 ipython = "*"
-pydata-sphinx-theme = "*"
-# Needed for generating docs for dataframely.mypy
-mypy = "*"
 myst-parser = "*"
 nbsphinx = "*"
 numpydoc = "*"
+pydata-sphinx-theme = "*"
 sphinx = ">=8.2"
 sphinx-copybutton = "*"
 sphinx-design = "*"

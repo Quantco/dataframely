@@ -26,7 +26,7 @@ class CheckSchema(dy.Schema):
     b = dy.UInt64()
 
     @dy.rule()
-    def a_ge_b() -> pl.Expr:
+    def a_ge_b(cls) -> pl.Expr:
         return pl.col("a") >= pl.col("b")
 
 
@@ -35,11 +35,11 @@ class ComplexSchema(dy.Schema):
     b = dy.UInt8(primary_key=True)
 
     @dy.rule()
-    def a_greater_b() -> pl.Expr:
+    def a_greater_b(cls) -> pl.Expr:
         return pl.col("a") > pl.col("b")
 
     @dy.rule(group_by=["a"])
-    def minimum_two_per_a() -> pl.Expr:
+    def minimum_two_per_a(cls) -> pl.Expr:
         return pl.len() >= 2
 
 
@@ -48,11 +48,11 @@ class LimitedComplexSchema(dy.Schema):
     b = dy.UInt8(primary_key=True)
 
     @dy.rule()
-    def a_greater_b() -> pl.Expr:
+    def a_greater_b(cls) -> pl.Expr:
         return pl.col("a") > pl.col("b")
 
     @dy.rule(group_by=["a"])
-    def minimum_two_per_a() -> pl.Expr:
+    def minimum_two_per_a(cls) -> pl.Expr:
         # We cannot generate more than 768 rows with this rule
         return pl.len() <= 3
 
@@ -63,7 +63,7 @@ class OrderedSchema(dy.Schema):
     iter = dy.Integer()
 
     @dy.rule()
-    def iter_ordered() -> pl.Expr:
+    def iter_ordered(cls) -> pl.Expr:
         return (
             pl.col("iter").rank(method="ordinal")
             == pl.struct("a", "b").rank(method="ordinal")

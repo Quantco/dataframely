@@ -4,7 +4,7 @@
 from typing import Any
 
 from dataframely._filter import Filter
-from dataframely._rule import Rule
+from dataframely._rule import Rule, RuleFactory
 from dataframely._typing import LazyFrame
 from dataframely.collection import Collection
 from dataframely.columns import Column
@@ -14,7 +14,7 @@ from dataframely.schema import Schema
 def create_schema(
     name: str,
     columns: dict[str, Column],
-    rules: dict[str, Rule] | None = None,
+    rules: dict[str, Rule | RuleFactory] | None = None,
 ) -> type[Schema]:
     """Dynamically create a new schema with the provided name.
 
@@ -23,12 +23,18 @@ def create_schema(
         columns: The columns to set on the schema. When properly defining the schema,
             this would be the annotations that define the column types.
         rules: The custom non-column-specific validation rules. When properly defining
-            the schema, this would be the functions annotated with `@dy.rule`.
+            the schema, this would be the functions annotated with ``@dy.rule``.
 
     Returns:
         The dynamically created schema.
     """
-    return type(name, (Schema,), {**columns, **(rules or {})})
+    rule_factories = {
+        rule_name: (
+            rule if isinstance(rule, RuleFactory) else RuleFactory.from_rule(rule)
+        )
+        for rule_name, rule in (rules or {}).items()
+    }
+    return type(name, (Schema,), {**columns, **rule_factories})
 
 
 def create_collection(

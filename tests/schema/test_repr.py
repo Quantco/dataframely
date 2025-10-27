@@ -34,11 +34,11 @@ class SchemaWithRules(dy.Schema):
     b = dy.String(primary_key=True, regex=r"^[A-Z]{3}$", alias="b2")
 
     @dy.rule()
-    def my_rule() -> pl.Expr:
+    def my_rule(cls) -> pl.Expr:
         return pl.col("a") < 100
 
     @dy.rule(group_by=["a"])
-    def my_group_rule() -> pl.Expr:
+    def my_group_rule(cls) -> pl.Expr:
         return pl.col("a").sum() > 50
 
 
