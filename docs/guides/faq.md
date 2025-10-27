@@ -29,3 +29,20 @@ class UserSchema(dy.Schema):
         """Email must be unique, if provided."""
         return pl.col("email").is_null() | pl.col("email").is_unique()
 ```
+
+## How do I fix the ruff error `First argument of a method should be named self`?
+
+If you are using [`ruff`](https://docs.astral.sh/ruff/) and introduce custom rules for your schemas, `ruff` will create
+the following linting error:
+
+```
+N805 First argument of a method should be named `self`
+```
+
+To fix this, you'll need to let `ruff` know that the `@dy.rule` decorator is applied to classmethods. This can easily
+be done by adding the following to your `pyproject.toml`:
+
+```toml
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["dataframely.rule"]
+```

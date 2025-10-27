@@ -22,8 +22,8 @@ def validate_lf(lf: pl.LazyFrame) -> pl.LazyFrame:
     return lf.pipe(MySchema.validate, eager=False)
 ```
 
-When `eager=False` and the input data does not satisfy the schema, validation is only run and an error is only raised
-once the lazy frame is collected.
+When `eager=False`, validation is only run once the lazy frame is collected. If input data does not satisfy the schema,
+no error is raised here, yet.
 
 ## Error Types
 
