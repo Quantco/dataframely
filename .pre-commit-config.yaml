@@ -93,6 +93,7 @@ repos:
         entry: pixi run -e lint check-merge-conflict --assume-in-merge
         language: system
         types: [text]
+        exclude: \.rst$
       # typos
       - id: typos
         name: typos

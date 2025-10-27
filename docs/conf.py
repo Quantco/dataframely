@@ -9,17 +9,6 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
-
-# -- Project information -----------------------------------------------------
-
 import datetime
 import importlib
 import inspect
@@ -27,7 +16,9 @@ import os
 import subprocess
 import sys
 from subprocess import CalledProcessError
-from typing import cast
+from typing import Any, cast
+
+# -- Project information -----------------------------------------------------
 
 _mod = importlib.import_module("dataframely")
 
@@ -37,49 +28,81 @@ copyright = f"{datetime.date.today().year}, QuantCo, Inc"
 author = "QuantCo, Inc."
 
 extensions = [
-    "nbsphinx",
-    "numpydoc",
-    "sphinx_copybutton",
+    # builtin sphinx
+    "sphinx.ext.autosummary",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
-    "sphinxcontrib.apidoc",
-    "myst_parser",
     "sphinx.ext.napoleon",
+    # external
+    "autodocsumm",
+    "myst_parser",
+    "nbsphinx",
+    "numpydoc",
+    "sphinx_copybutton",
+    "sphinx_design",
+    "sphinx_toolbox.more_autodoc.overloads",
 ]
-myst_parser_config = {"myst_enable_extensions": ["rst_eval_roles"]}
+
+## sphinx
+# html output
+html_theme = "pydata_sphinx_theme"
+pygments_style = "lovelace"
+html_theme_options = {
+    "external_links": [],
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/Quantco/dataframely",
+            "icon": "fa-brands fa-github",
+        },
+    ],
+}
+html_title = "Dataframely"
+html_static_path = ["_static"]
+html_css_files = ["css/custom.css"]
+html_favicon = "_static/favicon.ico"
+html_show_sourcelink = False
+
+# markup
+default_role = "code"
+
+# object signatures
+maximum_signature_line_length = 88
+
+# source files
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".txt": "markdown",
+    ".md": "markdown",
+}
+
+# templating
+templates_path = ["_templates"]
+
+## sphinx.ext.autodoc
+autoclass_content = "both"
+autodoc_default_options = {
+    "inherited-members": True,
+}
+
+## sphinx.ext.intersphinx
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "polars": ("https://docs.pola.rs/py-polars/html/", None),
     "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
 
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".txt": "markdown",
-    ".md": "markdown",
-}
+## myst_parser
+myst_parser_config = {"myst_enable_extensions": ["rst_eval_roles"]}
+
+## numpydoc
 numpydoc_class_members_toctree = False
+numpydoc_show_class_members = False
 
-apidoc_module_dir = "../dataframely"
-apidoc_output_dir = "_api"
-apidoc_module_first = True
-apidoc_extra_args = ["--implicit-namespaces"]
-
-autodoc_default_options = {
-    "inherited-members": True,
-}
-
-templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-html_theme = "furo"
-html_title = "Dataframely"
-html_static_path = ["_static"]
-html_css_files = ["custom.css"]
-html_favicon = "_static/favicon.ico"
-
-# Render docstring text in `single backticks` as code.
-default_role = "code"
+## sphinx_toolbox
+overloads_location = ["bottom"]
 
 
 # Copied and adapted from
@@ -138,3 +161,26 @@ def linkcode_resolve(domain: str, info: dict[str, str]) -> str | None:
         "https://github.com/quantco/dataframely"
         f"/blob/{commit}/{_mod.__name__.replace('.', '/')}/{fn}{linespec}"
     )
+
+
+## Hide the signature for classes that should not be instantiated by the user
+def hide_class_signature(
+    app: Any,
+    what: str,
+    name: str,
+    obj: Any,
+    options: Any,
+    signature: str | None,
+    return_annotation: str,
+) -> tuple[str, str] | None:
+    if what == "class" and (
+        name.endswith("FilterResult") or name.endswith("FailureInfo")
+    ):
+        # Return empty signature (no args after the class name)
+        return "", return_annotation
+    # Otherwise, keep default behavior
+    return None
+
+
+def setup(app: Any) -> None:
+    app.connect("autodoc-process-signature", hide_class_signature)
