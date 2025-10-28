@@ -30,6 +30,9 @@ def all_rules_horizontal(rules: IntoExpr | Iterable[IntoExpr]) -> pl.Expr:
         function_name="all_rules_horizontal",
         args=rules,
         use_abs_path=True,
+        is_elementwise=True,
+        returns_scalar=False,
+        changes_length=False,
     )
 
 
@@ -49,7 +52,9 @@ def all_rules(rules: IntoExpr | Iterable[IntoExpr]) -> pl.Expr:
         function_name="all_rules",
         args=rules,
         use_abs_path=True,
+        is_elementwise=False,
         returns_scalar=True,
+        changes_length=True,
     )
 
 
@@ -80,5 +85,7 @@ def all_rules_required(
         args=rules,
         kwargs={"null_is_valid": null_is_valid, "schema_name": schema_name},
         use_abs_path=True,
+        is_elementwise=False,
         returns_scalar=True,
+        changes_length=True,
     )
