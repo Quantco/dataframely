@@ -13,7 +13,8 @@ python = ">=3.10"
 
 fsspec = ">=2025.9"
 numpy = "*"
-polars = ">=1.35.1"
+# NOTE: Keep in sync with version in pyproject.toml and polars-min below
+polars = ">=1.34"
 
 maturin = ">=1.7,<2"
 pip = "*"
@@ -91,6 +92,10 @@ typos = "*"
 pre-commit-install = "pre-commit install"
 pre-commit-run = "pre-commit run -a"
 
+[feature.polars-min.dependencies]
+# Set this to minimum version allowed by the polars version constraint above
+polars = "=1.34"
+
 [feature.py310.dependencies]
 python = "3.10.*"
 typing-extensions = "*"
@@ -122,3 +127,4 @@ py312 = ["py312", "test"]
 py313 = ["py313", "test"]
 py314 = ["py314", "test"]
 py314-optionals = ["optionals", "py314", "test"]
+py314-polars-min = ["polars-min", "py314", "test"]
