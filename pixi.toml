@@ -13,7 +13,7 @@ python = ">=3.10"
 
 fsspec = ">=2025.9"
 numpy = "*"
-polars = ">=1.32"
+polars = ">=1.35.1"
 
 maturin = ">=1.7,<2"
 pip = "*"

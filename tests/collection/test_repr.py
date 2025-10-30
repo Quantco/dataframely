@@ -31,8 +31,8 @@ def test_repr_collection() -> None:
             - "member_a_member_b_one_to_one":
                 INNER JOIN:
                 LEFT PLAN ON: [col("a")]
-                  DF ["a"]; PROJECT */1 COLUMNS
+                  DF ["a"]; PROJECT["a"] 1/1 COLUMNS
                 RIGHT PLAN ON: [col("a")]
-                  DF ["a"]; PROJECT */1 COLUMNS
+                  DF ["a"]; PROJECT["a"] 1/1 COLUMNS
                 END INNER JOIN
         """)
