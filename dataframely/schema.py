@@ -637,7 +637,8 @@ class Schema(BaseSchema, ABC):
         cast: bool = False,
         eager: bool = True,
     ) -> FilterResult[Self] | LazyFilterResult[Self]:
-        """Filter the data frame by the rules of this schema.
+        """Filter the data frame by the rules of this schema, returning `(valid,
+        failures)`.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
         While :meth:`validate` raises an exception when a row does not adhere to the
@@ -655,6 +656,19 @@ class Schema(BaseSchema, ABC):
             eager: Whether the filter operation should be performed eagerly. If `False`, the
                 returned lazy frame will
                 fail to collect if the validation does not pass.
+
+        Example:
+        .. code-block:: python
+
+            # Filter the data and cast columns to expected types
+            good, failure = HouseSchema.filter(df, cast=True)
+
+            # Inspect the reasons for the failed rows
+            print(failure.counts())
+
+            # Inspect the failed rows
+            failed_df = failure.invalid()
+            print(failed_df)
 
         Returns:
             A tuple of the validated rows in the input data frame (potentially
