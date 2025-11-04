@@ -145,6 +145,10 @@ class FailureInfo(Generic[S]):
     def write_parquet(self, file: str | Path | IO[bytes], **kwargs: Any) -> None:
         """Write the failure info to a parquet file.
 
+        Writes the invalid rows along with additional boolean rule columns indicating
+        which validation rules failed. Unlike :meth:`invalid`, this includes columns
+        for each rule, where ``False`` indicates the rule failed for that row.
+
         Args:
             file: The file path or writable file-like object to which to write the
                 parquet file. This should be a path to a directory if writing a
@@ -163,6 +167,10 @@ class FailureInfo(Generic[S]):
         self, file: str | Path | IO[bytes] | PartitioningScheme, **kwargs: Any
     ) -> None:
         """Stream the failure info to a parquet file.
+
+        Writes the invalid rows along with additional boolean rule columns indicating
+        which validation rules failed. Unlike :meth:`invalid`, this includes columns
+        for each rule, where ``False`` indicates the rule failed for that row.
 
         Args:
             file: The file path or writable file-like object to which to write the
@@ -233,6 +241,10 @@ class FailureInfo(Generic[S]):
         **kwargs: Any,
     ) -> None:
         """Write the failure info to a delta lake table.
+
+        Writes the invalid rows along with additional boolean rule columns indicating
+        which validation rules failed. Unlike :meth:`invalid`, this includes columns
+        for each rule, where ``False`` indicates the rule failed for that row.
 
         Args:
             target: The file path or DeltaTable to which to write the delta lake data.
