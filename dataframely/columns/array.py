@@ -102,14 +102,18 @@ class Array(Column):
     def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.DataType | pa.Field:
         """Recursively build PyArrow type for array shape with proper nullability.
         
-        Returns a DataType or Field that preserves inner field nullability through nested lists.
-        The base case returns a Field to preserve nullability, and pa.list_ converts it to DataType.
+        Returns:
+            - Field: When shape is empty (base case), returns the inner field with nullability info
+            - DataType: When shape is non-empty (recursive case), returns DataType from pa.list_()
+            
+        The base case returns a Field to preserve nullability. When wrapped by pa.list_() in
+        recursive calls, the Field's nullability is preserved in the resulting DataType structure.
         """
         if shape:
             size, *rest = shape
             inner = self._pyarrow_field_of_shape(rest)
             # For nested dimensions, wrap in fixed size list
-            # pa.list_ can take either a Field or a DataType and returns a DataType
+            # pa.list_ can take either a Field or a DataType and always returns a DataType
             return pa.list_(inner, size)
         else:
             # Base case: return the inner field with its nullability
@@ -133,9 +137,10 @@ class Array(Column):
             The :mod:`pyarrow` field definition with proper nested nullability.
         """
         # Build the nested array structure preserving inner nullability
-        # Since shape is always non-empty (enforced in __init__), this returns a DataType
+        # Shape is always non-empty (enforced in __init__), so this returns a DataType
+        # but we handle both cases for safety in case of future changes
         nested_type_or_field = self._pyarrow_field_of_shape(self.shape)
-        # Handle both Field and DataType for robustness
+        # Extract DataType whether we got a Field or DataType
         nested_type = nested_type_or_field.type if isinstance(nested_type_or_field, pa.Field) else nested_type_or_field
         return pa.field(name, nested_type, nullable=self.nullable)
 
