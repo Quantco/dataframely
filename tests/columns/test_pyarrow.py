@@ -219,7 +219,7 @@ def test_array_preserves_inner_nullability() -> None:
     )
     pa_schema = schema.to_pyarrow_schema()
     array_field = pa_schema.field("a")
-    assert array_field.type.value_field.nullable == True
+    assert array_field.type.value_field.nullable
 
 
 def test_nested_struct_in_list_preserves_nullability() -> None:
@@ -242,8 +242,8 @@ def test_nested_struct_in_list_preserves_nullability() -> None:
     pa_schema = schema.to_pyarrow_schema()
     list_field = pa_schema.field("a")
     struct_type = list_field.type.value_field.type
-    assert struct_type[0].nullable == False  # required field
-    assert struct_type[1].nullable == True  # optional field
+    assert not struct_type[0].nullable  # required field
+    assert struct_type[1].nullable  # optional field
 
 
 def test_nested_list_in_struct_preserves_nullability() -> None:
@@ -262,7 +262,7 @@ def test_nested_list_in_struct_preserves_nullability() -> None:
     pa_schema = schema.to_pyarrow_schema()
     struct_field = pa_schema.field("a")
     list_type = struct_field.type[0].type
-    assert list_type.value_field.nullable == False
+    assert not list_type.value_field.nullable
 
 
 def test_deeply_nested_nullability() -> None:
@@ -287,5 +287,5 @@ def test_deeply_nested_nullability() -> None:
     pa_schema = schema.to_pyarrow_schema()
     outer_struct = pa_schema.field("a").type
     inner_struct = outer_struct[0].type
-    assert inner_struct[0].nullable == False  # required field
-    assert inner_struct[1].nullable == True  # optional field
+    assert not inner_struct[0].nullable  # required field
+    assert inner_struct[1].nullable  # optional field
