@@ -103,11 +103,10 @@ class Array(Column):
         """Recursively build PyArrow type for array shape with proper nullability.
         
         Returns:
-            - Field: When shape is empty (base case), returns the inner field with nullability info
-            - DataType: When shape is non-empty (recursive case), returns DataType from pa.list_()
-            
-        The base case returns a Field to preserve nullability. When wrapped by pa.list_() in
-        recursive calls, the Field's nullability is preserved in the resulting DataType structure.
+            Field when shape is empty (base case), DataType otherwise. The base case
+            returns a Field to preserve nullability info. When wrapped by pa.list_()
+            in recursive calls, the Field's nullability is preserved in the resulting
+            DataType structure.
         """
         if shape:
             size, *rest = shape

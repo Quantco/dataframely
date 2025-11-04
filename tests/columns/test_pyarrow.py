@@ -194,10 +194,8 @@ def test_struct_nested_nullability() -> None:
         },
     )
     pyarrow_schema = schema.to_pyarrow_schema()
-    
     # Check that the struct itself is not null
     assert not pyarrow_schema.field("a").nullable
-    
     # Check the inner fields
     struct_type = pyarrow_schema.field("a").type
     # required_field should be not null
