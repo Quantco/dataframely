@@ -521,26 +521,6 @@ class Collection(BaseCollection, ABC):
                 Note that until https://github.com/pola-rs/polars/pull/24129 is
                 released, eagerly filtering can provide significant speedups.
 
-
-        Example:
-
-        .. code-block:: python
-
-            # Define collection
-            class HospitalInvoiceData(dy.Collection):
-                invoice: dy.LazyFrame[InvoiceSchema]
-                ...
-
-            # Filter the data and cast columns to expected types
-            good, failure = HospitalInvoiceData.filter(df, cast=True)
-
-            # Inspect the reasons for the failed rows for member `invoice`
-            print(failure.invoice.counts())
-
-            # Inspect the failed rows
-            failed_df = failure.invoice.invalid()
-            print(failed_df)
-
         Returns:
             A named tuple with fields `result` and `failure`. The `result` field
             provides a collection with all members filtered for the rows passing
@@ -551,6 +531,25 @@ class Collection(BaseCollection, ABC):
         Raises:
             ValueError: If an insufficient set of input data frames is provided, i.e. if
                 any required member of this collection is missing in the input.
+
+        Example:
+
+            .. code-block:: python
+
+                # Define collection
+                class HospitalInvoiceData(dy.Collection):
+                    invoice: dy.LazyFrame[InvoiceSchema]
+                    ...
+
+                # Filter the data and cast columns to expected types
+                good, failure = HospitalInvoiceData.filter(df, cast=True)
+
+                # Inspect the reasons for the failed rows for member `invoice`
+                print(failure.invoice.counts())
+
+                # Inspect the failed rows
+                failed_df = failure.invoice.invalid()
+                print(failed_df)
         """
         cls._validate_input_keys(data)
 
