@@ -1,0 +1,26 @@
+name: Copilot Setup Steps
+on:
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  workflow_dispatch:
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@28eb668aafebd9dede9d97c4ba1cd9989a4d0004 # v0.9.2
+        with:
+          environments: default
+      - name: Install Rust
+        run: rustup show
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+      - name: Install repository
+        run: pixi run postinstall
