@@ -102,9 +102,17 @@ class Array(Column):
     def _pyarrow_dtype_of_shape(self, shape: Sequence[int]) -> pa.DataType:
         if shape:
             size, *rest = shape
-            return pa.list_(self._pyarrow_dtype_of_shape(rest), size)
+            if rest:
+                # Recursive case: build inner type and wrap with list
+                # The intermediate fields will have nullable=True by default
+                inner_type = self._pyarrow_dtype_of_shape(rest)
+                return pa.list_(inner_type, size)
+            else:
+                # Base case: use the inner field directly to preserve nullability
+                return pa.list_(self.inner.pyarrow_field("item"), size)
         else:
-            return self.inner.pyarrow_dtype
+            # Should not reach here if shape is always a non-empty tuple
+            return self.inner.pyarrow_field("item").type
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
