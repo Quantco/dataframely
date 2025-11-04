@@ -99,22 +99,21 @@ class Array(Column):
         # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
         raise NotImplementedError("SQL column cannot have 'Array' type.")
 
-    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field | pa.DataType:
-        """Recursively build PyArrow field/type for array shape with proper nullability.
+    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.DataType | pa.Field:
+        """Recursively build PyArrow type for array shape with proper nullability.
         
-        Returns a Field for the innermost type to preserve nullability, wrapped in
-        DataType for outer dimensions.
+        Returns a DataType or Field that preserves inner field nullability through nested lists.
+        The base case returns a Field to preserve nullability, and pa.list_ converts it to DataType.
         """
         if shape:
             size, *rest = shape
             inner = self._pyarrow_field_of_shape(rest)
             # For nested dimensions, wrap in fixed size list
-            if isinstance(inner, pa.Field):
-                return pa.list_(inner, size)
-            else:
-                return pa.list_(inner, size)
+            # pa.list_ can take either a Field or a DataType and returns a DataType
+            return pa.list_(inner, size)
         else:
             # Base case: return the inner field with its nullability
+            # When pa.list_ receives this Field, it preserves the nullability
             return self.inner.pyarrow_field("item")
 
     def _pyarrow_dtype_of_shape(self, shape: Sequence[int]) -> pa.DataType:
@@ -134,12 +133,11 @@ class Array(Column):
             The :mod:`pyarrow` field definition with proper nested nullability.
         """
         # Build the nested array structure preserving inner nullability
-        field_or_dtype = self._pyarrow_field_of_shape(self.shape)
-        if isinstance(field_or_dtype, pa.Field):
-            # If we got a field back (single dimension), wrap it properly
-            return pa.field(name, field_or_dtype.type, nullable=self.nullable)
-        else:
-            return pa.field(name, field_or_dtype, nullable=self.nullable)
+        # Since shape is always non-empty (enforced in __init__), this returns a DataType
+        nested_type_or_field = self._pyarrow_field_of_shape(self.shape)
+        # Handle both Field and DataType for robustness
+        nested_type = nested_type_or_field.type if isinstance(nested_type_or_field, pa.Field) else nested_type_or_field
+        return pa.field(name, nested_type, nullable=self.nullable)
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
