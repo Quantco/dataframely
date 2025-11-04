@@ -523,6 +523,7 @@ class Collection(BaseCollection, ABC):
 
 
         Example:
+
         .. code-block:: python
 
             # Define collection

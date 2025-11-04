@@ -658,6 +658,7 @@ class Schema(BaseSchema, ABC):
                 fail to collect if the validation does not pass.
 
         Example:
+
         .. code-block:: python
 
             # Filter the data and cast columns to expected types
