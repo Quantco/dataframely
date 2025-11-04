@@ -103,15 +103,19 @@ class Array(Column):
         if shape:
             size, *rest = shape
             if rest:
-                # Recursive case: build inner type and wrap with list
-                # The intermediate fields will have nullable=True by default
+                # Recursive case: build inner type and wrap with list.
+                # When pa.list_ is passed a DataType (not a Field), it creates
+                # an "item" field with nullable=True by default.
                 inner_type = self._pyarrow_dtype_of_shape(rest)
                 return pa.list_(inner_type, size)
             else:
-                # Base case: use the inner field directly to preserve nullability
+                # Base case: use the inner field directly to preserve nullability.
+                # Passing a Field to pa.list_ preserves its nullability.
                 return pa.list_(self.inner.pyarrow_field("item"), size)
         else:
-            # Should not reach here if shape is always a non-empty tuple
+            # This branch handles the case where shape is an empty tuple.
+            # While shape is initialized as at least (size,) in __init__,
+            # this provides a safe fallback.
             return self.inner.pyarrow_field("item").type
 
     @property
