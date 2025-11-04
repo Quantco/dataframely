@@ -142,6 +142,20 @@ class List(Column):
         # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
         raise NotImplementedError("SQL column cannot have 'List' type.")
 
+    def pyarrow_field(self, name: str) -> pa.Field:
+        """Obtain the pyarrow field of this column definition.
+
+        Args:
+            name: The name of the column.
+
+        Returns:
+            The :mod:`pyarrow` field definition with proper nested nullability.
+        """
+        # Use pyarrow_field for inner column to preserve nullability
+        # PyArrow large_list can take a field to preserve inner nullability
+        inner_field = self.inner.pyarrow_field("item")
+        return pa.field(name, pa.large_list(inner_field), nullable=self.nullable)
+
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         # NOTE: Polars uses `large_list`s by default.

@@ -99,12 +99,47 @@ class Array(Column):
         # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
         raise NotImplementedError("SQL column cannot have 'Array' type.")
 
+    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field | pa.DataType:
+        """Recursively build PyArrow field/type for array shape with proper nullability.
+        
+        Returns a Field for the innermost type to preserve nullability, wrapped in
+        DataType for outer dimensions.
+        """
+        if shape:
+            size, *rest = shape
+            inner = self._pyarrow_field_of_shape(rest)
+            # For nested dimensions, wrap in fixed size list
+            if isinstance(inner, pa.Field):
+                return pa.list_(inner, size)
+            else:
+                return pa.list_(inner, size)
+        else:
+            # Base case: return the inner field with its nullability
+            return self.inner.pyarrow_field("item")
+
     def _pyarrow_dtype_of_shape(self, shape: Sequence[int]) -> pa.DataType:
         if shape:
             size, *rest = shape
             return pa.list_(self._pyarrow_dtype_of_shape(rest), size)
         else:
             return self.inner.pyarrow_dtype
+
+    def pyarrow_field(self, name: str) -> pa.Field:
+        """Obtain the pyarrow field of this column definition.
+
+        Args:
+            name: The name of the column.
+
+        Returns:
+            The :mod:`pyarrow` field definition with proper nested nullability.
+        """
+        # Build the nested array structure preserving inner nullability
+        field_or_dtype = self._pyarrow_field_of_shape(self.shape)
+        if isinstance(field_or_dtype, pa.Field):
+            # If we got a field back (single dimension), wrap it properly
+            return pa.field(name, field_or_dtype.type, nullable=self.nullable)
+        else:
+            return pa.field(name, field_or_dtype, nullable=self.nullable)
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:

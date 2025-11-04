@@ -177,3 +177,103 @@ def test_datetime_time_unit(time_unit: TimeUnit) -> None:
         "test", {"a": dy.Datetime(time_unit=time_unit, nullable=True)}
     )
     assert str(schema.to_pyarrow_schema()) == f"a: timestamp[{time_unit}]"
+
+
+def test_struct_nested_nullability() -> None:
+    """Test that nested struct fields preserve their nullability settings."""
+    schema = create_schema(
+        "test",
+        {
+            "a": dy.Struct(
+                {
+                    "required_field": dy.Int64(nullable=False),
+                    "optional_field": dy.Int64(nullable=True),
+                },
+                nullable=False,
+            )
+        },
+    )
+    pyarrow_schema = schema.to_pyarrow_schema()
+    schema_str = str(pyarrow_schema)
+    
+    # The struct itself should be not null
+    assert "a: struct<" in schema_str
+    assert "a: struct<" in schema_str and "not null" in schema_str.split("a: struct<")[0] + schema_str.split("a: struct<")[1].split(">")[1]
+    
+    # Check the inner fields
+    # required_field should be "not null"
+    assert "required_field: int64 not null" in schema_str
+    # optional_field should be nullable (no "not null")
+    assert "optional_field: int64>" in schema_str or "optional_field: int64 " in schema_str
+    assert "optional_field: int64 not null" not in schema_str
+
+
+def test_list_nested_nullability() -> None:
+    """Test that list inner fields preserve their nullability settings."""
+    # List with non-nullable inner type
+    schema1 = create_schema(
+        "test",
+        {"a": dy.List(dy.Int64(nullable=False), nullable=True)},
+    )
+    schema_str1 = str(schema1.to_pyarrow_schema())
+    assert "item: int64 not null" in schema_str1
+    
+    # List with nullable inner type
+    schema2 = create_schema(
+        "test",
+        {"a": dy.List(dy.Int64(nullable=True), nullable=True)},
+    )
+    schema_str2 = str(schema2.to_pyarrow_schema())
+    assert "item: int64 not null" not in schema_str2
+    assert "item: int64" in schema_str2
+
+
+def test_array_nested_nullability() -> None:
+    """Test that array inner fields preserve their nullability settings."""
+    # Array with non-nullable inner type
+    schema1 = create_schema(
+        "test",
+        {"a": dy.Array(dy.Int64(nullable=False), 3, nullable=True)},
+    )
+    schema_str1 = str(schema1.to_pyarrow_schema())
+    assert "item: int64 not null" in schema_str1
+    
+    # Array with nullable inner type
+    schema2 = create_schema(
+        "test",
+        {"a": dy.Array(dy.Int64(nullable=True), 3, nullable=True)},
+    )
+    schema_str2 = str(schema2.to_pyarrow_schema())
+    assert "item: int64 not null" not in schema_str2
+    assert "item: int64" in schema_str2
+
+
+def test_deeply_nested_nullability() -> None:
+    """Test that deeply nested structures preserve nullability at all levels."""
+    schema = create_schema(
+        "test",
+        {
+            "a": dy.Struct(
+                {
+                    "nested_list": dy.List(
+                        dy.Struct(
+                            {
+                                "inner_required": dy.Int64(nullable=False),
+                                "inner_optional": dy.String(nullable=True),
+                            },
+                            nullable=False,
+                        ),
+                        nullable=True,
+                    ),
+                },
+                nullable=False,
+            )
+        },
+    )
+    schema_str = str(schema.to_pyarrow_schema())
+    
+    # Check that inner_required is not nullable
+    assert "inner_required: int64 not null" in schema_str
+    # Check that inner_optional is nullable
+    assert "inner_optional: string>" in schema_str or "inner_optional: string " in schema_str
+    assert "inner_optional: string not null" not in schema_str

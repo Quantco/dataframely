@@ -110,6 +110,19 @@ class Struct(Column):
         # NOTE: We might want to add support for PostgreSQL's JSON in the future.
         raise NotImplementedError("SQL column cannot have 'Struct' type.")
 
+    def pyarrow_field(self, name: str) -> pa.Field:
+        """Obtain the pyarrow field of this column definition.
+
+        Args:
+            name: The name of the column.
+
+        Returns:
+            The :mod:`pyarrow` field definition with proper nested nullability.
+        """
+        # Use pyarrow_field for inner columns to preserve nullability
+        fields = [col.pyarrow_field(field_name) for field_name, col in self.inner.items()]
+        return pa.field(name, pa.struct(fields), nullable=self.nullable)
+
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.struct({name: col.pyarrow_dtype for name, col in self.inner.items()})
