@@ -42,7 +42,7 @@ jobs:
           - target-platform: linux-aarch64
             os: ubuntu-24.04-arm
           - target-platform: osx-64
-            os: macos-13
+            os: macos-15-intel
           - target-platform: osx-arm64
             os: macos-latest
           - target-platform: win-64
