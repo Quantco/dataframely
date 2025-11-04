@@ -657,20 +657,6 @@ class Schema(BaseSchema, ABC):
                 returned lazy frame will
                 fail to collect if the validation does not pass.
 
-        Example:
-
-        .. code-block:: python
-
-            # Filter the data and cast columns to expected types
-            good, failure = HouseSchema.filter(df, cast=True)
-
-            # Inspect the reasons for the failed rows
-            print(failure.counts())
-
-            # Inspect the failed rows
-            failed_df = failure.invalid()
-            print(failed_df)
-
         Returns:
             A tuple of the validated rows in the input data frame (potentially
             empty) and a simple dataclass carrying information about the rows of the
@@ -685,6 +671,20 @@ class Schema(BaseSchema, ABC):
 
         Note:
             This method preserves the ordering of the input data frame.
+
+        Example:
+
+            .. code-block:: python
+
+                # Filter the data and cast columns to expected types
+                good, failure = HouseSchema.filter(df, cast=True)
+
+                # Inspect the reasons for the failed rows
+                print(failure.counts())
+
+                # Inspect the failed rows
+                failed_df = failure.invalid()
+                print(failed_df)
         """
         lf = df.lazy().pipe(
             match_to_schema, cls, casting=("lenient" if cast else "none")
