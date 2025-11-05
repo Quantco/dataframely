@@ -61,10 +61,7 @@ def test_equal_polars_schema_enum(categories: list[str]) -> None:
     "inner",
     [_nullable(c) for c in ALL_COLUMN_TYPES]
     + [dy.List(_nullable(t), nullable=True) for t in ALL_COLUMN_TYPES]
-    + [
-        dy.Array(t() if t == dy.Any else t(nullable=True), 1, nullable=True)
-        for t in NO_VALIDATION_COLUMN_TYPES
-    ]
+    + [dy.Array(_nullable(t), 1, nullable=True) for t in NO_VALIDATION_COLUMN_TYPES]
     + [dy.Struct({"a": _nullable(t)}, nullable=True) for t in ALL_COLUMN_TYPES],
 )
 def test_equal_polars_schema_list(inner: Column) -> None:
@@ -161,65 +158,30 @@ def test_nullability_information_struct(inner: Column, nullable: bool) -> None:
     assert ("not null" in str(schema.to_pyarrow_schema())) != nullable
 
 
-def test_multiple_columns() -> None:
-    schema = create_schema(
-        "test", {"a": dy.Int32(nullable=False), "b": dy.Integer(nullable=True)}
-    )
-    assert str(schema.to_pyarrow_schema()).split("\n") == [
-        "a: int32 not null",
-        "b: int64",
-    ]
-
-
-@pytest.mark.parametrize("time_unit", ["ns", "us", "ms"])
-def test_datetime_time_unit(time_unit: TimeUnit) -> None:
-    schema = create_schema(
-        "test", {"a": dy.Datetime(time_unit=time_unit, nullable=True)}
-    )
-    assert str(schema.to_pyarrow_schema()) == f"a: timestamp[{time_unit}]"
-
-
-# Tests for nested nullability preservation
-@pytest.mark.parametrize("nullable", [True, False])
-def test_struct_preserves_inner_nullability(nullable: bool) -> None:
-    """Test that struct fields preserve their nullability setting."""
-    schema = create_schema(
-        "test",
-        {
-            "a": dy.Struct(
-                {"field": dy.String(nullable=nullable)},
-                nullable=True,
-            )
-        },
-    )
+@pytest.mark.parametrize("column_type", COLUMN_TYPES)
+@pytest.mark.parametrize("inner_nullable", [True, False])
+def test_inner_nullability_struct(
+    column_type: type[Column], inner_nullable: bool
+) -> None:
+    inner = column_type(nullable=inner_nullable)
+    schema = create_schema("test", {"a": dy.Struct({"a": inner})})
     pa_schema = schema.to_pyarrow_schema()
     struct_field = pa_schema.field("a")
     inner_field = struct_field.type[0]
-    assert inner_field.nullable == nullable
+    assert inner_field.nullable == inner_nullable
 
 
-@pytest.mark.parametrize("nullable", [True, False])
-def test_list_preserves_inner_nullability(nullable: bool) -> None:
-    """Test that list inner types preserve their nullability setting."""
-    schema = create_schema(
-        "test",
-        {"a": dy.List(dy.String(nullable=nullable), nullable=True)},
-    )
+@pytest.mark.parametrize("column_type", COLUMN_TYPES)
+@pytest.mark.parametrize("inner_nullable", [True, False])
+def test_inner_nullability_list(
+    column_type: type[Column], inner_nullable: bool
+) -> None:
+    inner = column_type(nullable=inner_nullable)
+    schema = create_schema("test", {"a": dy.List(inner)})
     pa_schema = schema.to_pyarrow_schema()
     list_field = pa_schema.field("a")
-    assert list_field.type.value_field.nullable == nullable
-
-
-def test_array_preserves_inner_nullability() -> None:
-    """Test that array inner types preserve their nullability setting."""
-    # Arrays only support nullable inner types (nullable=False would require validation)
-    schema = create_schema(
-        "test",
-        {"a": dy.Array(dy.String(nullable=True), shape=3, nullable=True)},
-    )
-    pa_schema = schema.to_pyarrow_schema()
-    array_field = pa_schema.field("a")
-    assert array_field.type.value_field.nullable
+    inner_field = list_field.type.value_field
+    assert inner_field.nullable == inner_nullable
 
 
 def test_nested_struct_in_list_preserves_nullability() -> None:
@@ -242,8 +204,8 @@ def test_nested_struct_in_list_preserves_nullability() -> None:
     pa_schema = schema.to_pyarrow_schema()
     list_field = pa_schema.field("a")
     struct_type = list_field.type.value_field.type
-    assert not struct_type[0].nullable  # required field
-    assert struct_type[1].nullable  # optional field
+    assert not struct_type[0].nullable
+    assert struct_type[1].nullable
 
 
 def test_nested_list_in_struct_preserves_nullability() -> None:
@@ -252,9 +214,7 @@ def test_nested_list_in_struct_preserves_nullability() -> None:
         "test",
         {
             "a": dy.Struct(
-                {
-                    "list_field": dy.List(dy.String(nullable=False), nullable=True),
-                },
+                {"list_field": dy.List(dy.String(nullable=False), nullable=True)},
                 nullable=True,
             )
         },
@@ -266,7 +226,6 @@ def test_nested_list_in_struct_preserves_nullability() -> None:
 
 
 def test_deeply_nested_nullability() -> None:
-    """Test that deeply nested structures preserve nullability."""
     schema = create_schema(
         "test",
         {
@@ -289,3 +248,21 @@ def test_deeply_nested_nullability() -> None:
     inner_struct = outer_struct[0].type
     assert not inner_struct[0].nullable  # required field
     assert inner_struct[1].nullable  # optional field
+
+
+def test_multiple_columns() -> None:
+    schema = create_schema(
+        "test", {"a": dy.Int32(nullable=False), "b": dy.Integer(nullable=True)}
+    )
+    assert str(schema.to_pyarrow_schema()).split("\n") == [
+        "a: int32 not null",
+        "b: int64",
+    ]
+
+
+@pytest.mark.parametrize("time_unit", ["ns", "us", "ms"])
+def test_datetime_time_unit(time_unit: TimeUnit) -> None:
+    schema = create_schema(
+        "test", {"a": dy.Datetime(time_unit=time_unit, nullable=True)}
+    )
+    assert str(schema.to_pyarrow_schema()) == f"a: timestamp[{time_unit}]"

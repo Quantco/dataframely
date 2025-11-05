@@ -99,28 +99,17 @@ class Array(Column):
         # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
         raise NotImplementedError("SQL column cannot have 'Array' type.")
 
-    def _pyarrow_dtype_of_shape(self, shape: Sequence[int]) -> pa.DataType:
+    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
             size, *rest = shape
-            if rest:
-                # Recursive case: build inner type and wrap with list.
-                # When pa.list_ is passed a DataType (not a Field), it creates
-                # an "item" field with nullable=True by default.
-                inner_type = self._pyarrow_dtype_of_shape(rest)
-                return pa.list_(inner_type, size)
-            else:
-                # Base case: use the inner field directly to preserve nullability.
-                # Passing a Field to pa.list_ preserves its nullability.
-                return pa.list_(self.inner.pyarrow_field("item"), size)
+            inner_type = self._pyarrow_field_of_shape(rest)
+            return pa.field("item", pa.list_(inner_type, size), nullable=True)
         else:
-            # This branch handles the case where shape is an empty tuple.
-            # While shape is initialized as at least (size,) in __init__,
-            # this provides a safe fallback.
-            return self.inner.pyarrow_field("item").type
+            return self.inner.pyarrow_field("item")
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return self._pyarrow_dtype_of_shape(self.shape)
+        return self._pyarrow_field_of_shape(self.shape).type
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # Sample the inner elements in a flat series
