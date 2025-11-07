@@ -88,12 +88,39 @@ class Array(Column):
         return pl.Array(self.inner.dtype, self.shape)
 
     def validate_dtype(self, dtype: PolarsDataType) -> bool:
+        """Validate if the polars data type satisfies the column definition.
+
+        Args:
+            dtype: The dtype to validate.
+
+        Returns:
+            Whether the dtype is valid.
+
+        Note:
+            This method handles both flat and nested array representations.
+            For example, ``Array(Array(String, 1), 1)`` and ``Array(String, (1, 1))``
+            both produce the same polars dtype and are considered equivalent.
+        """
         if not isinstance(dtype, pl.Array):
             return False
         # Compare the constructed dtype directly - this handles both flat and nested cases
         return self.dtype == dtype
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
+        """Return validation rules for this array column.
+
+        This method validates both the array itself and its inner elements.
+        Inner validation rules are applied using ``arr.eval()`` and are prefixed
+        with ``inner_`` to distinguish them from outer array validations.
+
+        Args:
+            expr: An expression referencing the column of the data frame.
+
+        Returns:
+            A mapping from validation rule names to expressions that provide exactly
+            one boolean value per column item indicating whether validation with respect
+            to the rule is successful.
+        """
         inner_rules = {
             f"inner_{rule_name}": expr.arr.eval(inner_expr).arr.all()
             for rule_name, inner_expr in self.inner.validation_rules(
