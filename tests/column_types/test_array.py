@@ -6,7 +6,7 @@ import pytest
 
 import dataframely as dy
 from dataframely.columns._base import Column
-from dataframely.testing import create_schema
+from dataframely.testing import create_schema, validation_mask
 
 
 @pytest.mark.parametrize(
@@ -142,10 +142,33 @@ def test_array_with_inner_pk() -> None:
 
 
 def test_array_with_rules() -> None:
-    with pytest.raises(ValueError):
-        create_schema(
-            "test", {"a": dy.Array(dy.String(min_length=2, nullable=False), 1)}
-        )
+    schema = create_schema(
+        "test", {"a": dy.Array(dy.String(min_length=2, nullable=False), 1)}
+    )
+    df = pl.DataFrame(
+        {"a": [["ab"], ["a"], [None]]},
+        schema={"a": pl.Array(pl.String, 1)},
+    )
+    _, failures = schema.filter(df)
+    assert validation_mask(df, failures).to_list() == [True, False, False]
+    assert failures.counts() == {"a|inner_nullability": 1, "a|inner_min_length": 1}
+
+
+def test_nested_array_with_rules() -> None:
+    schema = create_schema(
+        "test", {"a": dy.Array(dy.Array(dy.String(min_length=2, nullable=False), 1), 1)}
+    )
+    df = pl.DataFrame(
+        {"a": [[["ab"]], [["a"]], [[None]]]},
+        schema={"a": pl.Array(pl.String, (1, 1))},
+    )
+    _, failures = schema.filter(df)
+    # NOTE: `validation_mask` currently fails for multiply nested arrays
+    assert failures.invalid().to_dict(as_series=False) == {"a": [[["a"]], [[None]]]}
+    assert failures.counts() == {
+        "a|inner_inner_nullability": 1,
+        "a|inner_inner_min_length": 1,
+    }
 
 
 def test_outer_nullability() -> None:
