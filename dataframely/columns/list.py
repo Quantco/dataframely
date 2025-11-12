@@ -145,7 +145,7 @@ class List(Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         # NOTE: Polars uses `large_list`s by default.
-        return pa.large_list(self.inner.pyarrow_dtype)
+        return pa.large_list(self.inner.pyarrow_field("item"))
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # First, sample the number of items per list element

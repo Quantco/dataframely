@@ -112,7 +112,7 @@ class Struct(Column):
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return pa.struct({name: col.pyarrow_dtype for name, col in self.inner.items()})
+        return pa.struct([col.pyarrow_field(name) for name, col in self.inner.items()])
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         series = (
