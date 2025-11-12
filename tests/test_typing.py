@@ -92,5 +92,4 @@ def test_non_existent_column_access() -> None:
 
 
 def test_valid_column_access() -> None:
-    """Test that accessing valid columns passes type checking."""
     Schema.a  # Should pass type checking
