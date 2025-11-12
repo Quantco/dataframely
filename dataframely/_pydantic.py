@@ -20,12 +20,12 @@ _S = TypeVar("_S", bound=BaseSchema)
 def _dict_to_df(schema_type: type[BaseSchema], data: dict) -> pl.DataFrame:
     return pl.from_dict(
         data,
-        schema=schema_type.to_polars_schema(),
+        schema=schema_type.to_polars_schema(),  # type: ignore[attr-defined]
     )
 
 
 def _validate_df_schema(schema_type: type[_S], df: pl.DataFrame) -> DataFrame[_S]:
-    if not schema_type.is_valid(df):
+    if not schema_type.is_valid(df):  # type: ignore[attr-defined]
         raise ValueError("DataFrame violates schema")
     return df  # type: ignore
 

@@ -80,3 +80,22 @@ def test_collection_concat() -> None:
     c1 = MyCollection.create_empty()
     c2 = MyCollection.create_empty()
     dy.concat_collection_members([c1, c2])
+
+
+# ------------------------------------------------------------------------------------ #
+#                                   ATTRIBUTE ACCESS                                   #
+# ------------------------------------------------------------------------------------ #
+
+
+def test_non_existent_column_access() -> None:
+    """Test that accessing non-existent columns fails type checking.
+
+    This test ensures that the fix for type-checking non-existent attributes is working.
+    Without the fix (using TYPE_CHECKING guard), mypy would allow this access.
+    """
+    Schema.non_existing_col  # type: ignore[attr-defined]
+
+
+def test_valid_column_access() -> None:
+    """Test that accessing valid columns passes type checking."""
+    Schema.a  # Should pass type checking
