@@ -61,10 +61,7 @@ def test_equal_polars_schema_enum(categories: list[str]) -> None:
     "inner",
     [c() for c in ALL_COLUMN_TYPES]
     + [dy.List(t()) for t in ALL_COLUMN_TYPES]
-    + [
-        dy.Array(t() if t == dy.Any else t(nullable=True), 1)
-        for t in NO_VALIDATION_COLUMN_TYPES
-    ]
+    + [dy.Array(t(), 1) for t in NO_VALIDATION_COLUMN_TYPES]
     + [dy.Struct({"a": t()}) for t in ALL_COLUMN_TYPES],
 )
 def test_equal_polars_schema_list(inner: Column) -> None:

@@ -11,12 +11,11 @@ from typing import Any, Literal, cast
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
-from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import column_from_dict, register
-from .struct import Struct
+from .list import _list_primary_key_check
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -65,14 +64,6 @@ class Array(Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
-        if inner.primary_key or (
-            isinstance(inner, Struct)
-            and any(col.primary_key for col in inner.inner.values())
-        ):
-            raise ValueError(
-                "`primary_key=True` is not yet supported for inner types of the Array type."
-            )
-
         super().__init__(
             nullable=nullable,
             primary_key=False,
@@ -87,40 +78,7 @@ class Array(Column):
     def dtype(self) -> pl.DataType:
         return pl.Array(self.inner.dtype, self.shape)
 
-    def validate_dtype(self, dtype: PolarsDataType) -> bool:
-        """Validate if the polars data type satisfies the column definition.
-
-        Args:
-            dtype: The dtype to validate.
-
-        Returns:
-            Whether the dtype is valid.
-
-        Note:
-            This method handles both flat and nested array representations.
-            For example, ``Array(Array(String, 1), 1)`` and ``Array(String, (1, 1))``
-            both produce the same polars dtype and are considered equivalent.
-        """
-        if not isinstance(dtype, pl.Array):
-            return False
-        # Compare the constructed dtype directly - this handles both flat and nested cases
-        return self.dtype == dtype
-
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
-        """Return validation rules for this array column.
-
-        This method validates both the array itself and its inner elements.
-        Inner validation rules are applied using ``arr.eval()`` and are prefixed
-        with ``inner_`` to distinguish them from outer array validations.
-
-        Args:
-            expr: An expression referencing the column of the data frame.
-
-        Returns:
-            A mapping from validation rule names to expressions that provide exactly
-            one boolean value per column item indicating whether validation with respect
-            to the rule is successful.
-        """
         inner_rules = {
             f"inner_{rule_name}": expr.arr.eval(inner_expr).arr.all()
             for rule_name, inner_expr in self.inner.validation_rules(
@@ -128,8 +86,13 @@ class Array(Column):
             ).items()
         }
 
+        array_rules: dict[str, pl.Expr] = {}
+        if (rule := _list_primary_key_check(expr.arr, self.inner)) is not None:
+            array_rules["primary_key"] = rule
+
         return {
             **super().validation_rules(expr),
+            **array_rules,
             **inner_rules,
         }
 

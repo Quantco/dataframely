@@ -8,6 +8,8 @@ from itertools import chain
 from typing import Any, cast
 
 import polars as pl
+from polars.expr.array import ExprArrayNameSpace
+from polars.expr.list import ExprListNameSpace
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
@@ -97,29 +99,8 @@ class List(Column):
         }
 
         list_rules: dict[str, pl.Expr] = {}
-        if self.inner.primary_key:
-            list_rules["primary_key"] = ~expr.list.eval(
-                pl.element().is_duplicated()
-            ).list.any()
-        elif isinstance(self.inner, Struct) and any(
-            col.primary_key for col in self.inner.inner.values()
-        ):
-            primary_key_columns = [
-                name for name, col in self.inner.inner.items() if col.primary_key
-            ]
-            # NOTE: We optimize for a single primary key column here as it is much
-            #  faster to run duplication checks for non-struct types in polars 1.22.
-            if len(primary_key_columns) == 1:
-                list_rules["primary_key"] = ~expr.list.eval(
-                    pl.element().struct.field(primary_key_columns[0]).is_duplicated()
-                ).list.any()
-            else:
-                list_rules["primary_key"] = ~expr.list.eval(
-                    pl.struct(
-                        pl.element().struct.field(primary_key_columns)
-                    ).is_duplicated()
-                ).list.any()
-
+        if (rule := _list_primary_key_check(expr.list, self.inner)) is not None:
+            list_rules["primary_key"] = rule
         if self.min_length is not None:
             list_rules["min_length"] = (
                 pl.when(expr.is_null())
@@ -187,3 +168,35 @@ class List(Column):
     def from_dict(cls, data: dict[str, Any]) -> Self:
         data["inner"] = column_from_dict(data["inner"])
         return super().from_dict(data)
+
+
+def _list_primary_key_check(
+    list_expr: ExprListNameSpace | ExprArrayNameSpace, inner: Column
+) -> pl.Expr | None:
+    def list_any(expr: pl.Expr) -> pl.Expr:
+        if isinstance(list_expr, ExprListNameSpace):
+            return expr.list.any()
+        return expr.arr.any()
+
+    if inner.primary_key:
+        return ~list_expr.eval(pl.element().is_duplicated()).pipe(list_any)
+    elif isinstance(inner, Struct) and any(
+        col.primary_key for col in inner.inner.values()
+    ):
+        primary_key_columns = [
+            name for name, col in inner.inner.items() if col.primary_key
+        ]
+        # NOTE: We optimize for a single primary key column here as it is much
+        #  faster to run duplication checks for non-struct types in polars 1.22.
+        if len(primary_key_columns) == 1:
+            return ~list_expr.eval(
+                pl.element().struct.field(primary_key_columns[0]).is_duplicated()
+            ).pipe(list_any)
+        else:
+            return ~list_expr.eval(
+                pl.struct(
+                    pl.element().struct.field(primary_key_columns)
+                ).is_duplicated()
+            ).pipe(list_any)
+
+    return None
