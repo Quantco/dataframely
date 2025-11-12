@@ -88,11 +88,6 @@ def test_collection_concat() -> None:
 
 
 def test_non_existent_column_access() -> None:
-    """Test that accessing non-existent columns fails type checking.
-
-    This test ensures that the fix for type-checking non-existent attributes is working.
-    Without the fix (using TYPE_CHECKING guard), mypy would allow this access.
-    """
     Schema.non_existing_col  # type: ignore[attr-defined]
 
 
