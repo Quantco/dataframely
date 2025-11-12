@@ -319,7 +319,7 @@ class FailureInfo(Generic[S]):
         backend.sink_failure_info(
             lf=self._lf,
             serialized_rules=json.dumps(self._rule_columns),
-            serialized_schema=self.schema.serialize(),
+            serialized_schema=self.schema.serialize(),  # type: ignore[attr-defined]
             **kwargs,
         )
 
@@ -333,7 +333,7 @@ class FailureInfo(Generic[S]):
         backend.write_failure_info(
             df=self._df,
             serialized_rules=json.dumps(self._rule_columns),
-            serialized_schema=self.schema.serialize(),
+            serialized_schema=self.schema.serialize(),  # type: ignore[attr-defined]
             **kwargs,
         )
 

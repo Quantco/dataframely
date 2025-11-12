@@ -8,7 +8,7 @@ import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
@@ -164,12 +164,16 @@ class SchemaMeta(ABCMeta):
 
         return cls
 
-    def __getattribute__(cls, name: str) -> Any:
-        val = super().__getattribute__(name)
-        # Dynamically set the name of the column if it is a `Column` instance.
-        if isinstance(val, Column):
-            val._name = val.alias or name
-        return val
+    if not TYPE_CHECKING:
+        # Only define __getattribute__ at runtime to allow type checkers to properly
+        # validate attribute access. When TYPE_CHECKING is True, type checkers will use
+        # the default metaclass behavior which correctly identifies non-existent attributes.
+        def __getattribute__(cls, name: str) -> Any:
+            val = super().__getattribute__(name)
+            # Dynamically set the name of the column if it is a `Column` instance.
+            if isinstance(val, Column):
+                val._name = val.alias or name
+            return val
 
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
@@ -199,9 +203,9 @@ class SchemaMeta(ABCMeta):
     def __repr__(cls) -> str:
         parts = [f'[Schema "{cls.__name__}"]']
         parts.append(textwrap.indent("Columns:", prefix=" " * 2))
-        for name, col in cls.columns().items():
+        for name, col in cls.columns().items():  # type: ignore[attr-defined]
             parts.append(textwrap.indent(f'- "{name}": {col!r}', prefix=" " * 4))
-        if validation_rules := cls._schema_validation_rules():
+        if validation_rules := cls._schema_validation_rules():  # type: ignore[attr-defined]
             parts.append(textwrap.indent("Rules:", prefix=" " * 2))
             for name, rule in validation_rules.items():
                 parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
