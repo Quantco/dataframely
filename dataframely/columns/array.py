@@ -100,16 +100,17 @@ class Array(Column):
         # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
         raise NotImplementedError("SQL column cannot have 'Array' type.")
 
-    def _pyarrow_dtype_of_shape(self, shape: Sequence[int]) -> pa.DataType:
+    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
             size, *rest = shape
-            return pa.list_(self._pyarrow_dtype_of_shape(rest), size)
+            inner_type = self._pyarrow_field_of_shape(rest)
+            return pa.field("item", pa.list_(inner_type, size), nullable=True)
         else:
-            return self.inner.pyarrow_dtype
+            return self.inner.pyarrow_field("item")
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return self._pyarrow_dtype_of_shape(self.shape)
+        return self._pyarrow_field_of_shape(self.shape).type
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # Sample the inner elements in a flat series

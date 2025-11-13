@@ -80,3 +80,16 @@ def test_collection_concat() -> None:
     c1 = MyCollection.create_empty()
     c2 = MyCollection.create_empty()
     dy.concat_collection_members([c1, c2])
+
+
+# ------------------------------------------------------------------------------------ #
+#                                   ATTRIBUTE ACCESS                                   #
+# ------------------------------------------------------------------------------------ #
+
+
+def test_non_existent_column_access() -> None:
+    Schema.non_existing_col  # type: ignore[attr-defined]
+
+
+def test_valid_column_access() -> None:
+    Schema.a  # Should pass type checking
