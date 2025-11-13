@@ -15,7 +15,7 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import column_from_dict, register
-from .struct import Struct
+from .list import _list_primary_key_check
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -42,7 +42,7 @@ class Array(Column):
     ):
         """
         Args:
-            inner: The inner column type. No validation rules on the inner type are supported yet.
+            inner: The inner column type.
             shape: The shape of the array.
             nullable: Whether this column may contain null values.
             primary_key: Whether this column is part of the primary key of the schema.
@@ -64,23 +64,6 @@ class Array(Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
-        if inner.primary_key or (
-            isinstance(inner, Struct)
-            and any(col.primary_key for col in inner.inner.values())
-        ):
-            raise ValueError(
-                "`primary_key=True` is not yet supported for inner types of the Array type."
-            )
-
-        # We disallow validation rules on the inner type since Polars arrays currently don't support .eval(). Converting
-        # to a list and calling .list.eval() is possible, however, since the shape can have multiple axes, the recursive
-        # conversion could have significant performance impact. Hence, we simply disallow inner validation rules.
-        # Another option would be to allow validation rules only for sampling, but not enforce them.
-        if inner.validation_rules(pl.lit(None)):
-            raise ValueError(
-                "Validation rules on the inner type of Array are not yet supported."
-            )
-
         super().__init__(
             nullable=nullable,
             primary_key=False,
@@ -94,6 +77,24 @@ class Array(Column):
     @property
     def dtype(self) -> pl.DataType:
         return pl.Array(self.inner.dtype, self.shape)
+
+    def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
+        inner_rules = {
+            f"inner_{rule_name}": expr.arr.eval(inner_expr).arr.all()
+            for rule_name, inner_expr in self.inner.validation_rules(
+                pl.element()
+            ).items()
+        }
+
+        array_rules: dict[str, pl.Expr] = {}
+        if (rule := _list_primary_key_check(expr.arr, self.inner)) is not None:
+            array_rules["primary_key"] = rule
+
+        return {
+            **super().validation_rules(expr),
+            **array_rules,
+            **inner_rules,
+        }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.

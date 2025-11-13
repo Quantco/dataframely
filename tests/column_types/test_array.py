@@ -6,7 +6,7 @@ import pytest
 
 import dataframely as dy
 from dataframely.columns._base import Column
-from dataframely.testing import create_schema
+from dataframely.testing import create_schema, validation_mask
 
 
 @pytest.mark.parametrize(
@@ -132,20 +132,30 @@ def test_nested_array() -> None:
     )
 
 
-def test_array_with_inner_pk() -> None:
-    with pytest.raises(ValueError):
-        column = dy.Array(dy.String(primary_key=True), 2)
-        create_schema(
-            "test",
-            {"a": column},
-        )
-
-
 def test_array_with_rules() -> None:
-    with pytest.raises(ValueError):
-        create_schema(
-            "test", {"a": dy.Array(dy.String(min_length=2, nullable=False), 1)}
-        )
+    schema = create_schema(
+        "test", {"a": dy.Array(dy.String(min_length=2, nullable=False), 1)}
+    )
+    df = pl.DataFrame(
+        {"a": [["ab"], ["a"], [None]]},
+        schema={"a": pl.Array(pl.String, 1)},
+    )
+    _, failures = schema.filter(df)
+    assert validation_mask(df, failures).to_list() == [True, False, False]
+    assert failures.counts() == {"a|inner_nullability": 1, "a|inner_min_length": 1}
+
+
+def test_array_with_primary_key_rule() -> None:
+    schema = create_schema(
+        "test", {"a": dy.Array(dy.String(min_length=2, primary_key=True), 2)}
+    )
+    df = pl.DataFrame(
+        {"a": [["ab", "ab"], ["cd", "de"], ["def", "ghi"]]},
+        schema={"a": pl.Array(pl.String, 2)},
+    )
+    _, failures = schema.filter(df)
+    assert validation_mask(df, failures).to_list() == [False, True, True]
+    assert failures.counts() == {"a|primary_key": 1}
 
 
 def test_outer_nullability() -> None:
