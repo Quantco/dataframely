@@ -197,7 +197,11 @@ class CollectionMeta(ABCMeta):
             annotations = source["__annotations__"]
         elif sys.version_info >= (3, 14):
             if "__annotate_func__" in source:
-                annotations = source["__annotate_func__"](Format.VALUE)
+                annotate_func = source["__annotate_func__"]
+                # __annotate_func__ can be None in Python 3.14 when a class
+                # has no annotations or in certain metaclass scenarios
+                if annotate_func is not None and callable(annotate_func):
+                    annotations = annotate_func(Format.VALUE)
         for attr, kls in annotations.items():
             result.members[attr] = CollectionMeta._derive_member_info(
                 attr, kls, CollectionMember()
