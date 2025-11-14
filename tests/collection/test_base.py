@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+import sys
+
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
@@ -110,3 +112,37 @@ def test_collect_all_optional() -> None:
     assert isinstance(out, MyCollection)
     assert len(out.first.collect()) == 3
     assert out.second is None
+
+
+@pytest.mark.skipif(sys.version_info < (3, 14), reason="Python 3.14+ only")
+def test_annotate_func_none_py314() -> None:
+    """Test that __annotate_func__ = None doesn't cause TypeError in Python 3.14.
+
+    In Python 3.14 with PEP 649, __annotate_func__ can be None when:
+    - A class has no annotations
+    - Annotations are being processed during certain import contexts
+    - Classes are created dynamically with __annotate_func__ set to None
+
+    This test ensures the metaclass handles this gracefully.
+    """
+    from typing import cast
+
+    from dataframely.collection._base import BaseCollection, CollectionMeta
+
+    # Create a namespace with __annotate_func__ = None
+    namespace = {
+        "__module__": "__main__",
+        "__qualname__": "TestCollection",
+        "__annotate_func__": None,
+    }
+
+    # This should not raise TypeError
+    TestCollection = CollectionMeta(
+        "TestCollection",
+        (dy.Collection,),
+        namespace,
+    )
+
+    # Verify it has no members (since there are no annotations)
+    # Cast to BaseCollection to satisfy mypy since CollectionMeta creates Collection classes
+    assert cast(type[BaseCollection], TestCollection).members() == {}
