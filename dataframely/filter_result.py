@@ -13,10 +13,11 @@ import polars as pl
 from polars._typing import PartitioningScheme
 
 from dataframely._base_schema import BaseSchema
-from dataframely._compat import deltalake
+from dataframely._compat import deltalake, IcebergTable
 
 from ._storage import StorageBackend
 from ._storage.delta import DeltaStorageBackend
+from ._storage.iceberg import IcebergStorageBackend
 from ._storage.parquet import ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame
 
@@ -305,6 +306,57 @@ class FailureInfo(Generic[S]):
         """
         return cls._read(
             backend=DeltaStorageBackend(), source=source, lazy=True, **kwargs
+        )
+
+    def write_iceberg(
+        self,
+        target: str | Path | IcebergTable,
+        **kwargs: Any,
+    ) -> None:
+        """Write the failure info to an Iceberg table.
+
+        Args:
+            target: The path or IcebergTable object to which to write the data.
+            kwargs: Additional keyword arguments passed to :meth:`polars.DataFrame.write_iceberg`.
+        """
+        self._write(IcebergStorageBackend(), target=target, **kwargs)
+
+    @classmethod
+    def scan_iceberg(
+        cls,
+        source: str | Path | IcebergTable,
+        **kwargs: Any,
+    ) -> FailureInfo:
+        """Lazily read failure info from an Iceberg table.
+
+        Args:
+            source: Path or IcebergTable object from which to read the data.
+            kwargs: Additional keyword arguments passed to :func:`polars.scan_iceberg`.
+        """
+        return cls._read(
+            IcebergStorageBackend(),
+            lazy=True,
+            source=source,
+            **kwargs,
+        )
+
+    @classmethod
+    def read_iceberg(
+        cls,
+        source: str | Path | IcebergTable,
+        **kwargs: Any,
+    ) -> FailureInfo:
+        """Read failure info from an Iceberg table.
+
+        Args:
+            source: Path or IcebergTable object from which to read the data.
+            kwargs: Additional keyword arguments passed to :func:`polars.scan_iceberg`.
+        """
+        return cls._read(
+            IcebergStorageBackend(),
+            lazy=False,
+            source=source,
+            **kwargs,
         )
 
     # -------------------------------- Storage --------------------------------------- #

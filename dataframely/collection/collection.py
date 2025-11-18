@@ -17,7 +17,7 @@ from typing import IO, Annotated, Any, Literal, cast
 import polars as pl
 import polars.exceptions as plexc
 
-from dataframely._compat import deltalake
+from dataframely._compat import deltalake, IcebergTable
 from dataframely._filter import Filter
 from dataframely._native import format_rule_failures
 from dataframely._plugin import all_rules_required
@@ -31,6 +31,7 @@ from dataframely._serialization import (
 from dataframely._storage import StorageBackend
 from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
+from dataframely._storage.iceberg import IcebergStorageBackend
 from dataframely._storage.parquet import ParquetStorageBackend
 from dataframely._typing import LazyFrame, Validation
 from dataframely.exc import ValidationError, ValidationRequiredError
@@ -1141,6 +1142,97 @@ class Collection(BaseCollection, ABC):
             validation=validation,
             lazy=False,
             source=source,
+        )
+
+    def write_iceberg(
+        self, target: str | Path | IcebergTable, **kwargs: Any
+    ) -> None:
+        """Write this collection to an Iceberg table.
+
+        This method automatically adds a serialization of this collection to the Iceberg table as metadata.
+        The metadata can be leveraged by :meth:`read_iceberg` and :meth:`scan_iceberg` for efficient reading or by external tools.
+
+        Args:
+            target: The root directory where the collection members will be stored as Iceberg tables.
+            kwargs: Additional keyword arguments passed to :meth:`polars.DataFrame.write_iceberg`.
+
+        Attention:
+            This method suffers from the same limitations as :meth:`serialize`.
+
+            Collection metadata is stored in table properties. Table modifications
+            that are not through dataframely may result in losing the metadata.
+        """
+        IcebergStorageBackend().write_collection(
+            dfs=self.to_dict(),
+            serialized_collection=self.serialize(),
+            serialized_schemas={
+                member_name: schema.serialize()
+                for member_name, schema in self._schemas().items()
+            },
+            target=target,
+            **kwargs,
+        )
+
+    @classmethod
+    def scan_iceberg(
+        cls,
+        source: str | Path | IcebergTable,
+        **kwargs: Any,
+    ) -> Self:
+        """Lazily read an Iceberg table collection.
+
+        Compared to :meth:`polars.scan_iceberg`, this method checks the table's metadata
+        and runs validation if necessary to ensure that the data matches this collection.
+
+        Args:
+            source: The root directory from which to read the collection members.
+            kwargs: Additional keyword arguments passed to :func:`polars.scan_iceberg`.
+
+        Returns:
+            The collection with lazy frames.
+
+        Attention:
+            Collection metadata is stored in table properties. Table modifications
+            that are not through dataframely may result in losing the metadata.
+
+            This method suffers from the same limitations as :meth:`serialize`.
+        """
+        return cls._read(
+            IcebergStorageBackend(),
+            lazy=True,
+            source=source,
+            **kwargs,
+        )
+
+    @classmethod
+    def read_iceberg(
+        cls,
+        source: str | Path | IcebergTable,
+        **kwargs: Any,
+    ) -> Self:
+        """Read an Iceberg table collection.
+
+        Compared to :func:`polars.scan_iceberg`, this method checks the table's metadata
+        and runs validation if necessary to ensure that the data matches this collection.
+
+        Args:
+            source: The root directory from which to read the collection members.
+            kwargs: Additional keyword arguments passed directly to :func:`polars.scan_iceberg`.
+
+        Returns:
+            The collection with eager frames.
+
+        Attention:
+            Collection metadata is stored in table properties. Table modifications
+            that are not through dataframely may result in losing the metadata.
+
+            This method suffers from the same limitations as :meth:`serialize`.
+        """
+        return cls._read(
+            IcebergStorageBackend(),
+            lazy=False,
+            source=source,
+            **kwargs,
         )
 
     # -------------------------------- Storage --------------------------------------- #
