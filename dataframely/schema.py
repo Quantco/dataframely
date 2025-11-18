@@ -16,7 +16,7 @@ import polars as pl
 import polars.exceptions as plexc
 from polars._typing import FileSource, PartitioningScheme
 
-from dataframely._compat import deltalake
+from dataframely._compat import deltalake, IcebergTable
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import pa, sa
@@ -34,6 +34,7 @@ from ._serialization import (
 from ._storage._base import SerializedSchema, StorageBackend
 from ._storage.constants import SCHEMA_METADATA_KEY
 from ._storage.delta import DeltaStorageBackend
+from ._storage.iceberg import IcebergStorageBackend
 from ._storage.parquet import (
     ParquetStorageBackend,
 )
@@ -1176,6 +1177,159 @@ class Schema(BaseSchema, ABC):
         """
         return cls._read(
             DeltaStorageBackend(),
+            validation=validation,
+            lazy=False,
+            source=source,
+            **kwargs,
+        )
+
+    @classmethod
+    def write_iceberg(
+        cls,
+        df: DataFrame[Self],
+        /,
+        target: str | Path | IcebergTable,
+        **kwargs: Any,
+    ) -> None:
+        """Write a typed data frame with this schema to an Iceberg table.
+
+        This method automatically adds a serialization of this schema to the Iceberg table as metadata.
+        The metadata can be leveraged by :meth:`read_iceberg` and :meth:`scan_iceberg` for efficient reading or by external tools.
+
+        Args:
+            df: The data frame to write to the Iceberg table.
+            target: The path or IcebergTable object to which to write the data.
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.write_iceberg`.
+
+        Attention:
+            This method suffers from the same limitations as :meth:`serialize`.
+
+            Schema metadata is stored in table properties. Table modifications
+            that are not through dataframely may result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
+        """
+        IcebergStorageBackend().write_frame(
+            df=df,
+            serialized_schema=cls.serialize(),
+            target=target,
+            **kwargs,
+        )
+
+    @classmethod
+    def scan_iceberg(
+        cls,
+        source: str | Path | IcebergTable,
+        *,
+        validation: Validation = "warn",
+        **kwargs: Any,
+    ) -> LazyFrame[Self]:
+        """Lazily read an Iceberg table into a typed data frame with this schema.
+
+        Compared to :meth:`polars.scan_iceberg`, this method checks the table's metadata
+        and runs validation if necessary to ensure that the data matches this schema.
+
+        Args:
+            source: Path or IcebergTable object from which to read the data.
+            validation: The strategy for running validation when reading the data:
+
+                - `"allow"`: The method tries to read the table's metadata. If
+                  the stored schema matches this schema, the data frame is read without
+                  validation. If the stored schema mismatches this schema or no schema
+                  information can be found in the metadata, this method automatically
+                  runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
+                  it prints a warning if validation is necessary.
+                - `"forbid"`: The method never runs validation automatically and only
+                  returns if the schema stored in the table's metadata matches
+                  this schema.
+                - `"skip"`: The method never runs validation and simply reads the
+                  table, entrusting the user that the schema is valid. *Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.scan_iceberg` to convey the purpose better*.
+
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_iceberg`.
+
+        Returns:
+            The lazy data frame with this schema.
+
+        Raises:
+            ValidationRequiredError:
+                If no schema information can be read
+                from the source and `validation` is set to `"forbid"`.
+
+        Attention:
+            Schema metadata is stored in table properties. Table modifications
+            that are not through dataframely may result in losing the metadata.
+
+            This method suffers from the same limitations as :meth:`serialize`.
+        """
+        return cls._read(
+            IcebergStorageBackend(),
+            validation=validation,
+            lazy=True,
+            source=source,
+            **kwargs,
+        )
+
+    @classmethod
+    def read_iceberg(
+        cls,
+        source: str | Path | IcebergTable,
+        *,
+        validation: Validation = "warn",
+        **kwargs: Any,
+    ) -> DataFrame[Self]:
+        """Read an Iceberg table into a typed data frame with this schema.
+
+        Compared to :meth:`polars.read_iceberg`, this method checks the table's metadata
+        and runs validation if necessary to ensure that the data matches this schema.
+
+        Args:
+            source: Path or IcebergTable object from which to read the data.
+            validation: The strategy for running validation when reading the data:
+
+                - `"allow"`: The method tries to read the table's metadata. If
+                  the stored schema matches this schema, the data frame is read without
+                  validation. If the stored schema mismatches this schema or no schema
+                  information can be found in the metadata, this method automatically
+                  runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
+                  it prints a warning if validation is necessary.
+                - `"forbid"`: The method never runs validation automatically and only
+                  returns if the schema stored in the table's metadata matches
+                  this schema.
+                - `"skip"`: The method never runs validation and simply reads the
+                  table, entrusting the user that the schema is valid. *Use this
+                  option carefully and consider replacing it with
+                  :meth:`polars.read_iceberg` to convey the purpose better*.
+
+            kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_iceberg`.
+
+        Returns:
+            The data frame with this schema.
+
+        Raises:
+            ValidationRequiredError:
+                If no schema information can be read from the source
+                and `validation` is set to `"forbid"`.
+
+        Attention:
+            Schema metadata is stored in table properties. Table modifications
+            that are not through dataframely may result in losing the metadata.
+
+            Be aware that appending to an existing table via mode="append" may result
+            in violation of group constraints that dataframely cannot catch
+            without re-validating. Only use appends if you are certain that they do not
+            break your schema.
+
+            This method suffers from the same limitations as :meth:`serialize`.
+        """
+        return cls._read(
+            IcebergStorageBackend(),
             validation=validation,
             lazy=False,
             source=source,

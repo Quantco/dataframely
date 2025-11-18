@@ -9,8 +9,9 @@ from fsspec import AbstractFileSystem, url_to_fs
 
 import dataframely as dy
 from dataframely import FailureInfo, Validation
-from dataframely._compat import deltalake
+from dataframely._compat import deltalake, IcebergTable
 from dataframely._storage.delta import _to_delta_table
+from dataframely._storage.iceberg import _to_iceberg_table
 
 # ----------------------------------- Schema -------------------------------------------
 S = TypeVar("S", bound=dy.Schema)
@@ -123,6 +124,35 @@ class DeltaSchemaStorageTester(SchemaStorageTester):
         return schema.read_delta(path, validation=validation)
 
 
+class IcebergSchemaStorageTester(SchemaStorageTester):
+    """Testing interface for the iceberg storage functionality of Schema."""
+
+    def write_typed(
+        self, schema: type[S], df: dy.DataFrame[S], path: str, lazy: bool
+    ) -> None:
+        schema.write_iceberg(df, path)
+
+    def write_untyped(self, df: pl.DataFrame, path: str, lazy: bool) -> None:
+        df.write_iceberg(path, mode="overwrite")
+
+    @overload
+    def read(
+        self, schema: type[S], path: str, lazy: Literal[True], validation: Validation
+    ) -> dy.LazyFrame[S]: ...
+
+    @overload
+    def read(
+        self, schema: type[S], path: str, lazy: Literal[False], validation: Validation
+    ) -> dy.DataFrame[S]: ...
+
+    def read(
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
+    ) -> dy.DataFrame[S] | dy.LazyFrame[S]:
+        if lazy:
+            return schema.scan_iceberg(path, validation=validation)
+        return schema.read_iceberg(path, validation=validation)
+
+
 # ------------------------------- Collection -------------------------------------------
 
 C = TypeVar("C", bound=dy.Collection)
@@ -223,6 +253,31 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
         return collection.read_delta(source=path, **kwargs)
 
 
+class IcebergCollectionStorageTester(CollectionStorageTester):
+    def write_typed(
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
+    ) -> None:
+        collection.write_iceberg(path, **kwargs)
+
+    def write_untyped(
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
+    ) -> None:
+        collection.write_iceberg(path, **kwargs)
+
+        # For each member table, write an empty update to clear metadata
+        # Similar to delta approach, we overwrite properties to lose metadata
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        for member, df in collection.to_dict().items():
+            table = _to_iceberg_table(fs.sep.join([path, member]))
+            # Clear custom metadata by writing empty data
+            df.head(0).collect().write_iceberg(table, mode="append")
+
+    def read(self, collection: type[C], path: str, lazy: bool, **kwargs: Any) -> C:
+        if lazy:
+            return collection.scan_iceberg(source=path, **kwargs)
+        return collection.read_iceberg(source=path, **kwargs)
+
+
 # ------------------------------------ Failure info ------------------------------------
 class FailureInfoStorageTester(ABC):
     @abstractmethod
@@ -307,3 +362,28 @@ class DeltaFailureInfoStorageTester(FailureInfoStorageTester):
             },
             mode="overwrite",
         )
+
+
+class IcebergFailureInfoStorageTester(FailureInfoStorageTester):
+    def write_typed(
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
+    ) -> None:
+        # Ignore 'lazy' here because lazy writes are not supported for iceberg at the moment.
+        failure_info.write_iceberg(path, **kwargs)
+
+    def write_untyped(
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
+    ) -> None:
+        failure_info._lf.collect().write_iceberg(path, mode="overwrite", **kwargs)
+
+    def read(self, path: str, lazy: bool, **kwargs: Any) -> FailureInfo:
+        if lazy:
+            return FailureInfo.scan_iceberg(source=path, **kwargs)
+        else:
+            return FailureInfo.read_iceberg(source=path, **kwargs)
+
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        from dataframely._storage.iceberg import _to_iceberg_table, _update_table_properties
+        
+        table = _to_iceberg_table(path)
+        _update_table_properties(table, metadata)
