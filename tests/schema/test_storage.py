@@ -15,6 +15,7 @@ from dataframely.exc import ValidationRequiredError
 from dataframely.testing import create_schema
 from dataframely.testing.storage import (
     DeltaSchemaStorageTester,
+    IcebergSchemaStorageTester,
     ParquetSchemaStorageTester,
     SchemaStorageTester,
 )
@@ -30,6 +31,7 @@ S = TypeVar("S", bound=dy.Schema)
 TESTERS = [
     ParquetSchemaStorageTester(),
     DeltaSchemaStorageTester(),
+    IcebergSchemaStorageTester(),
 ]
 
 

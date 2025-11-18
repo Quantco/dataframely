@@ -12,6 +12,7 @@ from dataframely.filter_result import UNKNOWN_SCHEMA_NAME
 from dataframely.testing.storage import (
     DeltaFailureInfoStorageTester,
     FailureInfoStorageTester,
+    IcebergFailureInfoStorageTester,
     ParquetFailureInfoStorageTester,
 )
 
@@ -28,7 +29,11 @@ class MySchema(dy.Schema):
     b = dy.Integer(nullable=False, is_in=[1, 2, 3, 5, 7, 11])
 
 
-TESTERS = [ParquetFailureInfoStorageTester(), DeltaFailureInfoStorageTester()]
+TESTERS = [
+    ParquetFailureInfoStorageTester(),
+    DeltaFailureInfoStorageTester(),
+    IcebergFailureInfoStorageTester(),
+]
 
 
 @pytest.mark.parametrize("tester", TESTERS)
