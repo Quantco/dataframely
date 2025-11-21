@@ -113,7 +113,6 @@ def test_deserialize_invalid_member_schema(strict: bool) -> None:
         "test",
         {
             "s1": create_schema("schema1", {"a": dy.Int64()}),
-            "s2": create_schema("schema2", {"a": dy.Int64()}),
         },
     )
     serialized = collection.serialize()

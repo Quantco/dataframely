@@ -1238,9 +1238,9 @@ class Schema(BaseSchema, ABC):
         validation: Validation,
         source: str,
     ) -> DataFrame[Self] | LazyFrame[Self]:
-        # Use strict=False when validation is "allow" or "warn" to tolerate
-        # deserialization failures from old serialized formats
-        strict = validation not in ("allow", "warn")
+        # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
+        # deserialization failures from old serialized formats.
+        strict = validation == "forbid"
         deserialized_schema = (
             deserialize_schema(serialized_schema, strict=strict)
             if serialized_schema

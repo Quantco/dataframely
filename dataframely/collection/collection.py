@@ -1184,9 +1184,9 @@ class Collection(BaseCollection, ABC):
                 members=cls.member_schemas().keys(), **kwargs
             )
 
-        # Use strict=False when validation is "allow" or "warn" to tolerate
+        # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
         # missing or broken collection metadata.
-        strict = validation not in ("allow", "warn")
+        strict = validation == "forbid"
         collection_types = _deserialize_types(
             serialized_collection_types, strict=strict
         )

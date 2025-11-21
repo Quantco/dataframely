@@ -292,7 +292,7 @@ def test_read_write_parquet_validation_skip_invalid_schema(
 # ---------------------------- PARQUET SPECIFICS ---------------------------------- #
 
 
-@pytest.mark.parametrize("validation", ["allow", "warn"])
+@pytest.mark.parametrize("validation", ["allow", "warn", "skip", "forbid"])
 @pytest.mark.parametrize("lazy", [True, False])
 @pytest.mark.parametrize(
     "any_tmp_path",
@@ -305,8 +305,8 @@ def test_read_write_parquet_old_format_version(
     validation: Validation,
     lazy: bool,
 ) -> None:
-    """If schema has an old/incompatible format version, we should fall back to
-    validating when validation is 'allow' or 'warn'."""
+    """If schema has an old/incompatible content, we should fall back to validating when
+    validation is 'allow', 'warn' or 'skip' or raise otherwise."""
     # Arrange
     from fsspec import AbstractFileSystem, url_to_fs
 
@@ -318,8 +318,14 @@ def test_read_write_parquet_old_format_version(
     # Write directly with custom metadata containing an old format version
     fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
     file_path = fs.sep.join([any_tmp_path, "test.parquet"])
-    old_format_metadata = '{"versions": {"format": "999"}}'
-    df.write_parquet(file_path, metadata={SCHEMA_METADATA_KEY: old_format_metadata})
+    df.write_parquet(
+        file_path,
+        metadata={
+            SCHEMA_METADATA_KEY: schema.serialize().replace(
+                "primary_key", "primary_keys"
+            )
+        },
+    )
 
     # Act
     spy = mocker.spy(schema, "validate")
