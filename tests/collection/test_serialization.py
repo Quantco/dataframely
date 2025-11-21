@@ -91,3 +91,21 @@ def test_deserialize_unknown_format_version() -> None:
     serialized = '{"versions": {"format": "invalid"}}'
     with pytest.raises(ValueError, match=r"Unsupported schema format version"):
         dy.deserialize_collection(serialized)
+
+
+def test_deserialize_unknown_format_version_strict_false() -> None:
+    serialized = '{"versions": {"format": "invalid"}}'
+    result = dy.deserialize_collection(serialized, strict=False)
+    assert result is None
+
+
+def test_deserialize_invalid_json_strict_false() -> None:
+    serialized = '{"invalid json'
+    result = dy.deserialize_collection(serialized, strict=False)
+    assert result is None
+
+
+def test_deserialize_invalid_json_strict_true() -> None:
+    serialized = '{"invalid json'
+    with pytest.raises(json.JSONDecodeError):
+        dy.deserialize_collection(serialized, strict=True)

@@ -422,6 +422,40 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
     spy.assert_called_once()
 
 
+@pytest.mark.parametrize("validation", ["allow", "warn"])
+@pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize(
+    "any_tmp_path",
+    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
+    indirect=True,
+)
+def test_read_write_parquet_old_format_version(
+    any_tmp_path: str, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+) -> None:
+    """If schema has an old/incompatible format version, we should fall back to
+    validating when validation is 'allow' or 'warn'."""
+    # Arrange
+    collection = MyCollection.create_empty()
+    tester = ParquetCollectionStorageTester()
+    # Use a collection metadata with an invalid format version
+    old_format_metadata = '{"versions": {"format": "999"}}'
+    tester.write_untyped(
+        collection,
+        any_tmp_path,
+        lazy,
+        metadata={COLLECTION_METADATA_KEY: old_format_metadata},
+    )
+
+    # Act
+    spy = mocker.spy(MyCollection, "validate")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
+
+    # Assert - validation should be called because the old format couldn't be deserialized
+    spy.assert_called_once()
+
+
 @pytest.mark.parametrize("metadata", [None, {COLLECTION_METADATA_KEY: "invalid"}])
 @pytest.mark.parametrize(
     "any_tmp_path",

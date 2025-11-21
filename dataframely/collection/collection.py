@@ -12,7 +12,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Annotated, Any, Literal, cast
+from typing import IO, Annotated, Any, Literal, cast, overload
 
 import polars as pl
 import polars.exceptions as plexc
@@ -1184,7 +1184,12 @@ class Collection(BaseCollection, ABC):
                 members=cls.member_schemas().keys(), **kwargs
             )
 
-        collection_types = _deserialize_types(serialized_collection_types)
+        # Use strict=False when validation is "allow" or "warn" to tolerate
+        # deserialization failures from old serialized formats
+        strict = validation not in ("allow", "warn")
+        collection_types = _deserialize_types(
+            serialized_collection_types, strict=strict
+        )
         collection_type = _reconcile_collection_types(collection_types)
 
         if cls._requires_validation_for_reading_parquets(collection_type, validation):
@@ -1245,14 +1250,27 @@ def read_parquet_metadata_collection(
     """
     metadata = pl.read_parquet_metadata(source)
     if (schema_metadata := metadata.get(COLLECTION_METADATA_KEY)) is not None:
-        try:
-            return deserialize_collection(schema_metadata)
-        except (JSONDecodeError, plexc.ComputeError):
-            return None
+        return deserialize_collection(schema_metadata, strict=False)
     return None
 
 
-def deserialize_collection(data: str) -> type[Collection]:
+@overload
+def deserialize_collection(
+    data: str, strict: Literal[True] = True
+) -> type[Collection]: ...
+
+
+@overload
+def deserialize_collection(
+    data: str, strict: Literal[False]
+) -> type[Collection] | None: ...
+
+
+@overload
+def deserialize_collection(data: str, strict: bool) -> type[Collection] | None: ...
+
+
+def deserialize_collection(data: str, strict: bool = True) -> type[Collection] | None:
     """Deserialize a collection from a JSON string.
 
     This method allows to dynamically load a collection from its serialization, without
@@ -1260,12 +1278,13 @@ def deserialize_collection(data: str) -> type[Collection]:
 
     Args:
         data: The JSON string created via :meth:`Collection.serialize`.
+        strict: Whether to raise an exception if the collection cannot be deserialized.
 
     Returns:
         The collection loaded from the JSON data.
 
     Raises:
-        ValueError: If the schema format version is not supported.
+        ValueError: If the schema format version is not supported and `strict=True`.
 
     Attention:
         The returned collection **cannot** be used to create instances of the
@@ -1280,34 +1299,39 @@ def deserialize_collection(data: str) -> type[Collection]:
     See also:
         :meth:`Collection.serialize` for additional information on serialization.
     """
-    decoded = json.loads(data, cls=SchemaJSONDecoder)
-    if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
-        raise ValueError(f"Unsupported schema format version: {format}")
+    try:
+        decoded = json.loads(data, cls=SchemaJSONDecoder)
+        if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
+            raise ValueError(f"Unsupported schema format version: {format}")
 
-    annotations: dict[str, Any] = {}
-    for name, info in decoded["members"].items():
-        lf_type = LazyFrame[_schema_from_dict(info["schema"])]  # type: ignore
-        if info["is_optional"]:
-            lf_type = lf_type | None  # type: ignore
-        annotations[name] = Annotated[
-            lf_type,
-            CollectionMember(
-                ignored_in_filters=info["ignored_in_filters"],
-                inline_for_sampling=info["inline_for_sampling"],
-            ),
-        ]
+        annotations: dict[str, Any] = {}
+        for name, info in decoded["members"].items():
+            lf_type = LazyFrame[_schema_from_dict(info["schema"])]  # type: ignore
+            if info["is_optional"]:
+                lf_type = lf_type | None  # type: ignore
+            annotations[name] = Annotated[
+                lf_type,
+                CollectionMember(
+                    ignored_in_filters=info["ignored_in_filters"],
+                    inline_for_sampling=info["inline_for_sampling"],
+                ),
+            ]
 
-    return type(
-        f"{decoded['name']}_dynamic",
-        (Collection,),
-        {
-            "__annotations__": annotations,
-            **{
-                name: Filter(logic=lambda _, logic=logic: logic)  # type: ignore
-                for name, logic in decoded["filters"].items()
+        return type(
+            f"{decoded['name']}_dynamic",
+            (Collection,),
+            {
+                "__annotations__": annotations,
+                **{
+                    name: Filter(logic=lambda _, logic=logic: logic)  # type: ignore
+                    for name, logic in decoded["filters"].items()
+                },
             },
-        },
-    )
+        )
+    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+        if strict:
+            raise e from e
+        return None
 
 
 # --------------------------------------- UTILS -------------------------------------- #
@@ -1333,14 +1357,16 @@ def _extract_keys_if_exist(
 
 def _deserialize_types(
     serialized_collection_types: Iterable[str | None],
+    strict: bool = True,
 ) -> list[type[Collection]]:
     collection_types = []
     collection_type: type[Collection] | None = None
     for t in serialized_collection_types:
         if t is None:
             continue
-        collection_type = deserialize_collection(t)
-        collection_types.append(collection_type)
+        collection_type = deserialize_collection(t, strict=strict)
+        if collection_type is not None:
+            collection_types.append(collection_type)
 
     return collection_types
 

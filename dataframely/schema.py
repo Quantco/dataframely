@@ -1238,8 +1238,13 @@ class Schema(BaseSchema, ABC):
         validation: Validation,
         source: str,
     ) -> DataFrame[Self] | LazyFrame[Self]:
+        # Use strict=False when validation is "allow" or "warn" to tolerate
+        # deserialization failures from old serialized formats
+        strict = validation not in ("allow", "warn")
         deserialized_schema = (
-            deserialize_schema(serialized_schema) if serialized_schema else None
+            deserialize_schema(serialized_schema, strict=strict)
+            if serialized_schema
+            else None
         )
 
         # Smart validation
@@ -1345,6 +1350,10 @@ def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]:
 
 @overload
 def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
+
+
+@overload
+def deserialize_schema(data: str, strict: bool) -> type[Schema] | None: ...
 
 
 def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:

@@ -289,6 +289,53 @@ def test_read_write_parquet_validation_skip_invalid_schema(
     spy.assert_not_called()
 
 
+# ---------------------------- PARQUET SPECIFICS ---------------------------------- #
+
+
+@pytest.mark.parametrize("validation", ["allow", "warn"])
+@pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize(
+    "any_tmp_path",
+    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
+    indirect=True,
+)
+def test_read_write_parquet_old_format_version(
+    any_tmp_path: str,
+    mocker: pytest_mock.MockerFixture,
+    validation: Validation,
+    lazy: bool,
+) -> None:
+    """If schema has an old/incompatible format version, we should fall back to
+    validating when validation is 'allow' or 'warn'."""
+    # Arrange
+    from fsspec import AbstractFileSystem, url_to_fs
+
+    from dataframely._storage.constants import SCHEMA_METADATA_KEY
+
+    schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
+    df = schema.create_empty()
+
+    # Write directly with custom metadata containing an old format version
+    fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
+    file_path = fs.sep.join([any_tmp_path, "test.parquet"])
+    old_format_metadata = '{"versions": {"format": "999"}}'
+    df.write_parquet(file_path, metadata={SCHEMA_METADATA_KEY: old_format_metadata})
+
+    # Act
+    spy = mocker.spy(schema, "validate")
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        if lazy:
+            schema.scan_parquet(file_path, validation=validation)
+        else:
+            schema.read_parquet(file_path, validation=validation)
+
+    # Assert - validation should be called because the old format couldn't be deserialized
+    spy.assert_called_once()
+
+
 # ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
 
 
