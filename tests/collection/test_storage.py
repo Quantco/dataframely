@@ -432,7 +432,7 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
 def test_read_write_parquet_old_format_version(
     any_tmp_path: str, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
 ) -> None:
-    """If schema has an old/incompatible format version, we should fall back to
+    """If collection has an old/incompatible format version, we should fall back to
     validating when validation is 'allow' or 'warn'."""
     # Arrange
     collection = MyCollection.create_empty()
