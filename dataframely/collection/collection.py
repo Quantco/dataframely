@@ -891,13 +891,13 @@ class Collection(BaseCollection, ABC):
                 - `"allow"`: The method tries to read the schema data from the parquet
                   files. If the stored collection schema matches this collection
                   schema, the collection is read without validation. If the stored
-                  schema mismatches this schema no metadata can be found in
+                  schema mismatches this schema, no valid metadata can be found in
                   the parquets, or the files have conflicting metadata,
                   this method automatically runs :meth:`validate` with `cast=True`.
                 - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
                 - `"forbid"`: The method never runs validation automatically and only
-                  returns if the metadata stores a collection schema that matches
+                  returns if the metadata stores a valid  collection schema that matches
                   this collection.
                 - `"skip"`: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. *Use this option
@@ -1185,7 +1185,7 @@ class Collection(BaseCollection, ABC):
             )
 
         # Use strict=False when validation is "allow" or "warn" to tolerate
-        # deserialization failures from old serialized formats
+        # missing or broken collection metadata.
         strict = validation not in ("allow", "warn")
         collection_types = _deserialize_types(
             serialized_collection_types, strict=strict
@@ -1285,6 +1285,8 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
 
     Raises:
         ValueError: If the schema format version is not supported and `strict=True`.
+        TypeError: If the schema content is invalid and `strict=True`.
+        JSONDecodeError: If the provided data is not valid JSON and `strict=True`.
 
     Attention:
         The returned collection **cannot** be used to create instances of the
@@ -1328,7 +1330,7 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
                 },
             },
         )
-    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+    except (ValueError, TypeError, JSONDecodeError, plexc.ComputeError) as e:
         if strict:
             raise e from e
         return None
@@ -1360,7 +1362,6 @@ def _deserialize_types(
     strict: bool = True,
 ) -> list[type[Collection]]:
     collection_types = []
-    collection_type: type[Collection] | None = None
     for t in serialized_collection_types:
         if t is None:
             continue
