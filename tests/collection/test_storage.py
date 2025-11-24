@@ -449,17 +449,24 @@ def test_read_write_parquet_old_schema_contents(
     )
 
     # Act & Assert
-    if validation == "forbid":
-        with pytest.raises(ValidationRequiredError):
+    match validation:
+        case "forbid":
+            with pytest.raises(ValidationRequiredError):
+                tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
+        case "allow":
+            spy = mocker.spy(MyCollection, "validate")
             tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
-    else:
-        spy = mocker.spy(MyCollection, "validate")
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=UserWarning)
+            spy.assert_called_once()
+        case "warn":
+            spy = mocker.spy(MyCollection, "validate")
+            with pytest.warns(UserWarning):
+                tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
+            spy.assert_called_once()
+        case "skip":
+            spy = mocker.spy(MyCollection, "validate")
             tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
-
-        # Validation should be called because the old format couldn't be deserialized
-        spy.assert_called_once()
+            # Validation should NOT be called because we are skipping it
+            spy.assert_not_called()
 
 
 @pytest.mark.parametrize("metadata", [None, {COLLECTION_METADATA_KEY: "invalid"}])

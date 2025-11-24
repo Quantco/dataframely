@@ -1384,7 +1384,7 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
             raise ValueError(f"Unsupported schema format version: {format}")
         return _schema_from_dict(decoded)
-    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+    except (ValueError, JSONDecodeError, plexc.ComputeError, TypeError) as e:
         if strict:
             raise e from e
         return None

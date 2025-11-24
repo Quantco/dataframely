@@ -45,6 +45,11 @@ class SchemaStorageTester(ABC):
         self, schema: type[S], path: str, lazy: Literal[False], validation: Validation
     ) -> dy.DataFrame[S]: ...
 
+    @overload
+    def read(
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
+    ) -> dy.LazyFrame[S] | dy.DataFrame[S]: ...
+
     @abstractmethod
     def read(
         self, schema: type[S], path: str, lazy: bool, validation: Validation
@@ -88,6 +93,11 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
         self, schema: type[S], path: str, lazy: Literal[False], validation: Validation
     ) -> dy.DataFrame[S]: ...
 
+    @overload
+    def read(
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
+    ) -> dy.LazyFrame[S] | dy.DataFrame[S]: ...
+
     def read(
         self, schema: type[S], path: str, lazy: bool, validation: Validation
     ) -> dy.LazyFrame[S] | dy.DataFrame[S]:
@@ -124,6 +134,11 @@ class DeltaSchemaStorageTester(SchemaStorageTester):
     def read(
         self, schema: type[S], path: str, lazy: Literal[False], validation: Validation
     ) -> dy.DataFrame[S]: ...
+
+    @overload
+    def read(
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
+    ) -> dy.LazyFrame[S] | dy.DataFrame[S]: ...
 
     def read(
         self, schema: type[S], path: str, lazy: bool, validation: Validation
