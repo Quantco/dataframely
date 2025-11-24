@@ -29,11 +29,11 @@ class SchemaStorageTester(ABC):
     def write_typed(
         self, schema: type[S], df: dy.DataFrame[S], path: str, lazy: bool
     ) -> None:
-        """Write a schema to the backend without recording schema information."""
+        """Write a schema to the backend and record schema information."""
 
     @abstractmethod
     def write_untyped(self, df: pl.DataFrame, path: str, lazy: bool) -> None:
-        """Write a schema to the backend and record schema information."""
+        """Write a schema to the backend without recording schema information."""
 
     @overload
     def read(
@@ -50,6 +50,11 @@ class SchemaStorageTester(ABC):
         self, schema: type[S], path: str, lazy: bool, validation: Validation
     ) -> dy.LazyFrame[S] | dy.DataFrame[S]:
         """Read from the backend, using schema information if available."""
+
+    @abstractmethod
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        """Overwrite the metadata stored at the given path with the provided
+        metadata."""
 
 
 class ParquetSchemaStorageTester(SchemaStorageTester):
@@ -93,6 +98,11 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
         else:
             return schema.read_parquet(self._wrap_path(path), validation=validation)
 
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        target = self._wrap_path(path)
+        data = pl.read_parquet(target)
+        data.write_parquet(target, metadata=metadata)
+
 
 class DeltaSchemaStorageTester(SchemaStorageTester):
     """Testing interface for the deltalake storage functionality of Schema."""
@@ -121,6 +131,18 @@ class DeltaSchemaStorageTester(SchemaStorageTester):
         if lazy:
             return schema.scan_delta(path, validation=validation)
         return schema.read_delta(path, validation=validation)
+
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        df = pl.read_delta(path)
+        df.head(0).write_delta(
+            path,
+            delta_write_options={
+                "commit_properties": deltalake.CommitProperties(
+                    custom_metadata=metadata
+                ),
+            },
+            mode="overwrite",
+        )
 
 
 # ------------------------------- Collection -------------------------------------------

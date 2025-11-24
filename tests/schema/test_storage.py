@@ -11,7 +11,7 @@ from polars.testing import assert_frame_equal
 import dataframely as dy
 from dataframely import Validation
 from dataframely._storage.delta import DeltaStorageBackend
-from dataframely.exc import ValidationRequiredError
+from dataframely.exc import ValidationError, ValidationRequiredError
 from dataframely.testing import create_schema
 from dataframely.testing.storage import (
     DeltaSchemaStorageTester,
@@ -292,6 +292,7 @@ def test_read_write_parquet_validation_skip_invalid_schema(
 # ---------------------------- PARQUET SPECIFICS ---------------------------------- #
 
 
+@pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("validation", ["allow", "warn", "skip", "forbid"])
 @pytest.mark.parametrize("lazy", [True, False])
 @pytest.mark.parametrize(
@@ -299,7 +300,8 @@ def test_read_write_parquet_validation_skip_invalid_schema(
     ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
     indirect=True,
 )
-def test_read_write_parquet_old_format_version(
+def test_read_write_parquet_old_metadata_contents(
+    tester: SchemaStorageTester,
     any_tmp_path: str,
     mocker: pytest_mock.MockerFixture,
     validation: Validation,
@@ -308,18 +310,14 @@ def test_read_write_parquet_old_format_version(
     """If schema has an old/incompatible content, we should fall back to validating when
     validation is 'allow', 'warn' or 'skip' or raise otherwise."""
     # Arrange
-    from fsspec import AbstractFileSystem, url_to_fs
-
     from dataframely._storage.constants import SCHEMA_METADATA_KEY
 
-    schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
+    schema = create_schema("test", {"a": dy.Int64()})
     df = schema.create_empty()
 
-    # Write directly with custom metadata containing an old format version
-    fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
-    file_path = fs.sep.join([any_tmp_path, "test.parquet"])
-    df.write_parquet(
-        file_path,
+    tester.write_typed(schema, df, any_tmp_path, lazy=lazy)
+    tester.set_metadata(
+        any_tmp_path,
         metadata={
             SCHEMA_METADATA_KEY: schema.serialize().replace(
                 "primary_key", "primary_keys"
@@ -327,19 +325,34 @@ def test_read_write_parquet_old_format_version(
         },
     )
 
-    # Act
-    spy = mocker.spy(schema, "validate")
-    import warnings
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=UserWarning)
+    # Act and assert
+    def read() -> pl.DataFrame | pl.LazyFrame:
         if lazy:
-            schema.scan_parquet(file_path, validation=validation)
+            return schema.scan_parquet(any_tmp_path, validation=validation)
         else:
-            schema.read_parquet(file_path, validation=validation)
+            return schema.read_parquet(any_tmp_path, validation=validation)
 
-    # Assert - validation should be called because the old format couldn't be deserialized
-    spy.assert_called_once()
+    if validation == "forbid":
+        with pytest.raises(ValidationError):
+            read()
+    elif validation == "allow":
+        spy = mocker.spy(schema, "validate")
+        out = read()
+        assert_frame_equal(df.lazy(), out.lazy())
+        spy.assert_called_once()
+    elif validation == "warn":
+        spy = mocker.spy(schema, "validate")
+        with pytest.warns(
+            UserWarning, match=r"requires validation: current schema does not match"
+        ):
+            out = read()
+        assert_frame_equal(df.lazy(), out.lazy())
+        spy.assert_called_once()
+    elif validation == "skip":
+        spy = mocker.spy(schema, "validate")
+        out = read()
+        assert_frame_equal(df.lazy(), out.lazy())
+        spy.assert_not_called()
 
 
 # ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
