@@ -405,10 +405,9 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
     # Arrange
     collection = MyCollection.create_empty()
     tester = ParquetCollectionStorageTester()
-    tester.write_untyped(
-        collection,
+    tester.write_untyped(collection, any_tmp_path, lazy)
+    tester.set_metadata(
         any_tmp_path,
-        lazy,
         metadata={COLLECTION_METADATA_KEY: "} this is not a valid JSON {"},
     )
 
