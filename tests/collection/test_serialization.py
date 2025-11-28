@@ -91,7 +91,7 @@ def test_roundtrip_matches(collection: type[dy.Collection]) -> None:
 def test_deserialize_unknown_format_version(strict: bool) -> None:
     serialized = '{"versions": {"format": "invalid"}}'
     if strict:
-        with pytest.raises(ValueError, match=r"Unsupported schema format version"):
+        with pytest.raises(dy.DeserializationError):
             dy.deserialize_collection(serialized)
     else:
         assert dy.deserialize_collection(serialized, strict=False) is None
@@ -101,7 +101,7 @@ def test_deserialize_unknown_format_version(strict: bool) -> None:
 def test_deserialize_invalid_json_strict_false(strict: bool) -> None:
     serialized = '{"invalid json'
     if strict:
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(dy.DeserializationError):
             dy.deserialize_collection(serialized, strict=True)
     else:
         assert dy.deserialize_collection(serialized, strict=False) is None
@@ -119,7 +119,7 @@ def test_deserialize_invalid_member_schema(strict: bool) -> None:
     broken = serialized.replace("primary_key", "primary_keys")
 
     if strict:
-        with pytest.raises(TypeError):
+        with pytest.raises(dy.DeserializationError):
             dy.deserialize_collection(broken, strict=strict)
     else:
         assert dy.deserialize_collection(broken, strict=False) is None

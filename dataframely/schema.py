@@ -40,7 +40,12 @@ from ._storage.parquet import (
 from ._typing import DataFrame, LazyFrame, Validation
 from .columns import Column, column_from_dict
 from .config import Config
-from .exc import SchemaError, ValidationError, ValidationRequiredError
+from .exc import (
+    DeserializationError,
+    SchemaError,
+    ValidationError,
+    ValidationRequiredError,
+)
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
 
@@ -1386,7 +1391,7 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         return _schema_from_dict(decoded)
     except (ValueError, JSONDecodeError, plexc.ComputeError, TypeError) as e:
         if strict:
-            raise e from e
+            raise DeserializationError("The schema could not be deserialized") from e
         return None
 
 

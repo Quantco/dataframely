@@ -184,6 +184,11 @@ class CollectionStorageTester(ABC):
     def read(self, collection: type[C], path: str, lazy: bool, **kwargs: Any) -> C:
         """Read from the backend, using collection information if available."""
 
+    @abstractmethod
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        """Overwrite the metadata stored at the given path with the provided
+        metadata."""
+
 
 class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_typed(
@@ -230,6 +235,22 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
         else:
             return collection.read_parquet(path, **kwargs)
 
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        prefix = (
+            ""
+            if fs.protocol == "file"
+            else (
+                f"{fs.protocol}://"
+                if isinstance(fs.protocol, str)
+                else f"{fs.protocol[0]}://"
+            )
+        )
+        for file in fs.glob(fs.sep.join([path, "**", "*.parquet"])):
+            file_path = f"{prefix}{file}"
+            df = pl.read_parquet(file_path)
+            df.write_parquet(file_path, metadata=metadata)
+
 
 class DeltaCollectionStorageTester(CollectionStorageTester):
     def write_typed(
@@ -258,6 +279,23 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
         if lazy:
             return collection.scan_delta(source=path, **kwargs)
         return collection.read_delta(source=path, **kwargs)
+
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        # For delta, we need to update metadata on each member table
+        for entry in fs.ls(path):
+            member_path = entry["name"] if isinstance(entry, dict) else entry
+            if fs.isdir(member_path):
+                df = pl.read_delta(member_path)
+                df.head(0).write_delta(
+                    member_path,
+                    delta_write_options={
+                        "commit_properties": deltalake.CommitProperties(
+                            custom_metadata=metadata
+                        ),
+                    },
+                    mode="overwrite",
+                )
 
 
 # ------------------------------------ Failure info ------------------------------------

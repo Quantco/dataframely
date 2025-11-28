@@ -33,7 +33,11 @@ from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
 from dataframely._storage.parquet import ParquetStorageBackend
 from dataframely._typing import LazyFrame, Validation
-from dataframely.exc import ValidationError, ValidationRequiredError
+from dataframely.exc import (
+    DeserializationError,
+    ValidationError,
+    ValidationRequiredError,
+)
 from dataframely.filter_result import FailureInfo
 from dataframely.random import Generator
 from dataframely.schema import _schema_from_dict
@@ -1332,7 +1336,9 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
         )
     except (ValueError, TypeError, JSONDecodeError, plexc.ComputeError) as e:
         if strict:
-            raise e from e
+            raise DeserializationError(
+                "The collection could not be deserialized"
+            ) from e
         return None
 
 

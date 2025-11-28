@@ -14,7 +14,7 @@ import dataframely as dy
 from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
 from dataframely.collection.collection import _reconcile_collection_types
-from dataframely.exc import ValidationRequiredError
+from dataframely.exc import DeserializationError, ValidationRequiredError
 from dataframely.testing.storage import (
     CollectionStorageTester,
     DeltaCollectionStorageTester,
@@ -422,6 +422,7 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
     spy.assert_called_once()
 
 
+@pytest.mark.parametrize("tester", TESTERS)
 @pytest.mark.parametrize("validation", ["forbid", "allow", "skip", "warn"])
 @pytest.mark.parametrize("lazy", [True, False])
 @pytest.mark.parametrize(
@@ -429,18 +430,20 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
     ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
     indirect=True,
 )
-def test_read_write_parquet_old_schema_contents(
-    any_tmp_path: str, mocker: pytest_mock.MockerFixture, validation: Any, lazy: bool
+def test_read_write_old_metadata_contents(
+    tester: CollectionStorageTester,
+    any_tmp_path: str,
+    mocker: pytest_mock.MockerFixture,
+    validation: Any,
+    lazy: bool,
 ) -> None:
     """If collection has an old/incompatible schema content, we should fall back to
     validating when validation is 'allow' or 'warn', and raise otherwise."""
     # Arrange
     collection = MyCollection.create_empty()
-    tester = ParquetCollectionStorageTester()
-    tester.write_untyped(
-        collection,
+    tester.write_typed(collection, any_tmp_path, lazy)
+    tester.set_metadata(
         any_tmp_path,
-        lazy,
         metadata={
             COLLECTION_METADATA_KEY: collection.serialize().replace(
                 "primary_key", "primary_keys"
@@ -451,7 +454,7 @@ def test_read_write_parquet_old_schema_contents(
     # Act & Assert
     match validation:
         case "forbid":
-            with pytest.raises(ValidationRequiredError):
+            with pytest.raises(DeserializationError):
                 tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
         case "allow":
             spy = mocker.spy(MyCollection, "validate")

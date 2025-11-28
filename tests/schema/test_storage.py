@@ -11,7 +11,7 @@ from polars.testing import assert_frame_equal
 import dataframely as dy
 from dataframely import Validation
 from dataframely._storage.delta import DeltaStorageBackend
-from dataframely.exc import ValidationRequiredError
+from dataframely.exc import DeserializationError, ValidationRequiredError
 from dataframely.testing import create_schema
 from dataframely.testing.storage import (
     DeltaSchemaStorageTester,
@@ -328,9 +328,7 @@ def test_read_write_parquet_old_metadata_contents(
     # Act and assert
     match validation:
         case "forbid":
-            with pytest.raises(
-                TypeError, match=r"got an unexpected keyword argument 'primary_keys'"
-            ):
+            with pytest.raises(DeserializationError):
                 tester.read(schema, any_tmp_path, lazy=lazy, validation=validation)
         case "allow":
             spy = mocker.spy(schema, "validate")
