@@ -189,6 +189,21 @@ class CollectionStorageTester(ABC):
         """Overwrite the metadata stored at the given path with the provided
         metadata."""
 
+    def _prefix_path(self, path: str, fs: AbstractFileSystem) -> str:
+        return f"{self._get_prefix(fs)}{path}"
+
+    @staticmethod
+    def _get_prefix(fs: AbstractFileSystem) -> str:
+        return (
+            ""
+            if fs.protocol == "file"
+            else (
+                f"{fs.protocol}://"
+                if isinstance(fs.protocol, str)
+                else f"{fs.protocol[0]}://"
+            )
+        )
+
 
 class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_typed(
@@ -243,21 +258,6 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
             df = pl.read_parquet(file_path)
             df.write_parquet(file_path, metadata=metadata)
 
-    def _prefix_path(self, path: str, fs: AbstractFileSystem) -> str:
-        return f"{self._get_prefix(fs)}{path}"
-
-    @staticmethod
-    def _get_prefix(fs: AbstractFileSystem) -> str:
-        return (
-            ""
-            if fs.protocol == "file"
-            else (
-                f"{fs.protocol}://"
-                if isinstance(fs.protocol, str)
-                else f"{fs.protocol[0]}://"
-            )
-        )
-
 
 class DeltaCollectionStorageTester(CollectionStorageTester):
     def write_typed(
@@ -300,7 +300,7 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
         fs: AbstractFileSystem = url_to_fs(path)[0]
         # For delta, we need to update metadata on each member table
         for entry in fs.ls(path):
-            member_path = entry["name"] if isinstance(entry, dict) else entry
+            member_path = self._prefix_path(entry, fs)
             if fs.isdir(member_path):
                 df = pl.read_delta(member_path)
                 df.head(0).write_delta(
