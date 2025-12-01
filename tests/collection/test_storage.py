@@ -1,7 +1,6 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
-import warnings
 from typing import Any
 
 import polars as pl
@@ -413,8 +412,10 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
 
     # Act
     spy = mocker.spy(MyCollection, "validate")
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=UserWarning)
+    if validation == "warn":
+        with pytest.warns(UserWarning):
+            tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
+    else:
         tester.read(MyCollection, any_tmp_path, lazy, validation=validation)
 
     # Assert

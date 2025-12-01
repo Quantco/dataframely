@@ -1288,9 +1288,8 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
         The collection loaded from the JSON data.
 
     Raises:
-        ValueError: If the schema format version is not supported and `strict=True`.
-        TypeError: If the schema content is invalid and `strict=True`.
-        JSONDecodeError: If the provided data is not valid JSON and `strict=True`.
+        DeserializationError: If the collection can not be deserialized
+            and `strict=True`.
 
     Attention:
         The returned collection **cannot** be used to create instances of the

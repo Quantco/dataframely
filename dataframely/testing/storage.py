@@ -228,7 +228,7 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
 
         fs: AbstractFileSystem = url_to_fs(path)[0]
         for file in fs.glob(fs.sep.join([path, "**", "*.parquet"])):
-            _delete_meta(f"{self._get_prefix(fs)}{file}")
+            _delete_meta(self._prefix_path(file, fs))
 
     def read(self, collection: type[C], path: str, lazy: bool, **kwargs: Any) -> C:
         if lazy:
@@ -239,9 +239,12 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
     def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
         fs: AbstractFileSystem = url_to_fs(path)[0]
         for file in fs.glob(fs.sep.join([path, "*.parquet"])):
-            file_path = f"{self._get_prefix(fs)}{file}"
+            file_path = self._prefix_path(file, fs)
             df = pl.read_parquet(file_path)
             df.write_parquet(file_path, metadata=metadata)
+
+    def _prefix_path(self, path: str, fs: AbstractFileSystem) -> str:
+        return f"{self._get_prefix(fs)}{path}"
 
     @staticmethod
     def _get_prefix(fs: AbstractFileSystem) -> str:
