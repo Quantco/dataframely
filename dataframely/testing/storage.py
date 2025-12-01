@@ -299,7 +299,8 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
     def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
         fs: AbstractFileSystem = url_to_fs(path)[0]
         # For delta, we need to update metadata on each member table
-        for member_path in fs.ls(path):
+        for entry in fs.ls(path):
+            member_path = entry["name"] if isinstance(entry, dict) else entry
             if fs.isdir(member_path):
                 df = pl.read_delta(member_path)
                 df.head(0).write_delta(
