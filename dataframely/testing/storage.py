@@ -194,6 +194,11 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_typed(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:
+            raise KeyError(
+                "`metadata` kwarg will be ignored in `write_typed`. Use `set_metadata`."
+            )
+
         # Polars does not support partitioning via kwarg on sink_parquet
         if lazy:
             kwargs.pop("partition_by", None)
@@ -206,6 +211,11 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_untyped(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:
+            raise KeyError(
+                "Cannot set metadata through `write_untyped`. Use `set_metadata`."
+            )
+
         if lazy:
             collection.sink_parquet(path, **kwargs)
         else:
@@ -217,17 +227,8 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
             df.write_parquet(file)
 
         fs: AbstractFileSystem = url_to_fs(path)[0]
-        prefix = (
-            ""
-            if fs.protocol == "file"
-            else (
-                f"{fs.protocol}://"
-                if isinstance(fs.protocol, str)
-                else f"{fs.protocol[0]}://"
-            )
-        )
         for file in fs.glob(fs.sep.join([path, "**", "*.parquet"])):
-            _delete_meta(f"{prefix}{file}")
+            _delete_meta(f"{self._get_prefix(fs)}{file}")
 
     def read(self, collection: type[C], path: str, lazy: bool, **kwargs: Any) -> C:
         if lazy:
@@ -237,7 +238,14 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
 
     def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
         fs: AbstractFileSystem = url_to_fs(path)[0]
-        prefix = (
+        for file in fs.glob(fs.sep.join([path, "*.parquet"])):
+            file_path = f"{self._get_prefix(fs)}{file}"
+            df = pl.read_parquet(file_path)
+            df.write_parquet(file_path, metadata=metadata)
+
+    @staticmethod
+    def _get_prefix(fs: AbstractFileSystem) -> str:
+        return (
             ""
             if fs.protocol == "file"
             else (
@@ -246,16 +254,17 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
                 else f"{fs.protocol[0]}://"
             )
         )
-        for file in fs.glob(fs.sep.join([path, "**", "*.parquet"])):
-            file_path = f"{prefix}{file}"
-            df = pl.read_parquet(file_path)
-            df.write_parquet(file_path, metadata=metadata)
 
 
 class DeltaCollectionStorageTester(CollectionStorageTester):
     def write_typed(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:
+            raise KeyError(
+                "`metadata` kwarg will be ignored in `write_typed`. Use `set_metadata`."
+            )
+
         extra_kwargs = {}
         if partition_by := kwargs.pop("partition_by", None):
             extra_kwargs["delta_write_options"] = {"partition_by": partition_by}
@@ -265,6 +274,10 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
     def write_untyped(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:
+            raise KeyError(
+                "Cannot set metadata through `write_untyped`. Use `set_metadata`."
+            )
         collection.write_delta(path, **kwargs)
 
         # For each member table, write an empty commit
@@ -283,8 +296,7 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
     def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
         fs: AbstractFileSystem = url_to_fs(path)[0]
         # For delta, we need to update metadata on each member table
-        for entry in fs.ls(path):
-            member_path = entry["name"] if isinstance(entry, dict) else entry
+        for member_path in fs.ls(path):
             if fs.isdir(member_path):
                 df = pl.read_delta(member_path)
                 df.head(0).write_delta(
