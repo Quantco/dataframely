@@ -209,7 +209,7 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_typed(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
-        if "metadata" in kwargs:
+        if "metadata" in kwargs:  # pragma: no cover
             raise KeyError(
                 "`metadata` kwarg will be ignored in `write_typed`. Use `set_metadata`."
             )
@@ -226,7 +226,7 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_untyped(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
-        if "metadata" in kwargs:
+        if "metadata" in kwargs:  # pragma: no cover
             raise KeyError(
                 "Cannot set metadata through `write_untyped`. Use `set_metadata`."
             )
@@ -263,7 +263,7 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
     def write_typed(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
-        if "metadata" in kwargs:
+        if "metadata" in kwargs:  # pragma: no cover
             raise KeyError(
                 "`metadata` kwarg will be ignored in `write_typed`. Use `set_metadata`."
             )
@@ -277,7 +277,7 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
     def write_untyped(
         self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
-        if "metadata" in kwargs:
+        if "metadata" in kwargs:  # pragma: no cover
             raise KeyError(
                 "Cannot set metadata through `write_untyped`. Use `set_metadata`."
             )
