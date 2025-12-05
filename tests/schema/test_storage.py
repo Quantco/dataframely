@@ -300,7 +300,7 @@ def test_read_write_parquet_validation_skip_invalid_schema(
     ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
     indirect=True,
 )
-def test_read_write_parquet_old_metadata_contents(
+def test_read_unreadable_metadata(
     tester: SchemaStorageTester,
     any_tmp_path: str,
     mocker: pytest_mock.MockerFixture,

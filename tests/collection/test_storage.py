@@ -430,7 +430,7 @@ def test_read_write_parquet_schema_json_fallback_corrupt(
     ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
     indirect=True,
 )
-def test_read_write_old_metadata_contents(
+def test_read_unreadable_metadata(
     tester: CollectionStorageTester,
     any_tmp_path: str,
     mocker: pytest_mock.MockerFixture,

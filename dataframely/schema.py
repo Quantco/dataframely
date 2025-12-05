@@ -1391,7 +1391,7 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         return _schema_from_dict(decoded)
     except (ValueError, JSONDecodeError, plexc.ComputeError, TypeError) as e:
         if strict:
-            raise DeserializationError("The schema could not be deserialized") from e
+            raise DeserializationError("The Schema metadata could not be deserialized") from e
         return None
 
 

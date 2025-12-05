@@ -901,7 +901,7 @@ class Collection(BaseCollection, ABC):
                 - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
                 - `"forbid"`: The method never runs validation automatically and only
-                  returns if the metadata stores a valid  collection schema that matches
+                  returns if the metadata stores a valid collection schema that matches
                   this collection.
                 - `"skip"`: The method never runs validation and simply reads the
                   data, entrusting the user that the schema is valid. *Use this option
@@ -1336,7 +1336,7 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
     except (ValueError, TypeError, JSONDecodeError, plexc.ComputeError) as e:
         if strict:
             raise DeserializationError(
-                "The collection could not be deserialized"
+                "The Collection metadata could not be deserialized"
             ) from e
         return None
 
