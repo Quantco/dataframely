@@ -40,7 +40,12 @@ from ._storage.parquet import (
 from ._typing import DataFrame, LazyFrame, Validation
 from .columns import Column, column_from_dict
 from .config import Config
-from .exc import SchemaError, ValidationError, ValidationRequiredError
+from .exc import (
+    DeserializationError,
+    SchemaError,
+    ValidationError,
+    ValidationRequiredError,
+)
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
 
@@ -1238,8 +1243,13 @@ class Schema(BaseSchema, ABC):
         validation: Validation,
         source: str,
     ) -> DataFrame[Self] | LazyFrame[Self]:
+        # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
+        # deserialization failures from old serialized formats.
+        strict = validation == "forbid"
         deserialized_schema = (
-            deserialize_schema(serialized_schema) if serialized_schema else None
+            deserialize_schema(serialized_schema, strict=strict)
+            if serialized_schema
+            else None
         )
 
         # Smart validation
@@ -1347,6 +1357,10 @@ def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]:
 def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
 
 
+@overload
+def deserialize_schema(data: str, strict: bool) -> type[Schema] | None: ...
+
+
 def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
     """Deserialize a schema from a JSON string.
 
@@ -1375,9 +1389,11 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
             raise ValueError(f"Unsupported schema format version: {format}")
         return _schema_from_dict(decoded)
-    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+    except (ValueError, JSONDecodeError, plexc.ComputeError, TypeError) as e:
         if strict:
-            raise e from e
+            raise DeserializationError(
+                "The Schema metadata could not be deserialized"
+            ) from e
         return None
 
 

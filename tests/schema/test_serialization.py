@@ -99,7 +99,7 @@ def test_deserialize_unknown_column_type() -> None:
             "rules": {}
         }
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)
 
 
@@ -112,13 +112,13 @@ def test_deserialize_unknown_rule_type() -> None:
             "rules": {"a": {"rule_type": "unknown"}}
         }
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)
 
 
 def test_deserialize_invalid_type() -> None:
     serialized = '{"__type__": "unknown", "value": "foo"}'
-    with pytest.raises(TypeError):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)
 
 
@@ -127,5 +127,5 @@ def test_deserialize_invalid_type() -> None:
 
 def test_deserialize_unknown_format_version() -> None:
     serialized = '{"versions": {"format": "invalid"}}'
-    with pytest.raises(ValueError, match=r"Unsupported schema format version"):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)

@@ -11,7 +11,7 @@ from polars.testing import assert_frame_equal
 import dataframely as dy
 from dataframely import Validation
 from dataframely._storage.delta import DeltaStorageBackend
-from dataframely.exc import ValidationRequiredError
+from dataframely.exc import DeserializationError, ValidationRequiredError
 from dataframely.testing import create_schema
 from dataframely.testing.storage import (
     DeltaSchemaStorageTester,
@@ -287,6 +287,67 @@ def test_read_write_parquet_validation_skip_invalid_schema(
 
     # Assert
     spy.assert_not_called()
+
+
+# ---------------------------- PARQUET SPECIFICS ---------------------------------- #
+
+
+@pytest.mark.parametrize("tester", TESTERS)
+@pytest.mark.parametrize("validation", ["allow", "warn", "skip", "forbid"])
+@pytest.mark.parametrize("lazy", [True, False])
+@pytest.mark.parametrize(
+    "any_tmp_path",
+    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
+    indirect=True,
+)
+def test_read_unreadable_metadata(
+    tester: SchemaStorageTester,
+    any_tmp_path: str,
+    mocker: pytest_mock.MockerFixture,
+    validation: Validation,
+    lazy: bool,
+) -> None:
+    """If schema has an old/incompatible content, we should fall back to validating when
+    validation is 'allow', 'warn' or 'skip' or raise otherwise."""
+    # Arrange
+    from dataframely._storage.constants import SCHEMA_METADATA_KEY
+
+    schema = create_schema("test", {"a": dy.Int64()})
+    df = schema.create_empty()
+
+    tester.write_typed(schema, df, any_tmp_path, lazy=lazy)
+    tester.set_metadata(
+        any_tmp_path,
+        metadata={
+            SCHEMA_METADATA_KEY: schema.serialize().replace(
+                "primary_key", "primary_keys"
+            )
+        },
+    )
+
+    # Act and assert
+    match validation:
+        case "forbid":
+            with pytest.raises(DeserializationError):
+                tester.read(schema, any_tmp_path, lazy=lazy, validation=validation)
+        case "allow":
+            spy = mocker.spy(schema, "validate")
+            out = tester.read(schema, any_tmp_path, lazy=lazy, validation=validation)
+            assert_frame_equal(df.lazy(), out.lazy())
+            spy.assert_called_once()
+        case "warn":
+            spy = mocker.spy(schema, "validate")
+            with pytest.warns(UserWarning, match=r"requires validation"):
+                out = tester.read(
+                    schema, any_tmp_path, lazy=lazy, validation=validation
+                )
+            assert_frame_equal(df.lazy(), out.lazy())
+            spy.assert_called_once()
+        case "skip":
+            spy = mocker.spy(schema, "validate")
+            out = tester.read(schema, any_tmp_path, lazy=lazy, validation=validation)
+            assert_frame_equal(df.lazy(), out.lazy())
+            spy.assert_not_called()
 
 
 # ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #

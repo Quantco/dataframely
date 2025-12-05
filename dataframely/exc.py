@@ -41,3 +41,10 @@ class AnnotationImplementationError(ImplementationError):
 
 class ValidationRequiredError(Exception):
     """Error raised when validation is required when reading a parquet file."""
+
+
+# ---------------------------------- DESERIALIZATION --------------------------------- #
+
+
+class DeserializationError(Exception):
+    """Error raised when deserialization of a schema or collection fails."""

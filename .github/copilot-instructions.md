@@ -202,7 +202,7 @@ validated_df: dy.DataFrame[MySchema] = MySchema.validate(df, cast=True)
 
 1. **Python code**: Run `pixi run pre-commit run` before committing
 2. **Rust code**: Run `pixi run postinstall` to rebuild, then run tests
-3. **Tests**: Ensure `pixi run test` passes
+3. **Tests**: Ensure `pixi run test` passes. If changes might affect storage backends, use `pixi run test -m s3`.
 4. **Documentation**: Update docstrings
 5. **API changes**: Ensure backward compatibility or document migration path
 
