@@ -17,6 +17,7 @@ from dataframely.exc import DeserializationError, ValidationRequiredError
 from dataframely.testing.storage import (
     CollectionStorageTester,
     DeltaCollectionStorageTester,
+    IcebergCollectionStorageTester,
     ParquetCollectionStorageTester,
 )
 
@@ -52,7 +53,11 @@ class MyCollection2(dy.Collection):
     second: dy.LazyFrame[MySecondSchema] | None
 
 
-TESTERS = [ParquetCollectionStorageTester(), DeltaCollectionStorageTester()]
+TESTERS = [
+    ParquetCollectionStorageTester(),
+    DeltaCollectionStorageTester(),
+    IcebergCollectionStorageTester(),
+]
 
 
 @pytest.mark.parametrize("tester", TESTERS)
