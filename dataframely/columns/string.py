@@ -78,9 +78,9 @@ class String(Column):
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         result = super().validation_rules(expr)
         if self.min_length is not None:
-            result["min_length"] = expr.str.len_bytes() >= self.min_length
+            result["min_length"] = expr.str.len_chars() >= self.min_length
         if self.max_length is not None:
-            result["max_length"] = expr.str.len_bytes() <= self.max_length
+            result["max_length"] = expr.str.len_chars() <= self.max_length
         if self.regex is not None:
             result["regex"] = expr.str.contains(self.regex)
         return result
