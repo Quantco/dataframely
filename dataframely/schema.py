@@ -14,7 +14,7 @@ from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
-from polars._typing import FileSource, PartitioningScheme
+from polars._typing import FileSource
 
 from dataframely._compat import deltalake
 
@@ -48,6 +48,11 @@ from .exc import (
 )
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
+
+if tuple(int(p) for p in pl.__version__.split(".")) >= (1, 36):
+    from polars.io.partition import _SinkDirectory as SinkDirectory
+else:  # pragma: no cover
+    from polars._typing import PartitioningScheme as SinkDirectory
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -861,7 +866,7 @@ class Schema(BaseSchema, ABC):
         cls,
         lf: LazyFrame[Self],
         /,
-        file: str | Path | IO[bytes] | PartitioningScheme,
+        file: str | Path | IO[bytes] | SinkDirectory,
         **kwargs: Any,
     ) -> None:
         """Stream a typed lazy frame with this schema to a parquet file.

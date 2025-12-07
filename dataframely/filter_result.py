@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
 
 import polars as pl
-from polars._typing import PartitioningScheme
 
 from dataframely._base_schema import BaseSchema
 from dataframely._compat import deltalake
@@ -19,6 +18,11 @@ from ._storage import StorageBackend
 from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame
+
+if tuple(int(p) for p in pl.__version__.split(".")) >= (1, 36):
+    from polars.io.partition import _SinkDirectory as SinkDirectory
+else:  # pragma: no cover
+    from polars._typing import PartitioningScheme as SinkDirectory
 
 if sys.version_info >= (3, 11):
     from typing import NamedTuple
@@ -164,7 +168,7 @@ class FailureInfo(Generic[S]):
         self._write(ParquetStorageBackend(), file=file, **kwargs)
 
     def sink_parquet(
-        self, file: str | Path | IO[bytes] | PartitioningScheme, **kwargs: Any
+        self, file: str | Path | IO[bytes] | SinkDirectory, **kwargs: Any
     ) -> None:
         """Stream the failure info to a single parquet file.
 
