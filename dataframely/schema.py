@@ -10,7 +10,7 @@ from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Any, Literal, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
@@ -49,10 +49,8 @@ from .exc import (
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
 
-if tuple(int(p) for p in pl.__version__.split(".")) >= (1, 36):
+if TYPE_CHECKING:
     from polars.io.partition import _SinkDirectory as SinkDirectory
-else:  # pragma: no cover
-    from polars._typing import PartitioningScheme as SinkDirectory
 
 if sys.version_info >= (3, 11):
     from typing import Self

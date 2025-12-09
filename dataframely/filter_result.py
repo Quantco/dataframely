@@ -19,10 +19,8 @@ from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame
 
-if tuple(int(p) for p in pl.__version__.split(".")) >= (1, 36):
+if TYPE_CHECKING:
     from polars.io.partition import _SinkDirectory as SinkDirectory
-else:  # pragma: no cover
-    from polars._typing import PartitioningScheme as SinkDirectory
 
 if sys.version_info >= (3, 11):
     from typing import NamedTuple
