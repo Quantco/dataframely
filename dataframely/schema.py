@@ -10,11 +10,12 @@ from abc import ABC
 from collections.abc import Iterable, Mapping, Sequence
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Literal, overload
+from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
 from polars._typing import FileSource
+from polars.io.partition import _SinkDirectory as SinkDirectory
 
 from dataframely._compat import deltalake
 
@@ -48,9 +49,6 @@ from .exc import (
 )
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
-
-if TYPE_CHECKING:
-    from polars.io.partition import _SinkDirectory as SinkDirectory
 
 if sys.version_info >= (3, 11):
     from typing import Self
