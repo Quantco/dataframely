@@ -573,7 +573,8 @@ class Collection(BaseCollection, ABC):
         # Once we've done that, we can apply the filters on this collection. To this end,
         # we iterate over all filters and store the filter results.
         filters = cls._filters()
-        if len(filters) > 0:
+        failure_propagating_members = cls._failure_propagating_members()
+        if len(filters) > 0 or len(failure_propagating_members) > 0:
             result_cls = cls._init(results)
             primary_key = cls.common_primary_key()
 
@@ -582,6 +583,17 @@ class Collection(BaseCollection, ABC):
                 keep[name] = (
                     filter.logic(result_cls)
                     .select(primary_key)
+                    .pipe(collect_if, eager)
+                    .lazy()
+                )
+
+            drop: dict[str, pl.LazyFrame] = {}
+            for failure_propagating_member in failure_propagating_members:
+                annotation_column = f"{failure_propagating_member}|failure_propagation"
+                drop[annotation_column] = (
+                    failures[failure_propagating_member]
+                    ._lf.select(primary_key)
+                    .unique()
                     .pipe(collect_if, eager)
                     .lazy()
                 )
@@ -601,15 +613,23 @@ class Collection(BaseCollection, ABC):
                         how="left",
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
+                for name, filter_drop in drop.items():
+                    lf_with_eval = lf_with_eval.join(
+                        filter_drop.with_columns(pl.lit(False).alias(name)),
+                        on=primary_key,
+                        how="left",
+                        maintain_order="left",
+                    ).with_columns(pl.col(name).fill_null(True))
 
                 lf_with_eval = lf_with_eval.pipe(collect_if, eager).lazy()
 
                 # Filtering `lf_with_eval` by the rows for which all joins
                 # "succeeded", we can identify the rows that pass all the filters. We
                 # keep these rows for the result.
+                all_filter_columns = list(keep.keys()) + list(drop.keys())
                 results[member_name] = lf_with_eval.filter(
-                    pl.all_horizontal(keep.keys())
-                ).drop(keep.keys())
+                    pl.all_horizontal(all_filter_columns)
+                ).drop(all_filter_columns)
 
                 # Filtering `lf_with_eval` with the inverse condition, we find all
                 # the problematic rows. We can build a single failure info object by
@@ -623,7 +643,7 @@ class Collection(BaseCollection, ABC):
                 #
                 failure = failures[member_name]
                 filtered_failure = lf_with_eval.filter(
-                    ~pl.all_horizontal(keep.keys())
+                    ~pl.all_horizontal(all_filter_columns)
                 ).lazy()
 
                 # If we cast previously, `failure` and `filtered_failure` have different
@@ -660,7 +680,7 @@ class Collection(BaseCollection, ABC):
 
                 failures[member_name] = FailureInfo(
                     lf=failure_lf,
-                    rule_columns=failure._rule_columns + list(keep.keys()),
+                    rule_columns=failure._rule_columns + all_filter_columns,
                     schema=failure.schema,
                 )
 
