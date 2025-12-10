@@ -87,9 +87,9 @@ class Enum(Column):
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        if len(self.categories) <= 2**8 - 2:
+        if len(self.categories) <= 2**8 - 1:
             dtype = pa.uint8()
-        elif len(self.categories) <= 2**16 - 2:
+        elif len(self.categories) <= 2**16 - 1:
             dtype = pa.uint16()
         else:
             dtype = pa.uint32()

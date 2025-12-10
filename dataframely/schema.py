@@ -14,7 +14,8 @@ from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
-from polars._typing import FileSource, PartitioningScheme
+from polars._typing import FileSource
+from polars.io.partition import _SinkDirectory as SinkDirectory
 
 from dataframely._compat import deltalake
 
@@ -861,7 +862,7 @@ class Schema(BaseSchema, ABC):
         cls,
         lf: LazyFrame[Self],
         /,
-        file: str | Path | IO[bytes] | PartitioningScheme,
+        file: str | Path | IO[bytes] | SinkDirectory,
         **kwargs: Any,
     ) -> None:
         """Stream a typed lazy frame with this schema to a parquet file.
