@@ -60,6 +60,7 @@ test-no-optional = "pytest -m 'not with_optionals'"
 [feature.optionals.dependencies]
 deltalake = "*"
 pyarrow = "*"
+pyiceberg = "*"
 pydantic = ">=2.11.9,<3"
 pydantic-core = ">=2.33.2,<3"
 sqlalchemy = ">=2"
