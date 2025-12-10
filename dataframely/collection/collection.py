@@ -613,7 +613,6 @@ class Collection(BaseCollection, ABC):
                         how="left",
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
-
                 for name, filter_drop in drop.items():
                     lf_with_eval = lf_with_eval.join(
                         filter_drop.with_columns(pl.lit(False).alias(name)),
