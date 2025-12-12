@@ -213,7 +213,7 @@ def test_precision_scale_validation(
     ],
 )
 def test_precision_scale_casting(
-    schema_precision: int | None,
+    schema_precision: int,
     schema_scale: int,
     input_dtype: DataTypeClass,
 ) -> None:
