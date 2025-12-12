@@ -98,7 +98,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         return pl.Decimal(self.precision, self.scale)
 
     def validate_dtype(self, dtype: PolarsDataType) -> bool:
-        if not dtype.is_decimal():
+        if not isinstance(dtype, pl.Decimal):
             return False
         # Scale must always match
         if dtype.scale != self.scale:

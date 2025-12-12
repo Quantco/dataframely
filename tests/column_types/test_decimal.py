@@ -224,5 +224,5 @@ def test_precision_scale_casting(
         pl.col("a").cast(input_dtype)
     )
     df_validated = TestSchema.validate(df_input, cast=True)
-    assert df_validated.schema["a"].precision == schema_precision
-    assert df_validated.schema["a"].scale == schema_scale
+    assert df_validated.schema["a"].precision == schema_precision  # type: ignore[attr-defined]
+    assert df_validated.schema["a"].scale == schema_scale  # type: ignore[attr-defined]
