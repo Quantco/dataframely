@@ -98,7 +98,15 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         return pl.Decimal(self.precision, self.scale)
 
     def validate_dtype(self, dtype: PolarsDataType) -> bool:
-        return dtype.is_decimal()
+        if not dtype.is_decimal():
+            return False
+        # Scale must always match
+        if dtype.scale != self.scale:
+            return False
+        # Precision must match if explicitly specified in the schema
+        if self.precision is not None and dtype.precision != self.precision:
+            return False
+        return True
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         if self.scale and not self.precision:
