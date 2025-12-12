@@ -215,7 +215,7 @@ def test_precision_scale_validation(
 def test_precision_scale_casting(
     schema_precision: int,
     schema_scale: int,
-    input_dtype: DataTypeClass,
+    input_dtype: pl.DataType,
 ) -> None:
     class TestSchema(dy.Schema):
         a = dy.Decimal(precision=schema_precision, scale=schema_scale)
