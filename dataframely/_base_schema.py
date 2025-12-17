@@ -173,7 +173,7 @@ class SchemaMeta(ABCMeta):
             if isinstance(value, type) and issubclass(value, pl.DataType):
                 raise TypeError(
                     f"Schema member '{attr}' is a polars DataType type. "
-                    f"Use dataframely column types (e.g., dy.String()) instead of polars types (e.g., pl.String or pl.String())."
+                    f"Use dataframely column types (e.g., dy.String()) instead of polars types (e.g., pl.String)."
                 )
 
         return cls
