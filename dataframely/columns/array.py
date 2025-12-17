@@ -15,7 +15,8 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import column_from_dict, register
-from .list import _list_primary_key_check
+from .list import List, _list_primary_key_check
+from .struct import Struct
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -120,9 +121,6 @@ class Array(Column):
         # For nested types (List, Array, Struct), we can't use reshape() directly
         # because the inner type is not a scalar. Instead, we need to construct
         # the nested structure manually.
-        from .list import List
-        from .struct import Struct
-
         if isinstance(self.inner, (List, Array, Struct)):
             # Convert to a list and then group into arrays of the specified shape
             all_elements_list = all_elements.to_list()
