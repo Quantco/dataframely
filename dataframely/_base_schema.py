@@ -162,18 +162,17 @@ class SchemaMeta(ABCMeta):
                     f"Did you forget to add parentheses?"
                 )
 
-            # Check for pl.DataType instance (e.g., pl.String() instead of dy.String())
-            if isinstance(value, pl.DataType):
-                raise TypeError(
-                    f"Schema member '{attr}' is a polars DataType instance. "
-                    f"Use dataframely column types (e.g., dy.String()) instead of polars types (e.g., pl.String())."
+            # Check for pl.DataType instance or type (e.g., pl.String() or pl.String instead of dy.String())
+            if isinstance(value, pl.DataType) or (
+                isinstance(value, type) and issubclass(value, pl.DataType)
+            ):
+                value_type = "instance" if isinstance(value, pl.DataType) else "type"
+                example = (
+                    "pl.String()" if isinstance(value, pl.DataType) else "pl.String"
                 )
-
-            # Check for pl.DataType type (e.g., pl.String instead of dy.String())
-            if isinstance(value, type) and issubclass(value, pl.DataType):
                 raise TypeError(
-                    f"Schema member '{attr}' is a polars DataType type. "
-                    f"Use dataframely column types (e.g., dy.String()) instead of polars types (e.g., pl.String)."
+                    f"Schema member '{attr}' is a polars DataType {value_type}. "
+                    f"Use dataframely column types (e.g., dy.String()) instead of polars types (e.g., {example})."
                 )
 
         return cls
