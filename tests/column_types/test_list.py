@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2025
 # SPDX-License-Identifier: BSD-3-Clause
 
+from typing import cast
+
 import polars as pl
 import pytest
 
@@ -188,4 +190,5 @@ def test_list_sampling_with_min_length(min_length: int) -> None:
     df = schema.sample(num_rows=10)
     assert len(df) == 10
     # Verify all lists have at least min_length elements
-    assert df["a"].list.len().min() >= min_length
+    min_list_len = cast(int, df["a"].list.len().min())
+    assert min_list_len >= min_length
