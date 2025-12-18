@@ -179,3 +179,13 @@ def test_inner_primary_key_struct(
     _, failure = schema.filter(df)
     assert failure.counts() == {"a|primary_key": failure_count}
     assert validation_mask(df, failure).to_list() == mask
+
+
+@pytest.mark.parametrize("min_length", [0, 10, 33, 100])
+def test_list_sampling_with_min_length(min_length: int) -> None:
+    """Test that sampling works correctly when min_length > 32."""
+    schema = create_schema("test", {"a": dy.List(dy.Int64(), min_length=min_length)})
+    df = schema.sample(num_rows=10)
+    assert len(df) == 10
+    # Verify all lists have at least min_length elements
+    assert df["a"].list.len().min() >= min_length
