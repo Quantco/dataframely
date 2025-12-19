@@ -131,9 +131,12 @@ class List(Column):
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # First, sample the number of items per list element
         # NOTE: We default to 32 for the upper bound as we need some kind of reasonable
-        #  upper bound if none is set.
+        #  upper bound if none is set. If min_length is greater than 32, we use
+        #  min_length as the default upper bound instead.
+        min_len = self.min_length or 0
+        default_max = max(32, min_len)
         element_lengths = generator.sample_int(
-            n, min=self.min_length or 0, max=(self.max_length or 32) + 1
+            n, min=min_len, max=(self.max_length or default_max) + 1
         )
 
         # Then, we can sample the inner elements in a flat series
