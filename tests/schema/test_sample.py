@@ -9,6 +9,7 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely.random import Generator
+from dataframely.testing import create_schema
 
 
 class MySimpleSchema(dy.Schema):
@@ -214,23 +215,6 @@ def test_sample_raises_superfluous_column_override() -> None:
         SchemaWithIrrelevantColumnPreProcessing.sample(100)
 
 
-def test_sample_with_inconsistent_overrides_keys_raises() -> None:
-    with pytest.raises(
-        ValueError,
-        match=(
-            r"The `overrides` entries at the following indices do not provide "
-            r"the same keys as the first entry: \[1, 2\]."
-        ),
-    ):
-        MySimpleSchema.sample(
-            overrides=[
-                {"a": 1, "b": "one"},
-                {"a": 2},
-                {"b": 2},
-            ]
-        )
-
-
 @pytest.mark.parametrize(
     "overrides,failed_column,failed_rule,failed_rows",
     [
@@ -252,3 +236,28 @@ def test_sample_invalid_override_values_raises(
     ):
         with dy.Config(max_sampling_iterations=100):  # speed up the test
             MyAdvancedSchema.sample(overrides=overrides)
+
+
+def test_sample_empty_override_sequence() -> None:
+    df = MySimpleSchema.sample(overrides=[])
+    assert len(df) == 0
+
+
+def test_sample_override_sequence_with_missing_keys() -> None:
+    df = MySimpleSchema.sample(overrides=[{"a": 1}, {"b": "two"}])
+    assert df.item(0, 0) == 1
+    assert df.item(1, 1) == "two"
+    assert len(df) == 2
+
+
+def test_sample_override_sequence_with_missing_keys_and_resampling() -> None:
+    schema = create_schema("test", {"a": dy.UInt8(primary_key=True), "b": dy.String()})
+    generator = Generator(seed=42)
+    df = schema.sample(
+        overrides=[{"a": i} for i in range(250)] + [{"b": "two"}, {"b": "three"}],
+        generator=generator,
+    )
+    assert len(df) == 252
+    assert all(df.item(i, 0) == i for i in range(250))
+    assert df.item(250, 1) == "two"
+    assert df.item(251, 1) == "three"
