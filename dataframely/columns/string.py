@@ -14,6 +14,8 @@ from dataframely.random import Generator
 from ._base import Check, Column
 from ._registry import register
 
+DEFAULT_SAMPLING_REGEX = r"[0-9a-zA-Z]"
+
 
 @register
 class String(Column):
@@ -126,9 +128,9 @@ class String(Column):
             str_max = f"{self.max_length}" if self.max_length is not None else ""
             # NOTE: We generate single-byte unicode characters here as validation uses
             #  `len_bytes()`. Potentially we need to be more accurate at some point...
-            regex = f"[\x01-\x7a]{{{str_min},{str_max}}}"
+            regex = f"{DEFAULT_SAMPLING_REGEX}{{{str_min},{str_max}}}"
         else:
-            regex = r"[\x01-\x7a]*"
+            regex = rf"{DEFAULT_SAMPLING_REGEX}*"
 
         return generator.sample_string(
             n,
