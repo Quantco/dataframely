@@ -15,7 +15,8 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import column_from_dict, register
-from .list import _list_primary_key_check
+from .list import List, _list_primary_key_check
+from .struct import Struct
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -117,9 +118,46 @@ class Array(Column):
         n_elements = n * math.prod(self.shape)
         all_elements = self.inner.sample(generator, n_elements)
 
+        # For nested types (List, Array, Struct), we can't use reshape() directly
+        # because the inner type is not a scalar. Instead, we need to construct
+        # the nested structure manually.
+        if isinstance(self.inner, (List, Array, Struct)):
+            # Convert to a list and then group into arrays of the specified shape
+            all_elements_list = all_elements.to_list()
+
+            def build_nested_structure(elements: list, shape: tuple[int, ...]) -> list:
+                """Build nested structure for a single array."""
+                if len(shape) == 1:
+                    # Base case: this is a 1D array
+                    return elements
+                else:
+                    # Recursive case: split into rows
+                    row_size = math.prod(shape[1:])
+                    rows = []
+                    for i in range(shape[0]):
+                        start = i * row_size
+                        end = start + row_size
+                        row_elements = elements[start:end]
+                        rows.append(build_nested_structure(row_elements, shape[1:]))
+                    return rows
+
+            # Build n arrays, each with the specified shape
+            elements_per_array = math.prod(self.shape)
+            nested_arrays = []
+            for i in range(n):
+                start = i * elements_per_array
+                end = start + elements_per_array
+                array_elements = all_elements_list[start:end]
+                nested_arrays.append(build_nested_structure(array_elements, self.shape))
+
+            result = pl.Series(nested_arrays, dtype=self.dtype)
+        else:
+            # For scalar types, use the original reshape approach
+            result = all_elements.reshape((n, *self.shape))
+
         # Finally, apply a null mask
         return generator._apply_null_mask(
-            all_elements.reshape((n, *self.shape)),
+            result,
             null_probability=self._null_probability,
         )
 
