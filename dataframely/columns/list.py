@@ -120,11 +120,13 @@ class List(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        if dialect.name == "postgresql":
-            return sa.ARRAY(self.inner.sqlalchemy_dtype(dialect))
-        raise NotImplementedError(
-            f"SQL column cannot have 'List' type for dialect '{dialect}'."
-        )
+        match dialect.name:
+            case "postgresql":
+                return sa.ARRAY(self.inner.sqlalchemy_dtype(dialect))
+            case _:
+                raise NotImplementedError(
+                    f"SQL column cannot have 'List' type for dialect '{dialect}'."
+                )
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:

@@ -97,15 +97,17 @@ class Array(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        if dialect.name == "postgresql":
-            # Note that the length of the array in each dimension is not supported in SQLAlchemy
-            # That is because PostgreSQL does not enforce the length anyway
-            return sa.ARRAY(
-                self.inner.sqlalchemy_dtype(dialect), dimensions=len(self.shape)
-            )
-        raise NotImplementedError(
-            f"SQL column cannot have 'Array' type for dialect '{dialect}'."
-        )
+        match dialect.name:
+            case "postgresql":
+                # Note that the length of the array in each dimension is not supported in SQLAlchemy
+                # That is because PostgreSQL does not enforce the length anyway
+                return sa.ARRAY(
+                    self.inner.sqlalchemy_dtype(dialect), dimensions=len(self.shape)
+                )
+            case _:
+                raise NotImplementedError(
+                    f"SQL column cannot have 'List' type for dialect '{dialect}'."
+                )
 
     def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
