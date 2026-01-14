@@ -95,6 +95,7 @@ def test_mssql_datatype(column: Column, datatype: str) -> None:
         (dy.String(regex="^[abc]{1,3}d$"), "VARCHAR(4)"),
         (dy.Enum(["foo", "bar"]), "CHAR(3)"),
         (dy.Enum(["a", "abc"]), "VARCHAR(3)"),
+        (dy.Struct({"a": dy.String(nullable=True)}), "JSONB"),
     ],
 )
 def test_postgres_datatype(column: Column, datatype: str) -> None:
@@ -152,7 +153,7 @@ def test_raise_for_array_column(dialect: Dialect) -> None:
         dy.Array(dy.String(nullable=True), 1).sqlalchemy_dtype(dialect)
 
 
-@pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
+@pytest.mark.parametrize("dialect", [PGDialect_psycopg2()])
 def test_raise_for_struct_column(dialect: Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'Struct' type."

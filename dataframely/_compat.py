@@ -29,6 +29,7 @@ except ImportError:
 try:
     import sqlalchemy as sa
     import sqlalchemy.dialects.mssql as sa_mssql
+    import sqlalchemy.dialects.postgresql as sa_postgresql
     from sqlalchemy import Dialect
     from sqlalchemy.dialects.mssql.pyodbc import MSDialect_pyodbc
     from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
@@ -36,6 +37,7 @@ try:
 except ImportError:
     sa = _DummyModule("sqlalchemy")  # type: ignore
     sa_mssql = _DummyModule("sqlalchemy")  # type: ignore
+    sa_postgresql = _DummyModule("sqlalchemy")  # type: ignore
 
     class sa_TypeEngine:  # type: ignore # noqa: N801
         pass
@@ -81,6 +83,7 @@ __all__ = [
     "pydantic_core_schema",
     "pydantic",
     "sa_mssql",
+    "sa_postgresql",
     "sa_TypeEngine",
     "sa",
 ]
