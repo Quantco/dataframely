@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -120,8 +120,13 @@ class List(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
-        raise NotImplementedError("SQL column cannot have 'List' type.")
+        match dialect.name:
+            case "postgresql":
+                return sa.ARRAY(self.inner.sqlalchemy_dtype(dialect))
+            case _:
+                raise NotImplementedError(
+                    f"SQL column cannot have 'List' type for dialect '{dialect}'."
+                )
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
