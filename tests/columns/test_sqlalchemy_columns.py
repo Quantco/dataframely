@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import pytest
@@ -95,6 +95,10 @@ def test_mssql_datatype(column: Column, datatype: str) -> None:
         (dy.String(regex="^[abc]{1,3}d$"), "VARCHAR(4)"),
         (dy.Enum(["foo", "bar"]), "CHAR(3)"),
         (dy.Enum(["a", "abc"]), "VARCHAR(3)"),
+        (dy.List(dy.Integer()), "INTEGER[]"),
+        (dy.List(dy.String(max_length=5)), "VARCHAR(5)[]"),
+        (dy.Array(dy.Integer(), shape=5), "INTEGER[]"),
+        (dy.Array(dy.String(max_length=5), shape=(2, 1)), "VARCHAR(5)[][]"),
     ],
 )
 def test_postgres_datatype(column: Column, datatype: str) -> None:
@@ -136,7 +140,7 @@ def test_sql_multiple_columns(dialect: Dialect) -> None:
     assert len(schema.to_sqlalchemy_columns(dialect)) == 2
 
 
-@pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
+@pytest.mark.parametrize("dialect", [MSDialect_pyodbc()])
 def test_raise_for_list_column(dialect: Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'List' type."
@@ -144,7 +148,7 @@ def test_raise_for_list_column(dialect: Dialect) -> None:
         dy.List(dy.String()).sqlalchemy_dtype(dialect)
 
 
-@pytest.mark.parametrize("dialect", [MSDialect_pyodbc(), PGDialect_psycopg2()])
+@pytest.mark.parametrize("dialect", [MSDialect_pyodbc()])
 def test_raise_for_array_column(dialect: Dialect) -> None:
     with pytest.raises(
         NotImplementedError, match="SQL column cannot have 'Array' type."

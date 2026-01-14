@@ -10,7 +10,7 @@ from typing import Any, Literal, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import PGDialect_psycopg2, pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
@@ -97,8 +97,15 @@ class Array(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
-        raise NotImplementedError("SQL column cannot have 'Array' type.")
+        if isinstance(dialect, PGDialect_psycopg2):
+            # Note that the length of the array in each dimension is not supported in SQLAlchemy
+            # That is because PostgreSQL does not enforce the length anyway
+            return sa.ARRAY(
+                self.inner.sqlalchemy_dtype(dialect), dimensions=len(self.shape)
+            )
+        raise NotImplementedError(
+            f"SQL column cannot have 'Array' type for dialect '{dialect}'."
+        )
 
     def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
