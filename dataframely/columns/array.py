@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from typing import Any, Literal, cast
 
 import polars as pl
 
-from dataframely._compat import PGDialect_psycopg2, pa, sa, sa_TypeEngine
+from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
@@ -97,7 +97,7 @@ class Array(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        if isinstance(dialect, PGDialect_psycopg2):
+        if dialect.name == "postgresql":
             # Note that the length of the array in each dimension is not supported in SQLAlchemy
             # That is because PostgreSQL does not enforce the length anyway
             return sa.ARRAY(

@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import polars as pl
 from polars.expr.array import ExprArrayNameSpace
 from polars.expr.list import ExprListNameSpace
 
-from dataframely._compat import PGDialect_psycopg2, pa, sa, sa_TypeEngine
+from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -120,7 +120,7 @@ class List(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        if isinstance(dialect, PGDialect_psycopg2):
+        if dialect.name == "postgresql":
             return sa.ARRAY(self.inner.sqlalchemy_dtype(dialect))
         raise NotImplementedError(
             f"SQL column cannot have 'List' type for dialect '{dialect}'."
