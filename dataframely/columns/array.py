@@ -106,7 +106,7 @@ class Array(Column):
                 )
             case _:
                 raise NotImplementedError(
-                    f"SQL column cannot have 'List' type for dialect '{dialect}'."
+                    f"SQL column cannot have 'Array' type for dialect '{dialect}'."
                 )
 
     def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
