@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
 
 import polars as pl
-from polars._typing import PartitioningScheme
+from polars.io.partition import _SinkDirectory as SinkDirectory
 
 from dataframely._base_schema import BaseSchema
 from dataframely._compat import deltalake
@@ -164,7 +164,7 @@ class FailureInfo(Generic[S]):
         self._write(ParquetStorageBackend(), file=file, **kwargs)
 
     def sink_parquet(
-        self, file: str | Path | IO[bytes] | PartitioningScheme, **kwargs: Any
+        self, file: str | Path | IO[bytes] | SinkDirectory, **kwargs: Any
     ) -> None:
         """Stream the failure info to a single parquet file.
 

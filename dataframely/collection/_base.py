@@ -65,6 +65,11 @@ class CollectionMember:
     #: the collection's common primary key. Two members that share common column names
     #: may not both be inlined for sampling.
     inline_for_sampling: bool = False
+    #: Whether individual row failures in this member should be propagated to the
+    #: collection, i.e., cause the common primary key of the failures to be filtered
+    #: out from the entire collection. This setting is ignored if `ignored_in_filters`
+    #: is `True`.
+    propagate_row_failures: bool = False
 
 
 # --------------------------------------- UTILS -------------------------------------- #
@@ -254,6 +259,7 @@ class CollectionMeta(ABCMeta):
                 is_optional=True,
                 ignored_in_filters=collection_member.ignored_in_filters,
                 inline_for_sampling=collection_member.inline_for_sampling,
+                propagate_row_failures=collection_member.propagate_row_failures,
             )
         elif issubclass(origin, TypedLazyFrame):
             # Happy path: required member
@@ -262,6 +268,7 @@ class CollectionMeta(ABCMeta):
                 is_optional=False,
                 ignored_in_filters=collection_member.ignored_in_filters,
                 inline_for_sampling=collection_member.inline_for_sampling,
+                propagate_row_failures=collection_member.propagate_row_failures,
             )
         else:
             # Some other unknown annotation
@@ -335,6 +342,16 @@ class BaseCollection(metaclass=CollectionMeta):
             name
             for name, member in cls.members().items()
             if not member.ignored_in_filters
+        }
+
+    @classmethod
+    def _failure_propagating_members(cls) -> set[str]:
+        """The names of all members of the collection that propagate individual row
+        failures to the collection."""
+        return {
+            name
+            for name, member in cls.members().items()
+            if member.propagate_row_failures
         }
 
     @classmethod

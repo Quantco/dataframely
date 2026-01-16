@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import pa, sa, sa_postgresql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -107,8 +107,11 @@ class Struct(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's JSON in the future.
-        raise NotImplementedError("SQL column cannot have 'Struct' type.")
+        match dialect.name:
+            case "postgresql":
+                return sa_postgresql.JSONB()
+            case _:
+                raise NotImplementedError("SQL column cannot have 'Struct' type.")
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:

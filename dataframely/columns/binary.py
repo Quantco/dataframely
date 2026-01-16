@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -21,9 +21,11 @@ class Binary(Column):
         return pl.Binary()
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        if dialect.name == "mssql":
-            return sa.VARBINARY()
-        return sa.LargeBinary()
+        match dialect.name:
+            case "mssql":
+                return sa.VARBINARY()
+            case _:
+                return sa.LargeBinary()
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:

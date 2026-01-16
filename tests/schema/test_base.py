@@ -125,3 +125,19 @@ def test_user_error_column_type_not_instance() -> None:
         class MySchemaWithColumnTypeNotInstance(dy.Schema):
             a = dy.Int32(nullable=False, primary_key=True)
             b = dy.Float64  # User error: Forgot parentheses!
+
+
+def test_user_error_polars_datatype_instance() -> None:
+    with pytest.raises(TypeError, match="polars DataType instance"):
+
+        class MySchemaWithPolarsDataTypeInstance(dy.Schema):
+            a = dy.Int32(nullable=False)
+            b = pl.String()  # User error: Used pl.String() instead of dy.String()
+
+
+def test_user_error_polars_datatype_type() -> None:
+    with pytest.raises(TypeError, match="polars DataType type"):
+
+        class MySchemaWithPolarsDataTypeType(dy.Schema):
+            a = dy.Int32(nullable=False)
+            b = pl.String  # User error: Used pl.String instead of dy.String()

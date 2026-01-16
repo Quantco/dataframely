@@ -51,6 +51,7 @@ from .columns import (
     UInt64,
 )
 from .config import Config
+from .exc import DeserializationError
 from .filter_result import FailureInfo
 from .functional import (
     concat_collection_members,
@@ -106,4 +107,5 @@ __all__ = [
     "Array",
     "Object",
     "Validation",
+    "DeserializationError",
 ]

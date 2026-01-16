@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -120,8 +120,13 @@ class List(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
-        raise NotImplementedError("SQL column cannot have 'List' type.")
+        match dialect.name:
+            case "postgresql":
+                return sa.ARRAY(self.inner.sqlalchemy_dtype(dialect))
+            case _:
+                raise NotImplementedError(
+                    f"SQL column cannot have 'List' type for dialect '{dialect}'."
+                )
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
@@ -131,9 +136,12 @@ class List(Column):
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # First, sample the number of items per list element
         # NOTE: We default to 32 for the upper bound as we need some kind of reasonable
-        #  upper bound if none is set.
+        #  upper bound if none is set. If min_length is greater than 32, we use
+        #  min_length as the default upper bound instead.
+        min_len = self.min_length or 0
+        default_max = max(32, min_len)
         element_lengths = generator.sample_int(
-            n, min=self.min_length or 0, max=(self.max_length or 32) + 1
+            n, min=min_len, max=(self.max_length or default_max) + 1
         )
 
         # Then, we can sample the inner elements in a flat series

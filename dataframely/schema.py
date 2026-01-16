@@ -7,14 +7,15 @@ import json
 import sys
 import warnings
 from abc import ABC
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from json import JSONDecodeError
 from pathlib import Path
 from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
-from polars._typing import FileSource, PartitioningScheme
+from polars._typing import FileSource
+from polars.io.partition import _SinkDirectory as SinkDirectory
 
 from dataframely._compat import deltalake
 
@@ -40,7 +41,12 @@ from ._storage.parquet import (
 from ._typing import DataFrame, LazyFrame, Validation
 from .columns import Column, column_from_dict
 from .config import Config
-from .exc import SchemaError, ValidationError, ValidationRequiredError
+from .exc import (
+    DeserializationError,
+    SchemaError,
+    ValidationError,
+    ValidationRequiredError,
+)
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
 
@@ -171,7 +177,7 @@ class Schema(BaseSchema, ABC):
         num_rows: int | None = None,
         *,
         overrides: (
-            Mapping[str, Iterable[Any]] | Sequence[Mapping[str, Any]] | None
+            Mapping[str, Sequence[Any] | Any] | Sequence[Mapping[str, Any]] | None
         ) = None,
         generator: Generator | None = None,
     ) -> DataFrame[Self]:
@@ -228,26 +234,22 @@ class Schema(BaseSchema, ABC):
         g = generator or Generator()
 
         # Precondition: valid overrides. We put them into a data frame to remember which
-        # values have been used in the algorithm below.
-        if overrides:
+        # values have been used in the algorithm below. When the user passes a sequence
+        # of mappings, they do not require to have the same keys. Hence, we have to
+        # remember that the data frame has "holes".
+        missing_override_indices: dict[str, pl.Series] = {}
+        if overrides is not None:
             override_keys = (
-                set(overrides) if isinstance(overrides, Mapping) else set(overrides[0])
+                set(overrides)
+                if isinstance(overrides, Mapping)
+                else (
+                    set.union(*[set(o.keys()) for o in overrides])
+                    if len(overrides) > 0
+                    else set()
+                )
             )
-            if isinstance(overrides, Sequence):
-                # Check that overrides entries are consistent. Not necessary for mapping
-                # overrides as polars checks the series lists upon data frame construction.
-                inconsistent_override_keys = [
-                    index
-                    for index, current in enumerate(overrides)
-                    if set(current) != override_keys
-                ]
-                if len(inconsistent_override_keys) > 0:
-                    raise ValueError(
-                        "The `overrides` entries at the following indices "
-                        "do not provide the same keys as the first entry: "
-                        f"{inconsistent_override_keys}."
-                    )
 
+            # Check that all override keys refer to valid columns
             column_names = set(cls.column_names())
             if not override_keys.issubset(column_names):
                 raise ValueError(
@@ -255,6 +257,19 @@ class Schema(BaseSchema, ABC):
                     "which are not in the schema."
                 )
 
+            # Remember the "holes" of the inputs if overrides are provided as a sequence
+            if isinstance(overrides, Sequence):
+                for key in override_keys:
+                    indices = [
+                        i for i, override in enumerate(overrides) if key not in override
+                    ]
+                    if len(indices) > 0:
+                        missing_override_indices[key] = pl.Series(indices)
+
+            # NOTE: Even if the user-provided overrides have "holes", we can still just
+            #  create the data frame. Polars will fill the missing values with nulls, we
+            #  will replace them later during sampling. If we were to already replace
+            #  them here, we would not be able to resample these values.
             values = pl.DataFrame(
                 overrides,
                 schema={
@@ -317,6 +332,7 @@ class Schema(BaseSchema, ABC):
             used_values=values.slice(0, 0),
             remaining_values=values,
             override_expressions=override_expressions,
+            missing_value_indices=missing_override_indices,
         )
 
         sampling_rounds = 1
@@ -354,6 +370,7 @@ class Schema(BaseSchema, ABC):
                 used_values=used_values,
                 remaining_values=remaining_values,
                 override_expressions=override_expressions,
+                missing_value_indices=missing_override_indices,
             )
             sampling_rounds += 1
 
@@ -382,6 +399,7 @@ class Schema(BaseSchema, ABC):
         used_values: pl.DataFrame,
         remaining_values: pl.DataFrame,
         override_expressions: list[pl.Expr],
+        missing_value_indices: dict[str, pl.Series],
     ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
         """Private method to sample a data frame with the schema including subsequent
         filtering.
@@ -399,6 +417,33 @@ class Schema(BaseSchema, ABC):
                 for name, col in cls.columns().items()
             }
         )
+
+        # If we have missing value indices, we need to sample new values for the
+        # indices that overlap with indices in the remaining values and replace them
+        # in the sampled data frame.
+        for name, indices in missing_value_indices.items():
+            remapped_indices = (
+                indices.to_frame("idx")
+                .join(
+                    remaining_values.select("__row_index__").with_row_index(
+                        "__row_index_loop__"
+                    ),
+                    left_on="idx",
+                    right_on="__row_index__",
+                )
+                .select("__row_index_loop__")
+                .to_series()
+            )
+            if (num := len(remapped_indices)) > 0:
+                sampled_values = cls.columns()[name].sample(generator, num)
+                sampled = sampled.with_columns(
+                    sampled[name]
+                    # NOTE: We need to sort here as `scatter` requires sorted indices.
+                    #  Due to concatenations in `remaining_values`, the indices can go
+                    #  out of order.
+                    .scatter(remapped_indices.sort(), sampled_values)
+                    .alias(name)
+                )
 
         combined_dataframe = pl.concat([previous_result, sampled])
         # Pre-process columns before filtering.
@@ -856,7 +901,7 @@ class Schema(BaseSchema, ABC):
         cls,
         lf: LazyFrame[Self],
         /,
-        file: str | Path | IO[bytes] | PartitioningScheme,
+        file: str | Path | IO[bytes] | SinkDirectory,
         **kwargs: Any,
     ) -> None:
         """Stream a typed lazy frame with this schema to a parquet file.
@@ -1238,8 +1283,13 @@ class Schema(BaseSchema, ABC):
         validation: Validation,
         source: str,
     ) -> DataFrame[Self] | LazyFrame[Self]:
+        # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
+        # deserialization failures from old serialized formats.
+        strict = validation == "forbid"
         deserialized_schema = (
-            deserialize_schema(serialized_schema) if serialized_schema else None
+            deserialize_schema(serialized_schema, strict=strict)
+            if serialized_schema
+            else None
         )
 
         # Smart validation
@@ -1347,6 +1397,10 @@ def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]:
 def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
 
 
+@overload
+def deserialize_schema(data: str, strict: bool) -> type[Schema] | None: ...
+
+
 def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
     """Deserialize a schema from a JSON string.
 
@@ -1375,9 +1429,11 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
             raise ValueError(f"Unsupported schema format version: {format}")
         return _schema_from_dict(decoded)
-    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+    except (ValueError, JSONDecodeError, plexc.ComputeError, TypeError) as e:
         if strict:
-            raise e from e
+            raise DeserializationError(
+                "The Schema metadata could not be deserialized"
+            ) from e
         return None
 
 
