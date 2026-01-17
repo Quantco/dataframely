@@ -190,6 +190,36 @@ def test_sample_array(generator: Generator) -> None:
     assert set(samples.arr.len()) == {2, None}
 
 
+@pytest.mark.parametrize(
+    "arr_size,n_samples",
+    [
+        (1, 1),
+        (2, 1),
+        (3, 5),
+        (1, 10),
+    ],
+)
+def test_sample_array_list(arr_size: int, n_samples: int, generator: Generator) -> None:
+    """Test sampling for Array(List(...), ...) which previously failed."""
+    column = dy.Array(dy.List(dy.Bool()), arr_size)
+    samples = sample_and_validate(column, generator, n=n_samples)
+    assert len(samples) == n_samples
+
+
+def test_sample_array_of_array(generator: Generator) -> None:
+    """Test sampling for Array(Array(...), ...)."""
+    column = dy.Array(dy.Array(dy.Bool(), 2), 3)
+    samples = sample_and_validate(column, generator, n=10)
+    assert len(samples) == 10
+
+
+def test_sample_array_of_struct(generator: Generator) -> None:
+    """Test sampling for Array(Struct(...), ...)."""
+    column = dy.Array(dy.Struct({"x": dy.Bool(), "y": dy.Integer()}), 2)
+    samples = sample_and_validate(column, generator, n=10)
+    assert len(samples) == 10
+
+
 def test_sample_struct(generator: Generator) -> None:
     column = dy.Struct(
         {"a": dy.String(regex="[abc]"), "b": dy.String(regex="[a-z]xx")}, nullable=True
