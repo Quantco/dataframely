@@ -318,8 +318,7 @@ class Column(ABC):
         }
 
         # Always include doc from the base Column class even if not in subclass signature
-        if "doc" not in result:
-            result["doc"] = self.doc
+        result["doc"] = self.doc
 
         return result
 
@@ -349,8 +348,7 @@ class Column(ABC):
         column = cls(**column_data)
 
         # Set doc attribute directly if it was in the serialized data
-        if doc_value is not None:
-            column.doc = doc_value
+        column.doc = doc_value
 
         return column
 
