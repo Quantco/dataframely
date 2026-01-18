@@ -34,14 +34,14 @@ ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
 
 def _extract_column_docstrings(cls: type) -> dict[str, str]:
     """Extract docstrings for class attributes from source code.
-    
+
     This function parses the source code of a class to find string literals
     that immediately follow attribute assignments. These are treated as
     documentation strings for those attributes.
-    
+
     Args:
         cls: The class to extract docstrings from.
-    
+
     Returns:
         A dictionary mapping attribute names to their docstrings.
     """
@@ -49,34 +49,35 @@ def _extract_column_docstrings(cls: type) -> dict[str, str]:
         source = inspect.getsource(cls)
         # Dedent to handle indented class definitions
         tree = ast.parse(textwrap.dedent(source))
-        
+
         # Find the class definition
         class_def = None
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 class_def = node
                 break
-        
+
         if not class_def:
             return {}
-        
+
         # Extract docstrings that appear after assignments
         docstrings = {}
         for i in range(len(class_def.body) - 1):
             current = class_def.body[i]
             next_stmt = class_def.body[i + 1]
-            
+
             # Check if current is an assignment and next is a string constant
-            if (isinstance(current, ast.Assign) and 
-                isinstance(next_stmt, ast.Expr) and 
-                isinstance(next_stmt.value, ast.Constant) and
-                isinstance(next_stmt.value.value, str)):
-                
+            if (
+                isinstance(current, ast.Assign)
+                and isinstance(next_stmt, ast.Expr)
+                and isinstance(next_stmt.value, ast.Constant)
+                and isinstance(next_stmt.value.value, str)
+            ):
                 # Get the target name(s)
                 for target in current.targets:
                     if isinstance(target, ast.Name):
                         docstrings[target.id] = next_stmt.value.value
-        
+
         return docstrings
     except (OSError, TypeError, SyntaxError):
         # Source not available or cannot be parsed
@@ -166,7 +167,7 @@ class SchemaMeta(ABCMeta):
                 if value is col:
                     original_name = attr
                     break
-            
+
             # If we found a docstring for this column and it doesn't already have one,
             # attach it
             if original_name and original_name in docstrings and col.doc is None:

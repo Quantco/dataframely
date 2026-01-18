@@ -2,216 +2,218 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
-import pytest
 
 import dataframely as dy
 
 
-def test_column_docstring_basic():
+def test_column_docstring_basic() -> None:
     """Test basic column docstring extraction."""
-    
+
     class MySchema(dy.Schema):
-        """Schema docstring"""
-        
+        """Schema docstring."""
+
         col1 = dy.String(nullable=False)
-        """This is the documentation for col1"""
-        
+        """This is the documentation for col1."""
+
         col2 = dy.Integer()
-        """This is the documentation for col2"""
-        
+        """This is the documentation for col2."""
+
         col3 = dy.Float64()
-    
+
     columns = MySchema.columns()
-    assert columns["col1"].doc == "This is the documentation for col1"
-    assert columns["col2"].doc == "This is the documentation for col2"
+    assert columns["col1"].doc == "This is the documentation for col1."
+    assert columns["col2"].doc == "This is the documentation for col2."
     assert columns["col3"].doc is None
 
 
-def test_column_docstring_multiline():
+def test_column_docstring_multiline() -> None:
     """Test multiline column docstrings."""
-    
+
     class MySchema(dy.Schema):
         col1 = dy.String()
         """This is a multiline docstring.
-        
+
         It has multiple lines and paragraphs.
         """
-        
+
         col2 = dy.Integer()
-        """Single line after col2"""
-    
+        """Single line after col2."""
+
     columns = MySchema.columns()
-    assert "multiline" in columns["col1"].doc
-    assert "multiple lines" in columns["col1"].doc
-    assert columns["col2"].doc == "Single line after col2"
+    assert columns["col1"].doc is not None and "multiline" in columns["col1"].doc
+    assert columns["col1"].doc is not None and "multiple lines" in columns["col1"].doc
+    assert columns["col2"].doc == "Single line after col2."
 
 
-def test_column_docstring_with_alias():
+def test_column_docstring_with_alias() -> None:
     """Test column docstrings work with aliased columns."""
-    
+
     class MySchema(dy.Schema):
         col_python_name = dy.String(alias="col-sql-name")
-        """Documentation for the aliased column"""
-    
+        """Documentation for the aliased column."""
+
     columns = MySchema.columns()
     # The column is stored under its alias
     assert "col-sql-name" in columns
-    assert columns["col-sql-name"].doc == "Documentation for the aliased column"
+    assert columns["col-sql-name"].doc == "Documentation for the aliased column."
 
 
-def test_column_docstring_with_inheritance():
+def test_column_docstring_with_inheritance() -> None:
     """Test column docstrings with schema inheritance."""
-    
+
     class BaseSchema(dy.Schema):
         base_col = dy.String()
-        """Base column documentation"""
-    
+        """Base column documentation."""
+
     class ChildSchema(BaseSchema):
         child_col = dy.Integer()
-        """Child column documentation"""
-    
+        """Child column documentation."""
+
     columns = ChildSchema.columns()
-    assert columns["base_col"].doc == "Base column documentation"
-    assert columns["child_col"].doc == "Child column documentation"
+    assert columns["base_col"].doc == "Base column documentation."
+    assert columns["child_col"].doc == "Child column documentation."
 
 
-def test_column_docstring_overridden_in_child():
+def test_column_docstring_overridden_in_child() -> None:
     """Test that docstrings can be overridden in child schemas."""
-    
+
     class ParentSchema(dy.Schema):
         col1 = dy.String()
-        """Parent documentation"""
-    
+        """Parent documentation."""
+
     class ChildSchema(ParentSchema):
         col1 = dy.String()
-        """Child documentation"""
-    
+        """Child documentation."""
+
     parent_columns = ParentSchema.columns()
     child_columns = ChildSchema.columns()
-    
+
     # Each schema should have its own docstring
-    assert parent_columns["col1"].doc == "Parent documentation"
-    assert child_columns["col1"].doc == "Child documentation"
+    assert parent_columns["col1"].doc == "Parent documentation."
+    assert child_columns["col1"].doc == "Child documentation."
 
 
-def test_column_docstring_serialization():
+def test_column_docstring_serialization() -> None:
     """Test that column docstrings are preserved in serialization."""
-    
+
     class MySchema(dy.Schema):
         col1 = dy.String(nullable=False)
-        """Documentation for col1"""
-        
+        """Documentation for col1."""
+
         col2 = dy.Integer()
-    
+
     # Serialize the schema
     serialized = MySchema.serialize()
-    
+
     # Deserialize it back
     from dataframely.schema import deserialize_schema
+
     deserialized = deserialize_schema(serialized)
-    
+
     # Check that docstrings are preserved
     columns = deserialized.columns()
-    assert columns["col1"].doc == "Documentation for col1"
+    assert columns["col1"].doc == "Documentation for col1."
     assert columns["col2"].doc is None
 
 
-def test_column_docstring_validation_not_affected():
+def test_column_docstring_validation_not_affected() -> None:
     """Test that column docstrings don't affect validation."""
-    
+
     class MySchema(dy.Schema):
         name = dy.String(nullable=False)
-        """Name documentation"""
-        
+        """Name documentation."""
+
         age = dy.UInt8()
-        """Age documentation"""
-    
+        """Age documentation."""
+
     # Create a valid DataFrame
-    df = pl.DataFrame({
-        "name": ["Alice", "Bob"],
-        "age": [30, 25],
-    })
-    
+    df = pl.DataFrame(
+        {
+            "name": ["Alice", "Bob"],
+            "age": [30, 25],
+        }
+    )
+
     # Validation should work normally
     result = MySchema.validate(df, cast=True)
     assert len(result) == 2
 
 
-def test_column_docstring_in_repr():
+def test_column_docstring_in_repr() -> None:
     """Test that doc parameter appears in column repr when set."""
-    
+
     # Create a schema with docstrings
     class MySchema(dy.Schema):
         col_with_doc = dy.String()
-        """Test documentation"""
-        
+        """Test documentation."""
+
         col_without_doc = dy.String()
-    
+
     columns = MySchema.columns()
     col_with_doc = columns["col_with_doc"]
     col_without_doc = columns["col_without_doc"]
-    
+
     # Doc should appear in repr when set
     assert "doc=" in repr(col_with_doc)
     # Doc should not appear when it's None (default value)
     assert "doc=" not in repr(col_without_doc)
 
 
-def test_column_docstring_empty_string():
+def test_column_docstring_empty_string() -> None:
     """Test handling of empty docstrings."""
-    
+
     class MySchema(dy.Schema):
         col1 = dy.String()
         ""
-        
+
         col2 = dy.Integer()
         """"""
-    
+
     columns = MySchema.columns()
     # Empty strings should still be captured
     assert columns["col1"].doc == ""
     assert columns["col2"].doc == ""
 
 
-def test_schema_matches_with_docstrings():
+def test_schema_matches_with_docstrings() -> None:
     """Test that schema matching considers docstrings."""
-    
+
     class Schema1(dy.Schema):
         col1 = dy.String()
-        """Doc 1"""
-    
+        """Doc 1."""
+
     class Schema2(dy.Schema):
         col1 = dy.String()
-        """Doc 1"""
-    
+        """Doc 1."""
+
     class Schema3(dy.Schema):
         col1 = dy.String()
-        """Doc 2"""
-    
+        """Doc 2."""
+
     class Schema4(dy.Schema):
         col1 = dy.String()
-    
+
     # Same docstrings should match
     assert Schema1.matches(Schema2)
-    
+
     # Different docstrings should not match
     assert not Schema1.matches(Schema3)
-    
+
     # Missing vs present docstring should not match
     assert not Schema1.matches(Schema4)
 
 
-def test_column_docstring_with_primary_key():
+def test_column_docstring_with_primary_key() -> None:
     """Test column docstrings work with primary key columns."""
-    
+
     class MySchema(dy.Schema):
         id = dy.Integer(primary_key=True)
-        """The unique identifier"""
-        
+        """The unique identifier."""
+
         name = dy.String()
-        """The name field"""
-    
+        """The name field."""
+
     columns = MySchema.columns()
-    assert columns["id"].doc == "The unique identifier"
+    assert columns["id"].doc == "The unique identifier."
     assert columns["id"].primary_key is True
-    assert columns["name"].doc == "The name field"
+    assert columns["name"].doc == "The name field."

@@ -316,11 +316,11 @@ class Column(ABC):
                 if param not in ("self", "alias")
             },
         }
-        
+
         # Always include doc from the base Column class even if not in subclass signature
         if "doc" not in result:
             result["doc"] = self.doc
-        
+
         return result
 
     @classmethod
@@ -338,20 +338,20 @@ class Column(ABC):
         """
         # Extract doc separately since it may not be in the subclass signature
         doc_value = data.get("doc")
-        
+
         # Create the column with parameters that match its __init__ signature
         column_data = {
             k: (cast(Any, _check_from_expr(v)) if k == "check" else v)
             for k, v in data.items()
             if k not in ("column_type", "doc")
         }
-        
+
         column = cls(**column_data)
-        
+
         # Set doc attribute directly if it was in the serialized data
         if doc_value is not None:
             column.doc = doc_value
-        
+
         return column
 
     # ----------------------------------- EQUALITY ----------------------------------- #
@@ -382,7 +382,7 @@ class Column(ABC):
             #  :meth:`Schema.matches`.
             if attr not in ("self", "alias")
         )
-        
+
         # Also check the doc attribute from the base Column class
         return sig_match and self.doc == other.doc
 
@@ -409,11 +409,11 @@ class Column(ABC):
                 getattr(self, attribute) == param_details.default
             )
         ]
-        
+
         # Also include doc from base Column class if it's not None
         if self.doc is not None:
             parts.append(f"doc={repr(self.doc)}")
-        
+
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
     def __str__(self) -> str:
