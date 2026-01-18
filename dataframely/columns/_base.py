@@ -47,6 +47,7 @@ class Column(ABC):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        doc: str | None = None,
     ):
         """
         Args:
@@ -70,6 +71,9 @@ class Column(ABC):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            doc: A documentation string for the column. This can be automatically
+                extracted from a docstring placed immediately after the column definition
+                in a schema class.
         """
 
         if nullable and primary_key:
@@ -80,6 +84,7 @@ class Column(ABC):
         self.check = check
         self.alias = alias
         self.metadata = metadata
+        self.doc = doc
         # The name may be overridden by the schema on column access.
         self._name = ""
 
@@ -299,7 +304,7 @@ class Column(ABC):
         if self.__class__.__name__ not in _TYPE_MAPPING:
             raise ValueError("Cannot serialize non-native dataframely column types.")
 
-        return {
+        result = {
             "column_type": self.__class__.__name__,
             **{
                 param: (
@@ -311,6 +316,12 @@ class Column(ABC):
                 if param not in ("self", "alias")
             },
         }
+        
+        # Always include doc from the base Column class even if not in subclass signature
+        if "doc" not in result:
+            result["doc"] = self.doc
+        
+        return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
@@ -325,13 +336,23 @@ class Column(ABC):
         Attention:
             This method is only intended for internal use.
         """
-        return cls(
-            **{
-                k: (cast(Any, _check_from_expr(v)) if k == "check" else v)
-                for k, v in data.items()
-                if k != "column_type"
-            }
-        )
+        # Extract doc separately since it may not be in the subclass signature
+        doc_value = data.get("doc")
+        
+        # Create the column with parameters that match its __init__ signature
+        column_data = {
+            k: (cast(Any, _check_from_expr(v)) if k == "check" else v)
+            for k, v in data.items()
+            if k not in ("column_type", "doc")
+        }
+        
+        column = cls(**column_data)
+        
+        # Set doc attribute directly if it was in the serialized data
+        if doc_value is not None:
+            column.doc = doc_value
+        
+        return column
 
     # ----------------------------------- EQUALITY ----------------------------------- #
 
@@ -350,7 +371,8 @@ class Column(ABC):
             return False
 
         attributes = inspect.signature(self.__class__.__init__)
-        return all(
+        # Check all attributes in the signature
+        sig_match = all(
             self._attributes_match(
                 getattr(self, attr), getattr(other, attr), attr, expr
             )
@@ -360,6 +382,9 @@ class Column(ABC):
             #  :meth:`Schema.matches`.
             if attr not in ("self", "alias")
         )
+        
+        # Also check the doc attribute from the base Column class
+        return sig_match and self.doc == other.doc
 
     def _attributes_match(
         self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
@@ -384,6 +409,11 @@ class Column(ABC):
                 getattr(self, attribute) == param_details.default
             )
         ]
+        
+        # Also include doc from base Column class if it's not None
+        if self.doc is not None:
+            parts.append(f"doc={repr(self.doc)}")
+        
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
     def __str__(self) -> str:

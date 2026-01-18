@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import ast
+import inspect
 import sys
 import textwrap
 from abc import ABCMeta
@@ -28,6 +30,57 @@ _RULE_ATTR = "__dataframely_rules__"
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
 
 # --------------------------------------- UTILS -------------------------------------- #
+
+
+def _extract_column_docstrings(cls: type) -> dict[str, str]:
+    """Extract docstrings for class attributes from source code.
+    
+    This function parses the source code of a class to find string literals
+    that immediately follow attribute assignments. These are treated as
+    documentation strings for those attributes.
+    
+    Args:
+        cls: The class to extract docstrings from.
+    
+    Returns:
+        A dictionary mapping attribute names to their docstrings.
+    """
+    try:
+        source = inspect.getsource(cls)
+        # Dedent to handle indented class definitions
+        tree = ast.parse(textwrap.dedent(source))
+        
+        # Find the class definition
+        class_def = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                class_def = node
+                break
+        
+        if not class_def:
+            return {}
+        
+        # Extract docstrings that appear after assignments
+        docstrings = {}
+        for i in range(len(class_def.body) - 1):
+            current = class_def.body[i]
+            next_stmt = class_def.body[i + 1]
+            
+            # Check if current is an assignment and next is a string constant
+            if (isinstance(current, ast.Assign) and 
+                isinstance(next_stmt, ast.Expr) and 
+                isinstance(next_stmt.value, ast.Constant) and
+                isinstance(next_stmt.value.value, str)):
+                
+                # Get the target name(s)
+                for target in current.targets:
+                    if isinstance(target, ast.Name):
+                        docstrings[target.id] = next_stmt.value.value
+        
+        return docstrings
+    except (OSError, TypeError, SyntaxError):
+        # Source not available or cannot be parsed
+        return {}
 
 
 def _build_rules(
@@ -103,6 +156,21 @@ class SchemaMeta(ABCMeta):
         result.update(mcs._get_metadata(namespace))
         namespace[_COLUMN_ATTR] = result.columns
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
+
+        # Extract and attach docstrings to columns
+        docstrings = _extract_column_docstrings(cls)
+        for col_name, col in result.columns.items():
+            # Use the original attribute name (not alias) to match docstrings
+            original_name = None
+            for attr, value in namespace.items():
+                if value is col:
+                    original_name = attr
+                    break
+            
+            # If we found a docstring for this column and it doesn't already have one,
+            # attach it
+            if original_name and original_name in docstrings and col.doc is None:
+                col.doc = docstrings[original_name]
 
         # Assign rules retroactively as we only encounter rule factories in the result
         rules = {name: factory.make(cls) for name, factory in result.rules.items()}
