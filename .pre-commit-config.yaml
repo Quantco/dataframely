@@ -6,7 +6,7 @@ repos:
       # workaround for https://github.com/prefix-dev/pixi/issues/1482
       - id: pixi-install
         name: pixi-install
-        entry: pixi install -e default -e lint
+        entry: pixi install -e default -e lint -e polars-backward-1 -e polars-backward-2
         language: system
         always_run: true
         require_serial: true
@@ -45,6 +45,20 @@ repos:
       - id: mypy
         name: mypy
         entry: pixi run -e default mypy
+        language: system
+        types: [python]
+        require_serial: true
+      # mypy with old polars
+      - id: mypy
+        name: mypy-polars-backward-1
+        entry: pixi run -e default-polars-backward-1 mypy --cache-dir .mypy_cache_polars_backward_1
+        language: system
+        types: [python]
+        require_serial: true
+      # mypy with even older polars
+      - id: mypy
+        name: mypy-polars-backward-2
+        entry: pixi run -e default-polars-backward-2 mypy --cache-dir .mypy_cache_polars_backward_2
         language: system
         types: [python]
         require_serial: true

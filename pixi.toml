@@ -122,7 +122,7 @@ install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :a
 
 [environments]
 build = ["build"]
-default = ["dev", "lint", "optionals", "py314", "test"]
+default = ["dev", "lint", "optionals", "py314", "test", "polars-latest"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]
@@ -140,3 +140,19 @@ py314-optionals = ["optionals", "py314", "test", "polars-latest"]
 # Polars compatibility envs
 polars-backward-1 = ["py314", "test", "polars-backward-1"]
 polars-backward-2 = ["py314", "test", "polars-backward-2"]
+default-polars-backward-1 = [
+  "dev",
+  "lint",
+  "optionals",
+  "py314",
+  "test",
+  "polars-backward-1",
+]
+default-polars-backward-2 = [
+  "dev",
+  "lint",
+  "optionals",
+  "py314",
+  "test",
+  "polars-backward-2",
+]
