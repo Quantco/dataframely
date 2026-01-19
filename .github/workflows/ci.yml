@@ -26,7 +26,7 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@82d477f15f3a381dbcc8adc1206ce643fe110fb7 # v0.9.3
         with:
-          environments: default lint
+          environments: default lint polars-minimal
       - name: Install Rust
         run: rustup show
       - name: Cache Rust dependencies

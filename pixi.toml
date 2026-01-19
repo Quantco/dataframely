@@ -112,9 +112,11 @@ python = "3.13.*"
 python = "3.14.*"
 
 [feature.polars-minimal.dependencies]
+# NOTE: Update docs/faq.md when updating this.
 polars = "1.35.*"
 
 [feature.polars-latest.dependencies]
+# NOTE: Update docs/faq.md when updating this.
 polars = "1.36.*"
 
 [feature.nightly.tasks]
