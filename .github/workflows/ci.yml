@@ -57,10 +57,7 @@ jobs:
             with_optionals: true
           # Test polars backward compatibility, only one OS
           - os: ubuntu-latest
-            environment: polars-backward-1
-            with_optionals: false
-          - os: ubuntu-latest
-            environment: polars-backward-2
+            environment: polars-minimal
             with_optionals: false
     steps:
       - name: Checkout branch

@@ -13,7 +13,10 @@ python = ">=3.10"
 
 fsspec = ">=2025.9"
 numpy = "*"
-# NOTE: When bumping this, also bump backward compatibility features below
+
+# NOTE: This is the oldest supported polars version.
+# It should always match the version in feature.polars-minimal.
+# The latest polars version is in feature.polars-latest.
 polars = ">=1.35"
 
 maturin = ">=1.7,<2"
@@ -108,11 +111,8 @@ python = "3.13.*"
 [feature.py314.dependencies]
 python = "3.14.*"
 
-[feature.polars-backward-2.dependencies]
+[feature.polars-minimal.dependencies]
 polars = "1.35.*"
-
-[feature.polars-backward-1.dependencies]
-polars = "1.36.*"
 
 [feature.polars-latest.dependencies]
 polars = "1.37.*"
@@ -138,21 +138,12 @@ py314 = ["py314", "test", "polars-latest"]
 py314-optionals = ["optionals", "py314", "test", "polars-latest"]
 
 # Polars compatibility envs
-polars-backward-1 = ["py314", "test", "polars-backward-1"]
-polars-backward-2 = ["py314", "test", "polars-backward-2"]
-default-polars-backward-1 = [
+polars-minimal = ["py314", "test", "polars-minimal"]
+default-polars-minimal = [
   "dev",
   "lint",
   "optionals",
   "py314",
   "test",
-  "polars-backward-1",
-]
-default-polars-backward-2 = [
-  "dev",
-  "lint",
-  "optionals",
-  "py314",
-  "test",
-  "polars-backward-2",
+  "polars-minimal",
 ]
