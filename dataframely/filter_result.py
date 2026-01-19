@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
 
 import polars as pl
-from polars.io.partition import _SinkDirectory as SinkDirectory
 
 from dataframely._base_schema import BaseSchema
 from dataframely._compat import deltalake
 
+from ._compat import PartitionSchemeOrSinkDirectory
 from ._storage import StorageBackend
 from ._storage.delta import DeltaStorageBackend
 from ._storage.parquet import ParquetStorageBackend
@@ -31,6 +31,7 @@ if TYPE_CHECKING:  # pragma: no cover
 UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
 
 S = TypeVar("S", bound=BaseSchema)
+
 
 # ----------------------------------- FILTER RESULT ---------------------------------- #
 
@@ -73,7 +74,8 @@ class LazyFilterResult(NamedTuple, Generic[S]):
             [self.result.lazy(), self.failure._lf], **kwargs
         )
         return FilterResult(
-            result=result_df,  # type: ignore
+            # Whether the type ignore is necessary depends on the polars version.
+            result=result_df,  # type: ignore[arg-type,unused-ignore]
             failure=FailureInfo(
                 failure_df.lazy(), self.failure._rule_columns, self.failure.schema
             ),
@@ -164,7 +166,9 @@ class FailureInfo(Generic[S]):
         self._write(ParquetStorageBackend(), file=file, **kwargs)
 
     def sink_parquet(
-        self, file: str | Path | IO[bytes] | SinkDirectory, **kwargs: Any
+        self,
+        file: str | Path | IO[bytes] | PartitionSchemeOrSinkDirectory,
+        **kwargs: Any,
     ) -> None:
         """Stream the failure info to a single parquet file.
 

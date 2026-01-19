@@ -1,8 +1,9 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
-
 from typing import Any
+
+import polars as pl
 
 
 class _DummyModule:  # pragma: no cover
@@ -58,7 +59,6 @@ try:
 except ImportError:
     pa = _DummyModule("pyarrow")
 
-
 # -------------------------------------- PYDANTIC ------------------------------------ #
 
 try:
@@ -71,6 +71,20 @@ try:
 except ImportError:
     pydantic_core_schema = _DummyModule("pydantic_core_schema")  # type: ignore
 
+# --------------------------------------- POLARS ------------------------------------- #
+
+_polars_version_tuple = tuple(
+    int(part) if part.isdigit() else part for part in pl.__version__.split(".")
+)
+if _polars_version_tuple < (1, 36):
+    from polars._typing import (  # type: ignore[attr-defined,unused-ignore]
+        PartitioningScheme as PartitionSchemeOrSinkDirectory,
+    )
+else:
+    from polars.io.partition import (  # type: ignore[no-redef,attr-defined,unused-ignore]
+        _SinkDirectory as PartitionSchemeOrSinkDirectory,
+    )
+
 # ------------------------------------------------------------------------------------ #
 
 __all__ = [
@@ -78,6 +92,7 @@ __all__ = [
     "DeltaTable",
     "Dialect",
     "MSDialect_pyodbc",
+    "PartitionSchemeOrSinkDirectory",
     "pa",
     "PGDialect_psycopg2",
     "pydantic_core_schema",
