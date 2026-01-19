@@ -37,7 +37,7 @@ See our documentation on [group rules](./quickstart.md#group-rules).
 ## What versions of `polars` does `dataframely` support?
 
 Our CI automatically tests `dataframely` for a minimal supported version of `polars`, which is currently `1.35.*`,
-and a latest stable version, which is currently `1.36.*`.
+and the latest stable version.
 We aim to extend support for new `polars` versions as they are released.
 
 If your `polars` version is not in the range of supported versions, `dataframely` may still work, but you may
