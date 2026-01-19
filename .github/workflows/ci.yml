@@ -45,6 +45,7 @@ jobs:
         environment: [py310, py311, py312, py313, py314]
         with_optionals: [false]
         include:
+          # Test with optional dependencies across OSes
           - os: ubuntu-latest
             environment: py314-optionals
             with_optionals: true
@@ -54,6 +55,13 @@ jobs:
           - os: macos-latest
             environment: py314-optionals
             with_optionals: true
+          # Test polars backward compatibility, only one OS
+          - os: ubuntu-latest
+            environment: polars-backward-1
+            with_optionals: false
+          - os: ubuntu-latest
+            environment: polars-backward-2
+            with_optionals: false
     steps:
       - name: Checkout branch
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1

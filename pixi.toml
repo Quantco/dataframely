@@ -13,7 +13,7 @@ python = ">=3.10"
 
 fsspec = ">=2025.9"
 numpy = "*"
-polars = ">=1.36"
+polars = ">=1.35"
 
 maturin = ">=1.7,<2"
 pip = "*"
@@ -107,6 +107,15 @@ python = "3.13.*"
 [feature.py314.dependencies]
 python = "3.14.*"
 
+[feature.polars-backward-2.dependencies]
+polars = "1.35.*"
+
+[feature.polars-backward-1.dependencies]
+polars = "1.36.*"
+
+[feature.polars-latest.dependencies]
+polars = "1.37.*"
+
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
@@ -116,9 +125,17 @@ default = ["dev", "lint", "optionals", "py314", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]
-py310 = ["py310", "test"]
-py311 = ["py311", "test"]
-py312 = ["py312", "test"]
-py313 = ["py313", "test"]
-py314 = ["py314", "test"]
-py314-optionals = ["optionals", "py314", "test"]
+
+# Different python versions with the latest polars
+py310 = ["py310", "test", "polars-latest"]
+py311 = ["py311", "test", "polars-latest"]
+py312 = ["py312", "test", "polars-latest"]
+py313 = ["py313", "test", "polars-latest"]
+py314 = ["py314", "test", "polars-latest"]
+
+# Test with optional dependencies
+py314-optionals = ["optionals", "py314", "test", "polars-latest"]
+
+# Polars compatibility envs
+polars-backward-1 = ["py314", "test", "polars-backward-1"]
+polars-backward-2 = ["py314", "test", "polars-backward-2"]
