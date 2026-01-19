@@ -13,6 +13,7 @@ python = ">=3.10"
 
 fsspec = ">=2025.9"
 numpy = "*"
+# NOTE: When bumping this, also bump backward compatibility features below
 polars = ">=1.35"
 
 maturin = ">=1.7,<2"
