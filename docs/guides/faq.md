@@ -33,3 +33,12 @@ class UserSchema(dy.Schema):
 ## How do I fix the ruff error `First argument of a method should be named self`?
 
 See our documentation on [group rules](./quickstart.md#group-rules).
+
+## What versions of `polars` does `dataframely` support?
+
+Our CI automatically tests `dataframely` for a minimal supported version of `polars`, which is currently `1.35.*`,
+and the latest stable version.
+We aim to extend support for new `polars` versions as they are released.
+
+If your `polars` version is not in the range of supported versions, `dataframely` may still work, but you may
+encounter unexpected issues.

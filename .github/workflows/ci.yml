@@ -26,7 +26,7 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@82d477f15f3a381dbcc8adc1206ce643fe110fb7 # v0.9.3
         with:
-          environments: default lint
+          environments: default lint polars-minimal
       - name: Install Rust
         run: rustup show
       - name: Cache Rust dependencies
@@ -45,6 +45,7 @@ jobs:
         environment: [py310, py311, py312, py313, py314]
         with_optionals: [false]
         include:
+          # Test with optional dependencies across OSes
           - os: ubuntu-latest
             environment: py314-optionals
             with_optionals: true
@@ -54,6 +55,10 @@ jobs:
           - os: macos-latest
             environment: py314-optionals
             with_optionals: true
+          # Test polars backward compatibility, only one OS
+          - os: ubuntu-latest
+            environment: polars-minimal
+            with_optionals: false
     steps:
       - name: Checkout branch
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1

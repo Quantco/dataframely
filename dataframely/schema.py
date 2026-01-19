@@ -15,12 +15,11 @@ from typing import IO, Any, Literal, overload
 import polars as pl
 import polars.exceptions as plexc
 from polars._typing import FileSource
-from polars.io.partition import _SinkDirectory as SinkDirectory
 
 from dataframely._compat import deltalake
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import pa, sa
+from ._compat import PartitionSchemeOrSinkDirectory, pa, sa
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
@@ -55,8 +54,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-
 _COLUMN_VALID = "__DATAFRAMELY_VALID__"
+
 
 # ------------------------------------------------------------------------------------ #
 #                                   SCHEMA DEFINITION                                  #
@@ -901,7 +900,7 @@ class Schema(BaseSchema, ABC):
         cls,
         lf: LazyFrame[Self],
         /,
-        file: str | Path | IO[bytes] | SinkDirectory,
+        file: str | Path | IO[bytes] | PartitionSchemeOrSinkDirectory,
         **kwargs: Any,
     ) -> None:
         """Stream a typed lazy frame with this schema to a parquet file.
