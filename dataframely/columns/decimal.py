@@ -29,10 +29,10 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
-        min: decimal.Decimal | None = None,
-        min_exclusive: decimal.Decimal | None = None,
-        max: decimal.Decimal | None = None,
-        max_exclusive: decimal.Decimal | None = None,
+        min: decimal.Decimal | int | None = None,
+        min_exclusive: decimal.Decimal | int | None = None,
+        max: decimal.Decimal | int | None = None,
+        max_exclusive: decimal.Decimal | int | None = None,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -70,6 +70,15 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
+        if isinstance(min, int):
+            min = decimal.Decimal(min)
+        if isinstance(min_exclusive, int):
+            min_exclusive = decimal.Decimal(min_exclusive)
+        if isinstance(max, int):
+            max = decimal.Decimal(max)
+        if isinstance(max_exclusive, int):
+            max_exclusive = decimal.Decimal(max_exclusive)
+
         if min is not None:
             _validate(min, precision, scale, "min")
         if min_exclusive is not None:
