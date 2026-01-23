@@ -50,6 +50,21 @@ def test_args_zero_and_negative_min_max(kwargs: dict[str, Any]) -> None:
 @pytest.mark.parametrize(
     "kwargs",
     [
+        {"min": 0},
+        {"min_exclusive": 0},
+        {"max": 0},
+        {"max_exclusive": 0},
+        {"min": -2, "max": 0},
+        {"min_exclusive": -2, "max_exclusive": 0},
+    ],
+)
+def test_int_args_for_min_max(kwargs: dict[str, Any]) -> None:
+    dy.Decimal(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
         dict(scale=1, min=decimal.Decimal("3.14")),
         dict(scale=1, min_exclusive=decimal.Decimal("3.14")),
         dict(scale=1, max=decimal.Decimal("3.14")),
