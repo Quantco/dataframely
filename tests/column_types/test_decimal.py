@@ -62,6 +62,19 @@ def test_int_args_for_min_max(kwargs: dict[str, Any]) -> None:
     dy.Decimal(**kwargs)
 
 
+def test_validate_int_args_for_min_max() -> None:
+    column = dy.Decimal(min=0, max_exclusive=3, nullable=True)
+    lf = pl.LazyFrame({"a": [-1, 0, 1, 2, 3]})
+    actual = evaluate_rules(lf, rules_from_exprs(column.validation_rules(pl.col("a"))))
+    expected = pl.LazyFrame(
+        {
+            "min": [False, True, True, True, True],
+            "max_exclusive": [True, True, True, True, False],
+        }
+    )
+    assert_frame_equal(actual, expected)
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [
