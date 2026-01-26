@@ -49,3 +49,13 @@ def test_write_parquet_non_existing_directory(any_tmp_path: str) -> None:
     # Assert
     result = MySchema.read_parquet(file)
     assert result.shape == (0, 1)
+
+
+def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:
+    # Arrange
+    df = MySchema.create_empty()
+    p = f"{tmp_path}/non_existent_dir/df.parquet"
+
+    # Act / Assert
+    with pytest.raises(FileNotFoundError):
+        MySchema.write_parquet(df, file=p)

@@ -159,7 +159,23 @@ def test_write_parquet_custom_metadata(
     if check_non_existent_directory:
         failure.write_parquet(p, metadata={"custom": "test"}, mkdir=True)
     else:
-        failure.write_parquet(p, metadata={"custom": "test"}, mkdir=True)
+        failure.write_parquet(p, metadata={"custom": "test"})
 
     # Assert
     assert pl.read_parquet_metadata(p)["custom"] == "test"
+
+
+def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:
+    # Arrange
+    df = pl.DataFrame(
+        {
+            "a": [4, 5, 6, 6, 7, 8],
+            "b": [1, 2, 3, 4, 5, 6],
+        }
+    )
+    _, failure = MySchema.filter(df)
+    p = f"{tmp_path}/non_existent_dir/failure.parquet"
+
+    # Act / Assert
+    with pytest.raises(FileNotFoundError):
+        failure.write_parquet(p)

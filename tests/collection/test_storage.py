@@ -526,6 +526,22 @@ def test_write_nonexistent_directory(any_tmp_path: str) -> None:
     assert_frame_equal(collection.second, out.second)
 
 
+def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:
+    # Arrange
+    collection = MyCollection.validate(
+        {
+            "first": pl.LazyFrame({"a": [1, 2, 3]}),
+            "second": pl.LazyFrame({"a": [1, 2], "b": [10, 15]}),
+        },
+        cast=True,
+    )
+    p = f"{tmp_path}/non_existent_dir"
+
+    # Act / Assert
+    with pytest.raises(FileNotFoundError):
+        collection.write_parquet(p)
+
+
 # ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
 
 
