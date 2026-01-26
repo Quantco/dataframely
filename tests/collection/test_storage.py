@@ -498,6 +498,50 @@ def test_read_invalid_parquet_metadata_collection(
     assert collection is None
 
 
+@pytest.mark.parametrize(
+    "any_tmp_path",
+    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
+    indirect=True,
+)
+def test_write_nonexistent_directory(any_tmp_path: str) -> None:
+    # Arrange
+    collection = MyCollection.validate(
+        {
+            "first": pl.LazyFrame({"a": [1, 2, 3]}),
+            "second": pl.LazyFrame({"a": [1, 2], "b": [10, 15]}),
+        },
+        cast=True,
+    )
+    fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
+    target_path = fs.sep.join([any_tmp_path, "non_existent_dir"])
+
+    # Act
+    collection.write_parquet(target_path, mkdir=True)
+
+    # Assert
+    out = MyCollection.read_parquet(target_path)
+    assert_frame_equal(collection.first, out.first)
+    assert collection.second is not None
+    assert out.second is not None
+    assert_frame_equal(collection.second, out.second)
+
+
+def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:
+    # Arrange
+    collection = MyCollection.validate(
+        {
+            "first": pl.LazyFrame({"a": [1, 2, 3]}),
+            "second": pl.LazyFrame({"a": [1, 2], "b": [10, 15]}),
+        },
+        cast=True,
+    )
+    p = f"{tmp_path}/non_existent_dir"
+
+    # Act / Assert
+    with pytest.raises(FileNotFoundError):
+        collection.write_parquet(p)
+
+
 # ---------------------------- DELTA LAKE SPECIFICS ---------------------------------- #
 
 

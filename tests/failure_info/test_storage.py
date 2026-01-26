@@ -133,7 +133,10 @@ def test_invalid_schema_deserialization(
     ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
     indirect=True,
 )
-def test_write_parquet_custom_metadata(any_tmp_path: str) -> None:
+@pytest.mark.parametrize("check_non_existent_directory", [True, False])
+def test_write_parquet_custom_metadata(
+    any_tmp_path: str, check_non_existent_directory: bool
+) -> None:
     # Arrange
     df = pl.DataFrame(
         {
@@ -144,10 +147,35 @@ def test_write_parquet_custom_metadata(any_tmp_path: str) -> None:
     _, failure = MySchema.filter(df)
     assert failure._df.height == 4
 
-    # Act
     fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
-    p = fs.sep.join([any_tmp_path, "failure.parquet"])
-    failure.write_parquet(p, metadata={"custom": "test"})
+    path_components = (
+        [any_tmp_path]
+        + (["non_existent_dir"] if check_non_existent_directory else [])
+        + ["failure.parquet"]
+    )
+    p = fs.sep.join(path_components)
+
+    # Act
+    if check_non_existent_directory:
+        failure.write_parquet(p, metadata={"custom": "test"}, mkdir=True)
+    else:
+        failure.write_parquet(p, metadata={"custom": "test"})
 
     # Assert
     assert pl.read_parquet_metadata(p)["custom"] == "test"
+
+
+def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:
+    # Arrange
+    df = pl.DataFrame(
+        {
+            "a": [4, 5, 6, 6, 7, 8],
+            "b": [1, 2, 3, 4, 5, 6],
+        }
+    )
+    _, failure = MySchema.filter(df)
+    p = f"{tmp_path}/non_existent_dir/failure.parquet"
+
+    # Act / Assert
+    with pytest.raises(FileNotFoundError):
+        failure.write_parquet(p)
