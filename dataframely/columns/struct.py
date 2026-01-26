@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import pa, sa, sa_postgresql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -29,7 +29,7 @@ class Struct(Column):
         self,
         inner: dict[str, Column],
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,
@@ -38,9 +38,9 @@ class Struct(Column):
         """
         Args:
             inner: The dictionary of struct fields. Struct fields may have
-                ``primary_key=True`` set but this setting only takes effect if the
+                `primary_key=True` set but this setting only takes effect if the
                 struct is nested inside a list. In this case, the list items must be
-                unique wrt. the struct fields that have ``primary_key=True`` set.
+                unique wrt. the struct fields that have `primary_key=True` set.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`
@@ -56,7 +56,7 @@ class Struct(Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -107,12 +107,15 @@ class Struct(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's JSON in the future.
-        raise NotImplementedError("SQL column cannot have 'Struct' type.")
+        match dialect.name:
+            case "postgresql":
+                return sa_postgresql.JSONB()
+            case _:
+                raise NotImplementedError("SQL column cannot have 'Struct' type.")
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return pa.struct({name: col.pyarrow_dtype for name, col in self.inner.items()})
+        return pa.struct([col.pyarrow_field(name) for name, col in self.inner.items()])
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         series = (

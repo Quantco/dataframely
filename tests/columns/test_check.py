@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
@@ -10,6 +10,22 @@ from dataframely.testing import validation_mask
 class CheckSchema(dy.Schema):
     a = dy.Int64(check=lambda col: (col < 5) | (col > 10))
     b = dy.String(min_length=3, check=lambda col: col.str.contains("x"))
+
+
+def test_check_argument_covariant() -> None:
+    # The interesting part of this test is mypy accepting it statically,
+    # not the runtime behavior.
+    def check_all_or_none(expr: pl.Expr) -> pl.Expr:
+        return (expr == "all").all() | (expr != "all").all()
+
+    check_dict = {"all_or_none": check_all_or_none}
+
+    class CheckDictSchema(dy.Schema):
+        column = dy.String(check=check_dict)
+
+    df = pl.DataFrame({"column": ["all", "all", "all"]})
+    _, failures = CheckDictSchema.filter(df)
+    assert failures.counts() == {}
 
 
 def test_check() -> None:

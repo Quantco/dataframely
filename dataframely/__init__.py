@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import importlib.metadata
@@ -11,18 +11,19 @@ except importlib.metadata.PackageNotFoundError as e:  # pragma: no cover
     __version__ = "unknown"
 
 from . import random
-from ._base_collection import CollectionMember
 from ._filter import filter
 from ._rule import rule
 from ._typing import DataFrame, LazyFrame, Validation
 from .collection import (
     Collection,
+    CollectionMember,
     deserialize_collection,
     read_parquet_metadata_collection,
 )
 from .columns import (
     Any,
     Array,
+    Binary,
     Bool,
     Categorical,
     Column,
@@ -50,11 +51,12 @@ from .columns import (
     UInt64,
 )
 from .config import Config
-from .failure import FailureInfo
+from .exc import DeserializationError
+from .filter_result import FailureInfo
 from .functional import (
     concat_collection_members,
-    filter_relationship_one_to_at_least_one,
-    filter_relationship_one_to_one,
+    require_relationship_one_to_at_least_one,
+    require_relationship_one_to_one,
 )
 from .schema import Schema, deserialize_schema, read_parquet_metadata_schema
 
@@ -70,13 +72,14 @@ __all__ = [
     "Config",
     "FailureInfo",
     "concat_collection_members",
-    "filter_relationship_one_to_at_least_one",
-    "filter_relationship_one_to_one",
+    "require_relationship_one_to_at_least_one",
+    "require_relationship_one_to_one",
     "Schema",
     "deserialize_schema",
     "read_parquet_metadata_schema",
     "read_parquet_metadata_collection",
     "Any",
+    "Binary",
     "Bool",
     "Categorical",
     "Column",
@@ -104,4 +107,5 @@ __all__ = [
     "Array",
     "Object",
     "Validation",
+    "DeserializationError",
 ]

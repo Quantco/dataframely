@@ -14,10 +14,12 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "fsspec>=2025.9",
   "numpy",
-  "polars>=1.32",
+  "polars>=1.35",
   # Conditional
   'typing-extensions; python_version <= "3.10"',
 ]
@@ -29,16 +31,17 @@ version = "0.0.0"
 
 [project.optional-dependencies]
 deltalake = ["deltalake"]
-sqlalchemy = ["sqlalchemy"]
 pyarrow = ["pyarrow"]
+pydantic = ["pydantic>=2"]
+s3 = ["s3fs>=2025.9"]
+sqlalchemy = ["sqlalchemy"]
 
 [project.urls]
 Documentation = "https://dataframely.readthedocs.io/"
 Repository = "https://github.com/quantco/dataframely"
 
 [tool.maturin]
-module-name = "dataframely._extre"
-profile = "release"
+module-name = "dataframely._native"
 
 [tool.setuptools.packages.find]
 include = ["dataframely"]
@@ -72,6 +75,9 @@ select = [
   "UP",
 ]
 
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["dataframely.rule"]
+
 [tool.ruff.format]
 indent-style = "space"
 quote-style = "double"
@@ -82,26 +88,32 @@ disallow_untyped_defs = true
 exclude = ["docs/"]
 explicit_package_bases = true
 no_implicit_optional = true
-plugins = ["dataframely.mypy"]
+plugins = ["pydantic.mypy"]
 python_version = '3.10'
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
+module = ["boto3.*", "fsspec.*", "pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
+
+[tool.typos.default.extend-identifiers]
+plain_serializer_function_ser_schema = "plain_serializer_function_ser_schema"
 
 [tool.pytest.ini_options]
-addopts = "--import-mode=importlib --benchmark-skip"
+addopts = "--import-mode=importlib --benchmark-skip -m 'not s3'"
 filterwarnings = [
   # By default, all warnings should yield errors
   "error",
   # Almost all tests are oblivious to the value of `nullable`. Let's ignore the warning as long as it exists.
   "ignore:The 'nullable' argument was not explicitly set:FutureWarning",
+  # boto3 still uses .utcnow()
+  "ignore::DeprecationWarning:botocore.*:",
+]
+markers = [
+  "s3: tests that run against and S3 backend",
+  "with_optionals: tests that require optional dependencies to be installed",
 ]
 testpaths = ["tests"]
-markers = [
-  "with_optionals: Tests that require optional dependencies to be installed",
-]
 
 [tool.coverage.run]
-omit = ["dataframely/mypy.py", "dataframely/testing/generate.py"]
+omit = ["dataframely/testing/generate.py"]

@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from typing import Any
@@ -29,7 +29,7 @@ def test_cast_valid(
     df = df_type(data)
     out = MySchema.cast(df)
     assert isinstance(out, df_type)
-    assert out.lazy().collect_schema() == MySchema.polars_schema()
+    assert out.lazy().collect_schema() == MySchema.to_polars_schema()
 
 
 def test_cast_invalid_schema_eager() -> None:

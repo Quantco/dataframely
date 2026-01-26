@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -8,6 +8,8 @@ from itertools import chain
 from typing import Any, cast
 
 import polars as pl
+from polars.expr.array import ExprArrayNameSpace
+from polars.expr.list import ExprListNameSpace
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
@@ -31,7 +33,7 @@ class List(Column):
         self,
         inner: Column,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,
@@ -41,11 +43,11 @@ class List(Column):
     ):
         """
         Args:
-            inner: The inner column type. If this type has ``primary_key=True`` set, all
+            inner: The inner column type. If this type has `primary_key=True` set, all
                 list items are required to be unique. If the inner type is a struct and
-                any of the struct fields have ``primary_key=True`` set, these fields
+                any of the struct fields have `primary_key=True` set, these fields
                 must be unique across all list items. Note that if the struct itself has
-                ``primary_key=True`` set, the fields' settings do not take effect.
+                `primary_key=True` set, the fields' settings do not take effect.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`
@@ -61,7 +63,7 @@ class List(Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -97,29 +99,8 @@ class List(Column):
         }
 
         list_rules: dict[str, pl.Expr] = {}
-        if self.inner.primary_key:
-            list_rules["primary_key"] = ~expr.list.eval(
-                pl.element().is_duplicated()
-            ).list.any()
-        elif isinstance(self.inner, Struct) and any(
-            col.primary_key for col in self.inner.inner.values()
-        ):
-            primary_key_columns = [
-                name for name, col in self.inner.inner.items() if col.primary_key
-            ]
-            # NOTE: We optimize for a single primary key column here as it is much
-            #  faster to run duplication checks for non-struct types in polars 1.22.
-            if len(primary_key_columns) == 1:
-                list_rules["primary_key"] = ~expr.list.eval(
-                    pl.element().struct.field(primary_key_columns[0]).is_duplicated()
-                ).list.any()
-            else:
-                list_rules["primary_key"] = ~expr.list.eval(
-                    pl.struct(
-                        pl.element().struct.field(primary_key_columns)
-                    ).is_duplicated()
-                ).list.any()
-
+        if (rule := _list_primary_key_check(expr.list, self.inner)) is not None:
+            list_rules["primary_key"] = rule
         if self.min_length is not None:
             list_rules["min_length"] = (
                 pl.when(expr.is_null())
@@ -139,20 +120,28 @@ class List(Column):
         }
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
-        raise NotImplementedError("SQL column cannot have 'List' type.")
+        match dialect.name:
+            case "postgresql":
+                return sa.ARRAY(self.inner.sqlalchemy_dtype(dialect))
+            case _:
+                raise NotImplementedError(
+                    f"SQL column cannot have 'List' type for dialect '{dialect}'."
+                )
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         # NOTE: Polars uses `large_list`s by default.
-        return pa.large_list(self.inner.pyarrow_dtype)
+        return pa.large_list(self.inner.pyarrow_field("item"))
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # First, sample the number of items per list element
         # NOTE: We default to 32 for the upper bound as we need some kind of reasonable
-        #  upper bound if none is set.
+        #  upper bound if none is set. If min_length is greater than 32, we use
+        #  min_length as the default upper bound instead.
+        min_len = self.min_length or 0
+        default_max = max(32, min_len)
         element_lengths = generator.sample_int(
-            n, min=self.min_length or 0, max=(self.max_length or 32) + 1
+            n, min=min_len, max=(self.max_length or default_max) + 1
         )
 
         # Then, we can sample the inner elements in a flat series
@@ -187,3 +176,35 @@ class List(Column):
     def from_dict(cls, data: dict[str, Any]) -> Self:
         data["inner"] = column_from_dict(data["inner"])
         return super().from_dict(data)
+
+
+def _list_primary_key_check(
+    list_expr: ExprListNameSpace | ExprArrayNameSpace, inner: Column
+) -> pl.Expr | None:
+    def list_any(expr: pl.Expr) -> pl.Expr:
+        if isinstance(list_expr, ExprListNameSpace):
+            return expr.list.any()
+        return expr.arr.any()
+
+    if inner.primary_key:
+        return ~list_expr.eval(pl.element().is_duplicated()).pipe(list_any)
+    elif isinstance(inner, Struct) and any(
+        col.primary_key for col in inner.inner.values()
+    ):
+        primary_key_columns = [
+            name for name, col in inner.inner.items() if col.primary_key
+        ]
+        # NOTE: We optimize for a single primary key column here as it is much
+        #  faster to run duplication checks for non-struct types in polars 1.22.
+        if len(primary_key_columns) == 1:
+            return ~list_expr.eval(
+                pl.element().struct.field(primary_key_columns[0]).is_duplicated()
+            ).pipe(list_any)
+        else:
+            return ~list_expr.eval(
+                pl.struct(
+                    pl.element().struct.field(primary_key_columns)
+                ).is_duplicated()
+            ).pipe(list_any)
+
+    return None

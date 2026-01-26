@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any, Concatenate, Generic, Literal, ParamSpec,
 import polars as pl
 
 from ._base_schema import BaseSchema
+from ._compat import pydantic, pydantic_core_schema
+from ._pydantic import get_pydantic_core_schema, get_pydantic_json_schema
 
 S = TypeVar("S", bound=BaseSchema, covariant=True)
 
@@ -32,7 +34,7 @@ class DataFrame(pl.DataFrame, Generic[S]):
     """Generic wrapper around a :class:`polars.DataFrame` to attach schema information.
 
     This class is merely used for the type system and never actually instantiated. This
-    means that it won't exist at runtime and ``isinstance(PoalrsDataFrame, <var>)`` will
+    means that it won't exist at runtime and `isinstance(PoalrsDataFrame, <var>)` will
     always fail. Accordingly, users should not try to create instances of this class.
     """
 
@@ -70,13 +72,27 @@ class DataFrame(pl.DataFrame, Generic[S]):
     def shrink_to_fit(self, *args: Any, **kwargs: Any) -> DataFrame[S]:
         raise NotImplementedError  # pragma: no cover
 
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: pydantic.GetCoreSchemaHandler
+    ) -> pydantic_core_schema.CoreSchema:
+        return get_pydantic_core_schema(source_type, handler, lazy=False)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        _core_schema: pydantic_core_schema.CoreSchema,
+        handler: pydantic.GetJsonSchemaHandler,
+    ) -> pydantic.json_schema.JsonSchemaValue:
+        return get_pydantic_json_schema(handler)
+
 
 class LazyFrame(pl.LazyFrame, Generic[S]):
     """Generic wrapper around a :class:`polars.LazyFrame` to attach schema information.
 
     This class is merely used for the type system and never actually instantiated. This
-    means that it won't exist at runtime and ``isinstance(LazyFrame, <var>)`` will
-    always fail. Accordingly, users should not try to create instances of this class.
+    means that it won't exist at runtime and `isinstance(LazyFrame, <var>)` will always
+    fail. Accordingly, users should not try to create instances of this class.
     """
 
     # NOTE: Code in this class will never be executed.
@@ -113,3 +129,17 @@ class LazyFrame(pl.LazyFrame, Generic[S]):
     @inherit_signature(pl.LazyFrame.set_sorted)
     def set_sorted(self, *args: Any, **kwargs: Any) -> LazyFrame[S]:
         raise NotImplementedError  # pragma: no cover
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: pydantic.GetCoreSchemaHandler
+    ) -> pydantic_core_schema.CoreSchema:
+        return get_pydantic_core_schema(source_type, handler, lazy=True)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        _core_schema: pydantic_core_schema.CoreSchema,
+        handler: pydantic.GetJsonSchemaHandler,
+    ) -> pydantic.json_schema.JsonSchemaValue:
+        return get_pydantic_json_schema(handler)

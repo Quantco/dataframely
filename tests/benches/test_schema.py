@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
@@ -111,7 +111,7 @@ class SingleGroupBySchema(dy.Schema):
     slope = dy.UInt8(nullable=True)
 
     @dy.rule(group_by=["slope"])
-    def average_elevation_at_least_2500() -> pl.Expr:
+    def average_elevation_at_least_2500(cls) -> pl.Expr:
         return pl.col("elevation").mean() > 2500
 
 
@@ -119,14 +119,14 @@ class SingleGroupBySchema(dy.Schema):
 def test_single_group_by_validate(
     benchmark: BenchmarkFixture, dataset: pl.DataFrame
 ) -> None:
-    benchmark(SingleGroupBySchema.validate, dataset.lazy())
+    benchmark(SingleGroupBySchema.validate, dataset)
 
 
 @pytest.mark.benchmark(group="schema-group-by-single")
 def test_single_group_by_filter(
     benchmark: BenchmarkFixture, dataset: pl.DataFrame
 ) -> None:
-    benchmark(SingleGroupBySchema.filter, dataset.lazy())
+    benchmark(SingleGroupBySchema.filter, dataset)
 
 
 # ---------------------------------- MULTI GROUP-BY ---------------------------------- #
@@ -138,19 +138,19 @@ class MultiGroupBySchema(dy.Schema):
     slope = dy.UInt8(nullable=True)
 
     @dy.rule(group_by=["slope"])
-    def average_elevation_at_least_2500() -> pl.Expr:
+    def average_elevation_at_least_2500(cls) -> pl.Expr:
         return pl.col("elevation").mean() > 2500
 
     @dy.rule(group_by=["slope"])
-    def at_least_one_elevation_2500() -> pl.Expr:
+    def at_least_one_elevation_2500(cls) -> pl.Expr:
         return (pl.col("elevation") > 2500).any()
 
     @dy.rule(group_by=["aspect"])
-    def at_least_50_aspects() -> pl.Expr:
+    def at_least_50_aspects(cls) -> pl.Expr:
         return pl.len() > 50
 
     @dy.rule(group_by=["aspect", "slope"])
-    def some_useless_filter() -> pl.Expr:
+    def some_useless_filter(cls) -> pl.Expr:
         return pl.len() >= 1
 
 

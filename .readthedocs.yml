@@ -4,9 +4,7 @@ build:
   tools:
     python: mambaforge-latest
   commands:
-    - mamba install -c conda-forge -c nodefaults pixi
-    - pixi run -e docs postinstall
-    - pixi run -e docs docs
+    - mamba install -c conda-forge/label/rust_dev -c conda-forge -c nodefaults pixi rust
     - pixi run -e docs readthedocs
 sphinx:
   configuration: docs/conf.py

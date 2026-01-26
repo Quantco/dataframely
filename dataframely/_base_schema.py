@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -8,11 +8,11 @@ import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
-from ._rule import DtypeCastRule, GroupRule, Rule
+from ._rule import DtypeCastRule, GroupRule, Rule, RuleFactory
 from .columns import Column
 from .exc import ImplementationError
 
@@ -20,6 +20,7 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
@@ -36,9 +37,9 @@ def _build_rules(
     rules: dict[str, Rule] = copy(custom)
 
     # Add primary key validation to the list of rules if applicable
-    primary_keys = _primary_keys(columns)
-    if len(primary_keys) > 0:
-        rules["primary_key"] = Rule(~pl.struct(primary_keys).is_duplicated())
+    primary_key = _primary_key(columns)
+    if len(primary_key) > 0:
+        rules["primary_key"] = Rule(~pl.struct(primary_key).is_duplicated())
 
     # Add column-specific rules
     column_rules = {
@@ -66,7 +67,7 @@ def _build_rules(
     return rules
 
 
-def _primary_keys(columns: dict[str, Column]) -> list[str]:
+def _primary_key(columns: dict[str, Column]) -> list[str]:
     return list(k for k, col in columns.items() if col.primary_key)
 
 
@@ -80,7 +81,7 @@ class Metadata:
     """Utility class to gather columns and rules associated with a schema."""
 
     columns: dict[str, Column] = field(default_factory=dict)
-    rules: dict[str, Rule] = field(default_factory=dict)
+    rules: dict[str, RuleFactory] = field(default_factory=dict)
 
     def update(self, other: Self) -> None:
         self.columns.update(other.columns)
@@ -101,7 +102,11 @@ class SchemaMeta(ABCMeta):
             result.update(mcs._get_metadata_recursively(base))
         result.update(mcs._get_metadata(namespace))
         namespace[_COLUMN_ATTR] = result.columns
-        namespace[_RULE_ATTR] = result.rules
+        cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
+
+        # Assign rules retroactively as we only encounter rule factories in the result
+        rules = {name: factory.make(cls) for name, factory in result.rules.items()}
+        setattr(cls, _RULE_ATTR, rules)
 
         # At this point, we already know all columns and custom rules. We want to run
         # some checks...
@@ -110,7 +115,7 @@ class SchemaMeta(ABCMeta):
         # we assume that users cast dtypes, i.e. additional rules for dtype casting
         # are also checked.
         all_column_names = set(result.columns)
-        all_rule_names = set(_build_rules(result.rules, result.columns, with_cast=True))
+        all_rule_names = set(_build_rules(rules, result.columns, with_cast=True))
         common_names = all_column_names & all_rule_names
         if len(common_names) > 0:
             common_list = ", ".join(sorted(f"'{col}'" for col in common_names))
@@ -120,7 +125,7 @@ class SchemaMeta(ABCMeta):
             )
 
         # 2) Check that the columns referenced in the group rules exist.
-        for rule_name, rule in result.rules.items():
+        for rule_name, rule in rules.items():
             if isinstance(rule, GroupRule):
                 missing_columns = set(rule.group_columns) - set(result.columns)
                 if len(missing_columns) > 0:
@@ -133,14 +138,55 @@ class SchemaMeta(ABCMeta):
                         f"which are not in the schema: {missing_list}."
                     )
 
-        return super().__new__(mcs, name, bases, namespace, *args, **kwargs)
+        # 3) Check that all members are non-pathological (i.e., user errors).
+        for attr, value in namespace.items():
+            if attr.startswith("__"):
+                continue
 
-    def __getattribute__(cls, name: str) -> Any:
-        val = super().__getattribute__(name)
-        # Dynamically set the name of the column if it is a `Column` instance.
-        if isinstance(val, Column):
-            val._name = val.alias or name
-        return val
+            # Check for tuple of column (commonly caused by trailing comma)
+            if (
+                isinstance(value, tuple)
+                and len(value) > 0
+                and isinstance(value[0], Column)
+            ):
+                raise TypeError(
+                    f"Column '{attr}' is defined as a tuple of dy.Column. "
+                    f"Did you accidentally add a trailing comma?"
+                )
+
+            # Check for column type instead of instance (e.g., dy.Float64 instead of dy.Float64())
+            if isinstance(value, type) and issubclass(value, Column):
+                raise TypeError(
+                    f"Column '{attr}' is a type, not an instance. "
+                    f"Schema members must be of type Column not type[Column]. "
+                    f"Did you forget to add parentheses?"
+                )
+
+            # Check for pl.DataType instance or type (e.g., pl.String() or pl.String instead of dy.String())
+            if isinstance(value, pl.DataType) or (
+                isinstance(value, type) and issubclass(value, pl.DataType)
+            ):
+                value_type = "instance" if isinstance(value, pl.DataType) else "type"
+                example = (
+                    "pl.String()" if isinstance(value, pl.DataType) else "pl.String"
+                )
+                raise TypeError(
+                    f"Schema member '{attr}' is a polars DataType {value_type}. "
+                    f"Use dataframely column types (e.g., dy.String()) instead of polars types (e.g., {example})."
+                )
+
+        return cls
+
+    if not TYPE_CHECKING:
+        # Only define __getattribute__ at runtime to allow type checkers to properly
+        # validate attribute access. When TYPE_CHECKING is True, type checkers will use
+        # the default metaclass behavior which correctly identifies non-existent attributes.
+        def __getattribute__(cls, name: str) -> Any:
+            val = super().__getattribute__(name)
+            # Dynamically set the name of the column if it is a `Column` instance.
+            if isinstance(val, Column):
+                val._name = val.alias or name
+            return val
 
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
@@ -158,7 +204,7 @@ class SchemaMeta(ABCMeta):
         }.items():
             if isinstance(value, Column):
                 result.columns[value.alias or attr] = value
-            if isinstance(value, Rule):
+            if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
                     raise ImplementationError(
@@ -170,9 +216,9 @@ class SchemaMeta(ABCMeta):
     def __repr__(cls) -> str:
         parts = [f'[Schema "{cls.__name__}"]']
         parts.append(textwrap.indent("Columns:", prefix=" " * 2))
-        for name, col in cls.columns().items():
+        for name, col in cls.columns().items():  # type: ignore[attr-defined]
             parts.append(textwrap.indent(f'- "{name}": {col!r}', prefix=" " * 4))
-        if validation_rules := cls._schema_validation_rules():
+        if validation_rules := cls._schema_validation_rules():  # type: ignore[attr-defined]
             parts.append(textwrap.indent("Rules:", prefix=" " * 2))
             for name, rule in validation_rules.items():
                 parts.append(textwrap.indent(f'- "{name}": {rule!r}', prefix=" " * 4))
@@ -199,9 +245,9 @@ class BaseSchema(metaclass=SchemaMeta):
         return columns
 
     @classmethod
-    def primary_keys(cls) -> list[str]:
+    def primary_key(cls) -> list[str]:
         """The primary key columns in this schema (possibly empty)."""
-        return _primary_keys(cls.columns())
+        return _primary_key(cls.columns())
 
     @classmethod
     def _validation_rules(cls, *, with_cast: bool) -> dict[str, Rule]:

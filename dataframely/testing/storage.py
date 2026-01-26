@@ -1,11 +1,11 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any, Literal, TypeVar, overload
 
 import polars as pl
+from fsspec import AbstractFileSystem, url_to_fs
 
 import dataframely as dy
 from dataframely import FailureInfo, Validation
@@ -27,46 +27,57 @@ class SchemaStorageTester(ABC):
 
     @abstractmethod
     def write_typed(
-        self, schema: type[S], df: dy.DataFrame[S], path: Path, lazy: bool
+        self, schema: type[S], df: dy.DataFrame[S], path: str, lazy: bool
     ) -> None:
-        """Write a schema to the backend without recording schema information."""
+        """Write a schema to the backend and record schema information."""
 
     @abstractmethod
-    def write_untyped(self, df: pl.DataFrame, path: Path, lazy: bool) -> None:
-        """Write a schema to the backend and record schema information."""
+    def write_untyped(self, df: pl.DataFrame, path: str, lazy: bool) -> None:
+        """Write a schema to the backend without recording schema information."""
 
     @overload
     def read(
-        self, schema: type[S], path: Path, lazy: Literal[True], validation: Validation
+        self, schema: type[S], path: str, lazy: Literal[True], validation: Validation
     ) -> dy.LazyFrame[S]: ...
 
     @overload
     def read(
-        self, schema: type[S], path: Path, lazy: Literal[False], validation: Validation
+        self, schema: type[S], path: str, lazy: Literal[False], validation: Validation
     ) -> dy.DataFrame[S]: ...
+
+    @overload
+    def read(
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
+    ) -> dy.LazyFrame[S] | dy.DataFrame[S]: ...
 
     @abstractmethod
     def read(
-        self, schema: type[S], path: Path, lazy: bool, validation: Validation
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
     ) -> dy.LazyFrame[S] | dy.DataFrame[S]:
         """Read from the backend, using schema information if available."""
+
+    @abstractmethod
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        """Overwrite the metadata stored at the given path with the provided
+        metadata."""
 
 
 class ParquetSchemaStorageTester(SchemaStorageTester):
     """Testing interface for the parquet storage functionality of Schema."""
 
-    def _wrap_path(self, path: Path) -> Path:
-        return path / "test.parquet"
+    def _wrap_path(self, path: str) -> str:
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        return fs.sep.join([path, "test.parquet"])
 
     def write_typed(
-        self, schema: type[S], df: dy.DataFrame[S], path: Path, lazy: bool
+        self, schema: type[S], df: dy.DataFrame[S], path: str, lazy: bool
     ) -> None:
         if lazy:
             schema.sink_parquet(df.lazy(), self._wrap_path(path))
         else:
             schema.write_parquet(df, self._wrap_path(path))
 
-    def write_untyped(self, df: pl.DataFrame, path: Path, lazy: bool) -> None:
+    def write_untyped(self, df: pl.DataFrame, path: str, lazy: bool) -> None:
         if lazy:
             df.lazy().sink_parquet(self._wrap_path(path))
         else:
@@ -74,16 +85,21 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
 
     @overload
     def read(
-        self, schema: type[S], path: Path, lazy: Literal[True], validation: Validation
+        self, schema: type[S], path: str, lazy: Literal[True], validation: Validation
     ) -> dy.LazyFrame[S]: ...
 
     @overload
     def read(
-        self, schema: type[S], path: Path, lazy: Literal[False], validation: Validation
+        self, schema: type[S], path: str, lazy: Literal[False], validation: Validation
     ) -> dy.DataFrame[S]: ...
 
+    @overload
     def read(
-        self, schema: type[S], path: Path, lazy: bool, validation: Validation
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
+    ) -> dy.LazyFrame[S] | dy.DataFrame[S]: ...
+
+    def read(
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
     ) -> dy.LazyFrame[S] | dy.DataFrame[S]:
         if lazy:
             return schema.scan_parquet(
@@ -92,34 +108,56 @@ class ParquetSchemaStorageTester(SchemaStorageTester):
         else:
             return schema.read_parquet(self._wrap_path(path), validation=validation)
 
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        target = self._wrap_path(path)
+        data = pl.read_parquet(target)
+        data.write_parquet(target, metadata=metadata)
+
 
 class DeltaSchemaStorageTester(SchemaStorageTester):
     """Testing interface for the deltalake storage functionality of Schema."""
 
     def write_typed(
-        self, schema: type[S], df: dy.DataFrame[S], path: Path, lazy: bool
+        self, schema: type[S], df: dy.DataFrame[S], path: str, lazy: bool
     ) -> None:
         schema.write_delta(df, path)
 
-    def write_untyped(self, df: pl.DataFrame, path: Path, lazy: bool) -> None:
+    def write_untyped(self, df: pl.DataFrame, path: str, lazy: bool) -> None:
         df.write_delta(path)
 
     @overload
     def read(
-        self, schema: type[S], path: Path, lazy: Literal[True], validation: Validation
+        self, schema: type[S], path: str, lazy: Literal[True], validation: Validation
     ) -> dy.LazyFrame[S]: ...
 
     @overload
     def read(
-        self, schema: type[S], path: Path, lazy: Literal[False], validation: Validation
+        self, schema: type[S], path: str, lazy: Literal[False], validation: Validation
     ) -> dy.DataFrame[S]: ...
 
+    @overload
     def read(
-        self, schema: type[S], path: Path, lazy: bool, validation: Validation
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
+    ) -> dy.LazyFrame[S] | dy.DataFrame[S]: ...
+
+    def read(
+        self, schema: type[S], path: str, lazy: bool, validation: Validation
     ) -> dy.DataFrame[S] | dy.LazyFrame[S]:
         if lazy:
             return schema.scan_delta(path, validation=validation)
         return schema.read_delta(path, validation=validation)
+
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        df = pl.read_delta(path)
+        df.head(0).write_delta(
+            path,
+            delta_write_options={
+                "commit_properties": deltalake.CommitProperties(
+                    custom_metadata=metadata
+                ),
+            },
+            mode="overwrite",
+        )
 
 
 # ------------------------------- Collection -------------------------------------------
@@ -132,25 +170,50 @@ class CollectionStorageTester(ABC):
 
     @abstractmethod
     def write_typed(
-        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
-        """Write a collectiob to the backend and record schema information."""
+        """Write a collection to the backend and record schema information."""
 
     @abstractmethod
     def write_untyped(
-        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
         """Write a collection to the backend without recording schema information."""
 
     @abstractmethod
-    def read(self, collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
+    def read(self, collection: type[C], path: str, lazy: bool, **kwargs: Any) -> C:
         """Read from the backend, using collection information if available."""
+
+    @abstractmethod
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        """Overwrite the metadata stored at the given path with the provided
+        metadata."""
+
+    def _prefix_path(self, path: str, fs: AbstractFileSystem) -> str:
+        return f"{self._get_prefix(fs)}{path}"
+
+    @staticmethod
+    def _get_prefix(fs: AbstractFileSystem) -> str:
+        return (
+            ""
+            if fs.protocol == "file"
+            else (
+                f"{fs.protocol}://"
+                if isinstance(fs.protocol, str)
+                else f"{fs.protocol[0]}://"
+            )
+        )
 
 
 class ParquetCollectionStorageTester(CollectionStorageTester):
     def write_typed(
-        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:  # pragma: no cover
+            raise KeyError(
+                "`metadata` kwarg will be ignored in `write_typed`. Use `set_metadata`."
+            )
+
         # Polars does not support partitioning via kwarg on sink_parquet
         if lazy:
             kwargs.pop("partition_by", None)
@@ -161,32 +224,50 @@ class ParquetCollectionStorageTester(CollectionStorageTester):
             collection.write_parquet(path, **kwargs)
 
     def write_untyped(
-        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:  # pragma: no cover
+            raise KeyError(
+                "Cannot set metadata through `write_untyped`. Use `set_metadata`."
+            )
+
         if lazy:
             collection.sink_parquet(path, **kwargs)
         else:
             collection.write_parquet(path, **kwargs)
 
-        def _delete_meta(file: Path) -> None:
+        def _delete_meta(file: str) -> None:
             """Overwrite a parquet file with the same data, but without metadata."""
             df = pl.read_parquet(file)
             df.write_parquet(file)
 
-        for file in path.rglob("*.parquet"):
-            _delete_meta(file)
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        for file in fs.glob(fs.sep.join([path, "**", "*.parquet"])):
+            _delete_meta(self._prefix_path(file, fs))
 
-    def read(self, collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
+    def read(self, collection: type[C], path: str, lazy: bool, **kwargs: Any) -> C:
         if lazy:
             return collection.scan_parquet(path, **kwargs)
         else:
             return collection.read_parquet(path, **kwargs)
 
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        for file in fs.glob(fs.sep.join([path, "*.parquet"])):
+            file_path = self._prefix_path(file, fs)
+            df = pl.read_parquet(file_path)
+            df.write_parquet(file_path, metadata=metadata)
+
 
 class DeltaCollectionStorageTester(CollectionStorageTester):
     def write_typed(
-        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:  # pragma: no cover
+            raise KeyError(
+                "`metadata` kwarg will be ignored in `write_typed`. Use `set_metadata`."
+            )
+
         extra_kwargs = {}
         if partition_by := kwargs.pop("partition_by", None):
             extra_kwargs["delta_write_options"] = {"partition_by": partition_by}
@@ -194,93 +275,119 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
         collection.write_delta(path, **kwargs, **extra_kwargs)
 
     def write_untyped(
-        self, collection: dy.Collection, path: Path, lazy: bool, **kwargs: Any
+        self, collection: dy.Collection, path: str, lazy: bool, **kwargs: Any
     ) -> None:
+        if "metadata" in kwargs:  # pragma: no cover
+            raise KeyError(
+                "Cannot set metadata through `write_untyped`. Use `set_metadata`."
+            )
         collection.write_delta(path, **kwargs)
 
         # For each member table, write an empty commit
         # Since the metadata retrieval depends on the metadata being attached to the
         # latest commit, this will make the metadata unretrievable.
+        fs: AbstractFileSystem = url_to_fs(path)[0]
         for member, df in collection.to_dict().items():
-            table = _to_delta_table(path / member)
+            table = _to_delta_table(fs.sep.join([path, member]))
             df.head(0).collect().write_delta(table, mode="append")
 
-    def read(self, collection: type[C], path: Path, lazy: bool, **kwargs: Any) -> C:
+    def read(self, collection: type[C], path: str, lazy: bool, **kwargs: Any) -> C:
         if lazy:
             return collection.scan_delta(source=path, **kwargs)
         return collection.read_delta(source=path, **kwargs)
+
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        # For delta, we need to update metadata on each member table
+        for entry in fs.ls(path):
+            member_path = self._prefix_path(entry, fs)
+            if fs.isdir(member_path):
+                df = pl.read_delta(member_path)
+                df.head(0).write_delta(
+                    member_path,
+                    delta_write_options={
+                        "commit_properties": deltalake.CommitProperties(
+                            custom_metadata=metadata
+                        ),
+                    },
+                    mode="overwrite",
+                )
 
 
 # ------------------------------------ Failure info ------------------------------------
 class FailureInfoStorageTester(ABC):
     @abstractmethod
     def write_typed(
-        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
     ) -> None: ...
 
     @abstractmethod
     def write_untyped(
-        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
     ) -> None: ...
 
     @abstractmethod
-    def read(self, path: Path, lazy: bool, **kwargs: Any) -> FailureInfo: ...
+    def read(self, path: str, lazy: bool, **kwargs: Any) -> FailureInfo: ...
 
     @abstractmethod
-    def set_metadata(self, path: Path, metadata: dict[str, Any]) -> None: ...
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None: ...
 
 
 class ParquetFailureInfoStorageTester(FailureInfoStorageTester):
     def write_typed(
-        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
     ) -> None:
-        p = path / "failure.parquet"
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        p = fs.sep.join([path, "failure.parquet"])
         if lazy:
             failure_info.sink_parquet(p, **kwargs)
         else:
             failure_info.write_parquet(p, **kwargs)
 
     def write_untyped(
-        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
     ) -> None:
-        p = path / "failure.parquet"
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        p = fs.sep.join([path, "failure.parquet"])
         if lazy:
             failure_info._lf.sink_parquet(p, **kwargs)
         else:
             failure_info._lf.collect().write_parquet(p, **kwargs)
 
-    def read(self, path: Path, lazy: bool, **kwargs: Any) -> FailureInfo:
-        p = path / "failure.parquet"
+    def read(self, path: str, lazy: bool, **kwargs: Any) -> FailureInfo:
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        p = fs.sep.join([path, "failure.parquet"])
         if lazy:
             return FailureInfo.scan_parquet(source=p, **kwargs)
         else:
             return FailureInfo.read_parquet(source=p, **kwargs)
 
-    def set_metadata(self, path: Path, metadata: dict[str, Any]) -> None:
-        p = path / "failure.parquet"
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        fs: AbstractFileSystem = url_to_fs(path)[0]
+        p = fs.sep.join([path, "failure.parquet"])
         data = pl.read_parquet(p)
         data.write_parquet(p, metadata=metadata)
 
 
 class DeltaFailureInfoStorageTester(FailureInfoStorageTester):
     def write_typed(
-        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
     ) -> None:
         # Ignore 'lazy' here because lazy writes are not supported for delta lake at the moment.
         failure_info.write_delta(path, **kwargs)
 
     def write_untyped(
-        self, failure_info: FailureInfo, path: Path, lazy: bool, **kwargs: Any
+        self, failure_info: FailureInfo, path: str, lazy: bool, **kwargs: Any
     ) -> None:
         failure_info._lf.collect().write_delta(path, **kwargs)
 
-    def read(self, path: Path, lazy: bool, **kwargs: Any) -> FailureInfo:
+    def read(self, path: str, lazy: bool, **kwargs: Any) -> FailureInfo:
         if lazy:
             return FailureInfo.scan_delta(source=path, **kwargs)
         else:
             return FailureInfo.read_delta(source=path, **kwargs)
 
-    def set_metadata(self, path: Path, metadata: dict[str, Any]) -> None:
+    def set_metadata(self, path: str, metadata: dict[str, Any]) -> None:
         df = pl.read_delta(path)
         df.head(0).write_delta(
             path,

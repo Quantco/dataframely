@@ -1,6 +1,5 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-
 
 import polars as pl
 import pytest
@@ -14,13 +13,13 @@ from dataframely.testing import create_schema
 class MySchema(dy.Schema):
     a = dy.Integer(primary_key=True)
     b = dy.String(primary_key=True)
-    c = dy.Float64()
+    c = dy.Float64(nullable=True)
     d = dy.Any(alias="e")
 
 
 class MySchemaWithRule(MySchema):
     @dy.rule()
-    def a_greater_than_c() -> pl.Expr:
+    def a_greater_than_c(cls) -> pl.Expr:
         return pl.col("a") > pl.col("c")
 
 
@@ -44,8 +43,8 @@ def test_nullability() -> None:
     assert columns["e"].nullable
 
 
-def test_primary_keys() -> None:
-    assert MySchema.primary_keys() == ["a", "b"]
+def test_primary_key() -> None:
+    assert MySchema.primary_key() == ["a", "b"]
 
 
 def test_no_rule_named_primary_key() -> None:
@@ -95,3 +94,50 @@ def test_dunder_name() -> None:
 
 def test_dunder_name_with_rule() -> None:
     assert MySchemaWithRule.__name__ == "MySchemaWithRule"
+
+
+def test_non_column_member_is_allowed() -> None:
+    class MySchemaWithNonColumnMembers(dy.Schema):
+        a = dy.Int32(nullable=False)
+        version: int = 1
+        useful_tuple: tuple[int, int] = (1, 2)
+
+    columns = MySchemaWithNonColumnMembers.columns()
+    assert "a" in columns
+    assert "version" not in columns
+    assert "useful_tuple" not in columns
+    assert MySchemaWithNonColumnMembers.version == 1
+    assert MySchemaWithNonColumnMembers.useful_tuple == (1, 2)
+
+
+def test_user_error_tuple_column() -> None:
+    with pytest.raises(TypeError, match="tuple"):
+
+        class MySchemaWithTupleOfColumn(dy.Schema):
+            a = dy.Int32(nullable=False)
+            b = (dy.Int32(nullable=False),)  # User error: Trailing comma = tuple
+            c = dy.Int32(nullable=False)
+
+
+def test_user_error_column_type_not_instance() -> None:
+    with pytest.raises(TypeError, match="type, not an instance"):
+
+        class MySchemaWithColumnTypeNotInstance(dy.Schema):
+            a = dy.Int32(nullable=False, primary_key=True)
+            b = dy.Float64  # User error: Forgot parentheses!
+
+
+def test_user_error_polars_datatype_instance() -> None:
+    with pytest.raises(TypeError, match="polars DataType instance"):
+
+        class MySchemaWithPolarsDataTypeInstance(dy.Schema):
+            a = dy.Int32(nullable=False)
+            b = pl.String()  # User error: Used pl.String() instead of dy.String()
+
+
+def test_user_error_polars_datatype_type() -> None:
+    with pytest.raises(TypeError, match="polars DataType type"):
+
+        class MySchemaWithPolarsDataTypeType(dy.Schema):
+            a = dy.Int32(nullable=False)
+            b = pl.String  # User error: Used pl.String instead of dy.String()

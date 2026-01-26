@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
@@ -49,7 +49,7 @@ class SingleFilterCollection(dy.Collection):
 
     @dy.filter()
     def one_to_one(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_one(self.first, self.second, on="idx")
+        return dy.require_relationship_one_to_one(self.first, self.second, on="idx")
 
 
 @pytest.mark.benchmark(group="collection-filter-single")
@@ -65,7 +65,7 @@ def test_single_filter_filter(
 ) -> None:
     def benchmark_fn() -> None:
         _, failure = SingleFilterCollection.filter(partitioned_dataset)
-        _ = [len(f) for f in failure.values()]  # type: ignore
+        _ = [len(f) for f in failure.values()]
 
     benchmark(benchmark_fn)
 
@@ -79,17 +79,17 @@ class MultiFilterCollection(dy.Collection):
 
     @dy.filter()
     def one_to_one(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_one(self.first, self.second, on="idx")
+        return dy.require_relationship_one_to_one(self.first, self.second, on="idx")
 
     @dy.filter()
     def one_to_at_least_one(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_at_least_one(
+        return dy.require_relationship_one_to_at_least_one(
             self.first, self.second, on="idx"
         )
 
     @dy.filter()
     def one_to_at_least_one_reverse(self) -> pl.LazyFrame:
-        return dy.filter_relationship_one_to_at_least_one(
+        return dy.require_relationship_one_to_at_least_one(
             self.second, self.first, on="idx"
         )
 
@@ -107,6 +107,6 @@ def test_multi_filter_filter(
 ) -> None:
     def benchmark_fn() -> None:
         _, failure = MultiFilterCollection.filter(partitioned_dataset)
-        _ = [len(f) for f in failure.values()]  # type: ignore
+        _ = [len(f) for f in failure.values()]
 
     benchmark(benchmark_fn)

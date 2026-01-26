@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -26,9 +26,10 @@ class _BaseFloat(OrdinalMixin[float], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
-        allow_inf_nan: bool = False,
+        allow_inf: bool = False,
+        allow_nan: bool = False,
         min: float | None = None,
         min_exclusive: float | None = None,
         max: float | None = None,
@@ -44,13 +45,14 @@ class _BaseFloat(OrdinalMixin[float], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
-            allow_inf_nan: Whether this column may contain NaN and infinity values.
+                If `True`, `nullable` is automatically set to `False`.
+            allow_inf: Whether this column may contain infinity values.
+            allow_nan: Whether this column may contain NaN values.
             min: The minimum value for floats in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum value for floats in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -62,7 +64,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -74,7 +76,8 @@ class _BaseFloat(OrdinalMixin[float], Column):
         if max is not None and max > self.max_value:
             raise ValueError("Maximum value is too big for the data type.")
 
-        self.allow_inf_nan = allow_inf_nan
+        self.allow_inf = allow_inf
+        self.allow_nan = allow_nan
 
         super().__init__(
             nullable=nullable,
@@ -101,17 +104,19 @@ class _BaseFloat(OrdinalMixin[float], Column):
     @property
     def _nan_probability(self) -> float:
         """Private utility for the null probability used during sampling."""
-        return 0.05 if self.allow_inf_nan else 0
+        return 0.05 if self.allow_nan else 0
 
     @property
     def _inf_probability(self) -> float:
         """Private utility for the null probability used during sampling."""
-        return 0.05 if self.allow_inf_nan else 0
+        return 0.05 if self.allow_inf else 0
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         result = super().validation_rules(expr)
-        if not self.allow_inf_nan:
-            result["inf_nan"] = ~(expr.is_infinite() | expr.is_nan())
+        if not self.allow_inf:
+            result["inf"] = ~expr.is_infinite()
+        if not self.allow_nan:
+            result["nan"] = ~expr.is_nan()
         return result
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:

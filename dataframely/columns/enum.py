@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ class Enum(Column):
         self,
         categories: pl.Series | Iterable[str] | type[enum.Enum],
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,
@@ -41,7 +41,7 @@ class Enum(Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -52,7 +52,7 @@ class Enum(Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -67,12 +67,8 @@ class Enum(Column):
             metadata=metadata,
         )
         if isclass(categories) and issubclass(categories, enum.Enum):
-            categories = pl.Series(
-                values=[getattr(v, "value", v) for v in categories.__members__.values()]
-            )
-        elif not isinstance(categories, pl.Series):
-            categories = pl.Series(values=categories)
-        self.categories = categories
+            categories = (item.value for item in categories)
+        self.categories = list(categories)
 
     @property
     def dtype(self) -> pl.DataType:
@@ -81,7 +77,7 @@ class Enum(Column):
     def validate_dtype(self, dtype: PolarsDataType) -> bool:
         if not isinstance(dtype, pl.Enum):
             return False
-        return self.categories.equals(dtype.categories)
+        return self.categories == dtype.categories.to_list()
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         category_lengths = [len(c) for c in self.categories]
@@ -91,9 +87,9 @@ class Enum(Column):
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        if len(self.categories) <= 2**8 - 2:
+        if len(self.categories) <= 2**8 - 1:
             dtype = pa.uint8()
-        elif len(self.categories) <= 2**16 - 2:
+        elif len(self.categories) <= 2**16 - 1:
             dtype = pa.uint16()
         else:
             dtype = pa.uint32()
@@ -102,6 +98,6 @@ class Enum(Column):
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(
             n,
-            choices=self.categories.to_list(),
+            choices=self.categories,
             null_probability=self._null_probability,
         ).cast(self.dtype)

@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
@@ -40,6 +40,7 @@ def test_simple_serialization() -> None:
         create_schema("test", {"a": dy.Int64(check=[lambda expr: expr > 5])}),
         create_schema("test", {"a": dy.Int64(check={"x": lambda expr: expr > 5})}),
         create_schema("test", {"a": dy.Int64(alias="foo")}),
+        create_schema("test", {"a": dy.Enum(["a"])}),
         create_schema("test", {"a": dy.Decimal(scale=2, min=Decimal("1.5"))}),
         create_schema("test", {"a": dy.Date(min=dt.date(2020, 1, 1))}),
         create_schema("test", {"a": dy.Datetime(min=dt.datetime(2020, 1, 1))}),
@@ -52,7 +53,7 @@ def test_simple_serialization() -> None:
             {"a": dy.Int64()},
             rules={"test": GroupRule(pl.len() > 2, group_columns=["a"])},
         ),
-        create_schema("test", {"a": dy.Array(dy.Int64(), shape=(2, 2))}),
+        create_schema("test", {"a": dy.Array(dy.Int64(nullable=True), shape=(2, 2))}),
         create_schema("test", {"a": dy.List(dy.Int64(min=5))}),
         create_schema(
             "test",
@@ -98,7 +99,7 @@ def test_deserialize_unknown_column_type() -> None:
             "rules": {}
         }
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)
 
 
@@ -111,13 +112,13 @@ def test_deserialize_unknown_rule_type() -> None:
             "rules": {"a": {"rule_type": "unknown"}}
         }
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)
 
 
 def test_deserialize_invalid_type() -> None:
     serialized = '{"__type__": "unknown", "value": "foo"}'
-    with pytest.raises(TypeError):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)
 
 
@@ -126,5 +127,5 @@ def test_deserialize_invalid_type() -> None:
 
 def test_deserialize_unknown_format_version() -> None:
     serialized = '{"versions": {"format": "invalid"}}'
-    with pytest.raises(ValueError, match=r"Unsupported schema format version"):
+    with pytest.raises(dy.DeserializationError):
         dy.deserialize_schema(serialized)

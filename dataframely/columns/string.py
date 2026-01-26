@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -8,11 +8,13 @@ from typing import Any
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
-from dataframely._extre import matching_string_length as extre_matching_string_length
+from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import register
+
+DEFAULT_SAMPLING_REGEX = r"[0-9a-zA-Z]"
 
 
 @register
@@ -22,7 +24,7 @@ class String(Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min_length: int | None = None,
         max_length: int | None = None,
@@ -41,7 +43,7 @@ class String(Column):
             min_length: The minimum byte-length of string values in this column.
             max_length: The maximum byte-length of string values in this column.
             regex: A regex that the string values in this column must match. If the
-                regex does not use start and end anchors (i.e. ``^`` and ``$``), the
+                regex does not use start and end anchors (i.e. `^` and `$`), the
                 regex must only be _contained_ in the string.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -53,7 +55,7 @@ class String(Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -99,7 +101,7 @@ class String(Column):
         ):
             # If the string is constrained by a fully anchored regex, we can use this
             # information to specify the length of the string column
-            min_length, max_length = extre_matching_string_length(self.regex)
+            min_length, max_length = regex_matching_string_length(self.regex)
             if max_length is not None:
                 if min_length == max_length:
                     return sa.CHAR(max_length)
@@ -126,9 +128,9 @@ class String(Column):
             str_max = f"{self.max_length}" if self.max_length is not None else ""
             # NOTE: We generate single-byte unicode characters here as validation uses
             #  `len_bytes()`. Potentially we need to be more accurate at some point...
-            regex = f"[\x01-\x7a]{{{str_min},{str_max}}}"
+            regex = f"{DEFAULT_SAMPLING_REGEX}{{{str_min},{str_max}}}"
         else:
-            regex = r"[\x01-\x7a]*"
+            regex = rf"{DEFAULT_SAMPLING_REGEX}*"
 
         return generator.sample_string(
             n,

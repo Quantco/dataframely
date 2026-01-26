@@ -1,5 +1,7 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
+
+from typing import cast
 
 import polars as pl
 import pytest
@@ -62,7 +64,7 @@ def test_nested_lists() -> None:
 def test_list_with_pk() -> None:
     schema = create_schema(
         "test",
-        {"a": dy.List(dy.String(), primary_key=True)},
+        {"a": dy.List(dy.String(nullable=True), primary_key=True)},
     )
     df = pl.DataFrame({"a": [["ab"], ["a", "ab"], [None], ["a", "b"], ["a", "b"]]})
     _, failures = schema.filter(df)
@@ -179,3 +181,14 @@ def test_inner_primary_key_struct(
     _, failure = schema.filter(df)
     assert failure.counts() == {"a|primary_key": failure_count}
     assert validation_mask(df, failure).to_list() == mask
+
+
+@pytest.mark.parametrize("min_length", [0, 10, 33, 100])
+def test_list_sampling_with_min_length(min_length: int) -> None:
+    """Test that sampling works correctly when min_length > 32."""
+    schema = create_schema("test", {"a": dy.List(dy.Int64(), min_length=min_length)})
+    df = schema.sample(num_rows=10)
+    assert len(df) == 10
+    # Verify all lists have at least min_length elements
+    min_list_len = cast(int, df["a"].list.len().min())
+    assert min_list_len >= min_length

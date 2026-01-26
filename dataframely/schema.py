@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -7,21 +7,24 @@ import json
 import sys
 import warnings
 from abc import ABC
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from json import JSONDecodeError
 from pathlib import Path
 from typing import IO, Any, Literal, overload
 
 import polars as pl
 import polars.exceptions as plexc
-import polars.selectors as cs
-from polars._typing import FileSource, PartitioningScheme
+from polars._typing import FileSource
 
 from dataframely._compat import deltalake
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import pa, sa
-from ._rule import Rule, rule_from_dict, with_evaluation_rules
+from ._compat import PartitionSchemeOrSinkDirectory, pa, sa
+from ._match_to_schema import match_to_schema
+from ._native import format_rule_failures
+from ._plugin import all_rules, all_rules_horizontal, all_rules_required
+from ._polars import collect_if
+from ._rule import Rule, RuleFactory, rule_from_dict, with_evaluation_rules
 from ._serialization import (
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
@@ -35,17 +38,23 @@ from ._storage.parquet import (
     ParquetStorageBackend,
 )
 from ._typing import DataFrame, LazyFrame, Validation
-from ._validation import DtypeCasting, validate_columns, validate_dtypes
 from .columns import Column, column_from_dict
 from .config import Config
-from .exc import RuleValidationError, ValidationError, ValidationRequiredError
-from .failure import FailureInfo
+from .exc import (
+    DeserializationError,
+    SchemaError,
+    ValidationError,
+    ValidationRequiredError,
+)
+from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
+_COLUMN_VALID = "__DATAFRAMELY_VALID__"
 
 
 # ------------------------------------------------------------------------------------ #
@@ -89,8 +98,9 @@ class Schema(BaseSchema, ABC):
         """Create an empty data or lazy frame from this schema.
 
         Args:
-            lazy: Whether to create a lazy data frame. If ``True``, returns a lazy frame
-                with this Schema. Otherwise, returns an eager frame.
+            lazy: Whether to create a lazy data frame.
+                If `True`, returns a lazy frame with this :class:`Schema`.
+                Otherwise, returns an eager frame.
 
         Returns:
             An instance of :class:`polars.DataFrame` or :class:`polars.LazyFrame` with
@@ -137,18 +147,19 @@ class Schema(BaseSchema, ABC):
         *,
         lazy: bool = False,
     ) -> DataFrame[Self] | LazyFrame[Self]:
-        """Impute ``None`` input with an empty, schema-compliant lazy or eager data
-        frame or return the input as lazy or eager frame.
+        """Impute `None` input with an empty, schema-compliant lazy or eager data frame
+        or return the input as lazy or eager frame.
 
         Args:
-            df: The data frame to check for ``None``. If it is not ``None``, it is
-                returned as lazy or eager frame. Otherwise, a schema-compliant data
-                or lazy frame with no rows is returned.
-            lazy: Whether to return a lazy data frame. If ``True``, returns a lazy frame
-                with this Schema. Otherwise, returns an eager frame.
+            df: The data frame to check for `None`.
+                If it is not `None`, it is returned as lazy or eager frame.
+                Otherwise, a schema-compliant data or lazy frame with no rows is returned.
+            lazy: Whether to return a lazy data frame.
+                If `True`, returns a lazy frame with this :class:`Schema`.
+                Otherwise, returns an eager frame.
 
         Returns:
-            The given data frame ``df`` as lazy or eager frame, if it is not ``None``.
+            The given data frame `df` as lazy or eager frame, if it is not `None`.
             An instance of :class:`polars.DataFrame` or :class:`polars.LazyFrame` with
             this schema's defined columns and their data types, but no rows, otherwise.
         """
@@ -165,7 +176,7 @@ class Schema(BaseSchema, ABC):
         num_rows: int | None = None,
         *,
         overrides: (
-            Mapping[str, Iterable[Any]] | Sequence[Mapping[str, Any]] | None
+            Mapping[str, Sequence[Any] | Any] | Sequence[Mapping[str, Any]] | None
         ) = None,
         generator: Generator | None = None,
     ) -> DataFrame[Self]:
@@ -177,36 +188,38 @@ class Schema(BaseSchema, ABC):
 
         In order to allow for sampling random data frames in the presence of custom
         rules and primary key constraints, this method performs *fuzzy sampling*: it
-        samples in a loop until it finds a data frame of length ``num_rows`` which
+        samples in a loop until it finds a data frame of length `num_rows` which
         adhere to the schema. The maximum number of sampling rounds is configured via
-        ``max_sampling_iterations`` in the :class:`Config` class. By fixing this setting
+        `max_sampling_iterations` in the :class:`Config` class. By fixing this setting
         to 1, it is only possible to reliably sample from schemas without custom rules
         and without primary key constraints.
 
         Args:
             num_rows: The (optional) number of rows to sample for creating the random
-                data frame. Must be provided (only) if no ``overrides`` are provided. If
-                this is ``None``, the number of rows in the data frame is determined by
-                the length of the values in ``overrides``.
+                data frame. Must be provided (only) if no `overrides` are provided. If
+                this is `None`, the number of rows in the data frame is determined by
+                the length of the values in `overrides`.
             overrides: Fixed values for a subset of the columns of the sampled data
                 frame. Just like when initializing a :mod:`polars.DataFrame`, overrides
                 may either be provided as "column-" or "row-layout", i.e. via a mapping
                 or a list of mappings, respectively. The number of rows in the result
-                data frame is equal to the length of the values in ``overrides``. If both
-                ``overrides`` and ``num_rows`` are provided, the length of the values in
-                ``overrides`` must be equal to ``num_rows``. The order of the items is
+                data frame is equal to the length of the values in `overrides`. If both
+                `overrides` and `num_rows` are provided, the length of the values in
+                `overrides` must be equal to `num_rows`. The order of the items is
                 guaranteed to match the ordering in the returned data frame. When providing
                 values for a column, no sampling is performed for that column.
-            generator: The (seeded) generator to use for sampling data. If ``None``, a
+            generator: The (seeded) generator to use for sampling data. If `None`, a
                 generator with random seed is automatically created.
 
         Returns:
             A data frame valid under the current schema with a number of rows that matches
-            the length of the values in ``overrides`` or ``num_rows``.
+            the length of the values in `overrides` or `num_rows`.
 
         Raises:
-            ValueError: If ``num_rows`` is not equal to the length of the values in
-                ``overrides``.
+            ValueError: If `num_rows` is not equal to the length of the values in
+                `overrides`.
+            ValueError: If `overrides` are specified as a sequence of mappings and
+                the mappings do not provide the same keys.
             ValueError: If no valid data frame can be found in the configured maximum
                 number of iterations.
 
@@ -220,11 +233,22 @@ class Schema(BaseSchema, ABC):
         g = generator or Generator()
 
         # Precondition: valid overrides. We put them into a data frame to remember which
-        # values have been used in the algorithm below.
-        if overrides:
+        # values have been used in the algorithm below. When the user passes a sequence
+        # of mappings, they do not require to have the same keys. Hence, we have to
+        # remember that the data frame has "holes".
+        missing_override_indices: dict[str, pl.Series] = {}
+        if overrides is not None:
             override_keys = (
-                set(overrides) if isinstance(overrides, Mapping) else set(overrides[0])
+                set(overrides)
+                if isinstance(overrides, Mapping)
+                else (
+                    set.union(*[set(o.keys()) for o in overrides])
+                    if len(overrides) > 0
+                    else set()
+                )
             )
+
+            # Check that all override keys refer to valid columns
             column_names = set(cls.column_names())
             if not override_keys.issubset(column_names):
                 raise ValueError(
@@ -232,6 +256,19 @@ class Schema(BaseSchema, ABC):
                     "which are not in the schema."
                 )
 
+            # Remember the "holes" of the inputs if overrides are provided as a sequence
+            if isinstance(overrides, Sequence):
+                for key in override_keys:
+                    indices = [
+                        i for i, override in enumerate(overrides) if key not in override
+                    ]
+                    if len(indices) > 0:
+                        missing_override_indices[key] = pl.Series(indices)
+
+            # NOTE: Even if the user-provided overrides have "holes", we can still just
+            #  create the data frame. Polars will fill the missing values with nulls, we
+            #  will replace them later during sampling. If we were to already replace
+            #  them here, we would not be able to resample these values.
             values = pl.DataFrame(
                 overrides,
                 schema={
@@ -294,15 +331,33 @@ class Schema(BaseSchema, ABC):
             used_values=values.slice(0, 0),
             remaining_values=values,
             override_expressions=override_expressions,
+            missing_value_indices=missing_override_indices,
         )
 
         sampling_rounds = 1
         while len(result) != num_rows:
             if sampling_rounds >= Config.options["max_sampling_iterations"]:
+                relevant_rows = pl.concat(
+                    [
+                        df
+                        for df in [
+                            result,
+                            used_values.drop("__row_index__"),
+                            remaining_values.drop("__row_index__"),
+                        ]
+                    ],
+                    how="diagonal",  # `used_values` and `remaining_values` only contain columns in `overrides`
+                )
+                validation_error = None
+                try:
+                    cls.validate(relevant_rows)
+                except ValidationError as e:
+                    validation_error = str(e)
                 raise ValueError(
-                    f"Sampling exceeded {Config.options['max_sampling_iterations']} "
-                    "iterations. Consider increasing the maximum number of sampling "
-                    "iterations via `dy.Config` or implement your custom sampling "
+                    f"After sampling for {Config.options['max_sampling_iterations']} "
+                    f"iterations, {validation_error or 'no valid data frame was found'}. "
+                    f"Consider increasing the maximum number "
+                    "of sampling iterations via `dy.Config` or implement your custom sampling "
                     "logic. Alternatively, passing predefined value to `overrides` "
                     "or implementing `_sampling_overrides` for your schema can also "
                     "help the sampling procedure find a valid data frame."
@@ -314,6 +369,7 @@ class Schema(BaseSchema, ABC):
                 used_values=used_values,
                 remaining_values=remaining_values,
                 override_expressions=override_expressions,
+                missing_value_indices=missing_override_indices,
             )
             sampling_rounds += 1
 
@@ -342,6 +398,7 @@ class Schema(BaseSchema, ABC):
         used_values: pl.DataFrame,
         remaining_values: pl.DataFrame,
         override_expressions: list[pl.Expr],
+        missing_value_indices: dict[str, pl.Series],
     ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
         """Private method to sample a data frame with the schema including subsequent
         filtering.
@@ -360,34 +417,61 @@ class Schema(BaseSchema, ABC):
             }
         )
 
+        # If we have missing value indices, we need to sample new values for the
+        # indices that overlap with indices in the remaining values and replace them
+        # in the sampled data frame.
+        for name, indices in missing_value_indices.items():
+            remapped_indices = (
+                indices.to_frame("idx")
+                .join(
+                    remaining_values.select("__row_index__").with_row_index(
+                        "__row_index_loop__"
+                    ),
+                    left_on="idx",
+                    right_on="__row_index__",
+                )
+                .select("__row_index_loop__")
+                .to_series()
+            )
+            if (num := len(remapped_indices)) > 0:
+                sampled_values = cls.columns()[name].sample(generator, num)
+                sampled = sampled.with_columns(
+                    sampled[name]
+                    # NOTE: We need to sort here as `scatter` requires sorted indices.
+                    #  Due to concatenations in `remaining_values`, the indices can go
+                    #  out of order.
+                    .scatter(remapped_indices.sort(), sampled_values)
+                    .alias(name)
+                )
+
         combined_dataframe = pl.concat([previous_result, sampled])
         # Pre-process columns before filtering.
         combined_dataframe = combined_dataframe.with_columns(override_expressions)
 
         # NOTE: We already know that all columns have the correct dtype
         rules = cls._validation_rules(with_cast=False)
-        filtered, evaluated = cls._filter_raw(combined_dataframe, rules, cast=False)
+        if not rules:
+            # We surely included all items from `remaining_values`
+            return combined_dataframe, remaining_values, remaining_values.head(0)
 
-        if evaluated is None:
-            # When `evaluated` is None, there are no rules and we surely included all
-            # items from `remaining_values`
-            return filtered, remaining_values, remaining_values.slice(0, 0)
+        evaluated = combined_dataframe.lazy().pipe(cls._with_evaluated_rules, rules)
+        filtered = evaluated.filter(_COLUMN_VALID).select(cls.column_names())
 
         concat_values = pl.concat([used_values, remaining_values])
-
         if concat_values.height == 0:
             # If we didn't provide any values, we can simply return empty data frames
             # with the right schema for used and remaining values
-            return filtered, concat_values, concat_values
+            return filtered.collect(), concat_values, concat_values
 
         # NOTE: We can filter `concat_values` using the bitmask from the above filter
         #  operation as the ordering of the custom values is guaranteed to be the
         #  same: `previous_result` and `used_values` contain the same values. Similarly,
         #  `sampled` and `remaining_values` have the same values.
+        filtered_df, evaluated_df = pl.collect_all([filtered, evaluated])
         return (
-            filtered,
-            concat_values.filter(evaluated.get_column("__final_valid__")),
-            concat_values.filter(~evaluated.get_column("__final_valid__")),
+            filtered_df,
+            concat_values.filter(evaluated_df.get_column(_COLUMN_VALID)),
+            concat_values.filter(~evaluated_df.get_column(_COLUMN_VALID)),
         )
 
     @classmethod
@@ -410,91 +494,195 @@ class Schema(BaseSchema, ABC):
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
+    @overload
     @classmethod
     def validate(
-        cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
-    ) -> DataFrame[Self]:
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[True] = True,
+    ) -> DataFrame[Self]: ...
+
+    @overload
+    @classmethod
+    def validate(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[False],
+    ) -> LazyFrame[Self]: ...
+
+    @overload
+    @classmethod
+    def validate(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool,
+    ) -> DataFrame[Self] | LazyFrame[Self]: ...
+
+    @classmethod
+    def validate(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool = True,
+    ) -> DataFrame[Self] | LazyFrame[Self]:
         """Validate that a data frame satisfies the schema.
+
+        If an eager data frame is passed as input, validation is performed within this
+        function. If a lazy frame is passed, the lazy frame is simply extended with the
+        validation logic. The logic will only be executed (and potentially raise an
+        error) once :meth:`~polars.LazyFrame.collect` is called on it.
 
         Args:
             df: The data frame to validate.
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible.
+            eager: Whether the validation should be performed eagerly and this method
+                should raise upon failure. If `False`, the returned lazy frame will
+                fail to collect if the validation does not pass.
 
         Returns:
-            The (collected) input data frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence. The data frame is
-            guaranteed to maintain its order.
+            The input eager or lazy frame, wrapped in a generic version of the
+            input's data frame type to reflect schema adherence. This operation is
+            guaranteed to maintain input ordering of rows.
 
         Raises:
-            ValidationError: If the input data frame does not satisfy the schema
-                definition.
-
-        Note:
-            This method _always_ collects the input data frame in order to raise
-            potential validation errors.
+            SchemaError: If `eager=True` and the input data frame misses columns or
+                `cast=False` and any data type mismatches the definition in this
+                schema. Only raised upon collection if `eager=False`.
+            ValidationError: If `eager=True` and in any rule in the schema is
+                violated, i.e. the data does not pass the validation. When
+                `eager=False`, a :class:`~polars.exceptions.ComputeError` is raised
+                upon collecting.
+            InvalidOperationError: If `eager=True`, `cast=True`, and the cast fails
+                for any value in the data. Only raised upon collection if
+                `eager=False`.
         """
-        # We can dispatch to the `filter` method and raise an error if any row cannot
-        # be validated
-        df_valid, failures = cls.filter(df, cast=cast)
-        if len(failures) > 0:
-            raise RuleValidationError(failures.counts())
-        return df_valid
+        if eager:
+            out, failure = cls.filter(df, cast=cast, eager=True)
+            if len(failure) > 0:
+                raise ValidationError(
+                    format_rule_failures(list(failure.counts().items()))
+                )
+            return out
+        else:
+            lf = df.lazy().pipe(
+                match_to_schema, cls, casting=("strict" if cast else "none")
+            )
+            if rules := cls._validation_rules(with_cast=False):
+                lf = (
+                    lf.pipe(with_evaluation_rules, rules)
+                    .filter(all_rules_required(rules.keys(), schema_name=cls.__name__))
+                    .drop(rules.keys())
+                )
+            return lf  # type: ignore
 
     @classmethod
     def is_valid(
         cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
     ) -> bool:
-        """Utility method to check whether :meth:`validate` raises an exception.
+        """Check whether a data frame satisfies the schema.
+
+        This method has two major differences to :meth:`validate`:
+
+        - It always collects the input to eagerly evaluate validity and return a boolean
+          value.
+        - It does not raise any of the documented exceptions for :meth:`validate` and
+          instead returns a value of `False`. Note that it still raises an exception
+          if a lazy frame is provided as input and any logic prior to the validation
+          causes an exception.
 
         Args:
             df: The data frame to check for validity.
-            allow_extra_columns: Whether to allow the data frame to contain columns
-                that are not defined in the schema.
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type before running validation. If set
-                to ``False``, a wrong data type will result in a return value of
-                ``False``.
+                to `False`, a wrong data type will result in a return value of
+                `False`.
 
         Returns:
             Whether the provided dataframe can be validated with this schema.
+
+        Notes:
+            If you want to customize the engine being used for collecting the result
+            within this method, consider wrapping the call in a context manager that
+            sets the `engine_affinity` in the :class:`polars.Config`.
         """
+        # NOTE: We need to perform "lenient" casting to catch issues resulting from
+        #  invalid target data types where casting fails for the data.
+        lf = df.lazy().pipe(
+            match_to_schema, cls, casting=("lenient" if cast else "none")
+        )
         try:
-            cls.validate(df, cast=cast)
-            return True
-        except (ValidationError, plexc.InvalidOperationError):
+            if rules := cls._validation_rules(with_cast=cast):
+                return (
+                    lf.pipe(with_evaluation_rules, rules)
+                    .select(all_rules(rules.keys()))
+                    .collect()
+                    .item()
+                )
+            # NOTE: We cannot simply return `True` here as, otherwise, we wouldn't
+            #  validate the schema.
+            return lf.select(pl.lit(True)).collect().item()
+        except SchemaError:
+            # If we encounter a schema error, we gracefully handle this as 'invalid'
             return False
-        except Exception as e:  # pragma: no cover
-            raise e
-
-    @classmethod
-    def _validate_schema(
-        cls,
-        lf: pl.LazyFrame,
-        *,
-        casting: DtypeCasting,
-    ) -> pl.LazyFrame:
-        schema = lf.collect_schema()
-        lf = validate_columns(lf, actual=schema.keys(), expected=cls.column_names())
-
-        if casting == "lenient":
-            # Keep around original nullability info to use this information to evaluate
-            # whether casting succeeded.
-            # NOTE: This code path is only executed from the `filter` method.
-            lf = lf.with_columns(
-                pl.col(cls.column_names()).name.prefix(ORIGINAL_COLUMN_PREFIX)
-            )
-
-        lf = validate_dtypes(lf, actual=schema, expected=cls.columns(), casting=casting)
-        return lf
 
     # ----------------------------------- FILTERING ---------------------------------- #
 
+    @overload
     @classmethod
     def filter(
-        cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False
-    ) -> tuple[DataFrame[Self], FailureInfo[Self]]:
-        """Filter the data frame by the rules of this schema.
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[True] = True,
+    ) -> FilterResult[Self]: ...
+
+    @overload
+    @classmethod
+    def filter(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: Literal[False],
+    ) -> LazyFilterResult[Self]: ...
+
+    @overload
+    @classmethod
+    def filter(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool,
+    ) -> FilterResult[Self] | LazyFilterResult[Self]: ...
+
+    @classmethod
+    def filter(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        eager: bool = True,
+    ) -> FilterResult[Self] | LazyFilterResult[Self]:
+        """Filter the data frame by the rules of this schema, returning `(valid,
+        failures)`.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
         While :meth:`validate` raises an exception when a row does not adhere to the
@@ -502,12 +690,16 @@ class Schema(BaseSchema, ABC):
         succeeds.
 
         Args:
-            df: The data frame to filter for valid rows. The data frame is collected
-                within this method, regardless of whether a :class:`~polars.DataFrame`
-                or :class:`~polars.LazyFrame` is passed.
-            cast: Whether columns with a wrong data type in the input data frame are
+            df: The data frame to filter for valid rows.
+                The data frame is collected within this method, regardless of whether
+                a :class:`~polars.DataFrame` or :class:`~polars.LazyFrame` is passed.
+            cast:
+                Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible. Rows for which the
                 cast fails for any column are filtered out.
+            eager: Whether the filter operation should be performed eagerly. If `False`, the
+                returned lazy frame will
+                fail to collect if the validation does not pass.
 
         Returns:
             A tuple of the validated rows in the input data frame (potentially
@@ -519,71 +711,68 @@ class Schema(BaseSchema, ABC):
         Raises:
             ValidationError: If the columns of the input data frame are invalid. This
                 happens only if the data frame misses a column defined in the schema or
-                a column has an invalid dtype while ``cast`` is set to ``False``.
+                a column has an invalid dtype while `cast` is set to `False`.
 
         Note:
             This method preserves the ordering of the input data frame.
+
+        Example:
+
+            .. code-block:: python
+
+                # Filter the data and cast columns to expected types
+                good, failure = HouseSchema.filter(df, cast=True)
+
+                # Inspect the reasons for the failed rows
+                print(failure.counts())
+
+                # Inspect the failed rows
+                failed_df = failure.invalid()
+                print(failed_df)
         """
-        rules = cls._validation_rules(with_cast=cast)
-        df_filtered, df_evaluated = cls._filter_raw(df, rules, cast)
-        if df_evaluated is not None:
-            failure_lf = (
-                df_evaluated.lazy()
-                .filter(~pl.col("__final_valid__"))
-                .drop("__final_valid__")
+        lf = df.lazy().pipe(
+            match_to_schema, cls, casting=("lenient" if cast else "none")
+        )
+        if rules := cls._validation_rules(with_cast=cast):
+            evaluated = (
+                lf.pipe(cls._with_evaluated_rules, rules).pipe(collect_if, eager).lazy()
             )
+            filtered = evaluated.filter(pl.col(_COLUMN_VALID)).select(
+                cls.column_names()
+            )
+            failure_lf = evaluated.filter(~pl.col(_COLUMN_VALID)).drop(_COLUMN_VALID)
             if cast:
                 # If we cast, we kept the original values around. In the failure info,
                 # we must return the original values instead of the casted ones.
-                failure_lf = failure_lf.with_columns(
-                    pl.col(f"{ORIGINAL_COLUMN_PREFIX}{name}").alias(name)
-                    for name in cls.column_names()
-                ).drop(f"{ORIGINAL_COLUMN_PREFIX}{name}" for name in cls.column_names())
-            return (
-                df_filtered,
-                FailureInfo(lf=failure_lf, rule_columns=list(rules.keys()), schema=cls),
-            )
-        return df_filtered, FailureInfo(lf=pl.LazyFrame(), rule_columns=[], schema=cls)
+                failure_lf = failure_lf.pipe(
+                    _restore_original_columns, cls.column_names()
+                )
+        else:
+            filtered = lf
+            failure_lf = pl.LazyFrame()
+
+        # Build the result objects
+        failure_info = FailureInfo(
+            lf=failure_lf, rule_columns=list(rules.keys()), schema=cls
+        )
+        result = LazyFilterResult(filtered, failure_info)  # type: ignore
+        if eager:
+            return result.collect_all()
+        return result
 
     @classmethod
-    def _filter_raw(
-        cls, df: pl.DataFrame | pl.LazyFrame, rules: dict[str, Rule], cast: bool
-    ) -> tuple[DataFrame[Self], pl.DataFrame | None]:
-        # First, we check for the schema of the data frame
-        lf = cls._validate_schema(df.lazy(), casting=("lenient" if cast else "none"))
-
-        # Then, we filter the data frame
-        if len(rules) > 0:
-            lf_with_eval = lf.pipe(with_evaluation_rules, rules)
-
-            # At this point, `lf_with_eval` contains the following:
-            # - All relevant columns of the original data frame
-            #   - If `cast` is set to `True`, the columns with their original names are
-            #     already cast and the original values are available in the columns
-            #     prefixed with `ORIGINAL_COLUMN_PREFIX`.
-            # - One boolean column for each rule in `rules`
-            rule_columns = rules.keys()
-            df_evaluated = lf_with_eval.with_columns(
-                __final_valid__=pl.all_horizontal(pl.col(rule_columns).fill_null(True))
-            ).collect()
-
-            # For the output, partition `lf_evaluated` into the returned data frame `lf`
-            # and the invalid data frame
-            lf = (
-                df_evaluated.lazy()
-                .filter("__final_valid__")
-                .drop(
-                    "__final_valid__",
-                    cs.starts_with(ORIGINAL_COLUMN_PREFIX),
-                    *rule_columns,
-                )
-            )
-        else:
-            df_evaluated = None
-
-        return (
-            lf.collect(),  # type: ignore
-            df_evaluated,
+    def _with_evaluated_rules(
+        cls, lf: pl.LazyFrame, rules: dict[str, Rule]
+    ) -> pl.LazyFrame:
+        # The resulting lazy frame contains:
+        #  - The output columns
+        #  - The input columns IF `cast=True`, prefixed with a constant
+        #  - One boolean column per rule
+        #  - One boolean column aggregating all rules
+        return lf.pipe(with_evaluation_rules, rules).with_columns(
+            all_rules_horizontal(
+                pl.col(rule).fill_null(True) for rule in rules.keys()
+            ).alias(_COLUMN_VALID)
         )
 
     # ------------------------------------ CASTING ----------------------------------- #
@@ -606,7 +795,7 @@ class Schema(BaseSchema, ABC):
         correct dtypes. However, it does **not** introspect the data frame contents.
 
         Hence, this method should be used with care and :meth:`validate` should
-        generally be preferred. It is advised to *only* use this method if ``df`` is
+        generally be preferred. It is advised to *only* use this method if `df` is
         surely known to adhere to the schema.
 
         Returns:
@@ -615,11 +804,11 @@ class Schema(BaseSchema, ABC):
 
         Note:
             If you only require a generic data frame for the type checker, consider
-            using :meth:`typing.cast` instead of this method.
+            using :func:`typing.cast` instead of this method.
 
         Attention:
             For lazy frames, casting is not performed eagerly. This prevents collecting
-            the lazy frame's schema but also means that a call to :meth:`collect`
+            the lazy frame's schema but also means that a call to :meth:`polars.LazyFrame.collect`
             further down the line might fail because of the cast and/or missing columns.
         """
         lf = df.lazy().select(
@@ -698,7 +887,7 @@ class Schema(BaseSchema, ABC):
                 partitioned dataset. The `mkdir` kwarg controls whether the directory
                 is created if needed.
             kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
+                :meth:`polars.write_parquet`. `metadata` may only be provided if it
                 is a dictionary.
 
         Attention:
@@ -712,7 +901,7 @@ class Schema(BaseSchema, ABC):
         cls,
         lf: LazyFrame[Self],
         /,
-        file: str | Path | IO[bytes] | PartitioningScheme,
+        file: str | Path | IO[bytes] | PartitionSchemeOrSinkDirectory,
         **kwargs: Any,
     ) -> None:
         """Stream a typed lazy frame with this schema to a parquet file.
@@ -726,7 +915,7 @@ class Schema(BaseSchema, ABC):
             file: The file path, writable file-like object, or partitioning scheme to
                 which to write the parquet file.
             kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
+                :meth:`polars.write_parquet`. `metadata` may only be provided if it
                 is a dictionary.
 
         Attention:
@@ -753,20 +942,20 @@ class Schema(BaseSchema, ABC):
             source: Path, directory, or file-like object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - `"allow"`: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
-                - ``"skip"``: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                - `"skip"`: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.read_parquet` to convey the purpose better_.
+                  :meth:`polars.read_parquet` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.read_parquet`.
@@ -775,8 +964,9 @@ class Schema(BaseSchema, ABC):
             The data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read from the
-                source and ``validation`` is set to ``"forbid"``.
+            ValidationRequiredError:
+                If no schema information can be read from the
+                source and `validation` is set to `"forbid"`.
 
         Attention:
             Be aware that this method suffers from the same limitations as
@@ -808,20 +998,20 @@ class Schema(BaseSchema, ABC):
             source: Path, directory, or file-like object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - `"allow"`: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
-                - ``"skip"``: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                - `"skip"`: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.scan_parquet` to convey the purpose better_.
+                  :meth:`polars.scan_parquet` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.scan_parquet`.
@@ -830,13 +1020,9 @@ class Schema(BaseSchema, ABC):
             The data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read from the
-                source and ``validation`` is set to ``"forbid"``.
-
-        Note:
-            Due to current limitations in dataframely, this method actually reads the
-            parquet file into memory if ``validation`` is ``"warn"`` or ``"allow"`` and
-            validation is required.
+            ValidationRequiredError:
+                If no schema information can be read from the
+                source and `validation` is set to `"forbid"`.
 
         Attention:
             Be aware that this method suffers from the same limitations as
@@ -939,20 +1125,20 @@ class Schema(BaseSchema, ABC):
             source: Path or DeltaTable object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - `"allow"`: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
-                - ``"skip"``: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                - `"skip"`: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.scan_delta` to convey the purpose better_.
+                  :meth:`polars.scan_delta` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_delta`.
 
@@ -960,18 +1146,14 @@ class Schema(BaseSchema, ABC):
             The lazy data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read
-            from the source and ``validation`` is set to ``"forbid"``.
+            ValidationRequiredError:
+                If no schema information can be read
+                from the source and `validation` is set to `"forbid"`.
 
         Attention:
             Schema metadata is stored as custom commit metadata. Only the schema
             information from the last commit is used, so any table modifications
             that are not through dataframely will result in losing the metadata.
-
-            Be aware that appending to an existing table via mode="append" may result
-            in violation of group constraints that dataframely cannot catch
-            without re-validating. Only use appends if you are certain that they do not
-            break your schema.
 
             This method suffers from the same limitations as :meth:`serialize`.
         """
@@ -1000,20 +1182,20 @@ class Schema(BaseSchema, ABC):
             source: Path or DeltaTable object from which to read the data.
             validation: The strategy for running validation when reading the data:
 
-                - ``"allow"`: The method tries to read the parquet file's metadata. If
+                - `"allow"`: The method tries to read the parquet file's metadata. If
                   the stored schema matches this schema, the data frame is read without
                   validation. If the stored schema mismatches this schema or no schema
                   information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with ``cast=True``.
-                - ``"warn"`: The method behaves similarly to ``"allow"``. However,
+                  runs :meth:`validate` with `cast=True`.
+                - `"warn"`: The method behaves similarly to `"allow"`. However,
                   it prints a warning if validation is necessary.
-                - ``"forbid"``: The method never runs validation automatically and only
+                - `"forbid"`: The method never runs validation automatically and only
                   returns if the schema stored in the parquet file's metadata matches
                   this schema.
-                - ``"skip"``: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. _Use this
+                - `"skip"`: The method never runs validation and simply reads the
+                  parquet file, entrusting the user that the schema is valid. *Use this
                   option carefully and consider replacing it with
-                  :meth:`polars.read_delta` to convey the purpose better_.
+                  :meth:`polars.read_delta` to convey the purpose better*.
 
             kwargs: Additional keyword arguments passed directly to :meth:`polars.read_delta`.
 
@@ -1021,8 +1203,9 @@ class Schema(BaseSchema, ABC):
             The data frame with this schema.
 
         Raises:
-            ValidationRequiredError: If no schema information can be read
-            from the source and ``validation`` is set to ``"forbid"``.
+            ValidationRequiredError:
+                If no schema information can be read from the source
+                and `validation` is set to `"forbid"`.
 
         Attention:
             Schema metadata is stored as custom commit metadata. Only the schema
@@ -1079,46 +1262,48 @@ class Schema(BaseSchema, ABC):
         cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
     ) -> LazyFrame[Self] | DataFrame[Self]:
         # Load
+        read: pl.DataFrame | pl.LazyFrame
         if lazy:
-            lf, serialized_schema = backend.scan_frame(**kwargs)
+            read, serialized_schema = backend.scan_frame(**kwargs)
         else:
-            df, serialized_schema = backend.read_frame(**kwargs)
-            lf = df.lazy()
+            read, serialized_schema = backend.read_frame(**kwargs)
 
-        validated = cls._validate_if_needed(
-            lf=lf,
+        return cls._validate_if_needed(
+            df=read,
             serialized_schema=serialized_schema,
             validation=validation,
             source=kwargs["source"],
         )
-        if lazy:
-            return validated
-        return validated.collect()
 
     @classmethod
     def _validate_if_needed(
         cls,
-        lf: pl.LazyFrame,
+        df: pl.DataFrame | pl.LazyFrame,
         serialized_schema: SerializedSchema | None,
         validation: Validation,
         source: str,
-    ) -> LazyFrame[Self]:
+    ) -> DataFrame[Self] | LazyFrame[Self]:
+        # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
+        # deserialization failures from old serialized formats.
+        strict = validation == "forbid"
         deserialized_schema = (
-            deserialize_schema(serialized_schema) if serialized_schema else None
+            deserialize_schema(serialized_schema, strict=strict)
+            if serialized_schema
+            else None
         )
 
         # Smart validation
         if cls._requires_validation_for_reading_parquet(
             deserialized_schema, validation, source=source
         ):
-            return cls.validate(lf, cast=True).lazy()
+            return df.pipe(cls.validate, cast=True, eager=isinstance(df, pl.DataFrame))
 
-        return cls.cast(lf)
+        return cls.cast(df)
 
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
     @classmethod
-    def polars_schema(cls) -> pl.Schema:
+    def to_polars_schema(cls) -> pl.Schema:
         """Obtain the polars schema for this schema.
 
         Returns:
@@ -1127,8 +1312,9 @@ class Schema(BaseSchema, ABC):
         return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
 
     @classmethod
-    def sql_schema(cls, dialect: sa.Dialect) -> list[sa.Column]:
-        """Obtain the SQL schema for a particular dialect for this schema.
+    def to_sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
+        """Obtain the SQLAlchemy column definitions for a particular dialect for this
+        schema.
 
         Args:
             dialect: The dialect for which to obtain the SQL schema. Note that column
@@ -1143,7 +1329,7 @@ class Schema(BaseSchema, ABC):
         ]
 
     @classmethod
-    def pyarrow_schema(cls) -> pa.Schema:
+    def to_pyarrow_schema(cls) -> pa.Schema:
         """Obtain the pyarrow schema for this schema.
 
         Returns:
@@ -1193,7 +1379,7 @@ def read_parquet_metadata_schema(
         source: Path to a parquet file or a file-like object that contains the metadata.
 
     Returns:
-        The schema that was serialized to the metadata. ``None`` if no schema metadata
+        The schema that was serialized to the metadata. `None` if no schema metadata
         is found or the deserialization fails.
     """
     metadata = pl.read_parquet_metadata(source)
@@ -1211,6 +1397,10 @@ def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]:
 def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
 
 
+@overload
+def deserialize_schema(data: str, strict: bool) -> type[Schema] | None: ...
+
+
 def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
     """Deserialize a schema from a JSON string.
 
@@ -1225,7 +1415,7 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         The schema loaded from the JSON data.
 
     Raises:
-        ValueError: If the schema format version is not supported and ``strict=True``.
+        ValueError: If the schema format version is not supported and `strict=True`.
 
     Attention:
         This functionality is considered unstable. It may be changed at any time
@@ -1239,9 +1429,11 @@ def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
         if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
             raise ValueError(f"Unsupported schema format version: {format}")
         return _schema_from_dict(decoded)
-    except (ValueError, JSONDecodeError, plexc.ComputeError) as e:
+    except (ValueError, JSONDecodeError, plexc.ComputeError, TypeError) as e:
         if strict:
-            raise e from e
+            raise DeserializationError(
+                "The Schema metadata could not be deserialized"
+            ) from e
         return None
 
 
@@ -1256,6 +1448,15 @@ def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:
         (Schema,),
         {
             **{name: column_from_dict(col) for name, col in data["columns"].items()},
-            **{name: rule_from_dict(rule) for name, rule in data["rules"].items()},
+            **{
+                name: RuleFactory.from_rule(rule_from_dict(rule))
+                for name, rule in data["rules"].items()
+            },
         },
     )
+
+
+def _restore_original_columns(lf: pl.LazyFrame, columns: list[str]) -> pl.LazyFrame:
+    return lf.with_columns(
+        pl.col(f"{ORIGINAL_COLUMN_PREFIX}{name}").alias(name) for name in columns
+    ).drop(f"{ORIGINAL_COLUMN_PREFIX}{name}" for name in columns)

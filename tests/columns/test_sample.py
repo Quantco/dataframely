@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
@@ -176,20 +176,24 @@ def test_sample_enum(generator: Generator) -> None:
 
 
 def test_sample_list(generator: Generator) -> None:
-    column = dy.List(dy.String(regex="[abc]"), min_length=5, max_length=10)
+    column = dy.List(
+        dy.String(regex="[abc]"), nullable=True, min_length=5, max_length=10
+    )
     samples = sample_and_validate(column, generator, n=10_000)
     assert set(samples.list.len()) == set(range(5, 11)) | {None}
 
 
 def test_sample_array(generator: Generator) -> None:
-    column = dy.Array(dy.Bool(), (2, 3))
+    column = dy.Array(dy.Bool(nullable=True), (2, 3))
     samples = sample_and_validate(column, generator, n=10_000)
     assert samples.is_null().any()
     assert set(samples.arr.len()) == {2, None}
 
 
 def test_sample_struct(generator: Generator) -> None:
-    column = dy.Struct({"a": dy.String(regex="[abc]"), "b": dy.String(regex="[a-z]xx")})
+    column = dy.Struct(
+        {"a": dy.String(regex="[abc]"), "b": dy.String(regex="[a-z]xx")}, nullable=True
+    )
     samples = sample_and_validate(column, generator, n=10_000)
     assert samples.is_null().any()
     assert len(samples) == 10_000

@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import numpy as np
@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
-from dataframely.failure import _compute_cooccurrence_counts, _compute_counts
+from dataframely.filter_result import _compute_cooccurrence_counts, _compute_counts
 
 
 @pytest.fixture()

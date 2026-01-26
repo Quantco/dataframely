@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ class Categorical(Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,
@@ -34,7 +34,7 @@ class Categorical(Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -45,7 +45,7 @@ class Categorical(Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different

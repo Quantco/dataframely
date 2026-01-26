@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
@@ -26,16 +26,16 @@ def test_cast_valid(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     first = df_type({"a": [3]})
     second = df_type({"a": [1]})
     out = Collection.cast({"first": first, "second": second})  # type: ignore
-    assert out.first.collect_schema() == FirstSchema.polars_schema()
+    assert out.first.collect_schema() == FirstSchema.to_polars_schema()
     assert out.second is not None
-    assert out.second.collect_schema() == SecondSchema.polars_schema()
+    assert out.second.collect_schema() == SecondSchema.to_polars_schema()
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_cast_valid_optional(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     first = df_type({"a": [3]})
     out = Collection.cast({"first": first})  # type: ignore
-    assert out.first.collect_schema() == FirstSchema.polars_schema()
+    assert out.first.collect_schema() == FirstSchema.to_polars_schema()
     assert out.second is None
 
 

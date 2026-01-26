@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._registry import column_from_dict, register
-from .struct import Struct
+from .list import _list_primary_key_check
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -42,7 +42,7 @@ class Array(Column):
     ):
         """
         Args:
-            inner: The inner column type. No validation rules on the inner type are supported yet.
+            inner: The inner column type.
             shape: The shape of the array.
             nullable: Whether this column may contain null values.
             primary_key: Whether this column is part of the primary key of the schema.
@@ -57,30 +57,13 @@ class Array(Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
-        if inner.primary_key or (
-            isinstance(inner, Struct)
-            and any(col.primary_key for col in inner.inner.values())
-        ):
-            raise ValueError(
-                "`primary_key=True` is not yet supported for inner types of the Array type."
-            )
-
-        # We disallow validation rules on the inner type since Polars arrays currently don't support .eval(). Converting
-        # to a list and calling .list.eval() is possible, however, since the shape can have multiple axes, the recursive
-        # conversion could have significant performance impact. Hence, we simply disallow inner validation rules.
-        # Another option would be to allow validation rules only for sampling, but not enforce them.
-        if inner.validation_rules(pl.lit(None)):
-            raise ValueError(
-                "Validation rules on the inner type of Array are not yet supported."
-            )
-
         super().__init__(
             nullable=nullable,
             primary_key=False,
@@ -95,20 +78,48 @@ class Array(Column):
     def dtype(self) -> pl.DataType:
         return pl.Array(self.inner.dtype, self.shape)
 
-    def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
-        # NOTE: We might want to add support for PostgreSQL's ARRAY type or use JSON in the future.
-        raise NotImplementedError("SQL column cannot have 'Array' type.")
+    def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
+        inner_rules = {
+            f"inner_{rule_name}": expr.arr.eval(inner_expr).arr.all()
+            for rule_name, inner_expr in self.inner.validation_rules(
+                pl.element()
+            ).items()
+        }
 
-    def _pyarrow_dtype_of_shape(self, shape: Sequence[int]) -> pa.DataType:
+        array_rules: dict[str, pl.Expr] = {}
+        if (rule := _list_primary_key_check(expr.arr, self.inner)) is not None:
+            array_rules["primary_key"] = rule
+
+        return {
+            **super().validation_rules(expr),
+            **array_rules,
+            **inner_rules,
+        }
+
+    def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
+        match dialect.name:
+            case "postgresql":
+                # Note that the length of the array in each dimension is not supported in SQLAlchemy
+                # That is because PostgreSQL does not enforce the length anyway
+                return sa.ARRAY(
+                    self.inner.sqlalchemy_dtype(dialect), dimensions=len(self.shape)
+                )
+            case _:
+                raise NotImplementedError(
+                    f"SQL column cannot have 'Array' type for dialect '{dialect}'."
+                )
+
+    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
             size, *rest = shape
-            return pa.list_(self._pyarrow_dtype_of_shape(rest), size)
+            inner_type = self._pyarrow_field_of_shape(rest)
+            return pa.field("item", pa.list_(inner_type, size), nullable=True)
         else:
-            return self.inner.pyarrow_dtype
+            return self.inner.pyarrow_field("item")
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return self._pyarrow_dtype_of_shape(self.shape)
+        return self._pyarrow_field_of_shape(self.shape).type
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # Sample the inner elements in a flat series

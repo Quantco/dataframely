@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import sys
@@ -76,7 +76,7 @@ class OrdinalMixin(Generic[T], Base):
             result["min_exclusive"] = expr > self.min_exclusive  # type: ignore
         if self.max is not None:
             result["max"] = expr <= self.max  # type: ignore
-        if self.max_exclusive:
+        if self.max_exclusive is not None:
             result["max_exclusive"] = expr < self.max_exclusive  # type: ignore
         return result
 

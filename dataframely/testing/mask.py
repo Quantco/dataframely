@@ -1,9 +1,9 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
 
-from dataframely.failure import FailureInfo
+from dataframely.filter_result import FailureInfo
 
 
 def validation_mask(df: pl.DataFrame | pl.LazyFrame, failure: FailureInfo) -> pl.Series:
@@ -16,7 +16,7 @@ def validation_mask(df: pl.DataFrame | pl.LazyFrame, failure: FailureInfo) -> pl
 
     Returns:
         A series where with the same length as the input data frame where a value of
-        ``True`` indicates validity and ``False`` the opposite.
+        `True` indicates validity and `False` the opposite.
 
     Raises:
         ValueError: If columns with a dtype of struct or nested list is contained in

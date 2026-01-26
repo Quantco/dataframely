@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -7,16 +7,12 @@ import inspect
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, TypeAlias, cast
 
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
-from dataframely._deprecation import (
-    warn_no_nullable_primary_keys,
-    warn_nullable_default_change,
-)
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -27,8 +23,8 @@ else:
 
 Check: TypeAlias = (
     Callable[[pl.Expr], pl.Expr]
-    | list[Callable[[pl.Expr], pl.Expr]]
-    | dict[str, Callable[[pl.Expr], pl.Expr]]
+    | Sequence[Callable[[pl.Expr], pl.Expr]]
+    | Mapping[str, Callable[[pl.Expr], pl.Expr]]
 )
 
 # ------------------------------------------------------------------------------------ #
@@ -46,7 +42,7 @@ class Column(ABC):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,
@@ -56,10 +52,8 @@ class Column(ABC):
         Args:
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
-                In a future release, `nullable=False` will be the default if `nullable`
-                is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -70,7 +64,7 @@ class Column(ABC):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -79,15 +73,7 @@ class Column(ABC):
         """
 
         if nullable and primary_key:
-            warn_no_nullable_primary_keys()
-            nullable = False
-
-        if nullable is None:
-            if primary_key:
-                nullable = False
-            else:
-                warn_nullable_default_change()
-                nullable = True
+            raise ValueError("Nullable primary key columns are not supported.")
 
         self.nullable = nullable
         self.primary_key = primary_key
@@ -133,7 +119,7 @@ class Column(ABC):
         Returns:
             A mapping from validation rule names to expressions that provide exactly
             one boolean value per column item indicating whether validation with respect
-            to the rule is successful. A value of ``False`` indicates invalid data, i.e.
+            to the rule is successful. A value of `False` indicates invalid data, i.e.
             unsuccessful validation.
         """
         result = {}
@@ -141,12 +127,14 @@ class Column(ABC):
             result["nullability"] = expr.is_not_null()
 
         if self.check is not None:
-            if isinstance(self.check, dict):
+            if isinstance(self.check, Mapping):
                 for rule_name, rule_callable in self.check.items():
                     result[f"check__{rule_name}"] = rule_callable(expr)
             else:
                 list_of_rules = (
-                    self.check if isinstance(self.check, list) else [self.check]
+                    list(self.check)
+                    if isinstance(self.check, Sequence)
+                    else [self.check]
                 )
                 # Get unique names for rules from callables
                 rule_names = self._derive_check_rule_names(list_of_rules)
@@ -378,6 +366,7 @@ class Column(ABC):
     ) -> bool:
         if name == "check":
             return _compare_checks(lhs, rhs, column_expr)
+
         return lhs == rhs
 
     # -------------------------------- DUNDER METHODS -------------------------------- #
@@ -423,9 +412,9 @@ def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
     match check:
         case None:
             return None
-        case list():
+        case Sequence():
             return [c(expr) for c in check]
-        case dict():
+        case Mapping():
             return {key: c(expr) for key, c in check.items()}
         case _ if callable(check):
             return check(expr)

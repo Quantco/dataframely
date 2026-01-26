@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
+from fsspec import AbstractFileSystem, url_to_fs
 
 from dataframely._compat import deltalake
 
@@ -82,7 +83,8 @@ class DeltaStorageBackend(StorageBackend):
         serialized_schemas: dict[str, str],
         **kwargs: Any,
     ) -> None:
-        uri = Path(kwargs.pop("target"))
+        uri = kwargs.pop("target")
+        fs: AbstractFileSystem = url_to_fs(uri)[0]
 
         # The collection schema is serialized as part of the member parquet metadata
         kwargs["metadata"] = kwargs.get("metadata", {}) | {
@@ -93,19 +95,20 @@ class DeltaStorageBackend(StorageBackend):
             self.write_frame(
                 lf.collect(),
                 serialized_schema=serialized_schemas[key],
-                target=uri / key,
+                target=fs.sep.join([uri, key]),
                 **kwargs,
             )
 
     def scan_collection(
         self, members: Iterable[str], **kwargs: Any
     ) -> tuple[dict[str, pl.LazyFrame], list[SerializedCollection | None]]:
-        uri = Path(kwargs.pop("source"))
+        uri = kwargs.pop("source")
+        fs: AbstractFileSystem = url_to_fs(uri)[0]
 
         data = {}
         collection_types = []
         for key in members:
-            member_uri = uri / key
+            member_uri = fs.sep.join([uri, key])
             if not deltalake.DeltaTable.is_deltatable(str(member_uri)):
                 continue
             table = _to_delta_table(member_uri)

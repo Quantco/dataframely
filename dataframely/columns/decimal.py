@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -27,12 +27,12 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         precision: int | None = None,
         scale: int = 0,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
-        min: decimal.Decimal | None = None,
-        min_exclusive: decimal.Decimal | None = None,
-        max: decimal.Decimal | None = None,
-        max_exclusive: decimal.Decimal | None = None,
+        min: decimal.Decimal | int | None = None,
+        min_exclusive: decimal.Decimal | int | None = None,
+        max: decimal.Decimal | int | None = None,
+        max_exclusive: decimal.Decimal | int | None = None,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -46,12 +46,12 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum value for decimals in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum value for decimals in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -63,13 +63,22 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
+        if isinstance(min, int):
+            min = decimal.Decimal(min)
+        if isinstance(min_exclusive, int):
+            min_exclusive = decimal.Decimal(min_exclusive)
+        if isinstance(max, int):
+            max = decimal.Decimal(max)
+        if isinstance(max_exclusive, int):
+            max_exclusive = decimal.Decimal(max_exclusive)
+
         if min is not None:
             _validate(min, precision, scale, "min")
         if min_exclusive is not None:
@@ -98,7 +107,11 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         return pl.Decimal(self.precision, self.scale)
 
     def validate_dtype(self, dtype: PolarsDataType) -> bool:
-        return dtype.is_decimal()
+        return (
+            isinstance(dtype, pl.Decimal)
+            and dtype.scale == self.scale
+            and (self.precision is None or dtype.precision == self.precision)
+        )
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         if self.scale and not self.precision:

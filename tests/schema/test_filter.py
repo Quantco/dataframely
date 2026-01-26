@@ -1,7 +1,8 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import random
+from typing import TypeVar
 
 import polars as pl
 import pytest
@@ -10,16 +11,35 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely._rule import GroupRule
-from dataframely.exc import DtypeValidationError, ValidationError
+from dataframely.exc import SchemaError
+from dataframely.filter_result import FilterResult
 from dataframely.random import Generator
 from dataframely.testing import create_schema, validation_mask
 
 
 class MySchema(dy.Schema):
     a = dy.Int64(primary_key=True)
-    b = dy.String(max_length=3)
+    b = dy.String(max_length=3, nullable=True)
 
 
+S = TypeVar("S", bound=dy.Schema)
+
+
+def _filter_and_collect(
+    schema: type[S], df: pl.DataFrame | pl.LazyFrame, *, cast: bool = False, eager: bool
+) -> FilterResult[S]:
+    result = schema.filter(df, cast=cast, eager=eager)
+    assert isinstance(result.result, pl.DataFrame if eager else pl.LazyFrame)
+    if not eager:
+        return result.collect_all()  # type: ignore
+    return result  # type: ignore
+
+
+# -------------------------------------- SCHEMA -------------------------------------- #
+
+
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
 @pytest.mark.parametrize(
     ("schema", "expected_columns"),
     [
@@ -29,19 +49,24 @@ class MySchema(dy.Schema):
     ],
 )
 def test_filter_extra_columns(
-    schema: dict[str, DataTypeClass], expected_columns: list[str] | None
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+    schema: dict[str, DataTypeClass],
+    expected_columns: list[str] | None,
+    eager: bool,
 ) -> None:
-    df = pl.DataFrame(schema=schema)
+    df = df_type(schema=schema)
     try:
-        filtered, _ = MySchema.filter(df)
+        filtered, _ = _filter_and_collect(MySchema, df, eager=eager)
         assert expected_columns is not None
         assert set(filtered.columns) == set(expected_columns)
-    except ValidationError:
+    except SchemaError:
         assert expected_columns is None
     except:  # noqa: E722
         assert False
 
 
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
 @pytest.mark.parametrize(
     ("schema", "cast", "success"),
     [
@@ -50,19 +75,27 @@ def test_filter_extra_columns(
     ],
 )
 def test_filter_dtypes(
-    schema: dict[str, DataTypeClass], cast: bool, success: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+    schema: dict[str, DataTypeClass],
+    cast: bool,
+    success: bool,
+    eager: bool,
 ) -> None:
-    df = pl.DataFrame(schema=schema)
+    df = df_type(schema=schema)
     try:
-        MySchema.filter(df, cast=cast)
+        _filter_and_collect(MySchema, df, cast=cast, eager=eager)
         assert success
-    except DtypeValidationError:
+    except SchemaError:
         assert not success
     except:  # noqa: E722
         assert False
 
 
+# --------------------------------------- RULES -------------------------------------- #
+
+
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
 @pytest.mark.parametrize(
     ("data_a", "data_b", "failure_mask", "counts", "cooccurrence_counts"),
     [
@@ -88,6 +121,7 @@ def test_filter_dtypes(
 )
 def test_filter_failure(
     df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+    eager: bool,
     data_a: list[int],
     data_b: list[str | None],
     failure_mask: list[bool],
@@ -95,8 +129,7 @@ def test_filter_failure(
     cooccurrence_counts: dict[frozenset[str], int],
 ) -> None:
     df = df_type({"a": data_a, "b": data_b})
-    df_valid, failures = MySchema.filter(df)
-    assert isinstance(df_valid, pl.DataFrame)
+    df_valid, failures = _filter_and_collect(MySchema, df, eager=eager)
     assert_frame_equal(df.filter(pl.Series(failure_mask)).lazy().collect(), df_valid)
     assert validation_mask(df, failures).to_list() == failure_mask
     assert len(failures) == (len(failure_mask) - sum(failure_mask))
@@ -105,11 +138,13 @@ def test_filter_failure(
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_filter_no_rules(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
-    schema = create_schema("test", {"a": dy.Int64()})
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_no_rules(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+) -> None:
+    schema = create_schema("test", {"a": dy.Int64(nullable=True)})
     df = df_type({"a": [1, 2, 3]})
-    df_valid, failures = schema.filter(df)
-    assert isinstance(df_valid, pl.DataFrame)
+    df_valid, failures = _filter_and_collect(schema, df, eager=eager)
     assert_frame_equal(df.lazy().collect(), df_valid)
     assert len(failures) == 0
     assert failures.counts() == {}
@@ -117,13 +152,13 @@ def test_filter_no_rules(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> No
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
 def test_filter_with_rule_all_valid(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
 ) -> None:
     schema = create_schema("test", {"a": dy.String(min_length=3)})
     df = df_type({"a": ["foo", "foobar"]})
-    df_valid, failures = schema.filter(df)
-    assert isinstance(df_valid, pl.DataFrame)
+    df_valid, failures = _filter_and_collect(schema, df, eager=eager)
     assert_frame_equal(df.lazy().collect(), df_valid)
     assert len(failures) == 0
     assert failures.counts() == {}
@@ -131,7 +166,10 @@ def test_filter_with_rule_all_valid(
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-def test_filter_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_cast(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+) -> None:
     data = {
         # validation: [true, true, false, false, false, false]
         "a": ["1", "2", "foo", None, "123x", "9223372036854775808"],
@@ -139,8 +177,7 @@ def test_filter_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
         "b": [20, 2000, None, 30, 3000, 50],
     }
     df = df_type(data)
-    df_valid, failures = MySchema.filter(df, cast=True)
-    assert isinstance(df_valid, pl.DataFrame)
+    df_valid, failures = _filter_and_collect(MySchema, df, cast=True, eager=eager)
     assert df_valid.collect_schema().names() == MySchema.column_names()
     assert len(failures) == 5
     assert failures.counts() == {
@@ -158,7 +195,8 @@ def test_filter_cast(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) -> None:
     }
 
 
-def test_filter_nondeterministic_lazyframe() -> None:
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_nondeterministic_lazyframe(eager: bool) -> None:
     n = 10_000
     lf = pl.LazyFrame(
         {
@@ -167,15 +205,16 @@ def test_filter_nondeterministic_lazyframe() -> None:
         }
     ).select(pl.all().shuffle())
 
-    filtered, _ = MySchema.filter(lf)
+    filtered, _ = _filter_and_collect(MySchema, lf, eager=eager)
     assert filtered.select(pl.col("b").n_unique()).item() == 1
 
 
-def test_filter_failure_info_original_dtype() -> None:
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_failure_info_original_dtype(eager: bool) -> None:
     schema = create_schema("test", {"a": dy.UInt8()})
     lf = pl.LazyFrame({"a": [100, 200, 300]}, schema={"a": pl.Int64})
 
-    out, failures = schema.filter(lf, cast=True)
+    out, failures = _filter_and_collect(schema, lf, cast=True, eager=eager)
     assert len(out) == 2
     assert out.schema.dtypes() == [pl.UInt8]
 
@@ -184,7 +223,8 @@ def test_filter_failure_info_original_dtype() -> None:
     assert failures.invalid().dtypes == [pl.Int64]
 
 
-def test_filter_maintain_order() -> None:
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_maintain_order(eager: bool) -> None:
     schema = create_schema(
         "test",
         {"a": dy.UInt16(), "b": dy.UInt8()},
@@ -201,5 +241,5 @@ def test_filter_maintain_order() -> None:
             "b": generator.sample_int(10_000, min=0, max=255),
         }
     )
-    out, _ = schema.filter(df, cast=True)
+    out, _ = _filter_and_collect(schema, df, cast=True, eager=eager)
     assert out.get_column("a").is_sorted()

@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from typing import Annotated, Any
@@ -189,3 +189,16 @@ def test_duplicate_column_inlined_for_sampling() -> None:
                 ],
             },
         )
+
+
+def test_sample_override_sequence_with_missing_keys() -> None:
+    collection = MyCollection.sample(
+        overrides=[{"first": {"a": 1}, "second": [{"c": 2}, {}, {"b": 5}]}]
+    )
+    assert collection.first.collect().height == 1
+    assert collection.second is not None
+
+    second = collection.second.collect()
+    assert second.height == 3
+    assert second["c"].item(0) == 2
+    assert second["b"].item(2) == 5

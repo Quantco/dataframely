@@ -1,10 +1,11 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from ._base import Column
 from ._registry import column_from_dict
 from .any import Any
 from .array import Array
+from .binary import Binary
 from .bool import Bool
 from .categorical import Categorical
 from .datetime import Date, Datetime, Duration, Time
@@ -22,6 +23,7 @@ __all__ = [
     "column_from_dict",
     "Any",
     "Array",
+    "Binary",
     "Bool",
     "Categorical",
     "Date",

@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
@@ -11,7 +11,7 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely.columns import Column
-from dataframely.exc import DtypeValidationError
+from dataframely.exc import SchemaError
 from dataframely.random import Generator
 from dataframely.testing import evaluate_rules, rules_from_exprs
 from dataframely.testing.factory import create_schema
@@ -216,47 +216,47 @@ def test_args_resolution_valid(
     ("column", "values", "valid"),
     [
         (
-            dy.Date(min=dt.date(2020, 4, 1)),
+            dy.Date(min=dt.date(2020, 4, 1), nullable=True),
             [dt.date(2020, 3, 31), dt.date(2020, 4, 1), dt.date(9999, 12, 31)],
             {"min": [False, True, True]},
         ),
         (
-            dy.Date(min_exclusive=dt.date(2020, 4, 1)),
+            dy.Date(min_exclusive=dt.date(2020, 4, 1), nullable=True),
             [dt.date(2020, 3, 31), dt.date(2020, 4, 1), dt.date(9999, 12, 31)],
             {"min_exclusive": [False, False, True]},
         ),
         (
-            dy.Date(max=dt.date(2020, 4, 1)),
+            dy.Date(max=dt.date(2020, 4, 1), nullable=True),
             [dt.date(2020, 3, 31), dt.date(2020, 4, 1), dt.date(2020, 4, 2)],
             {"max": [True, True, False]},
         ),
         (
-            dy.Date(max_exclusive=dt.date(2020, 4, 1)),
+            dy.Date(max_exclusive=dt.date(2020, 4, 1), nullable=True),
             [dt.date(2020, 3, 31), dt.date(2020, 4, 1), dt.date(2020, 4, 2)],
             {"max_exclusive": [True, False, False]},
         ),
         (
-            dy.Time(min=dt.time(3)),
+            dy.Time(min=dt.time(3), nullable=True),
             [dt.time(2, 59), dt.time(3, 0, 0), dt.time(4)],
             {"min": [False, True, True]},
         ),
         (
-            dy.Time(min_exclusive=dt.time(3)),
+            dy.Time(min_exclusive=dt.time(3), nullable=True),
             [dt.time(2, 59), dt.time(3, 0, 0), dt.time(4)],
             {"min_exclusive": [False, False, True]},
         ),
         (
-            dy.Time(max=dt.time(11, 59, 59, 999999)),
+            dy.Time(max=dt.time(11, 59, 59, 999999), nullable=True),
             [dt.time(11), dt.time(12), dt.time(13)],
             {"max": [True, False, False]},
         ),
         (
-            dy.Time(max_exclusive=dt.time(12)),
+            dy.Time(max_exclusive=dt.time(12), nullable=True),
             [dt.time(11), dt.time(12), dt.time(13)],
             {"max_exclusive": [True, False, False]},
         ),
         (
-            dy.Datetime(min=dt.datetime(2020, 3, 1, hour=12)),
+            dy.Datetime(min=dt.datetime(2020, 3, 1, hour=12), nullable=True),
             [
                 dt.datetime(2020, 2, 29, hour=14),
                 dt.datetime(2020, 3, 1, hour=11),
@@ -267,7 +267,7 @@ def test_args_resolution_valid(
             {"min": [False, False, True, True, True]},
         ),
         (
-            dy.Datetime(min_exclusive=dt.datetime(2020, 3, 1, hour=12)),
+            dy.Datetime(min_exclusive=dt.datetime(2020, 3, 1, hour=12), nullable=True),
             [
                 dt.datetime(2020, 2, 29, hour=14),
                 dt.datetime(2020, 3, 1, hour=11),
@@ -278,7 +278,7 @@ def test_args_resolution_valid(
             {"min_exclusive": [False, False, False, True, True]},
         ),
         (
-            dy.Datetime(max=dt.datetime(2020, 3, 1, hour=12)),
+            dy.Datetime(max=dt.datetime(2020, 3, 1, hour=12), nullable=True),
             [
                 dt.datetime(2020, 2, 29, hour=14),
                 dt.datetime(2020, 3, 1, hour=11),
@@ -289,7 +289,7 @@ def test_args_resolution_valid(
             {"max": [True, True, True, False, False]},
         ),
         (
-            dy.Datetime(max_exclusive=dt.datetime(2020, 3, 1, hour=12)),
+            dy.Datetime(max_exclusive=dt.datetime(2020, 3, 1, hour=12), nullable=True),
             [
                 dt.datetime(2020, 2, 29, hour=14),
                 dt.datetime(2020, 3, 1, hour=11),
@@ -300,7 +300,7 @@ def test_args_resolution_valid(
             {"max_exclusive": [True, True, False, False, False]},
         ),
         (
-            dy.Duration(min=dt.timedelta(days=1, seconds=14400)),
+            dy.Duration(min=dt.timedelta(days=1, seconds=14400), nullable=True),
             [
                 dt.timedelta(seconds=13000),
                 dt.timedelta(days=1, seconds=14400),
@@ -309,7 +309,9 @@ def test_args_resolution_valid(
             {"min": [False, True, True]},
         ),
         (
-            dy.Duration(min_exclusive=dt.timedelta(days=1, seconds=14400)),
+            dy.Duration(
+                min_exclusive=dt.timedelta(days=1, seconds=14400), nullable=True
+            ),
             [
                 dt.timedelta(seconds=13000),
                 dt.timedelta(days=1, seconds=14400),
@@ -318,7 +320,7 @@ def test_args_resolution_valid(
             {"min_exclusive": [False, False, True]},
         ),
         (
-            dy.Duration(max=dt.timedelta(days=1, seconds=14400)),
+            dy.Duration(max=dt.timedelta(days=1, seconds=14400), nullable=True),
             [
                 dt.timedelta(seconds=13000),
                 dt.timedelta(days=1, seconds=14400),
@@ -327,7 +329,9 @@ def test_args_resolution_valid(
             {"max": [True, True, False]},
         ),
         (
-            dy.Duration(max_exclusive=dt.timedelta(days=1, seconds=14400)),
+            dy.Duration(
+                max_exclusive=dt.timedelta(days=1, seconds=14400), nullable=True
+            ),
             [
                 dt.timedelta(seconds=13000),
                 dt.timedelta(days=1, seconds=14400),
@@ -350,17 +354,17 @@ def test_validate_min_max(
     ("column", "values", "valid"),
     [
         (
-            dy.Date(resolution="1mo"),
+            dy.Date(resolution="1mo", nullable=True),
             [dt.date(2020, 1, 1), dt.date(2021, 1, 15), dt.date(2022, 12, 1)],
             {"resolution": [True, False, True]},
         ),
         (
-            dy.Time(resolution="1h"),
+            dy.Time(resolution="1h", nullable=True),
             [dt.time(12, 0), dt.time(13, 15), dt.time(14, 0, 5)],
             {"resolution": [True, False, False]},
         ),
         (
-            dy.Datetime(resolution="1d"),
+            dy.Datetime(resolution="1d", nullable=True),
             [
                 dt.datetime(2020, 4, 5),
                 dt.datetime(2021, 1, 1, 12),
@@ -369,7 +373,7 @@ def test_validate_min_max(
             {"resolution": [True, False, False]},
         ),
         (
-            dy.Duration(resolution="12h"),
+            dy.Duration(resolution="12h", nullable=True),
             [
                 dt.timedelta(hours=12),
                 dt.timedelta(days=2),
@@ -418,7 +422,7 @@ def test_sample(column: dy.Column) -> None:
         (
             pl.Datetime(time_zone="America/New_York"),
             dy.Datetime(time_zone="Etc/UTC"),
-            r"1 columns have an invalid dtype.*\n.*got dtype 'Datetime\(time_unit='us', time_zone='America/New_York'\)' but expected 'Datetime\(time_unit='us', time_zone='Etc/UTC'\)'",
+            r"1 columns with invalid dtype for schema 'test'",
         ),
         (
             pl.Datetime(time_zone="Etc/UTC"),
@@ -437,6 +441,6 @@ def test_dtype_time_zone_validation(
     if error is None:
         schema.validate(df)
     else:
-        with pytest.raises(DtypeValidationError) as exc:
+        with pytest.raises(SchemaError) as exc:
             schema.validate(df)
         assert re.match(error, str(exc.value))

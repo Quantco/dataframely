@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ class Date(OrdinalMixin[dt.date], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.date | None = None,
         min_exclusive: dt.date | None = None,
@@ -52,16 +52,16 @@ class Date(OrdinalMixin[dt.date], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum date for dates in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum date for dates in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that dates in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1mo`` expects all dates to be on the first of the
+                formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1mo` expects all dates to be on the first of the
                 month. Note that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -73,7 +73,7 @@ class Date(OrdinalMixin[dt.date], Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -157,7 +157,7 @@ class Time(OrdinalMixin[dt.time], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.time | None = None,
         min_exclusive: dt.time | None = None,
@@ -175,16 +175,16 @@ class Time(OrdinalMixin[dt.time], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum time for times in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum time for times in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that times in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1h`` expects all times to be full hours. Note
+                formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1h` expects all times to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -196,7 +196,7 @@ class Time(OrdinalMixin[dt.time], Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -286,7 +286,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.datetime | None = None,
         min_exclusive: dt.datetime | None = None,
@@ -306,21 +306,21 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum datetime for datetimes in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum datetime for datetimes in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that datetimes in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1h`` expects all datetimes to be full hours. Note
+                the formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1h` expects all datetimes to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             time_zone: The time zone that datetimes in the column must have. The time
-                zone must use a valid IANA time zone name identifier e.x. ``Etc/UTC`` or
-                ``America/New_York``.
-            time_unit: Unit of time. Defaults to ``us`` (microseconds).
+                zone must use a valid IANA time zone name identifier e.x. `Etc/UTC` or
+                `America/New_York`.
+            time_unit: Unit of time. Defaults to `us` (microseconds).
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -331,7 +331,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
@@ -433,7 +433,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
     def __init__(
         self,
         *,
-        nullable: bool | None = None,
+        nullable: bool = False,
         primary_key: bool = False,
         min: dt.timedelta | None = None,
         min_exclusive: dt.timedelta | None = None,
@@ -451,16 +451,16 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-                If ``True``, ``nullable`` is automatically set to ``False``.
+                If `True`, `nullable` is automatically set to `False`.
             min: The minimum duration for durations in this column (inclusive).
-            min_exclusive: Like ``min`` but exclusive. May not be specified if ``min``
+            min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
             max: The maximum duration for durations in this column (inclusive).
-            max_exclusive: Like ``max`` but exclusive. May not be specified if ``max``
+            max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that durations in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime ``round`` method.
-                For example, a value ``1h`` expects all durations to be full hours. Note
+                the formatting language used by :mod:`polars` datetime `round` method.
+                For example, a value `1h` expects all durations to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
@@ -472,7 +472,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 in the same name, the suffix __i is appended to the name.
                 - A dictionary mapping rule names to callables, where each callable
                 returns a non-aggregated boolean expression.
-                All rule names provided here are given the prefix "check_".
+                All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different

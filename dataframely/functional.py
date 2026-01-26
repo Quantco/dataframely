@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from collections.abc import Sequence
@@ -6,8 +6,8 @@ from typing import TypeVar
 
 import polars as pl
 
-from ._base_collection import BaseCollection
 from ._typing import LazyFrame
+from .collection import BaseCollection
 from .schema import Schema
 
 S = TypeVar("S", bound=Schema)
@@ -24,40 +24,68 @@ C = TypeVar("C", bound=BaseCollection)
 # --------------------------------- RELATIONSHIP 1:1 --------------------------------- #
 
 
-def filter_relationship_one_to_one(
+def require_relationship_one_to_one(
     lhs: LazyFrame[S] | pl.LazyFrame,
     rhs: LazyFrame[T] | pl.LazyFrame,
     /,
     on: str | list[str],
+    *,
+    drop_duplicates: bool = True,
 ) -> pl.LazyFrame:
     """Express a 1:1 mapping between data frames for a collection filter.
 
     Args:
         lhs: The first data frame in the 1:1 mapping.
         rhs: The second data frame in the 1:1 mapping.
-        on: The columns to join the data frames on. If not provided, the join columns
-            are inferred from the mutual primary keys of the provided data frames.
+        on: The columns to join the data frames on.
+        drop_duplicates: If set to `True`, drops rows that are not uniquely identified by the
+            join columns specified with `on`. If set to `False`, skips uniqueness checks
+            and avoids performance penalties. Use with caution, as this may lead to unexpected
+            results if rows in one or both of the data frames are not unique in the join columns.
+
+    Returns:
+        A data frame representing the inner join of the two inputs on the specified
+        columns, filtered to ensure a 1:1 relationship.
     """
+    if drop_duplicates:
+        return lhs.unique(on, keep="none").join(
+            rhs.unique(on, keep="none"),
+            on=on,
+        )
+
     return lhs.join(rhs, on=on)
 
 
 # ------------------------------- RELATIONSHIP 1:{1,N} ------------------------------- #
 
 
-def filter_relationship_one_to_at_least_one(
+def require_relationship_one_to_at_least_one(
     lhs: LazyFrame[S] | pl.LazyFrame,
     rhs: LazyFrame[T] | pl.LazyFrame,
     /,
     on: str | list[str],
+    *,
+    drop_duplicates: bool = True,
 ) -> pl.LazyFrame:
     """Express a 1:{1,N} mapping between data frames for a collection filter.
 
     Args:
-        lhs: The data frame with exactly one occurrence for a set of key columns.
-        rhs: The data frame with at least one occurrence for a set of key columns.
-        on: The columns to join the data frames on. If not provided, the join columns
-            are inferred from the joint primary keys of the provided data frames.
+        lhs: The data frame with exactly one occurrence for the set of join columns.
+        rhs: The data frame with at least one occurrence for the set of join columns.
+        on: The columns to join the data frames on.
+        drop_duplicates: If set to `True`, drops rows in `lhs` that are not uniquely
+            identified by the join columns specified with `on`. If set to `False`,
+            skips uniqueness checks and avoids performance penalties. Use with
+            caution, as this may lead to unexpected results if rows in `lhs` are
+            not unique in the join columns.
+
+    Returns:
+        A data frame representing the inner join of the two inputs on the specified
+        columns, filtered to ensure a 1:{1,N} relationship.
     """
+    if drop_duplicates:
+        return lhs.unique(on, keep="none").join(rhs.unique(on), on=on)
+
     return lhs.join(rhs.unique(on), on=on)
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
@@ -15,13 +15,13 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-ValidationFunction = Callable[[], pl.Expr]
+ValidationFunction = Callable[[Any], pl.Expr]
 
 
 class Rule:
     """Internal class representing validation rules."""
 
-    def __init__(self, expr: pl.Expr | ValidationFunction) -> None:
+    def __init__(self, expr: pl.Expr | Callable[[], pl.Expr]) -> None:
         self._expr = expr
 
     @property
@@ -71,7 +71,7 @@ class GroupRule(Rule):
     """Rule that is evaluated on a group of columns."""
 
     def __init__(
-        self, expr: pl.Expr | ValidationFunction, group_columns: list[str]
+        self, expr: pl.Expr | Callable[[], pl.Expr], group_columns: list[str]
     ) -> None:
         super().__init__(expr)
         self.group_columns = group_columns
@@ -92,12 +92,46 @@ class GroupRule(Rule):
         return f"{super().__repr__()} grouped by {self.group_columns}"
 
 
-def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction], Rule]:
+# -------------------------------------- FACTORY ------------------------------------- #
+
+
+class RuleFactory:
+    """Factory class for rules created within schemas."""
+
+    def __init__(
+        self, validation_fn: Callable[[Any], pl.Expr], group_columns: list[str] | None
+    ) -> None:
+        self.validation_fn = validation_fn
+        self.group_columns = group_columns
+
+    @classmethod
+    def from_rule(cls, rule: Rule) -> Self:
+        """Create a rule factory from an existing rule."""
+        if isinstance(rule, GroupRule):
+            return cls(
+                validation_fn=lambda _: rule.expr,
+                group_columns=rule.group_columns,
+            )
+        return cls(validation_fn=lambda _: rule.expr, group_columns=None)
+
+    def make(self, schema: Any) -> Rule:
+        """Create a new rule from this factory."""
+        if self.group_columns is not None:
+            return GroupRule(
+                expr=lambda: self.validation_fn(schema),
+                group_columns=self.group_columns,
+            )
+        return Rule(expr=lambda: self.validation_fn(schema))
+
+
+def rule(
+    *, group_by: list[str] | None = None
+) -> Callable[[ValidationFunction], RuleFactory]:
     """Mark a function as a rule to evaluate during validation.
 
     The name of the function will be used as the name of the rule. The function should
     return an expression providing a boolean value whether a row is valid wrt. the rule.
-    A value of ``true`` indicates validity.
+    A value of `true` indicates validity.
 
     Rules should be used only in the following two circumstances:
 
@@ -113,12 +147,12 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
         group_by: An optional list of columns to group by for rules operating on groups
             of rows. If this list is provided, the returned expression must return a
             single boolean value, i.e. some kind of aggregation function must be used
-            (e.g. ``sum``, ``any``, ...).
+            (e.g. `sum`, `any`, ...).
 
     Note:
-        You'll need to explicitly handle ``null`` values in your columns when defining
-        rules. By default, any rule that evaluates to ``null`` because one of the
-        columns used in the rule is ``null`` is interpreted as ``true``, i.e. the row
+        You'll need to explicitly handle `null` values in your columns when defining
+        rules. By default, any rule that evaluates to `null` because one of the
+        columns used in the rule is `null` is interpreted as `true`, i.e. the row
         is assumed to be valid.
 
     Attention:
@@ -128,10 +162,8 @@ def rule(*, group_by: list[str] | None = None) -> Callable[[ValidationFunction],
         and (de-)serialization.
     """
 
-    def decorator(validation_fn: ValidationFunction) -> Rule:
-        if group_by is not None:
-            return GroupRule(expr=validation_fn, group_columns=group_by)
-        return Rule(expr=validation_fn)
+    def decorator(validation_fn: ValidationFunction) -> RuleFactory:
+        return RuleFactory(validation_fn=validation_fn, group_columns=group_by)
 
     return decorator
 
@@ -151,8 +183,8 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
 
     Returns:
         The input lazy frame along with one boolean column for each rule with the name
-        of the rule. For each rule, a value of ``True`` indicates successful validation
-        while ``False`` indicates an issue.
+        of the rule. For each rule, a value of `True` indicates successful validation
+        while `False` indicates an issue.
     """
     # Rules must be distinguished into two types of rules:
     #  1. Simple rules can simply be selected on the data frame (this includes rules
@@ -172,7 +204,7 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
     result = (
         # NOTE: A value of `null` always validates successfully as nullability should
         #  already be checked via dedicated rules.
-        _with_group_rules(lf, group_rules).with_columns(
+        lf.pipe(_with_group_rules, group_rules).with_columns(
             **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
         )
     )
@@ -239,11 +271,11 @@ def rule_from_dict(data: dict[str, Any]) -> Rule:
 
     Args:
         data: The dictionary obtained by calling :meth:`~Rule.asdict` on a rule object.
-            The dictionary must contain a key ``"rule_type"`` that indicates which rule
+            The dictionary must contain a key `"rule_type"` that indicates which rule
             type to instantiate.
 
     Returns:
-        The rule object as read from ``data``.
+        The rule object as read from `data`.
     """
     name = data["rule_type"]
     if name not in _TYPE_MAPPING:

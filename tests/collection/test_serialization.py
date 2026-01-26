@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import json
@@ -87,7 +87,39 @@ def test_roundtrip_matches(collection: type[dy.Collection]) -> None:
 # ----------------------------- DESERIALIZATION FAILURES ----------------------------- #
 
 
-def test_deserialize_unknown_format_version() -> None:
+@pytest.mark.parametrize("strict", [True, False])
+def test_deserialize_unknown_format_version(strict: bool) -> None:
     serialized = '{"versions": {"format": "invalid"}}'
-    with pytest.raises(ValueError, match=r"Unsupported schema format version"):
-        dy.deserialize_collection(serialized)
+    if strict:
+        with pytest.raises(dy.DeserializationError):
+            dy.deserialize_collection(serialized)
+    else:
+        assert dy.deserialize_collection(serialized, strict=False) is None
+
+
+@pytest.mark.parametrize("strict", [True, False])
+def test_deserialize_invalid_json_strict_false(strict: bool) -> None:
+    serialized = '{"invalid json'
+    if strict:
+        with pytest.raises(dy.DeserializationError):
+            dy.deserialize_collection(serialized, strict=True)
+    else:
+        assert dy.deserialize_collection(serialized, strict=False) is None
+
+
+@pytest.mark.parametrize("strict", [True, False])
+def test_deserialize_invalid_member_schema(strict: bool) -> None:
+    collection = create_collection(
+        "test",
+        {
+            "s1": create_schema("schema1", {"a": dy.Int64()}),
+        },
+    )
+    serialized = collection.serialize()
+    broken = serialized.replace("primary_key", "primary_keys")
+
+    if strict:
+        with pytest.raises(dy.DeserializationError):
+            dy.deserialize_collection(broken, strict=strict)
+    else:
+        assert dy.deserialize_collection(broken, strict=False) is None

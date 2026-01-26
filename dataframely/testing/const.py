@@ -1,4 +1,4 @@
-# Copyright (c) QuantCo 2025-2025
+# Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
 import dataframely.columns as dc
@@ -22,6 +22,7 @@ COLUMN_TYPES: list[type[dc.Column]] = [
     dc.UInt64,
     dc.String,
     dc.Categorical,
+    dc.Binary,
 ]
 INTEGER_COLUMN_TYPES: list[type[dc.Column]] = [
     dc.Integer,
