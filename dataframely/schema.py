@@ -553,8 +553,9 @@ class Schema(BaseSchema, ABC):
 
         Returns:
             The input eager or lazy frame, wrapped in a generic version of the
-            input's data frame type to reflect schema adherence. This operation is
-            guaranteed to maintain input ordering of rows.
+            input's data frame type to reflect schema adherence. Columns not defined
+            in the schema are removed from the output. This operation is guaranteed
+            to maintain input ordering of rows.
 
         Raises:
             SchemaError: If `eager=True` and the input data frame misses columns or
@@ -704,7 +705,8 @@ class Schema(BaseSchema, ABC):
         Returns:
             A tuple of the validated rows in the input data frame (potentially
             empty) and a simple dataclass carrying information about the rows of the
-            data frame which could not be validated successfully. Just like in polars'
+            data frame which could not be validated successfully. Columns not defined
+            in the schema are removed from the output. Just like in polars'
             native :meth:`~polars.DataFrame.filter`, the order of rows in the returned
             data frame is maintained.
 
