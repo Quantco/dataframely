@@ -80,9 +80,13 @@ if _polars_version_tuple < (1, 36):
     from polars._typing import (  # type: ignore[attr-defined,unused-ignore]
         PartitioningScheme as PartitionSchemeOrSinkDirectory,
     )
-else:
+elif _polars_version_tuple < (1, 38):  # pragma: no cover
     from polars.io.partition import (  # type: ignore[no-redef,attr-defined,unused-ignore]
         _SinkDirectory as PartitionSchemeOrSinkDirectory,
+    )
+else:
+    from polars.io.partition import (  # type: ignore[no-redef,attr-defined,unused-ignore]
+        PartitionBy as PartitionSchemeOrSinkDirectory,
     )
 
 # ------------------------------------------------------------------------------------ #
