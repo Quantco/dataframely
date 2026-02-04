@@ -25,6 +25,17 @@ except ImportError:
     class DeltaTable:  # type: ignore # noqa: N801
         pass
 
+# ------------------------------------ PYICEBERG -------------------------------------- #
+
+try:
+    import pyiceberg
+    from pyiceberg.table import Table as IcebergTable
+except ImportError:
+    pyiceberg = _DummyModule("pyiceberg")  # type: ignore
+
+    class IcebergTable:  # type: ignore # noqa: N801
+        pass
+
 # ------------------------------------ SQLALCHEMY ------------------------------------ #
 
 try:
@@ -91,10 +102,12 @@ __all__ = [
     "deltalake",
     "DeltaTable",
     "Dialect",
+    "IcebergTable",
     "MSDialect_pyodbc",
     "PartitionSchemeOrSinkDirectory",
     "pa",
     "PGDialect_psycopg2",
+    "pyiceberg",
     "pydantic_core_schema",
     "pydantic",
     "sa_mssql",
