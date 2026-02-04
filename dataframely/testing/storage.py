@@ -194,15 +194,15 @@ class CollectionStorageTester(ABC):
 
     @staticmethod
     def _get_prefix(fs: AbstractFileSystem) -> str:
-        return (
-            ""
-            if fs.protocol == "file"
-            else (
-                f"{fs.protocol}://"
-                if isinstance(fs.protocol, str)
-                else f"{fs.protocol[0]}://"
-            )
-        )
+        match fs.protocol:
+            case "file":
+                return ""
+            case str():
+                return f"{fs.protocol}://"
+            case [proto, *_]:
+                return f"{proto}://"
+            case _:
+                raise ValueError(f"Unexpected fs.protocol: {fs.protocol}")
 
 
 class ParquetCollectionStorageTester(CollectionStorageTester):
