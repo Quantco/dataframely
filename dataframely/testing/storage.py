@@ -199,6 +199,8 @@ class CollectionStorageTester(ABC):
                 return ""
             case str():
                 return f"{fs.protocol}://"
+            case ["file", *_]:
+                return ""
             case [proto, *_]:
                 return f"{proto}://"
             case _:
