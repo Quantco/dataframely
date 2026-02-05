@@ -81,7 +81,9 @@ class ParquetStorageBackend(StorageBackend):
         fs: AbstractFileSystem = url_to_fs(path)[0]
         for key, lf in dfs.items():
             destination = (
-                fs.sep.join([path, key])
+                # Enforce that the path ends with a separator. Otherwise
+                # polars misbehaves on Windows.
+                fs.sep.join([path, key]) + fs.sep
                 if "partition_by" in kwargs
                 else fs.sep.join([path, f"{key}.parquet"])
             )
@@ -109,7 +111,9 @@ class ParquetStorageBackend(StorageBackend):
         fs: AbstractFileSystem = url_to_fs(path)[0]
         for key, lf in dfs.items():
             destination = (
-                fs.sep.join([path, key])
+                # Enforce that the path ends with a separator. Otherwise
+                # polars misbehaves on Windows.
+                fs.sep.join([path, key]) + fs.sep
                 if "partition_by" in kwargs
                 else fs.sep.join([path, f"{key}.parquet"])
             )
