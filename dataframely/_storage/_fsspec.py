@@ -12,7 +12,7 @@ def get_file_prefix(fs: AbstractFileSystem) -> str:
             return f"{fs.protocol}://"
         case ["file", *_]:
             return ""
-        case [proto, *_]:
+        case [str(proto), *_]:
             return f"{proto}://"
         case _:
             raise ValueError(f"Unexpected fs.protocol: {fs.protocol}")
