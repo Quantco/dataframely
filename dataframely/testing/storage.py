@@ -10,6 +10,7 @@ from fsspec import AbstractFileSystem, url_to_fs
 import dataframely as dy
 from dataframely import FailureInfo, Validation
 from dataframely._compat import deltalake
+from dataframely._storage import get_file_prefix
 from dataframely._storage.delta import _to_delta_table
 
 # ----------------------------------- Schema -------------------------------------------
@@ -190,19 +191,7 @@ class CollectionStorageTester(ABC):
         metadata."""
 
     def _prefix_path(self, path: str, fs: AbstractFileSystem) -> str:
-        return f"{self._get_prefix(fs)}{path}"
-
-    @staticmethod
-    def _get_prefix(fs: AbstractFileSystem) -> str:
-        return (
-            ""
-            if fs.protocol == "file"
-            else (
-                f"{fs.protocol}://"
-                if isinstance(fs.protocol, str)
-                else f"{fs.protocol[0]}://"
-            )
-        )
+        return f"{get_file_prefix(fs)}{path}"
 
 
 class ParquetCollectionStorageTester(CollectionStorageTester):

@@ -117,35 +117,35 @@ polars = "1.35.*"
 
 [feature.polars-latest.dependencies]
 # NOTE: Update docs/faq.md when updating this.
-polars = "1.36.*"
+polars = "1.38.*"
 
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
 build = ["build"]
-default = ["dev", "lint", "optionals", "py314", "test", "polars-latest"]
+default = ["dev", "lint", "optionals", "polars-latest", "py314", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]
 
 # Different python versions with the latest polars
-py310 = ["py310", "test", "polars-latest"]
-py311 = ["py311", "test", "polars-latest"]
-py312 = ["py312", "test", "polars-latest"]
-py313 = ["py313", "test", "polars-latest"]
-py314 = ["py314", "test", "polars-latest"]
+py310 = ["polars-latest", "py310", "test"]
+py311 = ["polars-latest", "py311", "test"]
+py312 = ["polars-latest", "py312", "test"]
+py313 = ["polars-latest", "py313", "test"]
+py314 = ["polars-latest", "py314", "test"]
 
 # Test with optional dependencies
-py314-optionals = ["optionals", "py314", "test", "polars-latest"]
+py314-optionals = ["optionals", "polars-latest", "py314", "test"]
 
 # Polars compatibility envs
-polars-minimal = ["py314", "test", "polars-minimal"]
 default-polars-minimal = [
   "dev",
   "lint",
   "optionals",
+  "polars-minimal",
   "py314",
   "test",
-  "polars-minimal",
 ]
+polars-minimal = ["polars-minimal", "py314", "test"]
