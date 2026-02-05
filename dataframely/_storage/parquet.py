@@ -7,6 +7,8 @@ from typing import Any
 import polars as pl
 from fsspec import AbstractFileSystem, url_to_fs
 
+from dataframely._storage import get_file_prefix
+
 from ._base import (
     SerializedCollection,
     SerializedRules,
@@ -155,15 +157,7 @@ class ParquetStorageBackend(StorageBackend):
                 if is_file:
                     collection_types.append(_read_serialized_collection(source_path))
                 else:
-                    prefix = (
-                        ""
-                        if fs.protocol == "file"
-                        else (
-                            f"{fs.protocol}://"
-                            if isinstance(fs.protocol, str)
-                            else f"{fs.protocol[0]}://"
-                        )
-                    )
+                    prefix = get_file_prefix(fs)
                     for file in fs.glob(fs.sep.join([source_path, "**", "*.parquet"])):
                         collection_types.append(
                             _read_serialized_collection(f"{prefix}{file}")
