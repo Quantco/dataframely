@@ -4,6 +4,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Literal, TypeVar, overload
 
+from dataframely._storage import get_file_prefix
 import polars as pl
 from fsspec import AbstractFileSystem, url_to_fs
 
@@ -190,21 +191,7 @@ class CollectionStorageTester(ABC):
         metadata."""
 
     def _prefix_path(self, path: str, fs: AbstractFileSystem) -> str:
-        return f"{self._get_prefix(fs)}{path}"
-
-    @staticmethod
-    def _get_prefix(fs: AbstractFileSystem) -> str:
-        match fs.protocol:
-            case "file":
-                return ""
-            case str():
-                return f"{fs.protocol}://"
-            case ["file", *_]:
-                return ""
-            case [proto, *_]:
-                return f"{proto}://"
-            case _:
-                raise ValueError(f"Unexpected fs.protocol: {fs.protocol}")
+        return f"{get_file_prefix(fs)}{path}"
 
 
 class ParquetCollectionStorageTester(CollectionStorageTester):
