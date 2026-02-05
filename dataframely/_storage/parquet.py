@@ -4,9 +4,10 @@
 from collections.abc import Iterable
 from typing import Any
 
-from dataframely._storage import get_file_prefix
 import polars as pl
 from fsspec import AbstractFileSystem, url_to_fs
+
+from dataframely._storage import get_file_prefix
 
 from ._base import (
     SerializedCollection,

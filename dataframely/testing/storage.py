@@ -4,13 +4,13 @@
 from abc import ABC, abstractmethod
 from typing import Any, Literal, TypeVar, overload
 
-from dataframely._storage import get_file_prefix
 import polars as pl
 from fsspec import AbstractFileSystem, url_to_fs
 
 import dataframely as dy
 from dataframely import FailureInfo, Validation
 from dataframely._compat import deltalake
+from dataframely._storage import get_file_prefix
 from dataframely._storage.delta import _to_delta_table
 
 # ----------------------------------- Schema -------------------------------------------
