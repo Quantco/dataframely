@@ -1,11 +1,13 @@
 version: 2
 build:
-  os: ubuntu-20.04
+  os: ubuntu-24.04
   tools:
     python: mambaforge-latest
   commands:
-    - mamba install -c conda-forge/label/rust_dev -c conda-forge -c nodefaults pixi rust
-    - pixi run -e docs readthedocs
+    - mamba install -c conda-forge -c nodefaults pixi
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    - PATH=$HOME/.cargo/bin:$PATH rustup install
+    - PATH=$HOME/.cargo/bin:$PATH pixi run -e docs readthedocs
 sphinx:
   configuration: docs/conf.py
 formats:
