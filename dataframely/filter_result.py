@@ -111,7 +111,12 @@ class FailureInfo(Generic[S]):
         return self._lf.collect()
 
     def invalid(self) -> pl.DataFrame:
-        """The rows of the original data frame containing the invalid rows.
+        """The rows of the original data frame containing the invalid rows."""
+        return self._df.drop(self._rule_columns)
+
+    def violation_details(self) -> pl.DataFrame:
+        """Same as :meth:`invalid` but with additional columns indicating the results of
+        each individual rule.
 
         For each row, this includes:
             1. All columns of the original data frame.
