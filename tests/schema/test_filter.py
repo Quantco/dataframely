@@ -220,7 +220,7 @@ def test_filter_failure_info_original_dtype(eager: bool) -> None:
 
     assert failures.counts() == {"a|dtype": 1}
     assert failures.invalid().get_column("a").to_list() == [300]
-    assert failures.invalid().select("a").dtypes == [pl.Int64]
+    assert failures.invalid().dtypes == [pl.Int64]
 
 
 @pytest.mark.parametrize("eager", [True, False])
