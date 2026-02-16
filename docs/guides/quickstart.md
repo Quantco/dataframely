@@ -206,10 +206,10 @@ This information tends to be very useful in tracking down issues with the data,
 both in productive systems and analytics environments.
 
 ```{note}
-New in `dataframely` v2.8.0: The `FailureInfo.violation_details()` method now returns additional columns indicating which rules were violated for each row.
+New in `dataframely` v2.8.0: The `FailureInfo.details()` method now returns additional columns indicating which rules were violated for each row.
 ```
 
-For the example above, `failure.violation_details()` would look as follows (we omitted some columns for readability):
+For the example above, `failure.details()` would look as follows (we omitted some columns for readability):
 
 | zip_code | num_bedrooms | num_bathrooms | price  | reasonable_bathroom_to_bedroom... | minimum_zip_code_count | zip_code\|min_length | num_bedrooms\|nullability | ... |
 | -------- | ------------ | ------------- | ------ | --------------------------------- | ---------------------- | -------------------- | ------------------------- | --- |
@@ -242,7 +242,8 @@ df_concat = HouseSchema.cast(pl.concat([df1, df2]))
 Lastly, `dataframely` schemas can be used to integrate with external tools:
 
 - `HouseSchema.create_empty()` creates an empty `dy.DataFrame[HouseSchema]` that can be used for testing
-- `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be used to
+- `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be
+  used to
   create SQL tables using types and constraints in line with the schema
 - `HouseSchema.to_pyarrow_schema()` provides a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema with
   appropriate column dtypes and nullability information

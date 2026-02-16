@@ -114,7 +114,7 @@ class FailureInfo(Generic[S]):
         """The rows of the original data frame containing the invalid rows."""
         return self._df.drop(self._rule_columns)
 
-    def violation_details(self) -> pl.DataFrame:
+    def details(self) -> pl.DataFrame:
         """Same as :meth:`invalid` but with additional columns indicating the results of
         each individual rule.
 
@@ -131,9 +131,10 @@ class FailureInfo(Generic[S]):
         """
         return self._df.select(
             pl.exclude(self._rule_columns),
-            pl.col(*self._rule_columns)
-            .replace_strict({True: "valid", False: "invalid", None: "unknown"})
-            .cast(pl.Enum(["valid", "invalid", "unknown"])),
+            pl.col(*self._rule_columns).replace_strict(
+                {True: "valid", False: "invalid", None: "unknown"},
+                return_dtype=pl.Enum(["valid", "invalid", "unknown"]),
+            ),
         )
 
     def counts(self) -> dict[str, int]:

@@ -246,7 +246,7 @@ def test_filter_maintain_order(eager: bool) -> None:
 
 
 @pytest.mark.parametrize("eager", [True, False])
-def test_filter_violation_details(eager: bool) -> None:
+def test_filter_details(eager: bool) -> None:
     df = pl.DataFrame(
         {
             "a": [2, 2],
@@ -255,7 +255,7 @@ def test_filter_violation_details(eager: bool) -> None:
     )
     _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
 
-    assert fails.violation_details().to_dicts() == [
+    assert fails.details().to_dicts() == [
         {
             "a": 2,
             "b": "bar",

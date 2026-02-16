@@ -315,7 +315,7 @@ def test_unknown_rule_outcomes(
             "second": data_without_filter_with_rule_violation[1],
         }
     )
-    assert fails["first"].violation_details().to_dicts() == [
+    assert fails["first"].details().to_dicts() == [
         {
             "a": 1,
             "b": 1,
@@ -336,7 +336,7 @@ def test_unknown_rule_outcomes(
         },
     ]
 
-    assert fails["second"].violation_details().to_dicts() == [
+    assert fails["second"].details().to_dicts() == [
         {
             "a": 1,
             "b": 0,
