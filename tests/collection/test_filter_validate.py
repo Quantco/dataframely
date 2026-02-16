@@ -304,3 +304,57 @@ def test_maintain_order() -> None:
     out = MyShufflingCollection.validate(out.to_dict())
     assert out.first.select("a").collect().to_series().is_sorted()
     assert out.second.select("a").collect().to_series().is_sorted()
+
+
+def test_unknown_rule_outcomes(
+    data_without_filter_with_rule_violation: tuple[pl.DataFrame, pl.DataFrame],
+) -> None:
+    _, fails = MyCollection.filter(
+        {
+            "first": data_without_filter_with_rule_violation[0],
+            "second": data_without_filter_with_rule_violation[1],
+        }
+    )
+    assert fails["first"].invalid().to_dicts() == [
+        {
+            "a": 1,
+            "b": 1,
+            "a|nullability": "valid",
+            "b|nullability": "valid",
+            "equal_primary_key": "unknown",
+            "first_b_greater_second_b": "unknown",
+            "primary_key": "invalid",
+        },
+        {
+            "a": 1,
+            "b": 3,
+            "a|nullability": "valid",
+            "b|nullability": "valid",
+            "equal_primary_key": "unknown",
+            "first_b_greater_second_b": "unknown",
+            "primary_key": "invalid",
+        },
+    ]
+
+    assert fails["second"].invalid().to_dicts() == [
+        {
+            "a": 1,
+            "b": 0,
+            "primary_key": "valid",
+            "a|nullability": "valid",
+            "b|nullability": "valid",
+            "b|min": "invalid",
+            "equal_primary_key": "unknown",
+            "first_b_greater_second_b": "unknown",
+        },
+        {
+            "a": 3,
+            "b": 2,
+            "primary_key": "unknown",
+            "a|nullability": "unknown",
+            "b|nullability": "unknown",
+            "b|min": "unknown",
+            "equal_primary_key": "invalid",
+            "first_b_greater_second_b": "valid",
+        },
+    ]

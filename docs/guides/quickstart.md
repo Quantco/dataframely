@@ -205,7 +205,7 @@ failed_df = failure.invalid()
 This information tends to be very useful in tracking down issues with the data,
 both in productive systems and analytics environments.
 
-```{comment}
+```{note}
 New in `dataframely` v2.8.0: The `FailureInfo.invalid()` method now returns additional columns indicating which rules were violated for each row.
 ```
 
