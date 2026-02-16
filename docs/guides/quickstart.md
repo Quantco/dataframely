@@ -243,8 +243,7 @@ Lastly, `dataframely` schemas can be used to integrate with external tools:
 
 - `HouseSchema.create_empty()` creates an empty `dy.DataFrame[HouseSchema]` that can be used for testing
 - `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be
-  used to
-  create SQL tables using types and constraints in line with the schema
+  used to create SQL tables using types and constraints in line with the schema
 - `HouseSchema.to_pyarrow_schema()` provides a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema with
   appropriate column dtypes and nullability information
 - You can use `dy.DataFrame[HouseSchema]` (or the `LazyFrame` equivalent) as fields in
