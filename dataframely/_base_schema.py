@@ -21,11 +21,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
 
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
+
 
 # --------------------------------------- UTILS -------------------------------------- #
 
@@ -206,11 +206,17 @@ class SchemaMeta(ABCMeta):
                 result.columns[value.alias or attr] = value
             if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.
-                if attr == "primary_key":
+                name = value.name or attr
+                if name == "primary_key":
                     raise ImplementationError(
                         "Custom validation rule must not be named `primary_key`."
                     )
-                result.rules[attr] = value
+                if name in result.rules:
+                    raise ImplementationError(
+                        f"Duplicate validation rule name '{name}' found. "
+                        f"Custom validation rules must have unique names."
+                    )
+                result.rules[name] = value
         return result
 
     def __repr__(cls) -> str:

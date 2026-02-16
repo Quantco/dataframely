@@ -99,10 +99,14 @@ class RuleFactory:
     """Factory class for rules created within schemas."""
 
     def __init__(
-        self, validation_fn: Callable[[Any], pl.Expr], group_columns: list[str] | None
+        self,
+        validation_fn: Callable[[Any], pl.Expr],
+        group_columns: list[str] | None,
+        name: str | None = None,
     ) -> None:
         self.validation_fn = validation_fn
         self.group_columns = group_columns
+        self.name = name
 
     @classmethod
     def from_rule(cls, rule: Rule) -> Self:
@@ -125,7 +129,7 @@ class RuleFactory:
 
 
 def rule(
-    *, group_by: list[str] | None = None
+    *, group_by: list[str] | None = None, name: str | None = None
 ) -> Callable[[ValidationFunction], RuleFactory]:
     """Mark a function as a rule to evaluate during validation.
 
@@ -148,6 +152,8 @@ def rule(
             of rows. If this list is provided, the returned expression must return a
             single boolean value, i.e. some kind of aggregation function must be used
             (e.g. `sum`, `any`, ...).
+        name: A custom name for the rule for user-friendly display.
+            By default, the name of the decorated function will be used.
 
     Note:
         You'll need to explicitly handle `null` values in your columns when defining
@@ -163,7 +169,9 @@ def rule(
     """
 
     def decorator(validation_fn: ValidationFunction) -> RuleFactory:
-        return RuleFactory(validation_fn=validation_fn, group_columns=group_by)
+        return RuleFactory(
+            validation_fn=validation_fn, group_columns=group_by, name=name
+        )
 
     return decorator
 

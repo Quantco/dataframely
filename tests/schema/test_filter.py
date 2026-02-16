@@ -243,3 +243,34 @@ def test_filter_maintain_order(eager: bool) -> None:
     )
     out, _ = _filter_and_collect(schema, df, cast=True, eager=eager)
     assert out.get_column("a").is_sorted()
+
+
+def test_filter_custom_rule_name() -> None:
+    """Verify that we can set a custom rule name on a non-group rule."""
+
+    class MySchema(dy.Schema):
+        a = dy.Int64()
+
+        @dy.rule(name="custom_rule_name")
+        def my_rule(cls) -> pl.Expr:
+            return cls.a.col != 42
+
+    df, fails = MySchema.filter(pl.DataFrame({"a": [1, 42, 3]}))
+
+    assert fails.counts() == {"custom_rule_name": 1}
+
+
+def test_filter_custom_group_rule_name() -> None:
+    """Verify that we can set a custom rule name on a group rule."""
+
+    class MySchema(dy.Schema):
+        a = dy.String()
+        b = dy.Int64()
+
+        @dy.rule(name="custom_rule_name", group_by=["a"])
+        def my_rule(cls) -> pl.Expr:
+            return cls.b.col.sum() < 10
+
+    df, fails = MySchema.filter(pl.DataFrame({"a": ["x", "x", "y"], "b": [75, 75, 75]}))
+
+    assert fails.counts() == {"custom_rule_name": 3}

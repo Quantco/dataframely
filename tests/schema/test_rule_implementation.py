@@ -39,3 +39,35 @@ def test_rule_column_overlap_error() -> None:
             columns={"test": dy.Integer(alias="a")},
             rules={"a": Rule(pl.col("a") > 0)},
         )
+
+
+def test_rule_custom_illegal_name() -> None:
+    with pytest.raises(
+        dy.exc.ImplementationError,
+        match="Custom validation rule must not be named `primary_key`.",
+    ):
+
+        class MySchema(dy.Schema):
+            a = dy.String()
+
+            @dy.rule(name="primary_key")
+            def my_rule(cls) -> pl.Expr:
+                return cls.a.col < 10
+
+
+def test_rule_custom_duplicate_name() -> None:
+    with pytest.raises(
+        dy.exc.ImplementationError,
+        match="Custom validation rules must have unique names",
+    ):
+
+        class MySchema(dy.Schema):
+            a = dy.String()
+
+            @dy.rule(name="custom")
+            def my_rule1(cls) -> pl.Expr:
+                return cls.a.col < 10
+
+            @dy.rule(name="custom")
+            def my_rule2(cls) -> pl.Expr:
+                return cls.a.col > 5
