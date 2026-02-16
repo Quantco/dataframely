@@ -243,3 +243,35 @@ def test_filter_maintain_order(eager: bool) -> None:
     )
     out, _ = _filter_and_collect(schema, df, cast=True, eager=eager)
     assert out.get_column("a").is_sorted()
+
+
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_details(eager: bool) -> None:
+    df = pl.DataFrame(
+        {
+            "a": [2, 2],
+            "b": ["bar", "foobar"],
+        }
+    )
+    _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
+
+    assert fails.details().to_dicts() == [
+        {
+            "a": 2,
+            "b": "bar",
+            "a|dtype": "valid",
+            "a|nullability": "valid",
+            "b|dtype": "valid",
+            "b|max_length": "valid",
+            "primary_key": "invalid",
+        },
+        {
+            "a": 2,
+            "b": "foobar",
+            "a|dtype": "valid",
+            "a|nullability": "valid",
+            "b|dtype": "valid",
+            "b|max_length": "invalid",
+            "primary_key": "invalid",
+        },
+    ]
