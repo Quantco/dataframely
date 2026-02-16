@@ -245,7 +245,8 @@ def test_filter_maintain_order(eager: bool) -> None:
     assert out.get_column("a").is_sorted()
 
 
-def test_filter_custom_rule_name() -> None:
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_custom_rule_name(eager: bool) -> None:
     """Verify that we can set a custom rule name on a non-group rule."""
 
     class MySchema(dy.Schema):
@@ -255,12 +256,13 @@ def test_filter_custom_rule_name() -> None:
         def my_rule(cls) -> pl.Expr:
             return cls.a.col != 42
 
-    df, fails = MySchema.filter(pl.DataFrame({"a": [1, 42, 3]}))
-
+    df = pl.DataFrame({"a": [1, 42, 3]})
+    _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
     assert fails.counts() == {"custom_rule_name": 1}
 
 
-def test_filter_custom_group_rule_name() -> None:
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_custom_group_rule_name(eager: bool) -> None:
     """Verify that we can set a custom rule name on a group rule."""
 
     class MySchema(dy.Schema):
@@ -271,6 +273,7 @@ def test_filter_custom_group_rule_name() -> None:
         def my_rule(cls) -> pl.Expr:
             return cls.b.col.sum() < 10
 
-    df, fails = MySchema.filter(pl.DataFrame({"a": ["x", "x", "y"], "b": [75, 75, 75]}))
+    df = pl.DataFrame({"a": ["x", "x", "y"], "b": [75, 75, 75]})
+    _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
 
     assert fails.counts() == {"custom_rule_name": 3}
