@@ -5,7 +5,7 @@ build:
     python: mambaforge-latest
   commands:
     - mamba install -c conda-forge -c nodefaults pixi
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - rustup install
     - pixi run -e docs readthedocs
 sphinx:
