@@ -4,7 +4,9 @@ build:
   tools:
     python: mambaforge-latest
   commands:
-    - mamba install -c conda-forge/label/rust_dev -c conda-forge -c nodefaults pixi rust
+    - mamba install -c conda-forge -c nodefaults pixi
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    - rustup install
     - pixi run -e docs readthedocs
 sphinx:
   configuration: docs/conf.py
