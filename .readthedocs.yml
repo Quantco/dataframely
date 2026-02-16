@@ -6,8 +6,7 @@ build:
   commands:
     - mamba install -c conda-forge -c nodefaults pixi
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - . $HOME/.cargo/env
-    - rustup install
+    - $HOME/.cargo/bin/rustup install
     - pixi run -e docs readthedocs
 sphinx:
   configuration: docs/conf.py
