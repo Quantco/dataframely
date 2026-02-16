@@ -109,7 +109,7 @@ def test_struct_with_pk() -> None:
         {"s": [{"a": "foo", "b": 1}, {"a": "bar", "b": 1}, {"a": "bar", "b": 1}]}
     )
     _, failures = schema.filter(df)
-    assert failures.invalid().to_dict(as_series=False) == {
+    assert failures.invalid().select("s").to_dict(as_series=False) == {
         "s": [{"a": "bar", "b": 1}, {"a": "bar", "b": 1}]
     }
     assert failures.counts() == {"primary_key": 2}
@@ -121,7 +121,7 @@ def test_struct_with_rules() -> None:
     )
     df = pl.DataFrame({"s": [{"a": "ab"}, {"a": "a"}, {"a": None}]})
     _, failures = schema.filter(df)
-    assert failures.invalid().to_dict(as_series=False) == {
+    assert failures.invalid().select("s").to_dict(as_series=False) == {
         "s": [{"a": "a"}, {"a": None}]
     }
     assert failures.counts() == {"s|inner_a_nullability": 1, "s|inner_a_min_length": 1}
@@ -140,7 +140,7 @@ def test_nested_struct_with_rules() -> None:
         {"s1": [{"s2": {"a": "ab"}}, {"s2": {"a": "a"}}, {"s2": {"a": None}}]}
     )
     _, failures = schema.filter(df)
-    assert failures.invalid().to_dict(as_series=False) == {
+    assert failures.invalid().select("s1").to_dict(as_series=False) == {
         "s1": [{"s2": {"a": "a"}}, {"s2": {"a": None}}]
     }
     assert failures.counts() == {

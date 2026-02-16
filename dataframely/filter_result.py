@@ -111,8 +111,25 @@ class FailureInfo(Generic[S]):
         return self._lf.collect()
 
     def invalid(self) -> pl.DataFrame:
-        """The rows of the original data frame containing the invalid rows."""
-        return self._df.drop(self._rule_columns)
+        """The rows of the original data frame containing the invalid rows.
+
+        For each row, this includes:
+            1. All columns of the original data frame.
+            2. One column for each rule indicating whether the value of the column
+             is `valid`, `invalid`, or `unknown`.
+
+        If a rule column has a value of `unknown` for a given row, that means the rule
+        could not be evaluated reliably.
+        This may happen when calling :meth:`Collection.filter` with collection-level
+        filters in addition to member-level rules, or when calling :meth:`Schema.filter`
+        with `cast=True` and dtype-casting fails for a value.
+        """
+        return self._lf.select(
+            pl.exclude(self._rule_columns),
+            pl.col(*self._rule_columns)
+            .replace_strict({True: "valid", False: "invalid", None: "unknown"})
+            .cast(pl.Enum(["valid", "invalid", "unknown"])),
+        ).collect()
 
     def counts(self) -> dict[str, int]:
         """The number of validation failures for each individual rule.

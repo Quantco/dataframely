@@ -220,7 +220,7 @@ def test_filter_failure_info_original_dtype(eager: bool) -> None:
 
     assert failures.counts() == {"a|dtype": 1}
     assert failures.invalid().get_column("a").to_list() == [300]
-    assert failures.invalid().dtypes == [pl.Int64]
+    assert failures.invalid().select("a").dtypes == [pl.Int64]
 
 
 @pytest.mark.parametrize("eager", [True, False])
@@ -243,3 +243,35 @@ def test_filter_maintain_order(eager: bool) -> None:
     )
     out, _ = _filter_and_collect(schema, df, cast=True, eager=eager)
     assert out.get_column("a").is_sorted()
+
+
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_invalid_rows(eager: bool) -> None:
+    df = pl.DataFrame(
+        {
+            "a": [2, 2],
+            "b": ["bar", "foobar"],
+        }
+    )
+    _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
+
+    assert fails.invalid().to_dicts() == [
+        {
+            "a": 2,
+            "b": "bar",
+            "a|dtype": "valid",
+            "a|nullability": "valid",
+            "b|dtype": "valid",
+            "b|max_length": "valid",
+            "primary_key": "invalid",
+        },
+        {
+            "a": 2,
+            "b": "foobar",
+            "a|dtype": "valid",
+            "a|nullability": "valid",
+            "b|dtype": "valid",
+            "b|max_length": "invalid",
+            "primary_key": "invalid",
+        },
+    ]

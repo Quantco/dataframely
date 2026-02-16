@@ -89,7 +89,9 @@ def test_nested_list_with_rules() -> None:
     df = pl.DataFrame({"a": [[["ab"]], [["a"]], [[None]]]})
     _, failures = schema.filter(df)
     # NOTE: `validation_mask` currently fails for multiply nested lists
-    assert failures.invalid().to_dict(as_series=False) == {"a": [[["a"]], [[None]]]}
+    assert failures.invalid().select("a").to_dict(as_series=False) == {
+        "a": [[["a"]], [[None]]]
+    }
     assert failures.counts() == {
         "a|inner_inner_nullability": 1,
         "a|inner_inner_min_length": 1,

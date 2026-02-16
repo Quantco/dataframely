@@ -54,13 +54,13 @@ class HouseSchema(dy.Schema):
     price = dy.Float64(nullable=False)
 
     @dy.rule()
-    def reasonable_bathroom_to_bedrooom_ratio(cls) -> pl.Expr:
+    def reasonable_bathroom_to_bedroom_ratio(cls) -> pl.Expr:
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 ```
 
 The decorator `@dy.rule()` "registers" the function as a rule using its name (i.e.
-`reasonable_bathroom_to_bedrooom_ratio`).
+`reasonable_bathroom_to_bedroom_ratio`).
 The returned expression provides a boolean value for each row of the data which evaluates to `True` whenever the data
 are valid with respect to this rule.
 
@@ -81,7 +81,7 @@ class HouseSchema(dy.Schema):
     price = dy.Float64(nullable=False)
 
     @dy.rule()
-    def reasonable_bathroom_to_bedrooom_ratio(cls) -> pl.Expr:
+    def reasonable_bathroom_to_bedroom_ratio(cls) -> pl.Expr:
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 
@@ -189,7 +189,7 @@ Using the `counts` method on the :class:`~dataframely.FailureInfo` object will r
 
 ```python
 {
-    "reasonable_bathroom_to_bedrooom_ratio": 1,
+    "reasonable_bathroom_to_bedroom_ratio": 1,
     "minimum_zip_code_count": 2,
     "zip_code|min_length": 1,
     "num_bedrooms|nullability": 2,
@@ -204,6 +204,19 @@ failed_df = failure.invalid()
 
 This information tends to be very useful in tracking down issues with the data,
 both in productive systems and analytics environments.
+
+```{comment}
+New in `dataframely` v2.8.0: The `FailureInfo.invalid()` method now returns additional columns indicating which rules were violated for each row.
+```
+
+For the example above, `failed_df` would look as follows (we omitted some columns for readability):
+
+| zip_code | num_bedrooms | num_bathrooms | price  | reasonable_bathroom_to_bedroom... | minimum_zip_code_count | zip_code\|min_length | num_bedrooms\|nullability | ... |
+| -------- | ------------ | ------------- | ------ | --------------------------------- | ---------------------- | -------------------- | ------------------------- | --- |
+| 1        | 1            | 1             | 50000  | valid                             | invalid                | invalid              | valid                     |     |
+| 213      | null         | 1             | 80000  | valid                             | valid                  | valid                | invalid                   |     |
+| 123      | null         | 0             | 60000  | valid                             | invalid                | valid                | invalid                   |     |
+| 213      | 2            | 8             | 160000 | invalid                           | valid                  | valid                | valid                     |     |
 
 ## Type casting
 
@@ -229,7 +242,8 @@ df_concat = HouseSchema.cast(pl.concat([df1, df2]))
 Lastly, `dataframely` schemas can be used to integrate with external tools:
 
 - `HouseSchema.create_empty()` creates an empty `dy.DataFrame[HouseSchema]` that can be used for testing
-- `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be used to
+- `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be
+  used to
   create SQL tables using types and constraints in line with the schema
 - `HouseSchema.to_pyarrow_schema()` provides a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema with
   appropriate column dtypes and nullability information
