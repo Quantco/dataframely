@@ -286,11 +286,11 @@ def test_filter_group_rule_after_row_rule_filtering(
     df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
 ) -> None:
     """Test that group rules are evaluated after row-level rules filter rows.
-    
-    This addresses a bug where a row failing a row-level rule could affect
-    group rule evaluation, causing incorrect validation results.
+
+    This addresses a bug where a row failing a row-level rule could affect group rule
+    evaluation, causing incorrect validation results.
     """
-    
+
     class DiagnosisSchema(dy.Schema):
         invoice_id = dy.String(primary_key=True)
         diagnosis = dy.String(primary_key=True, regex="^[A-Z]{3}$")
