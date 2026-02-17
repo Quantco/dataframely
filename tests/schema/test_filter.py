@@ -246,6 +246,38 @@ def test_filter_maintain_order(eager: bool) -> None:
 
 
 @pytest.mark.parametrize("eager", [True, False])
+def test_filter_details(eager: bool) -> None:
+    df = pl.DataFrame(
+        {
+            "a": [2, 2],
+            "b": ["bar", "foobar"],
+        }
+    )
+    _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
+
+    assert fails.details().to_dicts() == [
+        {
+            "a": 2,
+            "b": "bar",
+            "a|dtype": "valid",
+            "a|nullability": "valid",
+            "b|dtype": "valid",
+            "b|max_length": "valid",
+            "primary_key": "invalid",
+        },
+        {
+            "a": 2,
+            "b": "foobar",
+            "a|dtype": "valid",
+            "a|nullability": "valid",
+            "b|dtype": "valid",
+            "b|max_length": "invalid",
+            "primary_key": "invalid",
+        },
+    ]
+
+
+@pytest.mark.parametrize("eager", [True, False])
 def test_filter_custom_rule_name(eager: bool) -> None:
     """Verify that we can set a custom rule name on a non-group rule."""
 

@@ -139,7 +139,7 @@ class HouseSchema(dy.Schema):
     price = dy.Float64(nullable=False)
 
     @dy.rule()
-    def reasonable_bathroom_to_bedrooom_ratio(cls) -> pl.Expr:
+    def reasonable_bathroom_to_bedroom_ratio(cls) -> pl.Expr:
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 
@@ -190,9 +190,9 @@ json.loads(HouseSchema.serialize())
                           'primary_key': False,
                           'regex': None}},
  'name': 'HouseSchema',
- 'rules': {'reasonable_bathroom_to_bedrooom_ratio': {'expr': {'__type__': 'expression',
-                                                              'value': 'gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gaZDb2x1bW6tbnVtX2JhdGhyb29tc6JvcKpUcnVlRGl2aWRlpXJpZ2h0gaZDb2x1bW6sbnVtX2JlZHJvb21zom9wpEd0RXGlcmlnaHSBp0xpdGVyYWyBo0R5boGlRmxvYXTLP9VVVVVVVVWib3CjQW5kpXJpZ2h0gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gaZDb2x1bW6tbnVtX2JhdGhyb29tc6JvcKpUcnVlRGl2aWRlpXJpZ2h0gaZDb2x1bW6sbnVtX2JlZHJvb21zom9wpEx0RXGlcmlnaHSBp0xpdGVyYWyBo0R5boGjSW50xBAAAAAAAAAAAAAAAAAAAAAD'},
-                                                     'rule_type': 'Rule'}},
+ 'rules': {'reasonable_bathroom_to_bedroom_ratio': {'expr': {'__type__': 'expression',
+                                                             'value': 'gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gaZDb2x1bW6tbnVtX2JhdGhyb29tc6JvcKpUcnVlRGl2aWRlpXJpZ2h0gaZDb2x1bW6sbnVtX2JlZHJvb21zom9wpEd0RXGlcmlnaHSBp0xpdGVyYWyBo0R5boGlRmxvYXTLP9VVVVVVVVWib3CjQW5kpXJpZ2h0gapCaW5hcnlFeHByg6RsZWZ0gapCaW5hcnlFeHByg6RsZWZ0gaZDb2x1bW6tbnVtX2JhdGhyb29tc6JvcKpUcnVlRGl2aWRlpXJpZ2h0gaZDb2x1bW6sbnVtX2JlZHJvb21zom9wpEx0RXGlcmlnaHSBp0xpdGVyYWyBo0R5boGjSW50xBAAAAAAAAAAAAAAAAAAAAAD'},
+                                                    'rule_type': 'Rule'}},
  'versions': {'dataframely': '2.0.0', 'format': '1', 'polars': '1.33.1'}}
 ```
 
