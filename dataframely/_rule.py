@@ -199,15 +199,20 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
         name: rule for name, rule in rules.items() if isinstance(rule, GroupRule)
     }
 
-    # Before we can select all of the simple expressions, we need to turn the
-    # group rules into something to use in a `select` statement as well.
-    result = (
-        # NOTE: A value of `null` always validates successfully as nullability should
-        #  already be checked via dedicated rules.
-        lf.pipe(_with_group_rules, group_rules).with_columns(
-            **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
-        )
+    # First, evaluate row-level (simple) rules
+    # NOTE: A value of `null` always validates successfully as nullability should
+    #  already be checked via dedicated rules.
+    result = lf.with_columns(
+        **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
     )
+
+    # Group rules must be evaluated AFTER row-level rules to ensure they only
+    # apply to rows that pass row-level validation. Otherwise, a row that fails
+    # a row-level rule could be part of a group evaluation, and when that row is
+    # filtered out, the group might become invalid.
+    if group_rules:
+        # Evaluate group rules only on rows that pass all row-level rules
+        result = result.pipe(_with_group_rules, group_rules, simple_exprs)
 
     # If there is at least one rule that checks for successful dtype casting, we need
     # to take an extra step: rules other than the "dtype rules" might not be reliable
@@ -231,7 +236,11 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
     return result
 
 
-def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyFrame:
+def _with_group_rules(
+    lf: pl.LazyFrame,
+    rules: dict[str, GroupRule],
+    simple_exprs: dict[str, pl.Expr] | None = None,
+) -> pl.LazyFrame:
     # First, we partition the rules by group columns. This will minimize the number
     # of `group_by` calls and joins to make.
     grouped_rules: dict[frozenset[str], dict[str, pl.Expr]] = defaultdict(dict)
@@ -239,19 +248,37 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
         # NOTE: `null` indicates validity, see note above.
         grouped_rules[frozenset(rule.group_columns)][name] = rule.expr.fill_null(True)
 
+    # If we have row-level rules, we need to evaluate group rules only on rows that
+    # pass all row-level rules. This ensures that a row failing a row-level rule
+    # doesn't affect group rule evaluation. We do this by filtering the data for
+    # group aggregation, but still joining back to the full dataset.
+    if simple_exprs:
+        # Create a filter for rows that pass all row-level rules
+        all_simple_valid = pl.all_horizontal(
+            [pl.col(name).fill_null(True) for name in simple_exprs.keys()]
+        )
+        # Use this filter when doing group aggregations
+        lf_for_groups = lf.filter(all_simple_valid)
+    else:
+        lf_for_groups = lf
+
     # Then, for each `group_by`, we apply the relevant rules and keep all the rule
     # evaluations around
     group_evaluations: dict[frozenset[str], pl.LazyFrame] = {}
-    for group_columns, group_rules in grouped_rules.items():
+    for group_columns, group_rules_exprs in grouped_rules.items():
         # We group by the group columns and apply all expressions
-        group_evaluations[group_columns] = lf.group_by(group_columns).agg(**group_rules)
+        group_evaluations[group_columns] = lf_for_groups.group_by(group_columns).agg(
+            **group_rules_exprs
+        )
 
     # Eventually, we apply the rule evaluations onto the input data frame. For this, we
     # "broadcast" the results within each group across rows in the same group.
+    # We join to the FULL dataset (lf), not the filtered one, so rows that failed
+    # row-level rules will get null values for group rules (which are treated as valid).
     result = lf
     for group_columns, frame in group_evaluations.items():
         result = result.join(
-            frame, on=list(group_columns), nulls_equal=True, maintain_order="left"
+            frame, on=list(group_columns), nulls_equal=True, maintain_order="left", how="left"
         )
     return result
 
