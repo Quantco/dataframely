@@ -64,6 +64,12 @@ The decorator `@dy.rule()` "registers" the function as a rule using its name (i.
 The returned expression provides a boolean value for each row of the data which evaluates to `True` whenever the data
 are valid with respect to this rule.
 
+```{note}
+New in `dataframely` v2.8.0: You can now set custom names on rules by specifying the `name` kwarg.
+For example, `@dy.rule(name="my-custom-name")` would register the rule under the name `my-custom-name` instead of the function name.
+This will affect how validation errors are reported and how the rule is referred to in the `FailureInfo` object.
+```
+
 ## Group rules
 
 For defining even more complex rules, the `@dy.rule` decorator allows for a `group_by`
