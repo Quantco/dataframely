@@ -138,7 +138,7 @@ class Array(Column):
                 start = i * chunk_size
                 chunk = all_elements.slice(start, chunk_size).to_list()
                 chunks.append(chunk)
-            result = pl.Series(chunks, dtype=pl.Array(inner_dtype, self.shape))
+            result = pl.Series(chunks, dtype=self.dtype)
         else:
             # For scalar and struct types, reshape works correctly
             result = all_elements.reshape((n, *self.shape))
