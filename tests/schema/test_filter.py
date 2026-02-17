@@ -275,3 +275,81 @@ def test_filter_details(eager: bool) -> None:
             "primary_key": "invalid",
         },
     ]
+
+
+# --------------------------- GROUP RULES WITH ROW RULES ----------------------------- #
+
+
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_group_rule_after_row_rule_filtering(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+) -> None:
+    """Test that group rules are evaluated after row-level rules filter rows.
+
+    This addresses a bug where a row failing a row-level rule could affect group rule
+    evaluation, causing incorrect validation results.
+    """
+
+    class DiagnosisSchema(dy.Schema):
+        invoice_id = dy.String(primary_key=True)
+        diagnosis = dy.String(primary_key=True, regex="^[A-Z]{3}$")
+        is_main = dy.Bool(nullable=False)
+
+        @dy.rule(group_by=["invoice_id"])
+        def exactly_one_main_diagnosis(cls) -> pl.Expr:
+            return pl.col("is_main").sum() == 1
+
+    # Case 1: Row-level rule removes row that would make group rule pass
+    # Without the fix, this would incorrectly pass validation
+    df1 = df_type(
+        {
+            "invoice_id": ["A", "A", "A"],
+            "diagnosis": ["ABC", "ABD", "123"],  # "123" fails regex
+            "is_main": [False, False, True],  # Main diagnosis on invalid row
+        }
+    )
+    valid1, failures1 = _filter_and_collect(DiagnosisSchema, df1, eager=eager)
+    # All rows should be filtered out: row with "123" fails regex,
+    # and remaining rows fail group rule (no main diagnosis)
+    assert len(valid1) == 0
+    assert "exactly_one_main_diagnosis" in failures1.counts()
+    assert "diagnosis|regex" in failures1.counts()
+
+    # Case 2: Valid data passes both row-level and group rules
+    df2 = df_type(
+        {
+            "invoice_id": ["A", "A", "A"],
+            "diagnosis": ["ABC", "ABD", "AEF"],
+            "is_main": [False, True, False],
+        }
+    )
+    valid2, failures2 = _filter_and_collect(DiagnosisSchema, df2, eager=eager)
+    assert len(valid2) == 3
+    assert valid2.select(pl.col("is_main").sum()).item() == 1
+    assert len(failures2) == 0
+
+    # Case 3: Multiple groups, one has invalid row-level data
+    df3 = df_type(
+        {
+            "invoice_id": ["A", "A", "A", "B", "B"],
+            "diagnosis": ["ABC", "ABD", "AEF", "XYZ", "123"],
+            "is_main": [False, True, False, True, False],
+        }
+    )
+    valid3, failures3 = _filter_and_collect(DiagnosisSchema, df3, eager=eager)
+    # Group A: all valid, group B: one row fails regex, remaining row is valid
+    assert len(valid3) == 4
+    assert failures3.counts() == {"diagnosis|regex": 1}
+
+    # Case 4: All rows pass row-level but fail group rule
+    df4 = df_type(
+        {
+            "invoice_id": ["A", "A", "A"],
+            "diagnosis": ["ABC", "ABD", "AEF"],
+            "is_main": [False, False, False],  # No main diagnosis
+        }
+    )
+    valid4, failures4 = _filter_and_collect(DiagnosisSchema, df4, eager=eager)
+    assert len(valid4) == 0
+    assert failures4.counts() == {"exactly_one_main_diagnosis": 3}
