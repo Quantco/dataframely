@@ -60,7 +60,7 @@ class Date(OrdinalMixin[dt.date], Column):
             max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that dates in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime `round` method.
+                formatting language used by :mod:`polars` datetime `truncate` method.
                 For example, a value `1mo` expects all dates to be on the first of the
                 month. Note that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
@@ -183,7 +183,7 @@ class Time(OrdinalMixin[dt.time], Column):
             max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that times in the column must have. This uses the
-                formatting language used by :mod:`polars` datetime `round` method.
+                formatting language used by :mod:`polars` datetime `truncate` method.
                 For example, a value `1h` expects all times to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
@@ -314,7 +314,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that datetimes in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime `round` method.
+                the formatting language used by :mod:`polars` datetime `truncate` method.
                 For example, a value `1h` expects all datetimes to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             time_zone: The time zone that datetimes in the column must have. The time
@@ -459,7 +459,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
             max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             resolution: The resolution that durations in the column must have. This uses
-                the formatting language used by :mod:`polars` datetime `round` method.
+                the formatting language used by :mod:`polars` datetime `truncate` method.
                 For example, a value `1h` expects all durations to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
