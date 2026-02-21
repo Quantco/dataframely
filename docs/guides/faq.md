@@ -30,6 +30,23 @@ class UserSchema(dy.Schema):
         return pl.col("email").is_null() | pl.col("email").is_unique()
 ```
 
+## How do I give custom names to the rules in a {class}`~dataframely.Schema`?
+
+By default, the name of a rule is the name of the function that implements it.
+However, you can also provide a custom name for a rule by using the `name` parameter of the `@dy.rule` decorator:
+
+```python
+class UserSchema(dy.Schema):
+    user_id = dy.UInt64(primary_key=True, nullable=False)
+
+    @dy.rule(name="my-custom-name")
+    def irrelevant_function_name(cls) -> pl.Expr:
+        return cls.user_id.col != 42
+```
+
+Whenever `dataframely` needs to refer to this rule, it will use the custom name `my-custom-name` instead of the function
+name `irrelevant_function_name`.
+
 ## How do I fix the ruff error `First argument of a method should be named self`?
 
 See our documentation on [group rules](./quickstart.md#group-rules).

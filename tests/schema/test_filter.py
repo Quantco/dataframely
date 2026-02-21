@@ -275,3 +275,37 @@ def test_filter_details(eager: bool) -> None:
             "primary_key": "invalid",
         },
     ]
+
+
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_custom_rule_name(eager: bool) -> None:
+    """Verify that we can set a custom rule name on a non-group rule."""
+
+    class MySchema(dy.Schema):
+        a = dy.Int64()
+
+        @dy.rule(name="custom_rule_name")
+        def my_rule(cls) -> pl.Expr:
+            return cls.a.col != 42
+
+    df = pl.DataFrame({"a": [1, 42, 3]})
+    _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
+    assert fails.counts() == {"custom_rule_name": 1}
+
+
+@pytest.mark.parametrize("eager", [True, False])
+def test_filter_custom_group_rule_name(eager: bool) -> None:
+    """Verify that we can set a custom rule name on a group rule."""
+
+    class MySchema(dy.Schema):
+        a = dy.String()
+        b = dy.Int64()
+
+        @dy.rule(name="custom_rule_name", group_by=["a"])
+        def my_rule(cls) -> pl.Expr:
+            return cls.b.col.sum() < 10
+
+    df = pl.DataFrame({"a": ["x", "x", "y"], "b": [75, 75, 75]})
+    _, fails = _filter_and_collect(MySchema, df, cast=True, eager=eager)
+
+    assert fails.counts() == {"custom_rule_name": 3}

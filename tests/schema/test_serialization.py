@@ -30,6 +30,16 @@ def test_simple_serialization() -> None:
     assert set(decoded["rules"].keys()) == set()
 
 
+class CustomRuleNameSchema(dy.Schema):
+    """A schema with a custom rule name."""
+
+    x = dy.Int64()
+
+    @dy.rule(name="custom_rule")
+    def irrelevant_name_here(cls) -> pl.Expr:
+        return cls.x.col > 5
+
+
 @pytest.mark.parametrize(
     "schema",
     [
@@ -59,6 +69,7 @@ def test_simple_serialization() -> None:
             "test",
             {"a": dy.Struct({"x": dy.Int64(min=5, check=lambda expr: expr < 10)})},
         ),
+        CustomRuleNameSchema,
     ],
 )
 def test_roundtrip_matches(schema: type[dy.Schema]) -> None:
