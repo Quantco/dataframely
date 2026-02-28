@@ -572,9 +572,22 @@ class Schema(BaseSchema, ABC):
         if eager:
             out, failure = cls.filter(df, cast=cast, eager=True)
             if len(failure) > 0:
-                raise ValidationError(
-                    format_rule_failures(list(failure.counts().items()))
-                )
+                counts = failure.counts()
+                msg = format_rule_failures(list(counts.items()))
+                if "primary_key" in counts:
+                    pk_cols = cls.primary_key()
+                    distinct_duplicate_keys = (
+                        failure._df.filter(pl.col("primary_key").not_())
+                        .select(pk_cols)
+                        .unique()
+                    )
+                    n_distinct = len(distinct_duplicate_keys)
+                    examples = distinct_duplicate_keys.head(5).to_dicts()
+                    suffix = "combination" if n_distinct == 1 else "combinations"
+                    old = f"'primary_key' failed for {counts['primary_key']:,} rows"
+                    new = old + f" with {n_distinct} distinct {suffix}, examples: {examples}"
+                    msg = msg.replace(old, new)
+                raise ValidationError(msg)
             return out
         else:
             lf = df.lazy().pipe(
