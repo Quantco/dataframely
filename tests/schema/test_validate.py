@@ -132,8 +132,7 @@ def test_invalid_primary_key(
         match=r"1 rules failed validation",
     ) as exc_info:
         _validate_and_collect(MySchema, df, eager=eager)
-    if eager:
-        exc_info.match(r"with 1 distinct combination, examples: \[")
+    exc_info.match(r"with 2 distinct examples")
     assert not MySchema.is_valid(df)
 
 

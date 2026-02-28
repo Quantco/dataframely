@@ -2,6 +2,8 @@ mod rule_failure;
 mod utils;
 mod validation_error;
 
+use std::collections::{HashMap, HashSet};
+
 use polars::prelude::*;
 use polars_core::POOL;
 use pyo3_polars::derive::polars_expr;
@@ -62,18 +64,71 @@ pub fn all_rules(inputs: &[Series]) -> PolarsResult<Series> {
 struct RequiredValidationKwargs {
     schema_name: String,
     null_is_valid: bool,
+    #[serde(default)]
+    num_rule_columns: Option<usize>,
+}
+
+/// The maximum number of distinct example rows included in validation error messages.
+const MAX_EXAMPLES: usize = 5;
+
+/// Format a single data row (at `row_idx`) from the given data series as a Python-like dict string.
+fn format_example_row(data_series: &[Series], row_idx: usize) -> String {
+    let kvs: Vec<String> = data_series
+        .iter()
+        .map(|s| {
+            let val = s.get(row_idx).unwrap_or(AnyValue::Null);
+            format!("'{}': {}", s.name(), val)
+        })
+        .collect();
+    format!("{{{}}}", kvs.join(", "))
+}
+
+/// Compute up to `max_examples` distinct example rows for a failing rule.
+fn compute_examples(
+    bool_ca: &BooleanChunked,
+    null_is_valid: bool,
+    data_series: &[Series],
+    max_examples: usize,
+) -> Vec<String> {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut examples: Vec<String> = Vec::new();
+
+    for (i, val) in bool_ca.iter().enumerate() {
+        let is_failure = match val {
+            Some(false) => true,
+            None => !null_is_valid,
+            _ => false,
+        };
+        if is_failure {
+            let row_str = format_example_row(data_series, i);
+            if seen.insert(row_str.clone()) {
+                examples.push(row_str);
+                if examples.len() >= max_examples {
+                    break;
+                }
+            }
+        }
+    }
+
+    examples
 }
 
 /// Reduce a set of boolean columns into a single boolean scalar, AND-ing all values.
 /// Null values are treated as `true`.
 /// In contrast to `all_rules`, this function raises an error if the returned value would be
 /// `false`, including details about the `false` values (i.e. "rules" that failed).
+/// The first `num_rule_columns` inputs are boolean rule columns; any remaining inputs are
+/// data columns used to generate example rows in error messages.
 #[polars_expr(output_type=Boolean)]
 pub fn all_rules_required(
     inputs: &[Series],
     kwargs: RequiredValidationKwargs,
 ) -> PolarsResult<Series> {
-    let failures = compute_rule_failures(inputs, kwargs.null_is_valid)?;
+    let num_rule = kwargs.num_rule_columns.unwrap_or(inputs.len());
+    let rule_inputs = &inputs[..num_rule];
+    let data_inputs = &inputs[num_rule..];
+
+    let failures = compute_rule_failures(rule_inputs, kwargs.null_is_valid)?;
 
     // If there's any failure, we know that validation failed and use the failure object for an
     // informative error message. If no failure exists, we simply return a series with a single
@@ -84,7 +139,26 @@ pub fn all_rules_required(
         return Ok(BooleanChunked::new(PlSmallStr::EMPTY, [true]).into_series());
     }
 
+    // Compute examples for each failing rule using the data columns.
+    let examples: HashMap<String, Vec<String>> = if data_inputs.is_empty() {
+        HashMap::new()
+    } else {
+        failures
+            .iter()
+            .map(|failure| {
+                let rule_series = rule_inputs
+                    .iter()
+                    .find(|s| s.name().as_str() == failure.rule)
+                    .expect("failing rule not found in inputs");
+                let bool_ca = as_bool(rule_series)?;
+                let examples =
+                    compute_examples(bool_ca, kwargs.null_is_valid, data_inputs, MAX_EXAMPLES);
+                Ok((failure.rule.to_string(), examples))
+            })
+            .collect::<PolarsResult<HashMap<_, _>>>()?
+    };
+
     // Aggregate failure counts into a validation error.
     let error = RuleValidationError::new(failures);
-    Err(polars_err!(ComputeError: format!("\n{}", error.to_string(Some(&kwargs.schema_name)))))
+    Err(polars_err!(ComputeError: format!("\n{}", error.to_string(Some(&kwargs.schema_name), Some(&examples)))))
 }

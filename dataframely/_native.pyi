@@ -1,6 +1,9 @@
 from typing import overload
 
-def format_rule_failures(failures: list[tuple[str, int]]) -> str:
+def format_rule_failures(
+    failures: list[tuple[str, int]],
+    examples: dict[str, list[str]] | None = None,
+) -> str:
     """
     Format rule failures with the same logic that produces validation errors from the
     polars plugin.
@@ -8,6 +11,9 @@ def format_rule_failures(failures: list[tuple[str, int]]) -> str:
     Args:
         failures: The name of the failures and their counts. This should only include
             failures with a count of at least 1.
+        examples: Optional mapping from rule name to a list of example row strings.
+            When provided, up to ``len(examples[rule])`` distinct examples are included
+            in the formatted message for each rule.
 
     Returns:
         The formatted rule failures.

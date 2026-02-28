@@ -58,6 +58,7 @@ def all_rules_required(
     *,
     null_is_valid: bool = True,
     schema_name: str,
+    data_columns: Iterable[IntoExpr] | None = None,
 ) -> pl.Expr:
     """Execute :mod:`~polars.all_horizontal` and `.all` for a set of rules.
 
@@ -70,15 +71,25 @@ def all_rules_required(
         schema_name: The name of the schema being validated. This is used to produce
             better error messages.
         null_is_valid: Whether to treat null values as valid (i.e., `true`).
+        data_columns: Optional data columns to include for generating example rows in
+            error messages. If provided, up to 5 distinct example rows are included
+            for each failing rule.
 
     Returns:
         A scalar boolean expression.
     """
+    rules_list = [rules] if isinstance(rules, pl.Expr) else list(rules)
+    num_rule_columns = len(rules_list)
+    data_columns_list = list(data_columns) if data_columns is not None else []
     return register_plugin_function(
         plugin_path=PLUGIN_PATH,
         function_name="all_rules_required",
-        args=rules,
-        kwargs={"null_is_valid": null_is_valid, "schema_name": schema_name},
+        args=[*rules_list, *data_columns_list],
+        kwargs={
+            "null_is_valid": null_is_valid,
+            "schema_name": schema_name,
+            "num_rule_columns": num_rule_columns,
+        },
         use_abs_path=True,
         returns_scalar=True,
     )

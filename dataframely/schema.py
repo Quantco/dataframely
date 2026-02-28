@@ -572,22 +572,11 @@ class Schema(BaseSchema, ABC):
         if eager:
             out, failure = cls.filter(df, cast=cast, eager=True)
             if len(failure) > 0:
-                counts = failure.counts()
-                msg = format_rule_failures(list(counts.items()))
-                if "primary_key" in counts:
-                    pk_cols = cls.primary_key()
-                    distinct_duplicate_keys = (
-                        failure._df.filter(pl.col("primary_key").not_())
-                        .select(pk_cols)
-                        .unique()
+                raise ValidationError(
+                    format_rule_failures(
+                        list(failure.counts().items()), failure.examples()
                     )
-                    n_distinct = len(distinct_duplicate_keys)
-                    examples = distinct_duplicate_keys.head(5).to_dicts()
-                    suffix = "combination" if n_distinct == 1 else "combinations"
-                    old = f"'primary_key' failed for {counts['primary_key']:,} rows"
-                    new = old + f" with {n_distinct} distinct {suffix}, examples: {examples}"
-                    msg = msg.replace(old, new)
-                raise ValidationError(msg)
+                )
             return out
         else:
             lf = df.lazy().pipe(
@@ -596,7 +585,13 @@ class Schema(BaseSchema, ABC):
             if rules := cls._validation_rules(with_cast=False):
                 lf = (
                     lf.pipe(with_evaluation_rules, rules)
-                    .filter(all_rules_required(rules.keys(), schema_name=cls.__name__))
+                    .filter(
+                        all_rules_required(
+                            rules.keys(),
+                            schema_name=cls.__name__,
+                            data_columns=cls.column_names(),
+                        )
+                    )
                     .drop(rules.keys())
                 )
             return lf  # type: ignore

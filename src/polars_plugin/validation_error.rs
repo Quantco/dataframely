@@ -2,6 +2,7 @@ use itertools::Itertools;
 use num_format::{Locale, ToFormattedString};
 use polars::prelude::*;
 use pyo3::{create_exception, exceptions::PyException, prelude::*};
+use std::collections::HashMap;
 
 use super::RuleFailure;
 
@@ -39,7 +40,11 @@ impl<'a> RuleValidationError<'a> {
         }
     }
 
-    pub fn to_string(&self, schema: Option<&str>) -> String {
+    pub fn to_string(
+        &self,
+        schema: Option<&str>,
+        examples: Option<&HashMap<String, Vec<String>>>,
+    ) -> String {
         let mut result = if let Some(schema) = schema {
             format!(
                 "{} rules failed validation for schema '{schema}':",
@@ -49,10 +54,12 @@ impl<'a> RuleValidationError<'a> {
             format!("{} rules failed validation:", self.num_rule_failures)
         };
         self.schema_errors.iter().for_each(|failure| {
+            let examples_str = format_examples(failure.rule, examples);
             result += format!(
-                "\n - '{}' failed for {} rows",
+                "\n - '{}' failed for {} rows{}",
                 failure.rule,
-                failure.count.to_formatted_string(&Locale::en)
+                failure.count.to_formatted_string(&Locale::en),
+                examples_str,
             )
             .as_str();
         });
@@ -63,10 +70,13 @@ impl<'a> RuleValidationError<'a> {
             )
             .as_str();
             errors.iter().for_each(|failure| {
+                let full_rule = format!("{}|{}", column, failure.rule);
+                let examples_str = format_examples(&full_rule, examples);
                 result += format!(
-                    "\n   - '{}' failed for {} rows",
+                    "\n   - '{}' failed for {} rows{}",
                     failure.rule,
-                    failure.count.to_formatted_string(&Locale::en)
+                    failure.count.to_formatted_string(&Locale::en),
+                    examples_str,
                 )
                 .as_str();
             });
@@ -75,8 +85,26 @@ impl<'a> RuleValidationError<'a> {
     }
 }
 
+fn format_examples(rule: &str, examples: Option<&HashMap<String, Vec<String>>>) -> String {
+    match examples.and_then(|ex| ex.get(rule)) {
+        Some(ex) if !ex.is_empty() => {
+            let suffix = if ex.len() == 1 {
+                "example".to_string()
+            } else {
+                "examples".to_string()
+            };
+            format!(" with {} distinct {}: [{}]", ex.len(), suffix, ex.join(", "))
+        }
+        _ => String::new(),
+    }
+}
+
 #[pyfunction]
-pub fn format_rule_failures(failures: Vec<(String, IdxSize)>) -> String {
+#[pyo3(signature = (failures, examples=None))]
+pub fn format_rule_failures(
+    failures: Vec<(String, IdxSize)>,
+    examples: Option<HashMap<String, Vec<String>>>,
+) -> String {
     let validation_error = RuleValidationError::new(
         failures
             .iter()
@@ -86,5 +114,5 @@ pub fn format_rule_failures(failures: Vec<(String, IdxSize)>) -> String {
             })
             .collect(),
     );
-    return validation_error.to_string(None);
+    return validation_error.to_string(None, examples.as_ref());
 }
