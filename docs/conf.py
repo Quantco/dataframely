@@ -41,6 +41,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_toolbox.more_autodoc.overloads",
+    "sphinx_llms_txt",
 ]
 
 ## sphinx
