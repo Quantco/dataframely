@@ -22,7 +22,6 @@ from typing import Any, cast
 
 _mod = importlib.import_module("dataframely")
 
-
 project = "dataframely"
 copyright = f"{datetime.date.today().year}, QuantCo, Inc"
 author = "QuantCo, Inc."
@@ -71,7 +70,7 @@ default_role = "code"
 maximum_signature_line_length = 88
 
 # source files
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "SKILL.md"]
 source_suffix = {
     ".rst": "restructuredtext",
     ".txt": "markdown",
