@@ -63,12 +63,12 @@ except ImportError:
 
 try:
     import pydantic
-except ImportError:
+except ImportError:  # pragma: no cover
     pydantic = _DummyModule("pydantic")  # type: ignore
 
 try:
     from pydantic_core import core_schema as pydantic_core_schema
-except ImportError:
+except ImportError:  # pragma: no cover
     pydantic_core_schema = _DummyModule("pydantic_core_schema")  # type: ignore
 
 # --------------------------------------- POLARS ------------------------------------- #
