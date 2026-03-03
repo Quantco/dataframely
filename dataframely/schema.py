@@ -820,6 +820,32 @@ class Schema(BaseSchema, ABC):
             return lf.collect()  # type: ignore
         return lf  # type: ignore
 
+    @overload
+    @classmethod
+    def undo_aliases(cls, df: pl.DataFrame, /) -> pl.DataFrame: ...
+
+    @overload
+    @classmethod
+    def undo_aliases(cls, df: pl.LazyFrame, /) -> pl.LazyFrame: ...
+
+    @classmethod
+    def undo_aliases(
+        cls, df: pl.DataFrame | pl.LazyFrame, /
+    ) -> pl.DataFrame | pl.LazyFrame:
+        """Rename columns from their alias names to their attribute names.
+
+        This method renames columns that have aliases defined, mapping from the
+        alias (e.g., "price ($)") to the attribute name (e.g., "price").
+
+        Args:
+            df: The data frame whose columns should be renamed.
+
+        Returns:
+            The data frame with columns renamed from aliases to attribute names.
+            Columns without aliases are left unchanged.
+        """
+        return df.rename(cls._alias_mapping())
+
     # --------------------------------- SERIALIZATION -------------------------------- #
 
     @classmethod

@@ -24,6 +24,8 @@ else:
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
+_ATTR_TO_ALIAS = "__dataframely_attr_to_alias__"
+_USE_ATTR_NAMES = "__dataframely_use_attribute_names__"
 
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
 
@@ -82,10 +84,12 @@ class Metadata:
 
     columns: dict[str, Column] = field(default_factory=dict)
     rules: dict[str, RuleFactory] = field(default_factory=dict)
+    attr_to_alias: dict[str, str | None] = field(default_factory=dict)
 
     def update(self, other: Self) -> None:
         self.columns.update(other.columns)
         self.rules.update(other.rules)
+        self.attr_to_alias.update(other.attr_to_alias)
 
 
 class SchemaMeta(ABCMeta):
@@ -95,13 +99,31 @@ class SchemaMeta(ABCMeta):
         bases: tuple[type[object], ...],
         namespace: dict[str, Any],
         *args: Any,
+        use_attribute_names: bool | None = None,
         **kwargs: Any,
     ) -> SchemaMeta:
         result = Metadata()
+
+        # Inherit use_attribute_names from parent if not explicitly set
+        inherited_use_attr_names = False
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))
-        result.update(mcs._get_metadata(namespace))
+            if hasattr(base, _USE_ATTR_NAMES):
+                inherited_use_attr_names = getattr(base, _USE_ATTR_NAMES)
+
+        # Explicit setting takes precedence over inheritance
+        final_use_attr_names = (
+            use_attribute_names
+            if use_attribute_names is not None
+            else inherited_use_attr_names
+        )
+
+        result.update(
+            mcs._get_metadata(namespace, use_attribute_names=final_use_attr_names)
+        )
         namespace[_COLUMN_ATTR] = result.columns
+        namespace[_ATTR_TO_ALIAS] = result.attr_to_alias
+        namespace[_USE_ATTR_NAMES] = final_use_attr_names
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
         # Assign rules retroactively as we only encounter rule factories in the result
@@ -185,7 +207,8 @@ class SchemaMeta(ABCMeta):
             val = super().__getattribute__(name)
             # Dynamically set the name of the column if it is a `Column` instance.
             if isinstance(val, Column):
-                val._name = val.alias or name
+                use_attr_names = getattr(cls, _USE_ATTR_NAMES, False)
+                val._name = name if use_attr_names else (val.alias or name)
             return val
 
     @staticmethod
@@ -193,17 +216,25 @@ class SchemaMeta(ABCMeta):
         result = Metadata()
         for base in kls.__bases__:
             result.update(SchemaMeta._get_metadata_recursively(base))
-        result.update(SchemaMeta._get_metadata(kls.__dict__))  # type: ignore
+        use_attr_names = getattr(kls, _USE_ATTR_NAMES, False)
+        result.update(
+            SchemaMeta._get_metadata(kls.__dict__, use_attribute_names=use_attr_names)  # type: ignore
+        )
         return result
 
     @staticmethod
-    def _get_metadata(source: dict[str, Any]) -> Metadata:
+    def _get_metadata(
+        source: dict[str, Any], *, use_attribute_names: bool = False
+    ) -> Metadata:
         result = Metadata()
         for attr, value in {
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
-                result.columns[value.alias or attr] = value
+                # When use_attribute_names=True, use attr as key; otherwise use alias or attr
+                col_name = attr if use_attribute_names else (value.alias or attr)
+                result.columns[col_name] = value
+                result.attr_to_alias[attr] = value.alias
             if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
@@ -258,3 +289,17 @@ class BaseSchema(metaclass=SchemaMeta):
     @classmethod
     def _schema_validation_rules(cls) -> dict[str, Rule]:
         return getattr(cls, _RULE_ATTR)
+
+    @classmethod
+    def _alias_mapping(cls) -> dict[str, str]:
+        """Mapping from aliases to column identifier (attribute)."""
+        return {
+            alias: attr
+            for attr, alias in getattr(cls, _ATTR_TO_ALIAS).items()
+            if alias is not None and alias != attr
+        }
+
+    @classmethod
+    def _uses_attribute_names(cls) -> bool:
+        """Check if the schema uses attribute names instead of aliases."""
+        return getattr(cls, _USE_ATTR_NAMES, False)
