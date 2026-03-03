@@ -104,14 +104,29 @@ class SchemaMeta(ABCMeta):
     ) -> SchemaMeta:
         result = Metadata()
 
-        # Inherit use_attribute_names from parent if not explicitly set
-        inherited_use_attr_names = False
+        # Inherit use_attribute_names from parent
+        inherited_use_attr_names: bool = False
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))
             if hasattr(base, _USE_ATTR_NAMES):
                 inherited_use_attr_names = getattr(base, _USE_ATTR_NAMES)
 
-        # Explicit setting takes precedence over inheritance
+        # Disallow changing use_attribute_names in subclasses when bases already
+        # define a different value. Mixed-name schemas would make column
+        # metadata inconsistent with attribute access and validation.
+        # Only check if base has actual columns (ignore root Schema class).
+        if (
+            use_attribute_names is not None
+            and use_attribute_names != inherited_use_attr_names
+            and len(result.columns) > 0
+        ):
+            raise ImplementationError(
+                f"Cannot override 'use_attribute_names' in subclass '{name}': "
+                f"base schema uses use_attribute_names={inherited_use_attr_names!r}, "
+                f"but subclass requested use_attribute_names={use_attribute_names!r}."
+            )
+
+        # Use explicit value if provided, otherwise inherit from parent
         final_use_attr_names = (
             use_attribute_names
             if use_attribute_names is not None
