@@ -84,6 +84,10 @@ class Metadata:
     rules: dict[str, RuleFactory] = field(default_factory=dict)
 
     def update(self, other: Self) -> None:
+        if duplicated_column_names := self.columns.keys() & other.columns.keys():
+            raise ImplementationError(
+                f"Columns {duplicated_column_names} are duplicated."
+            )
         self.columns.update(other.columns)
         self.rules.update(other.rules)
 
@@ -203,6 +207,8 @@ class SchemaMeta(ABCMeta):
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
+                if (col_name := value.alias or attr) in result.columns:
+                    raise ImplementationError(f"Column {col_name!r} is duplicated.")
                 result.columns[value.alias or attr] = value
             if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.
