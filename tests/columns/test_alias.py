@@ -2,10 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
-import pytest
 
 import dataframely as dy
-from dataframely.exc import ImplementationError
 
 
 class AliasSchema(dy.Schema):
@@ -40,27 +38,29 @@ def test_alias_unset() -> None:
     assert no_alias_col.name == ""
 
 
-def test_alias_use_attribute_names_inherited() -> None:
+def test_alias_use_attribute_names() -> None:
     class MySchema1(dy.Schema, use_attribute_names=True):
         price = dy.Int64(alias="price ($)")
 
-    class MySchema2(MySchema1):
+    class MySchema2(MySchema1, use_attribute_names=False):
         price2 = dy.Int64(alias="price2 ($)")
 
-    # Inheritance: use_attribute_names=True is inherited automatically
-    assert MySchema2.column_names() == ["price", "price2"]
+    class MySchema3(MySchema2):
+        price3 = dy.Int64(alias="price3 ($)")
 
+    class MySchema4(MySchema3, use_attribute_names=True):
+        price4 = dy.Int64(alias="price4 ($)")
 
-def test_alias_use_attribute_names_override_disallowed() -> None:
-    class MySchema1(dy.Schema, use_attribute_names=True):
-        price = dy.Int64(alias="price ($)")
+    class MySchema5(MySchema4):
+        price5 = dy.Int64(alias="price5 ($)")
 
-    with pytest.raises(
-        ImplementationError, match="Cannot override 'use_attribute_names'"
-    ):
-
-        class MySchema2(MySchema1, use_attribute_names=False):
-            price2 = dy.Int64(alias="price2 ($)")
+    assert MySchema5.column_names() == [
+        "price",
+        "price2 ($)",
+        "price3 ($)",
+        "price4",
+        "price5",
+    ]
 
 
 def test_alias_mapping() -> None:
