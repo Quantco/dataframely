@@ -21,11 +21,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
 
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
+
 
 # --------------------------------------- UTILS -------------------------------------- #
 
@@ -84,13 +84,11 @@ class Metadata:
     rules: dict[str, RuleFactory] = field(default_factory=dict)
 
     def update(self, other: Self) -> None:
-        if duplicated_column_names := self.columns.keys() & other.columns.keys():
-            raise ImplementationError(
-                f"Columns {duplicated_column_names} are duplicated."
         """Merge another Metadata instance into this one.
-        Overlapping keys are allowed if and only if they refer to the *same*
-        underlying object. This accommodates multiple-inheritance / diamond
-        patterns where the same base schema is visited more than once.
+
+        Overlapping keys are allowed if and only if they refer to the *same* underlying
+        object. This accommodates multiple-inheritance / diamond patterns where the same
+        base schema is visited more than once.
         """
         # Detect conflicting column definitions: same name, different Column instance
         duplicated_column_names = self.columns.keys() & other.columns.keys()
@@ -103,6 +101,8 @@ class Metadata:
             raise ImplementationError(
                 f"Columns {conflicting_columns} are duplicated with conflicting definitions."
             )
+
+        # All clear
         self.columns.update(other.columns)
         self.rules.update(other.rules)
 
