@@ -54,6 +54,12 @@ def test_alias_use_attribute_names() -> None:
     class MySchema5(MySchema4):
         price5 = dy.Int64(alias="price5 ($)")
 
+    assert MySchema5.price.name == "price"
+    assert MySchema5.price2.name == "price2 ($)"
+    assert MySchema5.price3.name == "price3 ($)"
+    assert MySchema5.price4.name == "price4"
+    assert MySchema5.price5.name == "price5 ($)"
+
     assert MySchema5.column_names() == [
         "price",
         "price2 ($)",
