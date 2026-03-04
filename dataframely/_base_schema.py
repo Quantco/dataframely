@@ -87,6 +87,21 @@ class Metadata:
         if duplicated_column_names := self.columns.keys() & other.columns.keys():
             raise ImplementationError(
                 f"Columns {duplicated_column_names} are duplicated."
+        """Merge another Metadata instance into this one.
+        Overlapping keys are allowed if and only if they refer to the *same*
+        underlying object. This accommodates multiple-inheritance / diamond
+        patterns where the same base schema is visited more than once.
+        """
+        # Detect conflicting column definitions: same name, different Column instance
+        duplicated_column_names = self.columns.keys() & other.columns.keys()
+        conflicting_columns = {
+            name
+            for name in duplicated_column_names
+            if self.columns[name] is not other.columns[name]
+        }
+        if conflicting_columns:
+            raise ImplementationError(
+                f"Columns {conflicting_columns} are duplicated with conflicting definitions."
             )
         self.columns.update(other.columns)
         self.rules.update(other.rules)
