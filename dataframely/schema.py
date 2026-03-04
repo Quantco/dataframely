@@ -844,7 +844,7 @@ class Schema(BaseSchema, ABC):
             The data frame with columns renamed from aliases to attribute names.
             Columns without aliases are left unchanged.
         """
-        return df.rename(cls._alias_mapping())
+        return df.rename(cls._alias_mapping(), strict=False)
 
     # --------------------------------- SERIALIZATION -------------------------------- #
 
