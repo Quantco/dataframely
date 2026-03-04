@@ -8,7 +8,7 @@ import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import polars as pl
 
@@ -24,7 +24,6 @@ else:
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
-_ATTR_TO_ALIAS = "__dataframely_attr_to_alias__"
 _USE_ATTR_NAMES = "__dataframely_use_attribute_names__"
 
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
@@ -84,12 +83,10 @@ class Metadata:
 
     columns: dict[str, Column] = field(default_factory=dict)
     rules: dict[str, RuleFactory] = field(default_factory=dict)
-    attr_to_alias: dict[str, str | None] = field(default_factory=dict)
 
     def update(self, other: Self) -> None:
         self.columns.update(other.columns)
         self.rules.update(other.rules)
-        self.attr_to_alias.update(other.attr_to_alias)
 
 
 class SchemaMeta(ABCMeta):
@@ -118,11 +115,18 @@ class SchemaMeta(ABCMeta):
             else inherited_use_attr_names
         )
 
+        # Copy columns defined in current namespace to avoid mutating shared objects.
+        # Set _name based on this class's use_attribute_names setting.
+        for attr, value in list(namespace.items()):
+            if isinstance(value, Column) and not attr.startswith("__"):
+                col = copy(value)
+                col._name = attr if final_use_attr_names else (col.alias or attr)
+                namespace[attr] = col
+
         result.update(
             mcs._get_metadata(namespace, use_attribute_names=final_use_attr_names)
         )
         namespace[_COLUMN_ATTR] = result.columns
-        namespace[_ATTR_TO_ALIAS] = result.attr_to_alias
         namespace[_USE_ATTR_NAMES] = final_use_attr_names
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
@@ -199,18 +203,6 @@ class SchemaMeta(ABCMeta):
 
         return cls
 
-    if not TYPE_CHECKING:
-        # Only define __getattribute__ at runtime to allow type checkers to properly
-        # validate attribute access. When TYPE_CHECKING is True, type checkers will use
-        # the default metaclass behavior which correctly identifies non-existent attributes.
-        def __getattribute__(cls, name: str) -> Any:
-            val = super().__getattribute__(name)
-            # Dynamically set the name of the column if it is a `Column` instance.
-            if isinstance(val, Column):
-                use_attr_names = getattr(cls, _USE_ATTR_NAMES, False)
-                val._name = name if use_attr_names else (val.alias or name)
-            return val
-
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
         result = Metadata()
@@ -234,7 +226,6 @@ class SchemaMeta(ABCMeta):
                 # When use_attribute_names=True, use attr as key; otherwise use alias or attr
                 col_name = attr if use_attribute_names else (value.alias or attr)
                 result.columns[col_name] = value
-                result.attr_to_alias[attr] = value.alias
             if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
@@ -269,11 +260,7 @@ class BaseSchema(metaclass=SchemaMeta):
     @classmethod
     def columns(cls) -> dict[str, Column]:
         """The column definitions of this schema."""
-        columns: dict[str, Column] = getattr(cls, _COLUMN_ATTR)
-        for name in columns.keys():
-            # Dynamically set the name of the columns.
-            columns[name]._name = name
-        return columns
+        return getattr(cls, _COLUMN_ATTR)
 
     @classmethod
     def primary_key(cls) -> list[str]:
@@ -294,9 +281,9 @@ class BaseSchema(metaclass=SchemaMeta):
     def _alias_mapping(cls) -> dict[str, str]:
         """Mapping from aliases to column identifier (attribute)."""
         return {
-            alias: attr
-            for attr, alias in getattr(cls, _ATTR_TO_ALIAS).items()
-            if alias is not None and alias != attr
+            col.alias: col._name
+            for col in cls.columns().values()
+            if col.alias is not None and col.alias != col._name
         }
 
     @classmethod
