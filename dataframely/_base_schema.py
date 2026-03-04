@@ -96,38 +96,27 @@ class SchemaMeta(ABCMeta):
         bases: tuple[type[object], ...],
         namespace: dict[str, Any],
         *args: Any,
-        use_attribute_names: bool | None = None,
+        use_attribute_names: bool = False,
         **kwargs: Any,
     ) -> SchemaMeta:
         result = Metadata()
 
-        # Inherit use_attribute_names from parent if not explicitly set
-        inherited_use_attr_names = False
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))
-            if hasattr(base, _USE_ATTR_NAMES):
-                inherited_use_attr_names = getattr(base, _USE_ATTR_NAMES)
-
-        # Explicit setting takes precedence over inheritance
-        final_use_attr_names = (
-            use_attribute_names
-            if use_attribute_names is not None
-            else inherited_use_attr_names
-        )
 
         # Copy columns defined in current namespace to avoid mutating shared objects.
         # Set _name based on this class's use_attribute_names setting.
         for attr, value in list(namespace.items()):
             if isinstance(value, Column) and not attr.startswith("__"):
                 col = copy(value)
-                col._name = attr if final_use_attr_names else (col.alias or attr)
+                col._name = attr if use_attribute_names else (col.alias or attr)
                 namespace[attr] = col
 
         result.update(
-            mcs._get_metadata(namespace, use_attribute_names=final_use_attr_names)
+            mcs._get_metadata(namespace, use_attribute_names=use_attribute_names)
         )
         namespace[_COLUMN_ATTR] = result.columns
-        namespace[_USE_ATTR_NAMES] = final_use_attr_names
+        namespace[_USE_ATTR_NAMES] = use_attribute_names
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
         # Assign rules retroactively as we only encounter rule factories in the result

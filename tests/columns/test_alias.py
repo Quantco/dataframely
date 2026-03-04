@@ -59,7 +59,7 @@ def test_alias_use_attribute_names() -> None:
         "price2 ($)",
         "price3 ($)",
         "price4",
-        "price5",
+        "price5 ($)",
     ]
 
 
