@@ -274,8 +274,3 @@ class BaseSchema(metaclass=SchemaMeta):
             for col in cls.columns().values()
             if col.alias is not None and col.alias != col._name
         }
-
-    @classmethod
-    def _uses_attribute_names(cls) -> bool:
-        """Check if the schema uses attribute names instead of aliases."""
-        return getattr(cls, _USE_ATTR_NAMES, False)
