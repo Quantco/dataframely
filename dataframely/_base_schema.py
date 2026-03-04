@@ -8,7 +8,7 @@ import textwrap
 from abc import ABCMeta
 from copy import copy
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import polars as pl
 
@@ -24,6 +24,7 @@ else:
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
+_USE_ATTR_NAMES = "__dataframely_use_attribute_names__"
 
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
 
@@ -95,13 +96,27 @@ class SchemaMeta(ABCMeta):
         bases: tuple[type[object], ...],
         namespace: dict[str, Any],
         *args: Any,
+        use_attribute_names: bool = False,
         **kwargs: Any,
     ) -> SchemaMeta:
         result = Metadata()
+
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))
-        result.update(mcs._get_metadata(namespace))
+
+        # Copy columns defined in current namespace to avoid mutating shared objects.
+        # Set _name based on this class's use_attribute_names setting.
+        for attr, value in list(namespace.items()):
+            if isinstance(value, Column) and not attr.startswith("__"):
+                col = copy(value)
+                col._name = attr if use_attribute_names else (col.alias or attr)
+                namespace[attr] = col
+
+        result.update(
+            mcs._get_metadata(namespace, use_attribute_names=use_attribute_names)
+        )
         namespace[_COLUMN_ATTR] = result.columns
+        namespace[_USE_ATTR_NAMES] = use_attribute_names
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
         # Assign rules retroactively as we only encounter rule factories in the result
@@ -177,33 +192,29 @@ class SchemaMeta(ABCMeta):
 
         return cls
 
-    if not TYPE_CHECKING:
-        # Only define __getattribute__ at runtime to allow type checkers to properly
-        # validate attribute access. When TYPE_CHECKING is True, type checkers will use
-        # the default metaclass behavior which correctly identifies non-existent attributes.
-        def __getattribute__(cls, name: str) -> Any:
-            val = super().__getattribute__(name)
-            # Dynamically set the name of the column if it is a `Column` instance.
-            if isinstance(val, Column):
-                val._name = val.alias or name
-            return val
-
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
         result = Metadata()
         for base in kls.__bases__:
             result.update(SchemaMeta._get_metadata_recursively(base))
-        result.update(SchemaMeta._get_metadata(kls.__dict__))  # type: ignore
+        use_attr_names = getattr(kls, _USE_ATTR_NAMES, False)
+        result.update(
+            SchemaMeta._get_metadata(kls.__dict__, use_attribute_names=use_attr_names)  # type: ignore
+        )
         return result
 
     @staticmethod
-    def _get_metadata(source: dict[str, Any]) -> Metadata:
+    def _get_metadata(
+        source: dict[str, Any], *, use_attribute_names: bool = False
+    ) -> Metadata:
         result = Metadata()
         for attr, value in {
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
-                result.columns[value.alias or attr] = value
+                # When use_attribute_names=True, use attr as key; otherwise use alias or attr
+                col_name = attr if use_attribute_names else (value.alias or attr)
+                result.columns[col_name] = value
             if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.
                 if attr == "primary_key":
@@ -238,11 +249,7 @@ class BaseSchema(metaclass=SchemaMeta):
     @classmethod
     def columns(cls) -> dict[str, Column]:
         """The column definitions of this schema."""
-        columns: dict[str, Column] = getattr(cls, _COLUMN_ATTR)
-        for name in columns.keys():
-            # Dynamically set the name of the columns.
-            columns[name]._name = name
-        return columns
+        return getattr(cls, _COLUMN_ATTR)
 
     @classmethod
     def primary_key(cls) -> list[str]:
@@ -258,3 +265,12 @@ class BaseSchema(metaclass=SchemaMeta):
     @classmethod
     def _schema_validation_rules(cls) -> dict[str, Rule]:
         return getattr(cls, _RULE_ATTR)
+
+    @classmethod
+    def _alias_mapping(cls) -> dict[str, str]:
+        """Mapping from aliases to column identifier (attribute)."""
+        return {
+            col.alias: col._name
+            for col in cls.columns().values()
+            if col.alias is not None and col.alias != col._name
+        }
