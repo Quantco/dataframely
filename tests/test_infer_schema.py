@@ -1,0 +1,272 @@
+# Copyright (c) QuantCo 2025-2026
+# SPDX-License-Identifier: BSD-3-Clause
+
+import datetime
+import textwrap
+
+import polars as pl
+
+import dataframely as dy
+
+
+class TestInferSchema:
+    def test_basic_types(self) -> None:
+        df = pl.DataFrame(
+            {
+                "int_col": [1, 2, 3],
+                "float_col": [1.0, 2.0, 3.0],
+                "str_col": ["a", "b", "c"],
+                "bool_col": [True, False, True],
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="BasicSchema")
+        expected = textwrap.dedent("""\
+            class BasicSchema(dy.Schema):
+                int_col = dy.Int64()
+                float_col = dy.Float64()
+                str_col = dy.String()
+                bool_col = dy.Bool()""")
+        assert result == expected
+
+    def test_nullable_detection(self) -> None:
+        df = pl.DataFrame(
+            {
+                "nullable_int": [1, None, 3],
+                "non_nullable_int": [1, 2, 3],
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="NullableSchema")
+        expected = textwrap.dedent("""\
+            class NullableSchema(dy.Schema):
+                nullable_int = dy.Int64(nullable=True)
+                non_nullable_int = dy.Int64()""")
+        assert result == expected
+
+    def test_datetime_types(self) -> None:
+        df = pl.DataFrame(
+            {
+                "date_col": [datetime.date(2024, 1, 1)],
+                "time_col": [datetime.time(12, 0, 0)],
+                "datetime_col": [datetime.datetime(2024, 1, 1, 12, 0, 0)],
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="DatetimeSchema")
+        expected = textwrap.dedent("""\
+            class DatetimeSchema(dy.Schema):
+                date_col = dy.Date()
+                time_col = dy.Time()
+                datetime_col = dy.Datetime()""")
+        assert result == expected
+
+    def test_datetime_with_timezone(self) -> None:
+        df = pl.DataFrame(
+            {
+                "utc_time": pl.Series(
+                    [datetime.datetime(2024, 1, 1)]
+                ).dt.replace_time_zone("UTC"),
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="TzSchema")
+        expected = textwrap.dedent("""\
+            class TzSchema(dy.Schema):
+                utc_time = dy.Datetime(time_zone="UTC")""")
+        assert result == expected
+
+    def test_enum_type(self) -> None:
+        df = pl.DataFrame(
+            {
+                "status": pl.Series(["active", "pending"]).cast(
+                    pl.Enum(["active", "pending", "inactive"])
+                ),
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="EnumSchema")
+        expected = textwrap.dedent("""\
+            class EnumSchema(dy.Schema):
+                status = dy.Enum(['active', 'pending', 'inactive'])""")
+        assert result == expected
+
+    def test_decimal_type(self) -> None:
+        df = pl.DataFrame(
+            {
+                "amount": pl.Series(["10.50"]).cast(pl.Decimal(precision=10, scale=2)),
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="DecimalSchema")
+        expected = textwrap.dedent("""\
+            class DecimalSchema(dy.Schema):
+                amount = dy.Decimal(precision=10, scale=2)""")
+        assert result == expected
+
+    def test_list_type(self) -> None:
+        df = pl.DataFrame(
+            {
+                "tags": [["a", "b"], ["c"]],
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="ListSchema")
+        expected = textwrap.dedent("""\
+            class ListSchema(dy.Schema):
+                tags = dy.List(dy.String())""")
+        assert result == expected
+
+    def test_struct_type(self) -> None:
+        df = pl.DataFrame(
+            {
+                "metadata": [{"key": "value"}, {"key": "other"}],
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="StructSchema")
+        expected = textwrap.dedent("""\
+            class StructSchema(dy.Schema):
+                metadata = dy.Struct({"key": dy.String()})""")
+        assert result == expected
+
+    def test_list_with_nullable_inner(self) -> None:
+        df = pl.DataFrame({"names": [["Alice"], [None]]})
+        result = dy.infer_schema(
+            df, return_type="string", schema_name="ListNullableInnerSchema"
+        )
+        expected = textwrap.dedent("""\
+            class ListNullableInnerSchema(dy.Schema):
+                names = dy.List(dy.String(nullable=True))""")
+        assert result == expected
+
+    def test_struct_with_nullable_field(self) -> None:
+        df = pl.DataFrame({"data": [{"key": "value"}, {"key": None}]})
+        result = dy.infer_schema(
+            df, return_type="string", schema_name="StructNullableFieldSchema"
+        )
+        expected = textwrap.dedent("""\
+            class StructNullableFieldSchema(dy.Schema):
+                data = dy.Struct({"key": dy.String(nullable=True)})""")
+        assert result == expected
+
+    def test_array_type(self) -> None:
+        df = pl.DataFrame({"vector": [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]}).cast(
+            {"vector": pl.Array(pl.Float64(), 3)}
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="ArraySchema")
+        expected = textwrap.dedent("""\
+            class ArraySchema(dy.Schema):
+                vector = dy.Array(dy.Float64(), shape=3)""")
+        assert result == expected
+
+    def test_invalid_identifier(self) -> None:
+        df = pl.DataFrame(
+            {
+                "123invalid": ["test"],
+            }
+        )
+        result = dy.infer_schema(
+            df, return_type="string", schema_name="InvalidIdSchema"
+        )
+        expected = textwrap.dedent("""\
+            class InvalidIdSchema(dy.Schema):
+                _123invalid = dy.String(alias="123invalid")""")
+        assert result == expected
+
+    def test_python_keyword(self) -> None:
+        df = pl.DataFrame(
+            {
+                "class": ["test"],
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="KeywordSchema")
+        expected = textwrap.dedent("""\
+            class KeywordSchema(dy.Schema):
+                class_ = dy.String(alias="class")""")
+        assert result == expected
+
+    def test_all_integer_types(self) -> None:
+        df = pl.DataFrame(
+            {
+                "i8": pl.Series([1], dtype=pl.Int8),
+                "i16": pl.Series([1], dtype=pl.Int16),
+                "i32": pl.Series([1], dtype=pl.Int32),
+                "i64": pl.Series([1], dtype=pl.Int64),
+                "u8": pl.Series([1], dtype=pl.UInt8),
+                "u16": pl.Series([1], dtype=pl.UInt16),
+                "u32": pl.Series([1], dtype=pl.UInt32),
+                "u64": pl.Series([1], dtype=pl.UInt64),
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="IntSchema")
+        assert "dy.Int8()" in result
+        assert "dy.Int16()" in result
+        assert "dy.Int32()" in result
+        assert "dy.Int64()" in result
+        assert "dy.UInt8()" in result
+        assert "dy.UInt16()" in result
+        assert "dy.UInt32()" in result
+        assert "dy.UInt64()" in result
+
+    def test_float_types(self) -> None:
+        df = pl.DataFrame(
+            {
+                "f32": pl.Series([1.0], dtype=pl.Float32),
+                "f64": pl.Series([1.0], dtype=pl.Float64),
+            }
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="FloatSchema")
+        assert "dy.Float32()" in result
+        assert "dy.Float64()" in result
+
+
+class TestInferSchemaReturnsSchema:
+    """Test that return_type='schema' produces working schemas."""
+
+    def test_inferred_schema_validates_dataframe(self) -> None:
+        """Verify inferred schema validates the original dataframe."""
+        dataframes = [
+            # Basic types
+            pl.DataFrame(
+                {
+                    "int_col": [1, 2, 3],
+                    "float_col": [1.0, 2.0, 3.0],
+                    "str_col": ["a", "b", "c"],
+                    "bool_col": [True, False, True],
+                }
+            ),
+            # Nullable
+            pl.DataFrame({"nullable_int": [1, None, 3], "non_nullable_int": [1, 2, 3]}),
+            # Datetime types
+            pl.DataFrame(
+                {
+                    "date_col": [datetime.date(2024, 1, 1)],
+                    "time_col": [datetime.time(12, 0, 0)],
+                    "datetime_col": [datetime.datetime(2024, 1, 1, 12, 0, 0)],
+                }
+            ),
+            # Enum
+            pl.DataFrame(
+                {
+                    "status": pl.Series(["active", "pending"]).cast(
+                        pl.Enum(["active", "pending", "inactive"])
+                    )
+                }
+            ),
+            # List and struct
+            pl.DataFrame({"tags": [["a", "b"], ["c"]]}),
+            pl.DataFrame({"metadata": [{"key": "value"}]}),
+            # Array
+            pl.DataFrame({"vector": [[1.0, 2.0, 3.0]]}).cast(
+                {"vector": pl.Array(pl.Float64(), 3)}
+            ),
+            # Invalid identifiers and keywords
+            pl.DataFrame({"123invalid": ["test"], "class": ["test"]}),
+            # Decimal
+            pl.DataFrame(
+                {"amount": pl.Series(["10.50"]).cast(pl.Decimal(precision=10, scale=2))}
+            ),
+            # Nested types
+            pl.DataFrame({"nested_list": [[["a", "b"]]]}),
+            pl.DataFrame({"nested_struct": [{"outer": {"inner": "value"}}]}),
+            # Nullable inner types
+            pl.DataFrame({"list_with_nulls": [["a"], [None]]}),
+            pl.DataFrame({"struct_with_nulls": [{"key": "value"}, {"key": None}]}),
+        ]
+
+        for i, df in enumerate(dataframes):
+            schema = dy.infer_schema(df, f"Schema{i}", return_type="schema")
+            assert schema.is_valid(df), f"Schema{i} failed for {df.schema}"

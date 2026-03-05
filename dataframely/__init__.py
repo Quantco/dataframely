@@ -12,6 +12,7 @@ except importlib.metadata.PackageNotFoundError as e:  # pragma: no cover
 
 from . import random
 from ._filter import filter
+from ._generate_schema import infer_schema
 from ._rule import rule
 from ._typing import DataFrame, LazyFrame, Validation
 from .collection import (
@@ -78,6 +79,7 @@ __all__ = [
     "deserialize_schema",
     "read_parquet_metadata_schema",
     "read_parquet_metadata_collection",
+    "infer_schema",
     "Any",
     "Binary",
     "Bool",
