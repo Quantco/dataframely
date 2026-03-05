@@ -5,6 +5,7 @@ import datetime
 import textwrap
 
 import polars as pl
+import pytest
 
 import dataframely as dy
 
@@ -211,6 +212,115 @@ class TestInferSchema:
         result = dy.infer_schema(df, return_type="string", schema_name="FloatSchema")
         assert "dy.Float32()" in result
         assert "dy.Float64()" in result
+
+
+class TestInferSchemaReturnTypes:
+    """Test the different return_type options."""
+
+    def test_return_type_none_prints_to_stdout(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        df = pl.DataFrame({"col": [1, 2, 3]})
+        result = dy.infer_schema(df, "TestSchema")
+        assert result is None
+        captured = capsys.readouterr()
+        assert "class TestSchema(dy.Schema):" in captured.out
+        assert "col = dy.Int64()" in captured.out
+
+    def test_return_type_string(self) -> None:
+        df = pl.DataFrame({"col": [1, 2, 3]})
+        result = dy.infer_schema(df, "TestSchema", return_type="string")
+        assert isinstance(result, str)
+        assert "class TestSchema(dy.Schema):" in result
+
+    def test_return_type_schema(self) -> None:
+        df = pl.DataFrame({"col": [1, 2, 3]})
+        schema = dy.infer_schema(df, "TestSchema", return_type="schema")
+        assert schema.is_valid(df)
+
+    def test_invalid_return_type_raises_error(self) -> None:
+        df = pl.DataFrame({"col": [1]})
+        with pytest.raises(ValueError, match="Invalid return_type"):
+            dy.infer_schema(df, "Test", return_type="invalid")  # type: ignore[call-overload]
+
+    def test_default_schema_name(self) -> None:
+        df = pl.DataFrame({"col": [1]})
+        result = dy.infer_schema(df, return_type="string")
+        assert "class Schema(dy.Schema):" in result
+
+
+class TestSpecialTypes:
+    """Test special column types."""
+
+    def test_binary_type(self) -> None:
+        df = pl.DataFrame({"data": pl.Series([b"hello"], dtype=pl.Binary)})
+        result = dy.infer_schema(df, return_type="string", schema_name="BinarySchema")
+        assert "dy.Binary()" in result
+
+    def test_null_type(self) -> None:
+        df = pl.DataFrame({"null_col": pl.Series([None, None], dtype=pl.Null)})
+        result = dy.infer_schema(df, return_type="string", schema_name="NullSchema")
+        assert "dy.Any()" in result
+
+    def test_object_type(self) -> None:
+        df = pl.DataFrame({"obj": pl.Series([object()], dtype=pl.Object)})
+        result = dy.infer_schema(df, return_type="string", schema_name="ObjectSchema")
+        assert "dy.Object()" in result
+
+    def test_categorical_type(self) -> None:
+        df = pl.DataFrame({"cat": pl.Series(["a", "b"]).cast(pl.Categorical())})
+        result = dy.infer_schema(df, return_type="string", schema_name="CatSchema")
+        assert "dy.Categorical()" in result
+
+    def test_duration_type(self) -> None:
+        df = pl.DataFrame(
+            {"dur": pl.Series([datetime.timedelta(days=1)], dtype=pl.Duration)}
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="DurSchema")
+        assert "dy.Duration()" in result
+
+    def test_datetime_with_time_unit_ms(self) -> None:
+        df = pl.DataFrame(
+            {"dt": pl.Series([datetime.datetime(2024, 1, 1)]).cast(pl.Datetime("ms"))}
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="DtSchema")
+        assert 'time_unit="ms"' in result
+
+    def test_datetime_with_time_unit_ns(self) -> None:
+        df = pl.DataFrame(
+            {"dt": pl.Series([datetime.datetime(2024, 1, 1)]).cast(pl.Datetime("ns"))}
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="DtSchema")
+        assert 'time_unit="ns"' in result
+
+    def test_decimal_without_scale(self) -> None:
+        df = pl.DataFrame(
+            {"amount": pl.Series(["10"]).cast(pl.Decimal(precision=5, scale=0))}
+        )
+        result = dy.infer_schema(df, return_type="string", schema_name="DecSchema")
+        assert "precision=5" in result
+        assert "scale=" not in result
+
+
+class TestMakeValidIdentifier:
+    """Test edge cases of _make_valid_identifier."""
+
+    def test_column_with_special_chars_replaced(self) -> None:
+        df = pl.DataFrame({"!!!": ["test"]})
+        result = dy.infer_schema(df, return_type="string", schema_name="SpecialSchema")
+        assert '___ = dy.String(alias="!!!")' in result
+
+    def test_column_empty_after_sanitization(self) -> None:
+        # Empty string column name results in _column fallback
+        df = pl.DataFrame({"": ["test"]})
+        result = dy.infer_schema(df, return_type="string", schema_name="EmptySchema")
+        # Empty string alias is not included (falsy), but _column is generated
+        assert "_column = dy.String()" in result
+
+    def test_column_with_spaces(self) -> None:
+        df = pl.DataFrame({"col name": ["test"]})
+        result = dy.infer_schema(df, return_type="string", schema_name="SpaceSchema")
+        assert 'col_name = dy.String(alias="col name")' in result
 
 
 class TestInferSchemaReturnsSchema:

@@ -43,7 +43,7 @@ def infer_schema(
 
 def infer_schema(
     df: pl.DataFrame,
-    schema_name: str = "InferredSchema",
+    schema_name: str = "Schema",
     *,
     return_type: Literal["string", "schema"] | None = None,
 ) -> str | type[Schema] | None:
