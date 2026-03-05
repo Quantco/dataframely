@@ -85,7 +85,14 @@ def infer_schema(
         >>> schema = dy.infer_schema(df, "PersonSchema", return_type="schema")
         >>> schema.is_valid(df)
         True
+
+    Raises:
+        ValueError: If ``schema_name`` is not a valid Python identifier.
     """
+    if not schema_name.isidentifier():
+        msg = f"schema_name must be a valid Python identifier, got {schema_name!r}"
+        raise ValueError(msg)
+
     code = _generate_schema_code(df, schema_name)
 
     if return_type is None:
@@ -146,9 +153,9 @@ def _format_args(*args: str, nullable: bool = False, alias: str | None = None) -
     """Format arguments for column constructor."""
     all_args = list(args)
     if nullable:
-        all_args.insert(0, "nullable=True")
+        all_args.append("nullable=True")
     if alias:
-        all_args.insert(0, f'alias="{alias}"')
+        all_args.append(f'alias="{alias}"')
     return ", ".join(all_args)
 
 

@@ -243,6 +243,13 @@ class TestInferSchemaReturnTypes:
         with pytest.raises(ValueError, match="Invalid return_type"):
             dy.infer_schema(df, "Test", return_type="invalid")  # type: ignore[call-overload]
 
+    def test_invalid_schema_name_raises_error(self) -> None:
+        df = pl.DataFrame({"col": [1]})
+        with pytest.raises(
+            ValueError, match="schema_name must be a valid Python identifier"
+        ):
+            dy.infer_schema(df, "Invalid Name")
+
     def test_default_schema_name(self) -> None:
         df = pl.DataFrame({"col": [1]})
         result = dy.infer_schema(df, return_type="string")
@@ -324,11 +331,9 @@ class TestMakeValidIdentifier:
 
 
 class TestInferSchemaReturnsSchema:
-    """Test that return_type='schema' produces working schemas."""
-
-    def test_inferred_schema_validates_dataframe(self) -> None:
-        """Verify inferred schema validates the original dataframe."""
-        dataframes = [
+    @pytest.mark.parametrize(
+        "df",
+        [
             # Basic types
             pl.DataFrame(
                 {
@@ -356,8 +361,9 @@ class TestInferSchemaReturnsSchema:
                     )
                 }
             ),
-            # List and struct
+            # List
             pl.DataFrame({"tags": [["a", "b"], ["c"]]}),
+            # Struct
             pl.DataFrame({"metadata": [{"key": "value"}]}),
             # Array
             pl.DataFrame({"vector": [[1.0, 2.0, 3.0]]}).cast(
@@ -375,8 +381,8 @@ class TestInferSchemaReturnsSchema:
             # Nullable inner types
             pl.DataFrame({"list_with_nulls": [["a"], [None]]}),
             pl.DataFrame({"struct_with_nulls": [{"key": "value"}, {"key": None}]}),
-        ]
-
-        for i, df in enumerate(dataframes):
-            schema = dy.infer_schema(df, f"Schema{i}", return_type="schema")
-            assert schema.is_valid(df), f"Schema{i} failed for {df.schema}"
+        ],
+    )
+    def test_inferred_schema_validates_dataframe(self, df: pl.DataFrame) -> None:
+        schema = dy.infer_schema(df, "TestSchema", return_type="schema")
+        assert schema.is_valid(df)

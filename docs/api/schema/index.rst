@@ -9,6 +9,7 @@ Schema
     validation
     io
     generation
+    inference
     conversion
     metadata
 
