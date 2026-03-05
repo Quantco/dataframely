@@ -251,4 +251,4 @@ def _dtype_to_column_code(series: pl.Series, *, alias: str | None = None) -> str
         return f"dy.Struct({_format_args(fields_dict, nullable=nullable, alias=alias)})"
 
     # Fallback for unknown types
-    return f"dy.Any({_format_args(alias=alias)})  # Unknown dtype: {dtype}"
+    return f"dy.Any({_format_args(alias=alias)})  # Unknown dtype: {dtype}"  # pragma: no cover
