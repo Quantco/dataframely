@@ -146,6 +146,22 @@ class FailureInfo(Generic[S]):
         """
         return _compute_counts(self._df, self._rule_columns)
 
+    def examples(self, max_examples: int = 5) -> dict[str, list[str]]:
+        """Example rows for each failing rule.
+
+        For each rule that has at least one failure, returns up to `max_examples`
+        distinct example rows (as formatted strings) from the original data columns.
+
+        Args:
+            max_examples: The maximum number of distinct example rows to return per
+                rule.
+
+        Returns:
+            A mapping from rule name to a list of example row strings. Rules with no
+            failures are not included.
+        """
+        return _compute_examples(self._df, self._rule_columns, max_examples)
+
     def cooccurrence_counts(self) -> dict[frozenset[str], int]:
         """The number of validation failures per co-occurring rule validation failure.
 
@@ -407,6 +423,28 @@ def _compute_counts(df: pl.DataFrame, rule_columns: list[str]) -> dict[str, int]
     return {
         name: count for name, count in (counts.row(0, named=True).items()) if count > 0
     }
+
+
+def _compute_examples(
+    df: pl.DataFrame, rule_columns: list[str], max_examples: int
+) -> dict[str, list[str]]:
+    if len(rule_columns) == 0:
+        return {}
+
+    data_columns = [c for c in df.columns if c not in rule_columns]
+    if not data_columns:
+        return {}
+
+    result = {}
+    for rule_name in rule_columns:
+        failing = df.filter(pl.col(rule_name).not_())
+        if len(failing) == 0:
+            continue
+        examples_df = (
+            failing.select(data_columns).unique(maintain_order=True).head(max_examples)
+        )
+        result[rule_name] = [str(row) for row in examples_df.to_dicts()]
+    return result
 
 
 def _compute_cooccurrence_counts(

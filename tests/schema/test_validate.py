@@ -130,8 +130,9 @@ def test_invalid_primary_key(
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"1 rules failed validation",
-    ):
+    ) as exc_info:
         _validate_and_collect(MySchema, df, eager=eager)
+    exc_info.match(r"with 2 distinct examples")
     assert not MySchema.is_valid(df)
 
 
