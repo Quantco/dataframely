@@ -126,9 +126,26 @@ class Array(Column):
         n_elements = n * math.prod(self.shape)
         all_elements = self.inner.sample(generator, n_elements)
 
+        # For complex inner types (List, Array), reshape doesn't work properly
+        # because it tries to reshape based on primitive element count, not the
+        # count of complex elements. We need to manually chunk and construct.
+        inner_dtype = self.inner.dtype
+        if isinstance(inner_dtype, (pl.List, pl.Array)):
+            # Chunk the elements into groups of shape size
+            chunk_size = math.prod(self.shape)
+            chunks = []
+            for i in range(n):
+                start = i * chunk_size
+                chunk = all_elements.slice(start, chunk_size).to_list()
+                chunks.append(chunk)
+            result = pl.Series(chunks, dtype=self.dtype)
+        else:
+            # For scalar and struct types, reshape works correctly
+            result = all_elements.reshape((n, *self.shape))
+
         # Finally, apply a null mask
         return generator._apply_null_mask(
-            all_elements.reshape((n, *self.shape)),
+            result,
             null_probability=self._null_probability,
         )
 
