@@ -132,11 +132,42 @@ class CollectionMeta(ABCMeta):
         # 1) Check that there are overlapping primary keys that allow the application
         # of filters.
         if len(non_ignored_member_schemas) > 0 and len(result.filters) > 0:
-            if len(_common_primary_key(non_ignored_member_schemas)) == 0:
-                raise ImplementationError(
-                    "Members of a collection must have an overlapping primary key "
-                    "but did not find any."
-                )
+            # Filters without 'members' apply to all non-ignored members and require
+            # their common primary key to be non-empty.
+            global_filters = [f for f in result.filters.values() if f.members is None]
+            if len(global_filters) > 0:
+                if len(_common_primary_key(non_ignored_member_schemas)) == 0:
+                    raise ImplementationError(
+                        "Members of a collection must have an overlapping primary key "
+                        "but did not find any."
+                    )
+
+            # Filters with 'members' apply only to specific members.
+            for filter_name, filter_obj in result.filters.items():
+                if filter_obj.members is None:
+                    continue
+                if len(filter_obj.members) == 0:
+                    raise ImplementationError(
+                        f"Filter '{filter_name}' must specify at least one member."
+                    )
+                for m in filter_obj.members:
+                    if m not in result.members:
+                        raise ImplementationError(
+                            f"Filter '{filter_name}' references unknown member '{m}'."
+                        )
+                    if result.members[m].ignored_in_filters:
+                        raise ImplementationError(
+                            f"Filter '{filter_name}' references member '{m}' which is "
+                            "ignored in filters."
+                        )
+                specified_schemas = [
+                    result.members[m].schema for m in filter_obj.members
+                ]
+                if len(_common_primary_key(specified_schemas)) == 0:
+                    raise ImplementationError(
+                        f"Members specified in filter '{filter_name}' must have an "
+                        "overlapping primary key but did not find any."
+                    )
 
         # 2) Check that filter names do not overlap with any column or rule names
         if len(result.members) > 0:
