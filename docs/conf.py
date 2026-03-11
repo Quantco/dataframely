@@ -70,7 +70,7 @@ default_role = "code"
 maximum_signature_line_length = 88
 
 # source files
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "SKILL.md"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 source_suffix = {
     ".rst": "restructuredtext",
     ".txt": "markdown",

@@ -36,7 +36,6 @@ sphinx = ">=8.2"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-toolbox = "*"
-sphinx-llms-txt = "*"
 
 [feature.docs.tasks]
 docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
