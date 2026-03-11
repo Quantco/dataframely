@@ -8,14 +8,20 @@ Coding agents are particularly powerful when two criteria are met:
 `dataframely` helps you fulfill these criteria.
 
 To help your coding agent write good `dataframely` code, we provide a
-`dataframely` [skill](https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/docs/guides/coding-agents/SKILL.md)
+`dataframely` [skill](https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/SKILL.md)
 following the [
 `agentskills.io` spec](https://agentskills.io/specification). You can install
 it by placing it where your agent can find it. For example, if you are using `claude`:
 
 ```bash
 mkdir -p .claude/skills/dataframely/
-curl -o .claude/skills/dataframely/SKILL.md https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/docs/guides/coding-agents/SKILL.md
+curl -o .claude/skills/dataframely/SKILL.md https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/SKILL.md
+```
+
+or if you are using skills.sh:
+
+```bash
+npx skills add Quantco/dataframely
 ```
 
 Refer to the documentation of your coding agent for instructions on how to add custom skills.

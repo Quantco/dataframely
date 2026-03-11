@@ -6,7 +6,8 @@ license: BSD-3-Clause
 
 # Dataframely skill
 
-`dataframely` provides `dy.Schema` and `dy.Collection` to document and enforce the structure of single or multiple related data frames.
+`dataframely` provides `dy.Schema` and `dy.Collection` to document and enforce the structure of single or multiple
+related data frames.
 
 ## `dy.Schema` example
 
@@ -26,7 +27,8 @@ class HouseSchema(dy.Schema):
 
 ## `dy.Collection` example
 
-A `dy.Collection` describes a set of related dataframes, each described by a `dy.Schema`. Dataframes in a collection should share at least a subset of their primary key.
+A `dy.Collection` describes a set of related dataframes, each described by a `dy.Schema`. Dataframes in a collection
+should share at least a subset of their primary key.
 
 ```python
 class MyStreetSchema(dy.Schema):
@@ -57,18 +59,22 @@ def preprocess(raw: dy.LazyFrame[MyRawSchema]) -> dy.DataFrame[MyPreprocessedSch
     return MyPreprocessedSchema.validate(df, cast=True)
 ```
 
-Use schemas for all input, output, and intermediate dataframes. Schemas may be omitted for short-lived temporary dataframes and private helper functions (prefixed with `_`).
+Use schemas for all input, output, and intermediate dataframes. Schemas may be omitted for short-lived temporary
+dataframes and private helper functions (prefixed with `_`).
 
 ## `filter` vs `validate`
 
 Both `.validate` and `.filter` enforce the schema at runtime. Pass `cast=True` for safe type-casting.
 
-- **`Schema.validate`** — raises on failure. Use when failures are unexpected (e.g. transforming already-validated data).
-- **`Schema.filter`** — returns valid rows plus a `FailureInfo` describing filtered-out rows. Use when failures are possible and should be handled gracefully (e.g. logging and skipping invalid rows).
+- **`Schema.validate`** — raises on failure. Use when failures are unexpected (e.g. transforming already-validated
+  data).
+- **`Schema.filter`** — returns valid rows plus a `FailureInfo` describing filtered-out rows. Use when failures are
+  possible and should be handled gracefully (e.g. logging and skipping invalid rows).
 
 ## Testing
 
-Every data transformation must have unit tests. Test each branch of the transformation logic. Do not test properties already guaranteed by the schema.
+Every data transformation must have unit tests. Test each branch of the transformation logic. Do not test properties
+already guaranteed by the schema.
 
 ### Test structure
 
@@ -106,7 +112,8 @@ For complex schemas where only some columns are relevant to the test, use `dataf
 random_data = MyInputSchema.sample(num_rows=100)
 ```
 
-Use fully random data for property tests where exact contents don't matter. Use overrides to pin specific columns while randomly sampling the rest:
+Use fully random data for property tests where exact contents don't matter. Use overrides to pin specific columns while
+randomly sampling the rest:
 
 ```python
 random_data_with_overrides = HouseSchema.sample(
@@ -116,3 +123,8 @@ random_data_with_overrides = HouseSchema.sample(
     }
 )
 ```
+
+# Getting more information
+
+`dataframely` relies on clear function signatures, type hints and doc strings. If you need more information, check the
+locally installed code.
