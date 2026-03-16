@@ -14,6 +14,34 @@ if TYPE_CHECKING:
     from dataframely.schema import Schema
 
 
+_POLARS_DTYPE_MAP: dict[type[pl.DataType], str] = {
+    pl.Boolean: "Bool",
+    pl.Int8: "Int8",
+    pl.Int16: "Int16",
+    pl.Int32: "Int32",
+    pl.Int64: "Int64",
+    pl.UInt8: "UInt8",
+    pl.UInt16: "UInt16",
+    pl.UInt32: "UInt32",
+    pl.UInt64: "UInt64",
+    pl.Float32: "Float32",
+    pl.Float64: "Float64",
+    pl.String: "String",
+    pl.Binary: "Binary",
+    pl.Date: "Date",
+    pl.Time: "Time",
+    pl.Object: "Object",
+    pl.Categorical: "Categorical",
+    pl.Duration: "Duration",
+    pl.Datetime: "Datetime",
+    pl.Decimal: "Decimal",
+    pl.Enum: "Enum",
+    pl.List: "List",
+    pl.Array: "Array",
+    pl.Struct: "Struct",
+}
+
+
 @overload
 def infer_schema(
     df: pl.DataFrame,
@@ -149,6 +177,47 @@ def _make_valid_identifier(name: str) -> str:
     return result
 
 
+def _get_dtype_args(dtype: pl.DataType, series: pl.Series) -> list[str]:
+    """Get extra arguments for parameterized types."""
+    if isinstance(dtype, pl.Datetime):
+        args = []
+        if dtype.time_zone is not None:
+            args.append(f'time_zone="{dtype.time_zone}"')
+        if dtype.time_unit != "us":
+            args.append(f'time_unit="{dtype.time_unit}"')
+        return args
+
+    if isinstance(dtype, pl.Duration):
+        if dtype.time_unit != "us":  # us is the default
+            return [f'time_unit="{dtype.time_unit}"']
+
+    if isinstance(dtype, pl.Decimal):
+        args = []
+        if dtype.precision is not None:
+            args.append(f"precision={dtype.precision}")
+        if dtype.scale != 0:
+            args.append(f"scale={dtype.scale}")
+        return args
+
+    if isinstance(dtype, pl.Enum):
+        return [repr(dtype.categories.to_list())]
+
+    if isinstance(dtype, pl.List):
+        return [_dtype_to_column_code(series.explode())]
+
+    if isinstance(dtype, pl.Array):
+        return [_dtype_to_column_code(series.explode()), f"shape={dtype.size}"]
+
+    if isinstance(dtype, pl.Struct):
+        fields_parts = []
+        for field in dtype.fields:
+            field_code = _dtype_to_column_code(series.struct.field(field.name))
+            fields_parts.append(f'"{field.name}": {field_code}')
+        return ["{" + ", ".join(fields_parts) + "}"]
+
+    return []
+
+
 def _format_args(*args: str, nullable: bool = False, alias: str | None = None) -> str:
     """Format arguments for column constructor."""
     all_args = list(args)
@@ -163,92 +232,10 @@ def _dtype_to_column_code(series: pl.Series, *, alias: str | None = None) -> str
     """Convert a Polars Series to dataframely column constructor code."""
     dtype = series.dtype
     nullable = series.null_count() > 0
+    dy_name = _POLARS_DTYPE_MAP.get(type(dtype))
 
-    # Simple types
-    if dtype == pl.Boolean():
-        return f"dy.Bool({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Int8():
-        return f"dy.Int8({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Int16():
-        return f"dy.Int16({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Int32():
-        return f"dy.Int32({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Int64():
-        return f"dy.Int64({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.UInt8():
-        return f"dy.UInt8({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.UInt16():
-        return f"dy.UInt16({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.UInt32():
-        return f"dy.UInt32({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.UInt64():
-        return f"dy.UInt64({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Float32():
-        return f"dy.Float32({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Float64():
-        return f"dy.Float64({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.String():
-        return f"dy.String({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Binary():
-        return f"dy.Binary({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Date():
-        return f"dy.Date({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Time():
-        return f"dy.Time({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Null():
-        return f"dy.Any({_format_args(alias=alias)})"
-    if dtype == pl.Object():
-        return f"dy.Object({_format_args(nullable=nullable, alias=alias)})"
-    if dtype == pl.Categorical():
-        return f"dy.Categorical({_format_args(nullable=nullable, alias=alias)})"
+    if dy_name is None:
+        return f"dy.Any({_format_args(alias=alias)})  # Unknown dtype: {dtype}"
 
-    # Datetime with parameters
-    if isinstance(dtype, pl.Datetime):
-        args = []
-        if dtype.time_zone is not None:
-            args.append(f'time_zone="{dtype.time_zone}"')
-        if dtype.time_unit != "us":  # us is the default
-            args.append(f'time_unit="{dtype.time_unit}"')
-        return f"dy.Datetime({_format_args(*args, nullable=nullable, alias=alias)})"
-
-    # Duration with time_unit
-    if isinstance(dtype, pl.Duration):
-        return f"dy.Duration({_format_args(nullable=nullable, alias=alias)})"
-
-    # Decimal with precision and scale
-    if isinstance(dtype, pl.Decimal):
-        args = []
-        if dtype.precision is not None:
-            args.append(f"precision={dtype.precision}")
-        if dtype.scale != 0:
-            args.append(f"scale={dtype.scale}")
-        return f"dy.Decimal({_format_args(*args, nullable=nullable, alias=alias)})"
-
-    # Enum with categories
-    if isinstance(dtype, pl.Enum):
-        categories = dtype.categories.to_list()
-        return (
-            f"dy.Enum({_format_args(repr(categories), nullable=nullable, alias=alias)})"
-        )
-
-    # List with inner type
-    if isinstance(dtype, pl.List):
-        inner_code = _dtype_to_column_code(series.explode())
-        return f"dy.List({_format_args(inner_code, nullable=nullable, alias=alias)})"
-
-    # Array with inner type and shape
-    if isinstance(dtype, pl.Array):
-        inner_code = _dtype_to_column_code(series.explode())
-        return f"dy.Array({_format_args(inner_code, f'shape={dtype.size}', nullable=nullable, alias=alias)})"
-
-    # Struct with fields
-    if isinstance(dtype, pl.Struct):
-        fields_parts = []
-        for field in dtype.fields:
-            field_code = _dtype_to_column_code(series.struct.field(field.name))
-            fields_parts.append(f'"{field.name}": {field_code}')
-        fields_dict = "{" + ", ".join(fields_parts) + "}"
-        return f"dy.Struct({_format_args(fields_dict, nullable=nullable, alias=alias)})"
-
-    # Fallback for unknown types
-    return f"dy.Any({_format_args(alias=alias)})  # Unknown dtype: {dtype}"  # pragma: no cover
+    args = _get_dtype_args(dtype, series)
+    return f"dy.{dy_name}({_format_args(*args, nullable=nullable, alias=alias)})"
