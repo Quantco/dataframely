@@ -6,13 +6,8 @@ from __future__ import annotations
 
 import keyword
 import re
-from typing import TYPE_CHECKING, Literal, overload
 
 import polars as pl
-
-if TYPE_CHECKING:
-    from dataframely.schema import Schema
-
 
 _POLARS_DTYPE_MAP: dict[type[pl.DataType], str] = {
     pl.Boolean: "Bool",
@@ -42,60 +37,21 @@ _POLARS_DTYPE_MAP: dict[type[pl.DataType], str] = {
 }
 
 
-@overload
-def infer_schema(
-    df: pl.DataFrame,
-    schema_name: str = ...,
-    *,
-    return_type: None = ...,
-) -> None: ...
-
-
-@overload
-def infer_schema(
-    df: pl.DataFrame,
-    schema_name: str = ...,
-    *,
-    return_type: Literal["string"],
-) -> str: ...
-
-
-@overload
-def infer_schema(
-    df: pl.DataFrame,
-    schema_name: str = ...,
-    *,
-    return_type: Literal["schema"],
-) -> type[Schema]: ...
-
-
 def infer_schema(
     df: pl.DataFrame,
     schema_name: str = "Schema",
-    *,
-    return_type: Literal["string", "schema"] | None = None,
-) -> str | type[Schema] | None:
+) -> str:
     """Infer a dataframely schema from a Polars DataFrame.
 
-    This function inspects a DataFrame's schema and generates a corresponding
-    dataframely Schema. It can print the schema code, return it as a string,
-    or return an actual Schema class.
+    This function inspects a DataFrame's schema and generates corresponding
+    dataframely Schema code as a string.
 
     Args:
         df: The Polars DataFrame to infer the schema from.
         schema_name: The name for the generated schema class.
-        return_type: Controls the return format:
-
-            - ``None`` (default): Print the schema code to stdout, return ``None``.
-            - ``"string"``: Return the schema code as a string.
-            - ``"schema"``: Return an actual Schema class.
 
     Returns:
-        Depends on ``return_type``:
-
-        - ``None``: Returns ``None`` (prints to stdout).
-        - ``"string"``: Returns the schema code as a string.
-        - ``"schema"``: Returns a Schema class that can be used directly.
+        The schema code as a string.
 
     Example:
         >>> import polars as pl
@@ -105,14 +61,11 @@ def infer_schema(
         ...     "age": [25, 30],
         ...     "score": [95.5, None],
         ... })
-        >>> dy.infer_schema(df, "PersonSchema")
+        >>> print(dy.infer_schema(df, "PersonSchema"))
         class PersonSchema(dy.Schema):
             name = dy.String()
             age = dy.Int64()
             score = dy.Float64(nullable=True)
-        >>> schema = dy.infer_schema(df, "PersonSchema", return_type="schema")
-        >>> schema.is_valid(df)
-        True
 
     Raises:
         ValueError: If ``schema_name`` is not a valid Python identifier.
@@ -121,60 +74,47 @@ def infer_schema(
         msg = f"schema_name must be a valid Python identifier, got {schema_name!r}"
         raise ValueError(msg)
 
-    code = _generate_schema_code(df, schema_name)
-
-    if return_type is None:
-        print(code)  # noqa: T201
-        return None
-    if return_type == "string":
-        return code
-    if return_type == "schema":
-        import dataframely as dy
-
-        namespace: dict = {"dy": dy}
-        exec(code, namespace)  # noqa: S102
-        return namespace[schema_name]
-
-    msg = f"Invalid return_type: {return_type!r}"
-    raise ValueError(msg)
+    return _generate_schema_code(df, schema_name)
 
 
 def _generate_schema_code(df: pl.DataFrame, schema_name: str) -> str:
     """Generate schema code string from a DataFrame."""
     lines = [f"class {schema_name}(dy.Schema):"]
+    used_identifiers: set[str] = set()
 
-    for col_name, series in df.to_dict().items():
-        if _is_valid_identifier(col_name):
-            attr_name = col_name
-            alias = None
-        else:
-            attr_name = _make_valid_identifier(col_name)
-            alias = col_name
+    for idx, (col_name, series) in enumerate(df.to_dict().items()):
+        attr_name = _make_valid_identifier(col_name)
+        # Make sure yes have no duplicates
+        if attr_name in used_identifiers:
+            # Remove trailing "_" if exists as it will be included in the suffix anyway
+            if attr_name.endswith("_"):
+                attr_name = attr_name[:-1]
+            idx = 1
+            while f"{attr_name}_{idx}" in used_identifiers:
+                idx += 1
+            attr_name = f"{attr_name}_{idx}"
+        used_identifiers.add(attr_name)
+        alias = col_name if attr_name != col_name else None
         col_code = _dtype_to_column_code(series, alias=alias)
         lines.append(f"    {attr_name} = {col_code}")
 
     return "\n".join(lines)
 
 
-def _is_valid_identifier(name: str) -> bool:
-    """Check if a string is a valid Python identifier and not a keyword."""
-    return name.isidentifier() and not keyword.iskeyword(name)
-
-
 def _make_valid_identifier(name: str) -> str:
     """Convert a string to a valid Python identifier."""
     # Replace invalid characters with underscores
-    result = re.sub(r"[^a-zA-Z0-9_]", "_", name)
+    valid_identifier = re.sub(r"[^a-zA-Z0-9_]", "_", name)
+
+    # Handle empty name or name with only special characters ones with simple "_"
+    if set(valid_identifier).issubset({"_"}):
+        return "_"
     # Ensure it doesn't start with a digit
-    if result and result[0].isdigit():
-        result = "_" + result
-    # Ensure it's not empty
-    if not result:
-        result = "_column"
-    # Handle keywords
-    if keyword.iskeyword(result):
-        result = result + "_"
-    return result
+    if valid_identifier[0].isdigit():
+        return "_" + valid_identifier
+    if keyword.iskeyword(valid_identifier):
+        return valid_identifier + "_"
+    return valid_identifier
 
 
 def _get_dtype_args(dtype: pl.DataType, series: pl.Series) -> list[str]:
@@ -223,7 +163,7 @@ def _format_args(*args: str, nullable: bool = False, alias: str | None = None) -
     all_args = list(args)
     if nullable:
         all_args.append("nullable=True")
-    if alias:
+    if alias is not None:
         all_args.append(f'alias="{alias}"')
     return ", ".join(all_args)
 

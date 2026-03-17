@@ -12,7 +12,7 @@ except importlib.metadata.PackageNotFoundError as e:  # pragma: no cover
 
 from . import random
 from ._filter import filter
-from ._generate_schema import infer_schema
+from ._infer_schema import infer_schema
 from ._rule import rule
 from ._typing import DataFrame, LazyFrame, Validation
 from .collection import (
