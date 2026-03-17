@@ -309,10 +309,11 @@ def test_decimal_without_scale() -> None:
 
 
 def test_column_sanitization() -> None:
-    df = pl.DataFrame({"$": ["test"], "valid": ["test"], "!!!": ["test"]})
+    df = pl.DataFrame({"$": ["test"], "valid": ["test"], "!!!": ["test"], "": ["test"]})
     result = dy.infer_schema(df)
     assert '_ = dy.String(alias="$")' in result
     assert '_1 = dy.String(alias="!!!")' in result
+    assert '_2 = dy.String(alias="")' in result
 
 
 def test_column_with_spaces() -> None:
