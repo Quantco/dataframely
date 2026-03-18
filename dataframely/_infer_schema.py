@@ -82,8 +82,8 @@ def _generate_schema_code(df: pl.DataFrame, schema_name: str) -> str:
     lines = [f"class {schema_name}(dy.Schema):"]
     used_identifiers: set[str] = set()
 
-    for idx, (col_name, series) in enumerate(df.to_dict().items()):
-        attr_name = _make_valid_identifier(col_name)
+    for col_index, (col_name, series) in enumerate(df.to_dict().items()):
+        attr_name = _make_valid_identifier(col_name, col_index)
         # Make sure yes have no duplicates
         if attr_name in used_identifiers:
             # Remove trailing "_" if exists as it will be included in the suffix anyway
@@ -101,14 +101,14 @@ def _generate_schema_code(df: pl.DataFrame, schema_name: str) -> str:
     return "\n".join(lines)
 
 
-def _make_valid_identifier(name: str) -> str:
+def _make_valid_identifier(name: str, col_index: int) -> str:
     """Convert a string to a valid Python identifier."""
     # Replace invalid characters with underscores
     valid_identifier = re.sub(r"[^a-zA-Z0-9_]", "_", name)
 
     # Handle empty name or name with only special characters ones with simple "_"
     if set(valid_identifier).issubset({"_"}):
-        return "_"
+        return f"column_{col_index}"
     # Ensure it doesn't start with a digit
     if valid_identifier[0].isdigit():
         return "_" + valid_identifier
