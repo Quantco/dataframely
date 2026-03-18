@@ -175,7 +175,7 @@ def _dtype_to_column_code(series: pl.Series, *, alias: str | None = None) -> str
     dy_name = _POLARS_DTYPE_MAP.get(type(dtype))
 
     if dy_name is None:
-        return f"dy.Any({_format_args(alias=alias)})  # Unknown dtype: {dtype}"
+        return f"dy.Any({_format_args(alias=alias)})" # Unknown dtype: {dtype}
 
     args = _get_dtype_args(dtype, series)
     return f"dy.{dy_name}({_format_args(*args, nullable=nullable, alias=alias)})"
