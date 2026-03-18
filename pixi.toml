@@ -117,7 +117,7 @@ polars = "1.35.*"
 
 [feature.polars-latest.dependencies]
 # NOTE: Update docs/faq.md when updating this.
-polars = "1.38.*"
+polars = "1.39.*"
 
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
