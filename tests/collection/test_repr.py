@@ -4,8 +4,10 @@
 import textwrap
 
 import polars as pl
+import pytest
 
 import dataframely as dy
+from dataframely._compat import _polars_version_tuple
 
 
 class MySchema(dy.Schema):
@@ -21,6 +23,10 @@ class MyCollection(dy.Collection):
         return self.member_a.join(self.member_b, on="a", how="inner")
 
 
+@pytest.mark.skipif(
+    _polars_version_tuple < (1, 39),
+    reason="query plan repr changed in polars 1.39",
+)
 def test_repr_collection() -> None:
     assert repr(MyCollection) == textwrap.dedent("""\
         [Collection "CollectionMeta"]
