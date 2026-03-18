@@ -318,12 +318,28 @@ def test_column_sanitization() -> None:
 
 def test_column_with_spaces() -> None:
     df = pl.DataFrame(
-        {"col name": ["test"], "col_name": ["test"], "col_name_1": ["test"]}
+        {
+            "col name": ["test"],
+            "col_name": ["test"],
+            "col@name": ["test"],
+            "col_name_1": ["test"],
+        }
     )
     result = dy.infer_schema(df, schema_name="SpaceSchema")
     assert 'col_name = dy.String(alias="col name")' in result
     assert 'col_name_1 = dy.String(alias="col_name")' in result
+    assert 'col_name_2 = dy.String(alias="col@name")' in result
     assert 'col_name_1_1 = dy.String(alias="col_name_1")' in result
+
+
+def test_column_sanitization_conflict_with_existing() -> None:
+    df = pl.DataFrame({"col_": ["test"], "col!": ["test"]})
+    result = dy.infer_schema(df, schema_name="ConflictSchema")
+    expected = textwrap.dedent("""\
+        class ConflictSchema(dy.Schema):
+            col_ = dy.String()
+            col_1 = dy.String(alias="col!")""")
+    assert result == expected
 
 
 @pytest.mark.parametrize(
