@@ -7,4 +7,4 @@ Experimental
     :toctree: _gen/
     :nosignatures:
 
-  experimental.infer_schema
+    experimental.infer_schema
