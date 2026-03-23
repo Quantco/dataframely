@@ -1,31 +1,17 @@
 [build-system]
-<<<<<<< before updating
 build-backend = "maturin"
-||||||| last update
-=======
-build-backend = "hatchling.build"
->>>>>>> after updating
 requires = ["maturin>=1.7,<2.0", "hatchling"]
 
 [project]
-<<<<<<< before updating
+name = "dataframely"
 authors = [
   { name = "Andreas Albert", email = "andreas.albert@quantco.com" },
   { name = "Daniel Elsner", email = "daniel.elsner@quantco.com" },
   { name = "Oliver Borchert", email = "oliver.borchert@quantco.com" },
 ]
-||||||| last update
-name = "dataframely"
 description = "A declarative, polars-native data frame validation library"
-authors = [{ name = "Oliver Borchert", email = "oliver.borchert@quantco.com" }]
-dynamic = ["version"]
-=======
-name = "dataframely"
-description = "A declarative, polars-native data frame validation library"
-authors = [{ name = "Oliver Borchert", email = "oliver.borchert@quantco.com" }]
 # replaced in CI
 version = "0.0.0"
->>>>>>> after updating
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -41,11 +27,8 @@ dependencies = [
   # Conditional
   'typing-extensions; python_version <= "3.10"',
 ]
-description = "A declarative, polars-native data frame validation library"
-name = "dataframely"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.0.0"
 
 [project.optional-dependencies]
 deltalake = ["deltalake"]
