@@ -37,3 +37,9 @@ Users can disable `FutureWarnings` either through
 builtins from tools
 like [pytest](https://docs.pytest.org/en/stable/how-to/capture-warnings.html#controlling-warnings),
 or by setting the `DATAFRAMELY_NO_FUTURE_WARNINGS` environment variable to `true` or `1`.
+
+## Experimental features
+
+Experimental features are published in a dedicated namespace `dataframely.experimental`.
+The versioning policy above does not apply to this namespace, and we may introduce breaking changes to experimental
+features in minor releases.

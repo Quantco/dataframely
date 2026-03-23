@@ -55,17 +55,21 @@ def infer_schema(
 
     Example:
         >>> import polars as pl
-        >>> import dataframely as dy
+        >>> from dataframely.experimental import infer_schema
         >>> df = pl.DataFrame({
         ...     "name": ["Alice", "Bob"],
         ...     "age": [25, 30],
         ...     "score": [95.5, None],
         ... })
-        >>> print(dy.infer_schema(df, "PersonSchema"))
+        >>> print(infer_schema(df, "PersonSchema"))
         class PersonSchema(dy.Schema):
             name = dy.String()
             age = dy.Int64()
             score = dy.Float64(nullable=True)
+
+    Attention:
+        This functionality is considered unstable. It may be changed at any time
+        without it being considered a breaking change.
 
     Raises:
         ValueError: If ``schema_name`` is not a valid Python identifier.
