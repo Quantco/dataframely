@@ -5,7 +5,7 @@ thinking, please add it here.
 
 ## How do I define additional unique keys in a {class}`~dataframely.Schema`?
 
-By default, `dataframely` only supports defining a single non-nullable (composite) primary key in :class:
+By default, `dataframely` only supports defining a single non-nullable (composite) primary key in {class}
 `~dataframely.Schema`.
 However, in some scenarios it may be useful to define additional unique keys (which support nullable fields and/or which
 are additionally unique).
@@ -33,6 +33,13 @@ class UserSchema(dy.Schema):
 ## How do I fix the ruff error `First argument of a method should be named self`?
 
 See our documentation on [group rules](./quickstart.md#group-rules).
+
+## How do I get a {class}`~dataframely.Schema` for my dataframe?
+
+You can use {func}`dataframely.experimental.infer_schema` to get a basic {class}`~dataframely.Schema` definition for
+your dataframe. The function infers column names, types and nullability from the dataframe and returns a code
+representation of a {class}`~dataframely.Schema`
+Starting from this definition, you can then refine the schema by adding additional rules, adjusting types, etc.
 
 ## What versions of `polars` does `dataframely` support?
 
