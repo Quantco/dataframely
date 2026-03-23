@@ -13,9 +13,6 @@ backend = { name = "pixi-build-python", git = "https://github.com/pavelzw/pixi",
 [package.host-dependencies]
 maturin = "*"
 python = "3.10.*"
-[package.target.osx-arm64.build-dependencies]
-# https://conda-forge.zulipchat.com/#narrow/channel/457337-general/topic/macOS.20clang.2021.20.2F.20LTO.20issues/near/578390360
-clangdev = "*"
 [package.build.config]
 abi3 = true
 compilers = ["c", "rust"]
