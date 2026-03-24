@@ -119,7 +119,25 @@ class SchemaMeta(ABCMeta):
         result = Metadata()
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))
-        result.update(mcs._get_metadata(namespace))
+        # Before merging the child namespace, remove any parent columns that the
+        # child explicitly overrides (same attribute name). This allows subclasses to
+        # redefine inherited columns while still detecting genuine alias conflicts.
+        namespace_metadata = mcs._get_metadata(namespace)
+        for attr, value in namespace.items():
+            if not isinstance(value, Column):
+                continue
+            # Walk parent MRO to find if this attribute was a Column in a parent class.
+            for base in bases:
+                for parent_cls in base.__mro__:
+                    parent_col = parent_cls.__dict__.get(attr)
+                    if parent_col is not None and isinstance(parent_col, Column):
+                        parent_key = parent_col.alias or attr
+                        result.columns.pop(parent_key, None)
+                        break
+                else:
+                    continue
+                break
+        result.update(namespace_metadata)
         namespace[_COLUMN_ATTR] = result.columns
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
