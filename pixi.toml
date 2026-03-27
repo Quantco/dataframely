@@ -3,13 +3,24 @@ channels = ["conda-forge"]
 description = "A declarative, polars-native data frame validation library."
 name = "dataframely"
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
+preview = ["pixi-build"]
 
-[tasks]
-postinstall = "maturin develop"
-postinstall-release = "pip install --no-build-isolation --no-deps --disable-pip-version-check -v -e ."
+[package]
+name = "dataframely"
+
+[package.build]
+backend = { name = "pixi-build-python", git = "https://github.com/pavelzw/pixi", branch = "abi3", subdirectory = "crates/pixi_build_python" }
+[package.host-dependencies]
+maturin = "*"
+python = "3.10.*"
+[package.build.config]
+abi3 = true
+compilers = ["c", "rust"]
+env = { MATURIN_PEP517_ARGS = "--locked" }
 
 [dependencies]
 python = ">=3.10"
+dataframely = { path = "." }
 
 fsspec = ">=2025.9"
 numpy = "*"
@@ -18,9 +29,6 @@ numpy = "*"
 # It should always match the version in feature.polars-minimal.
 # The latest polars version is in feature.polars-latest.
 polars = ">=1.35"
-
-maturin = ">=1.7,<2"
-pip = "*"
 
 [feature.dev.dependencies]
 jupyter = "*"
@@ -36,8 +44,9 @@ sphinx = ">=8.2"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-toolbox = "*"
+
 [feature.docs.tasks]
-docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
+docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs" }
 readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
 
 [feature.test.dependencies]
@@ -47,7 +56,7 @@ mypy = ">=1.13"
 pandas = "*"
 pandas-stubs = "*"
 pyodbc = "*"
-pytest = ">=6"
+pytest = "*"
 pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
@@ -69,10 +78,12 @@ pydantic-core = ">=2.33.2,<3"
 sqlalchemy = ">=2"
 
 [feature.build.dependencies]
+python = "*"
+hatchling = "*"
 python-build = "*"
-setuptools-scm = "*"
-twine = "*"
-wheel = "*"
+version = "*"
+twine = ">=6"
+
 [feature.build.target.unix.dependencies]
 sed = "*"
 
@@ -83,7 +94,7 @@ check-wheel = "twine check dist/*"
 set-version = "sed -i \"s/0.0.0/$(python -m setuptools_scm)/\" pyproject.toml"
 
 [feature.lint.dependencies]
-docformatter = "*"
+lefthook = "*"
 insert-license-header = "*"
 pre-commit = "*"
 pre-commit-hooks = "*"
@@ -91,9 +102,11 @@ prettier = "*"
 ruff = "*"
 taplo = "*"
 typos = "*"
+zizmor = "*"
+
 [feature.lint.tasks]
-pre-commit-install = "pre-commit install"
-pre-commit-run = "pre-commit run -a"
+pre-commit-install = "lefthook install"
+lint = "lefthook run pre-commit --all-files"
 
 [feature.py310.dependencies]
 python = "3.10.*"
@@ -123,8 +136,16 @@ polars = "1.39.*"
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
-build = ["build"]
-default = ["dev", "lint", "optionals", "polars-latest", "py314", "test"]
+py314 = ["polars-latest", "py314", "test"]
+default = [
+  "dev",
+  "build",
+  "lint",
+  "optionals",
+  "polars-latest",
+  "py314",
+  "test",
+]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]
@@ -134,7 +155,6 @@ py310 = ["polars-latest", "py310", "test"]
 py311 = ["polars-latest", "py311", "test"]
 py312 = ["polars-latest", "py312", "test"]
 py313 = ["polars-latest", "py313", "test"]
-py314 = ["polars-latest", "py314", "test"]
 
 # Test with optional dependencies
 py314-optionals = ["optionals", "polars-latest", "py314", "test"]

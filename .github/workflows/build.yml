@@ -17,13 +17,42 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up pixi
+<<<<<<< before updating
         uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
         with:
           environments: build
       - name: Set version
         run: pixi run -e build set-version
+||||||| last update
+        uses: prefix-dev/setup-pixi@19eac09b398e3d0c747adc7921926a6d802df4da # v0.8.8
+        with:
+          environments: build
+=======
+        uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+      - name: Derive version
+        id: version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: echo "version=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
+      - name: Replace version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          sed -i -e "s/0.0.0/${STEPS_VERSION_OUTPUTS_VERSION}/g" pyproject.toml
+        env:
+          STEPS_VERSION_OUTPUTS_VERSION: ${{ steps.version.outputs.version }}
+>>>>>>> after updating
       - name: Build project
+<<<<<<< before updating
         run: pixi run -e build build-sdist
+||||||| last update
+        run: pixi run -e build build-wheel
+      - name: Check package
+        run: pixi run check-wheel
+=======
+        run: pixi run build-wheel
+      - name: Check package
+        run: pixi run check-wheel
+>>>>>>> after updating
       - name: Upload package
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
@@ -65,7 +94,7 @@ jobs:
           manylinux: auto
           sccache: true
       - name: Check package
-        run: pixi run -e build check-wheel
+        run: pixi run check-wheel
       - name: Upload package
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
@@ -81,7 +110,13 @@ jobs:
       id-token: write
     environment: pypi
     steps:
+<<<<<<< before updating
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+||||||| last update
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+=======
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+>>>>>>> after updating
         with:
           path: dist
           merge-multiple: true

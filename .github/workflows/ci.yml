@@ -13,17 +13,31 @@ permissions:
   contents: read
 
 jobs:
+<<<<<<< before updating
   pre-commit-checks:
     name: Pre-commit Checks
+||||||| last update
+  pre-commit:
+=======
+  lint:
+    name: Lint
+>>>>>>> after updating
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
+<<<<<<< before updating
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           # needed for 'pre-commit-mirrors-insert-license'
           fetch-depth: 0
+||||||| last update
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+=======
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+>>>>>>> after updating
       - name: Set up pixi
+<<<<<<< before updating
         uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
         with:
           environments: default lint polars-minimal
@@ -33,6 +47,19 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
       - name: pre-commit
         run: pixi run pre-commit-run --color=always --show-diff-on-failure
+||||||| last update
+        uses: prefix-dev/setup-pixi@19eac09b398e3d0c747adc7921926a6d802df4da # v0.8.8
+        with:
+          environments: default lint
+      - name: pre-commit
+        run: pixi run pre-commit-run --color=always --show-diff-on-failure
+=======
+        uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+      - name: Run linting
+        run: pixi run lint
+        env:
+          CLICOLOR_FORCE: 1
+>>>>>>> after updating
 
   unit-tests:
     name: Unit Tests (${{ contains(matrix.os, 'ubuntu') && 'Linux' || (contains(matrix.os, 'windows') && 'Windows' || 'macOS') }}) - ${{ matrix.environment }}
@@ -41,6 +68,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
+<<<<<<< before updating
         os: [ubuntu-latest, windows-latest, macos-latest]
         environment: [py310, py311, py312, py313, py314]
         with_optionals: [false]
@@ -59,13 +87,46 @@ jobs:
           - os: ubuntu-latest
             environment: polars-minimal
             with_optionals: false
+||||||| last update
+        environment:
+          - py310
+          - py311
+          - py312
+          - py313
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+=======
+        environment:
+          - py310
+          - py311
+          - py312
+          - py313
+          - py314
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+>>>>>>> after updating
     steps:
       - name: Checkout branch
+<<<<<<< before updating
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+||||||| last update
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+=======
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+>>>>>>> after updating
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
         with:
           environments: ${{ matrix.environment }}
+<<<<<<< before updating
           # FIXME: Remove when `s3_server` fixture does not start a process anymore
           post-cleanup: ${{ matrix.os != 'windows-latest' }}
       - name: Install Rust
@@ -74,6 +135,11 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
       - name: Install repository
         run: pixi run -e ${{ matrix.environment }} postinstall
+||||||| last update
+      - name: Install repository
+        run: pixi run -e ${{ matrix.environment }} postinstall
+=======
+>>>>>>> after updating
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes ${{ matrix.with_optionals && '-m with_optionals' || '-m "not with_optionals"'}} --cov=dataframely --cov-report=xml
       - name: Upload codecov
