@@ -14,15 +14,15 @@ related data frames.
 A `dy.Schema` describes the structure of a single dataframe.
 
 ```python
-class HouseSchema(dy.Schema):
+class MyHouseSchema(dy.Schema):
     """A schema for a dataframe describing houses."""
 
-    street: dy.String(primary_key=True)
-    number: dy.UInt16(primary_key=True)
+    street = dy.String(primary_key=True)
+    number = dy.UInt16(primary_key=True)
     # Number of rooms
-    rooms: dy.UInt8()
+    rooms = dy.UInt8()
     # Area in square meters
-    area: dy.UInt16()
+    area = dy.UInt16()
 ```
 
 ## `dy.Collection` example
@@ -35,15 +35,15 @@ class MyStreetSchema(dy.Schema):
     """A schema for a dataframe describing streets."""
 
     # Shared primary key component with MyHouseSchema
-    street: dy.String(primary_key=True)
-    city: dy.String()
+    street = dy.String(primary_key=True)
+    city = dy.String()
 
 
 class MyCollection(dy.Collection):
     """A collection of related dataframes."""
 
-    houses: MyHouseSchema
-    streets: MyStreetSchema
+    houses: dy.LazyFrame[MyHouseSchema]
+    streets: dy.LazyFrame[MyStreetSchema]
 ```
 
 # Usage conventions
@@ -100,7 +100,7 @@ def test_grouped_sum():
 
     result = my_code(df)
 
-    assert assert_frame_equal(expected, result)
+    assert_frame_equal(expected, result)
 ```
 
 ### Generating synthetic input data
@@ -117,7 +117,6 @@ randomly sampling the rest:
 
 ```python
 random_data_with_overrides = HouseSchema.sample(
-    num_rows=5,
     overrides={
         "street": ["Main St.", "Main St.", "Main St.", "Second St.", "Second St."],
     }
