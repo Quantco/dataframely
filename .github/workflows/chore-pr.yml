@@ -3,8 +3,6 @@ on:
   pull_request_target:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
-  push:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,7 +11,6 @@ concurrency:
 jobs:
   check-pr-title:
     name: Check PR Title
-    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -50,17 +47,13 @@ jobs:
           header: conventional-commit-pr-title
           delete: true
 
-  release-drafter:
-    name: ${{ github.event_name == 'pull_request_target' && 'Assign Labels' || 'Draft Release' }}
+  assign-labels:
+    name: Assign Labels
     runs-on: ubuntu-latest
     permissions:
-      contents: write
       pull-requests: write
     steps:
-      - name: ${{ github.event_name == 'pull_request_target' && 'Assign labels' || 'Update release draft' }}
-        uses: release-drafter/release-drafter@139054aeaa9adc52ab36ddf67437541f039b88e2 # v7.1.1
+      - name: Assign labels
+        uses: release-drafter/release-drafter/autolabeler@139054aeaa9adc52ab36ddf67437541f039b88e2 # v7.1.1
         with:
-          disable-releaser: ${{ github.event_name == 'pull_request_target' }}
-          disable-autolabeler: ${{ github.event_name == 'push' }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          token: ${{ github.token }}
