@@ -22,7 +22,6 @@ from typing import Any, cast
 
 _mod = importlib.import_module("dataframely")
 
-
 project = "dataframely"
 copyright = f"{datetime.date.today().year}, QuantCo, Inc"
 author = "QuantCo, Inc."

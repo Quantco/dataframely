@@ -7,6 +7,7 @@
 quickstart
 examples/index
 features/index
+coding-agents
 development
 migration/index
 faq
