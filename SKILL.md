@@ -9,12 +9,14 @@ user-invocable: false
 
 # Using dataframely
 
-`dataframely` provides `dy.Schema` and `dy.Collection` to document and enforce the structure of single or multiple
-related data frames.
+`dataframely` provides two types:
+
+- `dy.Schema` documents and enforces the structure of a single data frame
+- `dy.Collection` documents and enforces the relationships between multiple related data frames that each have their own `dy.Schema`
 
 ## `dy.Schema`
 
-A `dy.Schema` describes the structure of a single dataframe.
+A subclass of `dy.Schema` describes the structure of a single dataframe.
 
 ```python
 class MyHouseSchema(dy.Schema):
@@ -43,7 +45,7 @@ about the column contents.
 
 ## `dy.Collection`
 
-A `dy.Collection` describes a set of related data frames, each described by a `dy.Schema`. Data frames in a collection
+A subclass of `dy.Collection` describes a set of related data frames, each described by a `dy.Schema`. Data frames in a collection
 should share at least a subset of their primary key.
 
 ```python
