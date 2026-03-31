@@ -1,15 +1,18 @@
 ---
 name: dataframely
-description: A declarative, Polars-native data frame validation library. Use when implementing data processing logic in polars.
+description: Best practices for polars data processing with dataframely. Covers definitions of Schema and Collection, usage of
+  .validate() and .filter(), type hints, and testing. Use when writing or modifying code involving dataframely or
+  polars data frames.
 license: BSD-3-Clause
+user-invocable: false
 ---
 
-# Dataframely skill
+# Using dataframely
 
 `dataframely` provides `dy.Schema` and `dy.Collection` to document and enforce the structure of single or multiple
 related data frames.
 
-## `dy.Schema` example
+## `dy.Schema`
 
 A `dy.Schema` describes the structure of a single dataframe.
 
@@ -19,15 +22,28 @@ class MyHouseSchema(dy.Schema):
 
     street = dy.String(primary_key=True)
     number = dy.UInt16(primary_key=True)
-    # Number of rooms
+    #: Description on the number of rooms.
     rooms = dy.UInt8()
-    # Area in square meters
+    #: Description on the area of the house.
     area = dy.UInt16()
 ```
 
-## `dy.Collection` example
+### Defining Constraints
 
-A `dy.Collection` describes a set of related dataframes, each described by a `dy.Schema`. Dataframes in a collection
+Persist all implicit assumptions on the data as constraints in the schema. Use docstrings purely to answer the "what"
+about the column contents.
+
+- Use the most specific type possible for each column (e.g. `dy.Enum` instead of `dy.String` when applicable).
+- Use pre-defined arguments (e.g. `nullable`, `min`, `regex`) for column-level constraints if possible.
+- Use the `check` argument for non-standard column-level constraints that cannot be expressed using pre-defined
+  arguments.
+- Use rules (i.e. methods decorated with `@dy.rule`) for cross-column constraints.
+- Use group rules (i.e. methods decorated with `@dy.rule(group_by=...)`) for cross-row constraints beyond primary key
+  checks.
+
+## `dy.Collection`
+
+A `dy.Collection` describes a set of related data frames, each described by a `dy.Schema`. Data frames in a collection
 should share at least a subset of their primary key.
 
 ```python
@@ -46,42 +62,61 @@ class MyCollection(dy.Collection):
     streets: dy.LazyFrame[MyStreetSchema]
 ```
 
-# Usage conventions
+### Defining Constraints
 
-## Use clear interfaces
+Persist all implicit assumptions about the relationships between the collections' data frames as constraints in the
+collection.
+
+- Use filters (i.e. methods decorated with `@dy.filter`) to enforce assumptions about the relationships (e.g. 1:1, 1:N)
+  between the collections' data frames. Leverage `dy.functional` for writing filter logic.
+
+# Usage Conventions
+
+## Clear Interfaces
 
 Structure data processing code with clear interfaces documented using `dataframely` type hints:
 
 ```python
 def preprocess(raw: dy.LazyFrame[MyRawSchema]) -> dy.DataFrame[MyPreprocessedSchema]:
-    # Internal dataframes do not require schemas
+    # Internal data frames do not require schemas
     df: pl.LazyFrame = ...
     return MyPreprocessedSchema.validate(df, cast=True)
 ```
 
-Use schemas for all input, output, and intermediate dataframes. Schemas may be omitted for short-lived temporary
-dataframes and private helper functions (prefixed with `_`).
+- Use schemas for all input and output data frames in a function. Omit type hints if the function is a private helper
+  (prefixed with `_`) unless the schema critically improves readability or testability.
+- Omit schemas for short-lived temporary data frames. Never define schemas for function-local data frames.
 
-## `filter` vs `validate`
+## Validation and Filtering
 
 Both `.validate` and `.filter` enforce the schema at runtime. Pass `cast=True` for safe type-casting.
 
 - **`Schema.validate`** — raises on failure. Use when failures are unexpected (e.g. transforming already-validated
   data).
 - **`Schema.filter`** — returns valid rows plus a `FailureInfo` describing filtered-out rows. Use when failures are
-  possible and should be handled gracefully (e.g. logging and skipping invalid rows).
+  possible and should be handled gracefully. Failures should either be kept around or logged for introspection.
+
+When performing validation or filtering, prefer using `pipe` to clarify the flow of data:
+
+```python
+result = df.pipe(MySchema.validate)
+out, failures = df.pipe(MySchema.filter)
+```
 
 ## Testing
 
-Every data transformation must have unit tests. Test each branch of the transformation logic. Do not test properties
-already guaranteed by the schema.
+Unless otherwise specified by the user or the project context, add unit tests for all (non-private) methods performing
+data transformations.
+
+- Do not test properties already guaranteed by the schema (e.g. data types, nullability, value constraints).
 
 ### Test structure
 
-1. Create synthetic input data
-2. Define the expected output
-3. Execute the transformation
-4. Compare using `assert_frame_equal` from `polars.testing` (or `diffly.testing` if installed)
+Write tests with the following structure:
+
+1. "Arrange": Define synthetic input data and expected output
+2. "Act": Execute the transformation
+3. "Assert": Compare expected and actual output using `assert_frame_equal` from `polars.testing`
 
 ```python
 from polars.testing import assert_frame_equal
@@ -103,27 +138,19 @@ def test_grouped_sum():
     assert_frame_equal(expected, result)
 ```
 
-### Generating synthetic input data
+### Generating Synthetic Test Data
 
-For complex schemas where only some columns are relevant to the test, use `dataframely`'s synthetic data generation:
+Use `dataframely`'s synthetic data generation for creating inputs to functions requiring typed data frames in their
+input:
 
-```python
-# Random data meeting all schema constraints
-random_data = MyInputSchema.sample(num_rows=100)
-```
-
-Use fully random data for property tests where exact contents don't matter. Use overrides to pin specific columns while
-randomly sampling the rest:
-
-```python
-random_data_with_overrides = HouseSchema.sample(
-    overrides={
-        "street": ["Main St.", "Main St.", "Main St.", "Second St.", "Second St."],
-    }
-)
-```
+- Use `MySchema.sample(num_rows=...)` to generate fully random data when exact contents don't matter.
+- Use `MySchema.sample(overrides=...)` to generate random data with specific columns pinned to certain values for
+  testing specific functionality. Prefer using dicts of lists for overrides unless specifically prompted otherwise.
+  - When using dicts of lists: for providing overrides that are constant across all rows, provide scalar values instead
+    of lists of equal values.
+- Always use `MySchema.create_empty()` instead of sampling with empty overrides when an empty data frame is needed.
 
 # Getting more information
 
-`dataframely` relies on clear function signatures, type hints and doc strings. If you need more information, check the
-locally installed code.
+`dataframely` provides clear function signatures, type hints and docstrings for the full public API. For more
+information, inspect the source code in the site packages. If available, always use the LSP tool to find documentation.
