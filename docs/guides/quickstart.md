@@ -175,7 +175,7 @@ print(failure.counts())
 ```
 
 In this case, `good` remains to be a `dy.DataFrame[HouseSchema]`, albeit with potentially fewer rows than `df`.
-The `failure` object is of type :class:`~dataframely.FailureInfo` and provides means to inspect
+The `failure` object is of type {class}`~dataframely.FailureInfo` and provides means to inspect
 the reasons for validation failures for invalid rows.
 
 Given the example data above and the schema that we defined, we know that rows 2, 3, 4, and 5 are invalid (0-indexed):
@@ -185,7 +185,7 @@ Given the example data above and the schema that we defined, we know that rows 2
 - Row 4 violates both of the rules above
 - Row 5 violates the reasonable bathroom to bedroom ratio
 
-Using the `counts` method on the :class:`~dataframely.FailureInfo` object will result in the following dictionary:
+Using the `counts` method on the {class}`~dataframely.FailureInfo` object will result in the following dictionary:
 
 ```python
 {
