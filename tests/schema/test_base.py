@@ -141,3 +141,22 @@ def test_user_error_polars_datatype_type() -> None:
         class MySchemaWithPolarsDataTypeType(dy.Schema):
             a = dy.Int32(nullable=False)
             b = pl.String  # User error: Used pl.String instead of dy.String()
+
+
+def test_override() -> None:
+    class FirstSchema(dy.Schema):
+        x = dy.Int64()
+
+    class SecondSchema(FirstSchema):
+        x = dy.Int64(nullable=True)
+
+    first_columns = FirstSchema.columns()
+    second_columns = SecondSchema.columns()
+
+    assert set(first_columns) == {"x"}
+    assert set(second_columns) == {"x"}
+
+    assert first_columns["x"].nullable is False
+    assert second_columns["x"].nullable is True
+
+    assert type(second_columns["x"]) is type(first_columns["x"])
