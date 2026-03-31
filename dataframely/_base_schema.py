@@ -119,24 +119,8 @@ class SchemaMeta(ABCMeta):
         result = Metadata()
         for base in bases:
             result.update(mcs._get_metadata_recursively(base))
-        # Before merging the child namespace, remove any parent columns that the
-        # child explicitly overrides (same attribute name). This allows subclasses to
-        # redefine inherited columns while still detecting genuine alias conflicts.
         namespace_metadata = mcs._get_metadata(namespace)
-        for attr, value in namespace.items():
-            if not isinstance(value, Column):
-                continue
-            # Walk all parent MROs to find if this attribute was a Column in any
-            # parent class. In multiple-inheritance scenarios, the same attribute
-            # name may appear in more than one base with different aliases.
-            keys_to_remove: set[str] = set()
-            for base in bases:
-                for parent_cls in base.__mro__:
-                    parent_col = parent_cls.__dict__.get(attr)
-                    if parent_col is not None and isinstance(parent_col, Column):
-                        keys_to_remove.add(parent_col.alias or attr)
-            for parent_key in keys_to_remove:
-                result.columns.pop(parent_key, None)
+        mcs._remove_overridden_columns(result, namespace, bases)
         result.update(namespace_metadata)
         namespace[_COLUMN_ATTR] = result.columns
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
@@ -224,6 +208,34 @@ class SchemaMeta(ABCMeta):
             if isinstance(val, Column):
                 val._name = val.alias or name
             return val
+
+    @staticmethod
+    def _remove_overridden_columns(
+        result: Metadata,
+        namespace: dict[str, Any],
+        bases: tuple[type[object], ...],
+    ) -> None:
+        """Remove inherited columns that the child namespace explicitly overrides.
+
+        Before merging the child namespace, we must drop any parent columns whose
+        attribute name is redefined in the child. This allows subclasses to redefine
+        inherited columns while still detecting genuine alias conflicts.
+
+        In multiple-inheritance scenarios, the same attribute name may appear in more
+        than one base with different aliases, so we walk all parent MROs and collect
+        every matching column key to remove.
+        """
+        for attr, value in namespace.items():
+            if not isinstance(value, Column):
+                continue
+            keys_to_remove: set[str] = set()
+            for base in bases:
+                for parent_cls in base.__mro__:
+                    parent_col = parent_cls.__dict__.get(attr)
+                    if parent_col is not None and isinstance(parent_col, Column):
+                        keys_to_remove.add(parent_col.alias or attr)
+            for parent_key in keys_to_remove:
+                result.columns.pop(parent_key, None)
 
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
