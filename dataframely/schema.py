@@ -38,6 +38,7 @@ from ._storage.parquet import (
     ParquetStorageBackend,
 )
 from ._typing import DataFrame, LazyFrame, Validation
+from .columns import Any as AnyColumn
 from .columns import Column, column_from_dict
 from .config import Config
 from .exc import (
@@ -814,7 +815,9 @@ class Schema(BaseSchema, ABC):
             further down the line might fail because of the cast and/or missing columns.
         """
         lf = df.lazy().select(
-            pl.col(name).cast(col.dtype) for name, col in cls.columns().items()
+            # Skip casting for Any columns since they accept any type
+            pl.col(name) if isinstance(col, AnyColumn) else pl.col(name).cast(col.dtype)
+            for name, col in cls.columns().items()
         )
         if isinstance(df, pl.DataFrame):
             return lf.collect()  # type: ignore

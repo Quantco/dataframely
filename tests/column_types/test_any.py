@@ -20,3 +20,9 @@ class AnySchema(dy.Schema):
 def test_any_dtype_passes(data: dict[str, Any]) -> None:
     df = pl.DataFrame(data)
     assert AnySchema.is_valid(df)
+
+
+def test_any_cast() -> None:
+    df = pl.DataFrame({"a": 0})
+    result = AnySchema.cast(df)
+    assert result["a"].dtype == pl.Int64
