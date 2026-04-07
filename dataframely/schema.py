@@ -38,7 +38,6 @@ from ._storage.parquet import (
     ParquetStorageBackend,
 )
 from ._typing import DataFrame, LazyFrame, Validation
-from .columns import Any as AnyColumn
 from .columns import Column, column_from_dict
 from .config import Config
 from .exc import (
@@ -814,11 +813,19 @@ class Schema(BaseSchema, ABC):
             the lazy frame's schema but also means that a call to :meth:`polars.LazyFrame.collect`
             further down the line might fail because of the cast and/or missing columns.
         """
-        lf = df.lazy().select(
-            # Skip casting for Any columns since they accept any type
-            pl.col(name) if isinstance(col, AnyColumn) else pl.col(name).cast(col.dtype)
-            for name, col in cls.columns().items()
-        )
+
+        def _cast_to_schema(
+            lf: pl.LazyFrame, schema: dict[str, pl.DataType]
+        ) -> pl.LazyFrame:
+            return lf.select(cls.column_names()).cast(
+                {
+                    name: col.dtype
+                    for name, col in cls.columns().items()
+                    if name in schema and not col.validate_dtype(schema[name])
+                }
+            )
+
+        lf = df.lazy().pipe_with_schema(_cast_to_schema)
         if isinstance(df, pl.DataFrame):
             return lf.collect()  # type: ignore
         return lf  # type: ignore

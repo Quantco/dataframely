@@ -43,3 +43,18 @@ def test_cast_invalid_schema_lazy() -> None:
     lf = MySchema.cast(lf)
     with pytest.raises(plexc.ColumnNotFoundError):
         lf.collect()
+
+
+class IntegerSchema(dy.Schema):
+    a = dy.Integer()
+
+
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+def test_cast_preserves_valid_dtype(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
+) -> None:
+    """Test that cast doesn't change already valid dtypes (issue #318)."""
+    df = df_type({"a": [1, 2, 3]}, schema={"a": pl.Int32})
+    result = IntegerSchema.cast(df)
+    # Int32 is valid for dy.Integer, so it should NOT be cast to Int64
+    assert result.lazy().collect_schema()["a"] == pl.Int32
