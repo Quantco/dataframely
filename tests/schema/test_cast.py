@@ -1,13 +1,12 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-
 from typing import Any
 
 import polars as pl
-import polars.exceptions as plexc
 import pytest
 
 import dataframely as dy
+from dataframely.exc import SchemaError
 
 
 class MySchema(dy.Schema):
@@ -34,14 +33,14 @@ def test_cast_valid(
 
 def test_cast_invalid_schema_eager() -> None:
     df = pl.DataFrame({"a": [1]})
-    with pytest.raises(plexc.ColumnNotFoundError):
+    with pytest.raises(SchemaError):
         MySchema.cast(df)
 
 
 def test_cast_invalid_schema_lazy() -> None:
     lf = pl.LazyFrame({"a": [1]})
     lf = MySchema.cast(lf)
-    with pytest.raises(plexc.ColumnNotFoundError):
+    with pytest.raises(SchemaError):
         lf.collect()
 
 

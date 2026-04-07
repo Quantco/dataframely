@@ -814,25 +814,7 @@ class Schema(BaseSchema, ABC):
             further down the line might fail because of the cast and/or missing columns.
         """
 
-        def _cast_to_schema(
-            lf: pl.LazyFrame, schema: dict[str, pl.DataType]
-        ) -> pl.LazyFrame:
-            # NOTE: This function does almost the same thing as `match_to_schema`, except:
-            #
-            # 1. It raises a polars `polars.exceptionsColumnNotFoundError` on missing columns,
-            #    while `match_to_schema` raises a `dataframely.exc.SchemaError`
-            # 2. The error is raised only at collection time, while `match_to_schema` raises immediately
-            #
-            # This behavior is needed to not break backward compatibility.
-            return lf.select(cls.column_names()).cast(
-                {
-                    name: col.dtype
-                    for name, col in cls.columns().items()
-                    if name in schema and not col.validate_dtype(schema[name])
-                }
-            )
-
-        lf = df.lazy().pipe_with_schema(_cast_to_schema)
+        lf = match_to_schema(df.lazy(), cls, casting="strict")
         if isinstance(df, pl.DataFrame):
             return lf.collect()  # type: ignore
         return lf  # type: ignore
