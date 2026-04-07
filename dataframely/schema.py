@@ -813,9 +813,7 @@ class Schema(BaseSchema, ABC):
             the lazy frame's schema but also means that a call to :meth:`polars.LazyFrame.collect`
             further down the line might fail because of the cast and/or missing columns.
         """
-        lf = df.lazy().select(
-            pl.col(name).cast(col.dtype) for name, col in cls.columns().items()
-        )
+        lf = match_to_schema(df.lazy(), cls, casting="strict")
         if isinstance(df, pl.DataFrame):
             return lf.collect()  # type: ignore
         return lf  # type: ignore
