@@ -816,13 +816,14 @@ class Schema(BaseSchema, ABC):
 
         def _cast_to_schema(
             lf: pl.LazyFrame, schema: dict[str, pl.DataType]
-        # NOTE: This function does almost the same thing as `match_to_schema`, except:
-        #
-        # 1. It raises a polars `polars.exceptionsColumnNotFoundError` on missing columns, 
-        #    while `match_to_schema` raises a `dataframely.exc.SchemaError`
-        # 2. The error is raised only at collection time, while `match_to_schema` raises immediately
-        #
-        # This behavior is needed to not break backward compatibility.
+        ) -> pl.LazyFrame:
+            # NOTE: This function does almost the same thing as `match_to_schema`, except:
+            #
+            # 1. It raises a polars `polars.exceptionsColumnNotFoundError` on missing columns,
+            #    while `match_to_schema` raises a `dataframely.exc.SchemaError`
+            # 2. The error is raised only at collection time, while `match_to_schema` raises immediately
+            #
+            # This behavior is needed to not break backward compatibility.
             return lf.select(cls.column_names()).cast(
                 {
                     name: col.dtype
