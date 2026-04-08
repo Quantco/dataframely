@@ -15,7 +15,7 @@ find it. For example, if you are using Claude Code:
 
 ```bash
 mkdir -p .claude/skills/dataframely/
-curl -o .claude/skills/dataframely/SKILL.md https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/SKILL.md
+curl -o .claude/skills/dataframely/SKILL.md https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/skills/SKILL.md
 ```
 
 or if you are using [skills.sh](https://skills.sh/) to manage your skills:
