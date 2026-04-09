@@ -6,7 +6,6 @@ from typing import Any
 import pytest
 
 import dataframely as dy
-from dataframely.columns._base import Check
 
 
 @pytest.mark.parametrize("column_type", [dy.Int64, dy.String, dy.Float32, dy.Decimal])
@@ -72,16 +71,23 @@ def test_no_nullable_primary_key(column_type: type[dy.Column]) -> None:
     ],
 )
 def test_with_properties(existing_col: dy.Column, properties: dict[str, Any]) -> None:
-    """It assigns the property to the new column but not the old column."""
+    original_state = {
+        key: getattr(existing_col, key) for key in existing_col.__dict__.keys()
+    }
+
     new_col = existing_col.with_properties(**properties)
 
-    assert all(getattr(new_col, key) == value for key, value in properties.items())
-    assert all(getattr(existing_col, key) != value for key, value in properties.items())
+    assert existing_col.__dict__ == original_state, "Original column was mutated"
+
+    assert all(getattr(new_col, key) == value for key, value in properties.items()), (
+        "New column did not receive new properties"
+    )
+
     assert all(
         getattr(existing_col, key) == getattr(new_col, key)
         for key in existing_col.__dict__.keys()
         if key not in properties
-    )
+    ), "Property was updated even though it should not have been"
 
 
 @pytest.mark.parametrize(
@@ -159,10 +165,9 @@ def test_with(
     col_type: type[dy.Column],
     col_kwargs: dict[str, Any],
     property: str,
-    original_value: str | dict[str, Any] | Check | bool,
-    new_value: str,
+    original_value: Any,
+    new_value: Any,
 ) -> None:
-    """It only updates the called property."""
     # Some column types don't support primary_key
     if property == "primary_key" and col_type in [dy.Any, dy.Array, dy.List, dy.Object]:
         pytest.xfail(f"{col_type.__name__} does not support primary_key")
@@ -171,8 +176,7 @@ def test_with(
     if property == "nullable" and col_type == dy.Any:
         pytest.xfail("Any does not support changing nullable")
 
-    col = col_type(**col_kwargs)
-    setattr(col, property, original_value)
+    col = col_type(**col_kwargs | {property: original_value})
 
     new_col = getattr(col, f"with_{property}")(new_value)
 

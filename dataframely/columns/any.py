@@ -54,6 +54,10 @@ class Any(Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
+        if not nullable:
+            raise NotImplementedError("The 'Any' type column must be nullable.")
+        if primary_key:
+            raise NotImplementedError("The 'Any' type column cannot be a primary key.")
         super().__init__(
             nullable=True,
             primary_key=False,
