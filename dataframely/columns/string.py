@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
 from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 
@@ -137,3 +137,35 @@ class String(Column):
             regex=regex,
             null_probability=self._null_probability,
         )
+
+    def _pydantic_field_inner(self) -> type[str] | None:
+        """Return pydantic field type for string column."""
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        # Build constraints
+        merged_kwargs = {}
+        if self.min_length is not None:
+            merged_kwargs["min_length"] = self.min_length
+        if self.max_length is not None:
+            merged_kwargs["max_length"] = self.max_length
+        if self.regex is not None:
+            # Pydantic uses 'pattern' for regex validation
+            merged_kwargs["pattern"] = self.regex
+
+        # Build the type annotation
+        base_type = str
+
+        if merged_kwargs:
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            from typing import Union
+
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore

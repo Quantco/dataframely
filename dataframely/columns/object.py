@@ -71,3 +71,12 @@ class Object(Column):
         raise NotImplementedError(
             "Random data sampling not implemented for 'Object' type."
         )
+
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Object column."""
+        from typing import Any as AnyType, Union
+
+        # Object columns can contain any Python object
+        if self.nullable:
+            return Union[AnyType, None]  # type: ignore
+        return AnyType

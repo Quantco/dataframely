@@ -8,7 +8,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -168,6 +168,57 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             null_probability=self._null_probability,
         )
         return ((samples * 10**self.scale).floor() / 10**self.scale).cast(self.dtype)
+
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Decimal column."""
+        import decimal
+        import warnings
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        # Warn about untranslated constraints
+        if self.precision is not None:
+            warnings.warn(
+                f"Decimal column '{self.name or self.__class__.__name__}' has a precision "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+        if self.scale != 0:
+            warnings.warn(
+                f"Decimal column '{self.name or self.__class__.__name__}' has a scale "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        # Build constraints
+        merged_kwargs = {}
+        if self.min is not None:
+            merged_kwargs["ge"] = self.min
+        if self.min_exclusive is not None:
+            merged_kwargs["gt"] = self.min_exclusive
+        if self.max is not None:
+            merged_kwargs["le"] = self.max
+        if self.max_exclusive is not None:
+            merged_kwargs["lt"] = self.max_exclusive
+
+        # Build the type annotation
+        base_type = decimal.Decimal
+
+        if merged_kwargs:
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            from typing import Union
+
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore
 
 
 # --------------------------------------- UTILS -------------------------------------- #

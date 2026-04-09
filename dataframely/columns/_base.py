@@ -222,6 +222,37 @@ class Column(ABC):
     def pyarrow_dtype(self) -> pa.DataType:
         """The :mod:`pyarrow` dtype equivalent of this column data type."""
 
+    # ----------------------------------- PYDANTIC ----------------------------------- #
+
+    def pydantic_field(self) -> Any:
+        """Obtain a pydantic field type for this column definition.
+
+        Returns:
+            A pydantic-compatible type annotation that includes structured constraints
+            (e.g., min, max, regex) but excludes custom checks.
+
+        Warning:
+            Custom checks defined via the `check` parameter are not included in the
+            returned pydantic field. A UserWarning is raised if custom checks are present.
+        """
+        import warnings
+
+        from dataframely._compat import pydantic
+
+        if self.check is not None:
+            warnings.warn(
+                f"Custom checks for column '{self.name or self.__class__.__name__}' "
+                "are not translated to pydantic constraints.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        return self._pydantic_field_inner()
+
+    @abstractmethod
+    def _pydantic_field_inner(self) -> Any:
+        """Subclasses implement this to return the actual pydantic field type."""
+
     # ------------------------------------ HELPER ------------------------------------ #
 
     @property

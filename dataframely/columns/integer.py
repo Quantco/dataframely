@@ -10,7 +10,7 @@ from typing import Any
 import polars as pl
 from polars.datatypes.group import INTEGER_DTYPES
 
-from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
+from dataframely._compat import pa, pydantic, sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -141,6 +141,61 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
             ),
             null_probability=self._null_probability,
         ).cast(self.dtype)
+
+    def _pydantic_field_inner(self) -> type[int] | None:
+        """Return pydantic field type for integer column."""
+        import warnings
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        # Build constraints list
+        constraints = []
+
+        if self.is_in is not None:
+            # Use Literal for enumerations
+            from typing import Literal
+
+            # Convert to tuple since Literal requires literal values
+            return Literal[tuple(self.is_in)]  # type: ignore
+
+        # Add range constraints
+        if self.min is not None:
+            constraints.append(pydantic.Field(ge=self.min))
+        if self.min_exclusive is not None:
+            constraints.append(pydantic.Field(gt=self.min_exclusive))
+        if self.max is not None:
+            constraints.append(pydantic.Field(le=self.max))
+        if self.max_exclusive is not None:
+            constraints.append(pydantic.Field(lt=self.max_exclusive))
+
+        # Build the type annotation
+        base_type = int
+
+        if constraints:
+            # Merge all Field constraints
+            merged_kwargs = {}
+            for constraint in constraints:
+                if hasattr(constraint, "ge") and constraint.ge is not None:
+                    merged_kwargs["ge"] = constraint.ge
+                if hasattr(constraint, "gt") and constraint.gt is not None:
+                    merged_kwargs["gt"] = constraint.gt
+                if hasattr(constraint, "le") and constraint.le is not None:
+                    merged_kwargs["le"] = constraint.le
+                if hasattr(constraint, "lt") and constraint.lt is not None:
+                    merged_kwargs["lt"] = constraint.lt
+
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            from typing import Union
+
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore
 
 
 # ------------------------------------------------------------------------------------ #

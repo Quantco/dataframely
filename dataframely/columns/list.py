@@ -177,6 +177,38 @@ class List(Column):
         data["inner"] = column_from_dict(data["inner"])
         return super().from_dict(data)
 
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for List column."""
+        from typing import Annotated, Union
+
+        from dataframely._compat import pydantic
+
+        # Get the inner type
+        inner_type = self.inner.pydantic_field()
+
+        # Build constraints
+        merged_kwargs = {}
+        if self.min_length is not None:
+            merged_kwargs["min_length"] = self.min_length
+        if self.max_length is not None:
+            merged_kwargs["max_length"] = self.max_length
+
+        # Build the type annotation
+        from typing import List as ListType
+
+        base_type = ListType[inner_type]  # type: ignore
+
+        if merged_kwargs:
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore
+
 
 def _list_primary_key_check(
     list_expr: ExprListNameSpace | ExprArrayNameSpace, inner: Column

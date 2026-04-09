@@ -1339,6 +1339,60 @@ class Schema(BaseSchema, ABC):
             [col.pyarrow_field(name) for name, col in cls.columns().items()]
         )
 
+    @classmethod
+    def to_pydantic_model(cls) -> type:
+        """Convert this schema to a pydantic model.
+
+        This method creates a pydantic model with fields corresponding to the columns
+        in this schema. Structured constraints (min, max, regex, etc.) are translated
+        to pydantic field constraints where possible. Custom checks and group rules
+        are not translated.
+
+        Returns:
+            A pydantic model class that can be used for data validation.
+
+        Warning:
+            Custom checks defined via the `check` parameter on columns are not
+            included in the pydantic model. A UserWarning is raised if custom checks
+            are present.
+
+        Warning:
+            Group rules defined on the schema are not translated to pydantic validators.
+            A UserWarning is raised if group rules are present.
+
+        Example:
+            >>> class MySchema(dy.Schema):
+            ...     x = dy.Integer(min=0, max=100)
+            ...     y = dy.String(regex=r"^[A-Z]+$")
+            ...
+            >>> Model = MySchema.to_pydantic_model()
+            >>> # Now you can use Model for validation, e.g., with LLM APIs
+        """
+        import warnings
+
+        from dataframely._compat import pydantic
+
+        # Check for group rules and warn if present
+        if cls._schema_validation_rules():
+            warnings.warn(
+                f"Schema '{cls.__name__}' has group rules that cannot be "
+                "translated to pydantic validators.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        # Build field definitions for the pydantic model
+        fields = {}
+        for col_name, col in cls.columns().items():
+            # Get the pydantic field type for this column
+            field_type = col.pydantic_field()
+            # All fields are required (use ... as default)
+            fields[col_name] = (field_type, ...)
+
+        # Create the pydantic model dynamically
+        model_name = f"{cls.__name__}PydanticModel"
+        return pydantic.create_model(model_name, **fields)  # type: ignore
+
     # ----------------------------------- EQUALITY ----------------------------------- #
 
     @classmethod

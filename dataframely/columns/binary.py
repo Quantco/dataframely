@@ -38,3 +38,11 @@ class Binary(Column):
             max_bytes=32,
             null_probability=self._null_probability,
         )
+
+    def _pydantic_field_inner(self) -> type[bytes] | None:
+        """Return pydantic field type for binary column."""
+        if self.nullable:
+            from typing import Union
+
+            return Union[bytes, None]  # type: ignore
+        return bytes

@@ -10,7 +10,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -101,3 +101,20 @@ class Enum(Column):
             choices=self.categories,
             null_probability=self._null_probability,
         ).cast(self.dtype)
+
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Enum column."""
+        from typing import Literal, Union
+
+        # Use Literal for enum categories
+        if len(self.categories) == 0:
+            # Empty enum, use str as fallback
+            base_type = str
+        else:
+            base_type = Literal[tuple(self.categories)]  # type: ignore
+
+        # Handle nullability
+        if self.nullable:
+            return Union[base_type, None]  # type: ignore
+
+        return base_type  # type: ignore

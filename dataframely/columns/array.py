@@ -148,3 +148,29 @@ class Array(Column):
     def from_dict(cls, data: dict[str, Any]) -> Self:
         data["inner"] = column_from_dict(data["inner"])
         return super().from_dict(data)
+
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Array column."""
+        import warnings
+        from typing import Union
+
+        warnings.warn(
+            f"Array column '{self.name or self.__class__.__name__}' cannot be fully "
+            "translated to pydantic. Using list as the base type.",
+            UserWarning,
+            stacklevel=3,
+        )
+
+        # Get the inner type
+        inner_type = self.inner.pydantic_field()
+
+        # Build the type annotation - use list for arrays
+        from typing import List as ListType
+
+        base_type = ListType[inner_type]  # type: ignore
+
+        # Handle nullability
+        if self.nullable:
+            return Union[base_type, None]  # type: ignore
+
+        return base_type  # type: ignore

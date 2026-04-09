@@ -149,6 +149,50 @@ class Date(OrdinalMixin[dt.date], Column):
             null_probability=self._null_probability,
         )
 
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Date column."""
+        import datetime as dt
+        import warnings
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        # Warn about untranslated constraints
+        if self.resolution is not None:
+            warnings.warn(
+                f"Date column '{self.name or self.__class__.__name__}' has a resolution "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        # Build constraints
+        merged_kwargs = {}
+        if self.min is not None:
+            merged_kwargs["ge"] = self.min
+        if self.min_exclusive is not None:
+            merged_kwargs["gt"] = self.min_exclusive
+        if self.max is not None:
+            merged_kwargs["le"] = self.max
+        if self.max_exclusive is not None:
+            merged_kwargs["lt"] = self.max_exclusive
+
+        # Build the type annotation
+        base_type = dt.date
+
+        if merged_kwargs:
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            from typing import Union
+
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore
+
 
 @register
 class Time(OrdinalMixin[dt.time], Column):
@@ -277,6 +321,50 @@ class Time(OrdinalMixin[dt.time], Column):
             resolution=self.resolution,
             null_probability=self._null_probability,
         )
+
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Time column."""
+        import datetime as dt
+        import warnings
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        # Warn about untranslated constraints
+        if self.resolution is not None:
+            warnings.warn(
+                f"Time column '{self.name or self.__class__.__name__}' has a resolution "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        # Build constraints
+        merged_kwargs = {}
+        if self.min is not None:
+            merged_kwargs["ge"] = self.min
+        if self.min_exclusive is not None:
+            merged_kwargs["gt"] = self.min_exclusive
+        if self.max is not None:
+            merged_kwargs["le"] = self.max
+        if self.max_exclusive is not None:
+            merged_kwargs["lt"] = self.max_exclusive
+
+        # Build the type annotation
+        base_type = dt.time
+
+        if merged_kwargs:
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            from typing import Union
+
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore
 
 
 @register
@@ -425,6 +513,64 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             return lhs.utcoffset(now) == rhs.utcoffset(now)
         return super()._attributes_match(lhs, rhs, name, column_expr)
 
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Datetime column."""
+        import datetime as dt
+        import warnings
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        # Warn about untranslated constraints
+        if self.resolution is not None:
+            warnings.warn(
+                f"Datetime column '{self.name or self.__class__.__name__}' has a resolution "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+        if self.time_zone is not None:
+            warnings.warn(
+                f"Datetime column '{self.name or self.__class__.__name__}' has a time_zone "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+        if self.time_unit != "us":
+            warnings.warn(
+                f"Datetime column '{self.name or self.__class__.__name__}' has a time_unit "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        # Build constraints
+        merged_kwargs = {}
+        if self.min is not None:
+            merged_kwargs["ge"] = self.min
+        if self.min_exclusive is not None:
+            merged_kwargs["gt"] = self.min_exclusive
+        if self.max is not None:
+            merged_kwargs["le"] = self.max
+        if self.max_exclusive is not None:
+            merged_kwargs["lt"] = self.max_exclusive
+
+        # Build the type annotation
+        base_type = dt.datetime
+
+        if merged_kwargs:
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            from typing import Union
+
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore
+
 
 @register
 class Duration(OrdinalMixin[dt.timedelta], Column):
@@ -549,6 +695,57 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
             time_unit=self.time_unit,
             null_probability=self._null_probability,
         )
+
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Duration column."""
+        import datetime as dt
+        import warnings
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        # Warn about untranslated constraints
+        if self.resolution is not None:
+            warnings.warn(
+                f"Duration column '{self.name or self.__class__.__name__}' has a resolution "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+        if self.time_unit != "us":
+            warnings.warn(
+                f"Duration column '{self.name or self.__class__.__name__}' has a time_unit "
+                "constraint that cannot be translated to pydantic.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        # Build constraints
+        merged_kwargs = {}
+        if self.min is not None:
+            merged_kwargs["ge"] = self.min
+        if self.min_exclusive is not None:
+            merged_kwargs["gt"] = self.min_exclusive
+        if self.max is not None:
+            merged_kwargs["le"] = self.max
+        if self.max_exclusive is not None:
+            merged_kwargs["lt"] = self.max_exclusive
+
+        # Build the type annotation
+        base_type = dt.timedelta
+
+        if merged_kwargs:
+            annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]
+        else:
+            annotated_type = base_type
+
+        # Handle nullability
+        if self.nullable:
+            from typing import Union
+
+            return Union[annotated_type, None]  # type: ignore
+
+        return annotated_type  # type: ignore
 
 
 # --------------------------------------- UTILS -------------------------------------- #

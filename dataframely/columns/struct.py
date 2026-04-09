@@ -156,3 +156,26 @@ class Struct(Column):
             name: column_from_dict(col) for name, col in data["inner"].items()
         }
         return super().from_dict(data)
+
+    def _pydantic_field_inner(self) -> type:
+        """Return pydantic field type for Struct column."""
+        from typing import Union
+
+        from dataframely._compat import pydantic
+
+        # Build a pydantic model for the struct
+        fields = {}
+        for field_name, col in self.inner.items():
+            field_type = col.pydantic_field()
+            fields[field_name] = (field_type, ...)
+
+        # Create a dynamic pydantic model
+        model = pydantic.create_model(
+            f"{self.name or 'Struct'}Model", **fields  # type: ignore
+        )
+
+        # Handle nullability
+        if self.nullable:
+            return Union[model, None]  # type: ignore
+
+        return model  # type: ignore

@@ -76,3 +76,12 @@ class Categorical(Column):
         return generator.sample_string(
             n, regex=r"[a-z]{1,2}", null_probability=self._null_probability
         ).cast(self.dtype)
+
+    def _pydantic_field_inner(self) -> type[str] | None:
+        """Return pydantic field type for categorical column."""
+        # Categorical is essentially a string type
+        if self.nullable:
+            from typing import Union
+
+            return Union[str, None]  # type: ignore
+        return str
