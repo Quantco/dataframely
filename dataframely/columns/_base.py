@@ -235,20 +235,18 @@ class Column(ABC):
         return pl.col(self.name)
 
     def with_properties(self, **kwargs: Any) -> Self:
-        """Return a new column definition with updated public properties.
+        """Copy the current column definition while updating the provided properties.
 
-        Creates a copy of this column with the specified properties updated.
         All other properties from the original column are preserved.
 
         Args:
-            **kwargs: Properties to update on the new column instance.
-
+            **kwargs: Properties to update on the new column instance. The set of allowed properties depends on the type of the column.
         Returns:
             A new column instance with updated properties.
         """
         new_kwargs = {
-            k: v for k, v in self.__dict__.items() if not k.startswith("_")
-        } | kwargs  # keep private attributes private
+            k: getattr(self, k) for k in inspect.signature(self.__class__).parameters
+        } | kwargs
         return self.__class__(**new_kwargs)
 
     def with_nullable(self, nullable: bool) -> Self:

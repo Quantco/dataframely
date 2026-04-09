@@ -25,18 +25,12 @@ class Any(Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
-        primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         """
         Args:
-            nullable: Whether this column may contain null values.
-                Always `True` for the Any type.
-            primary_key: Whether this column is part of the primary key of the schema.
-                Always `False` for the Any type.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -54,10 +48,6 @@ class Any(Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
-        if not nullable:
-            raise NotImplementedError("The 'Any' type column must be nullable.")
-        if primary_key:
-            raise NotImplementedError("The 'Any' type column cannot be a primary key.")
         super().__init__(
             nullable=True,
             primary_key=False,
