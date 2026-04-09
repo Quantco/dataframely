@@ -237,8 +237,6 @@ class Column(ABC):
         """
         import warnings
 
-        from dataframely._compat import pydantic
-
         if self.check is not None:
             warnings.warn(
                 f"Custom checks for column '{self.name or self.__class__.__name__}' "

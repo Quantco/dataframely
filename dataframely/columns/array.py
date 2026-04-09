@@ -165,9 +165,8 @@ class Array(Column):
         inner_type = self.inner.pydantic_field()
 
         # Build the type annotation - use list for arrays
-        from typing import List as ListType
 
-        base_type = ListType[inner_type]  # type: ignore
+        base_type = list[inner_type]  # type: ignore
 
         # Handle nullability
         if self.nullable:

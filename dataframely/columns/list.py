@@ -194,9 +194,8 @@ class List(Column):
             merged_kwargs["max_length"] = self.max_length
 
         # Build the type annotation
-        from typing import List as ListType
 
-        base_type = ListType[inner_type]  # type: ignore
+        base_type = list[inner_type]  # type: ignore
 
         if merged_kwargs:
             annotated_type = Annotated[base_type, pydantic.Field(**merged_kwargs)]

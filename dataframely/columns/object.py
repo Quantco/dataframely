@@ -74,7 +74,8 @@ class Object(Column):
 
     def _pydantic_field_inner(self) -> type:
         """Return pydantic field type for Object column."""
-        from typing import Any as AnyType, Union
+        from typing import Any as AnyType
+        from typing import Union
 
         # Object columns can contain any Python object
         if self.nullable:

@@ -175,8 +175,6 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         import warnings
         from typing import Annotated
 
-        from dataframely._compat import pydantic
-
         # Warn about untranslated constraints
         if self.precision is not None:
             warnings.warn(

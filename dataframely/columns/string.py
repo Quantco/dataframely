@@ -142,8 +142,6 @@ class String(Column):
         """Return pydantic field type for string column."""
         from typing import Annotated
 
-        from dataframely._compat import pydantic
-
         # Build constraints
         merged_kwargs = {}
         if self.min_length is not None:

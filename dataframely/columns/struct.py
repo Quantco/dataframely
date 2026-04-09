@@ -171,7 +171,8 @@ class Struct(Column):
 
         # Create a dynamic pydantic model
         model = pydantic.create_model(
-            f"{self.name or 'Struct'}Model", **fields  # type: ignore
+            f"{self.name or 'Struct'}Model",
+            **fields,  # type: ignore
         )
 
         # Handle nullability
