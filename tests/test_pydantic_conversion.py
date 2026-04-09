@@ -1,6 +1,5 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-
 """Tests for pydantic conversion functionality."""
 
 import datetime as dt
@@ -354,7 +353,10 @@ def test_schema_with_list_of_ints() -> None:
 def test_decimal_column_pydantic_field() -> None:
     # Arrange
     column = dy.Decimal(
-        precision=10, scale=2, min=decimal.Decimal("0.00"), max=decimal.Decimal("100.00")
+        precision=10,
+        scale=2,
+        min=decimal.Decimal("0.00"),
+        max=decimal.Decimal("100.00"),
     )
     column._name = "test_col"
 
@@ -388,5 +390,5 @@ def test_schema_with_group_rules_raises_warning() -> None:
             return (lf.select("x") + lf.select("y") > 0).to_series()
 
     # Act & Assert
-    with pytest.warns(UserWarning, match="group rules that cannot be translated"):
+    with pytest.warns(UserWarning, match="group rules.*not currently translated"):
         SchemaWithRules.to_pydantic_model()

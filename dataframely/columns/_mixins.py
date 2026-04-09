@@ -80,6 +80,38 @@ class OrdinalMixin(Generic[T], Base):
             result["max_exclusive"] = expr < self.max_exclusive  # type: ignore
         return result
 
+    def _add_ordinal_constraints_to_pydantic_field(
+        self, base_type: Any
+    ) -> tuple[Any, dict[str, Any]]:
+        """Helper method to add ordinal constraints to a pydantic field.
+
+        Returns:
+            A tuple of (annotated_type_or_base_type, constraint_kwargs).
+            If there are constraints, the first element is an Annotated type,
+            otherwise it's the base_type unchanged.
+        """
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
+
+        constraint_kwargs = {}
+        if self.min is not None:
+            constraint_kwargs["ge"] = self.min
+        if self.min_exclusive is not None:
+            constraint_kwargs["gt"] = self.min_exclusive
+        if self.max is not None:
+            constraint_kwargs["le"] = self.max
+        if self.max_exclusive is not None:
+            constraint_kwargs["lt"] = self.max_exclusive
+
+        if constraint_kwargs:
+            return (
+                Annotated[base_type, pydantic.Field(**constraint_kwargs)],  # type: ignore[call-overload]
+                constraint_kwargs,
+            )
+
+        return base_type, constraint_kwargs
+
 
 # ------------------------------------ IS IN MIXIN ----------------------------------- #
 

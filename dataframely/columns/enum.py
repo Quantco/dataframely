@@ -104,17 +104,11 @@ class Enum(Column):
 
     def _pydantic_field_inner(self) -> type:
         """Return pydantic field type for Enum column."""
-        from typing import Literal, Union
+        from typing import Literal
 
-        # Use Literal for enum categories
         if len(self.categories) == 0:
-            # Empty enum, use str as fallback
             base_type = str
         else:
             base_type = Literal[tuple(self.categories)]  # type: ignore
 
-        # Handle nullability
-        if self.nullable:
-            return Union[base_type, None]  # type: ignore
-
-        return base_type  # type: ignore
+        return self._make_nullable_type(base_type)

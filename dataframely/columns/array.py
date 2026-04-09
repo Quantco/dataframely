@@ -152,24 +152,13 @@ class Array(Column):
     def _pydantic_field_inner(self) -> type:
         """Return pydantic field type for Array column."""
         import warnings
-        from typing import Union
 
         warnings.warn(
             f"Array column '{self.name or self.__class__.__name__}' cannot be fully "
-            "translated to pydantic. Using list as the base type.",
-            UserWarning,
-            stacklevel=3,
+            "translated to pydantic. Using list as the base type."
         )
 
-        # Get the inner type
         inner_type = self.inner.pydantic_field()
-
-        # Build the type annotation - use list for arrays
-
         base_type = list[inner_type]  # type: ignore
 
-        # Handle nullability
-        if self.nullable:
-            return Union[base_type, None]  # type: ignore
-
-        return base_type  # type: ignore
+        return self._make_nullable_type(base_type)

@@ -16,7 +16,7 @@ import polars as pl
 import polars.exceptions as plexc
 from polars._typing import FileSource
 
-from dataframely._compat import deltalake
+from dataframely._compat import deltalake, pydantic
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import PartitionSchemeOrSinkDirectory, pa, sa
@@ -1368,17 +1368,11 @@ class Schema(BaseSchema, ABC):
             >>> Model = MySchema.to_pydantic_model()
             >>> # Now you can use Model for validation, e.g., with LLM APIs
         """
-        import warnings
-
-        from dataframely._compat import pydantic
-
         # Check for group rules and warn if present
         if cls._schema_validation_rules():
             warnings.warn(
-                f"Schema '{cls.__name__}' has group rules that cannot be "
-                "translated to pydantic validators.",
-                UserWarning,
-                stacklevel=2,
+                f"Schema '{cls.__name__}' has group rules. These are not currently "
+                "translated to pydantic validators."
             )
 
         # Build field definitions for the pydantic model
@@ -1390,7 +1384,7 @@ class Schema(BaseSchema, ABC):
             fields[col_name] = (field_type, ...)
 
         # Create the pydantic model dynamically
-        model_name = f"{cls.__name__}PydanticModel"
+        model_name = f"{cls.__name__.removesuffix('Schema')}Model"
         return pydantic.create_model(model_name, **fields)  # type: ignore
 
     # ----------------------------------- EQUALITY ----------------------------------- #

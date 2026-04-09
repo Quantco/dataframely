@@ -79,9 +79,4 @@ class Categorical(Column):
 
     def _pydantic_field_inner(self) -> type[str] | None:
         """Return pydantic field type for categorical column."""
-        # Categorical is essentially a string type
-        if self.nullable:
-            from typing import Union
-
-            return Union[str, None]  # type: ignore
-        return str
+        return self._make_nullable_type(str)

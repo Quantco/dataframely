@@ -32,8 +32,4 @@ class Bool(Column):
 
     def _pydantic_field_inner(self) -> type[bool] | None:
         """Return pydantic field type for bool column."""
-        if self.nullable:
-            from typing import Union
-
-            return Union[bool, None]  # type: ignore
-        return bool
+        return self._make_nullable_type(bool)

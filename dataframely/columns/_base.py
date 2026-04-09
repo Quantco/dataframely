@@ -240,9 +240,7 @@ class Column(ABC):
         if self.check is not None:
             warnings.warn(
                 f"Custom checks for column '{self.name or self.__class__.__name__}' "
-                "are not translated to pydantic constraints.",
-                UserWarning,
-                stacklevel=2,
+                "are not translated to pydantic constraints."
             )
 
         return self._pydantic_field_inner()
@@ -250,6 +248,12 @@ class Column(ABC):
     @abstractmethod
     def _pydantic_field_inner(self) -> Any:
         """Subclasses implement this to return the actual pydantic field type."""
+
+    def _make_nullable_type(self, base_type: Any) -> Any:
+        """Helper to make a type nullable if needed."""
+        if self.nullable:
+            return base_type | None
+        return base_type
 
     # ------------------------------------ HELPER ------------------------------------ #
 

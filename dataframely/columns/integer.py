@@ -144,14 +144,11 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
 
     def _pydantic_field_inner(self) -> type[int] | None:
         """Return pydantic field type for integer column."""
-        from typing import Annotated, Literal, Union
+        from typing import Annotated, Literal
 
-        # Build constraints
         if self.is_in is not None:
-            # Use Literal for enumerations
-            base_type = Literal[tuple(self.is_in)]  # type: ignore
+            base_type: Any = Literal[tuple(self.is_in)]  # type: ignore
         else:
-            # Build range constraints in a single Field
             field_kwargs = {}
             if self.min is not None:
                 field_kwargs["ge"] = self.min
@@ -163,15 +160,11 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
                 field_kwargs["lt"] = self.max_exclusive
 
             if field_kwargs:
-                base_type = Annotated[int, pydantic.Field(**field_kwargs)]  # type: ignore
+                base_type = Annotated[int, pydantic.Field(**field_kwargs)]  # type: ignore[call-overload]
             else:
                 base_type = int
 
-        # Handle nullability
-        if self.nullable:
-            return Union[base_type, None]  # type: ignore
-
-        return base_type  # type: ignore
+        return self._make_nullable_type(base_type)
 
 
 # ------------------------------------------------------------------------------------ #
