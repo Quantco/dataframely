@@ -149,8 +149,8 @@ class Array(Column):
         data["inner"] = column_from_dict(data["inner"])
         return super().from_dict(data)
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Array column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Array column."""
         import warnings
 
         warnings.warn(
@@ -159,6 +159,4 @@ class Array(Column):
         )
 
         inner_type = self.inner.pydantic_field()
-        base_type = list[inner_type]  # type: ignore
-
-        return self._make_nullable_type(base_type)
+        return list[inner_type]  # type: ignore

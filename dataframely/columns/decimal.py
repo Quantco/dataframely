@@ -169,8 +169,8 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         )
         return ((samples * 10**self.scale).floor() / 10**self.scale).cast(self.dtype)
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Decimal column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Decimal column."""
         import decimal
         import warnings
 
@@ -180,13 +180,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             "constraints that cannot be translated to pydantic."
         )
 
-        # Build the type annotation using mixin helper
-        annotated_type, _ = self._add_ordinal_constraints_to_pydantic_field(
-            decimal.Decimal
-        )
-
-        # Handle nullability
-        return self._make_nullable_type(annotated_type)
+        return decimal.Decimal
 
 
 # --------------------------------------- UTILS -------------------------------------- #

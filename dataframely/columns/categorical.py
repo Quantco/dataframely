@@ -77,6 +77,6 @@ class Categorical(Column):
             n, regex=r"[a-z]{1,2}", null_probability=self._null_probability
         ).cast(self.dtype)
 
-    def _pydantic_field_inner(self) -> type[str] | None:
-        """Return pydantic field type for categorical column."""
-        return self._make_nullable_type(str)
+    def _python_type(self) -> type:
+        """Return the base Python type for categorical column."""
+        return str

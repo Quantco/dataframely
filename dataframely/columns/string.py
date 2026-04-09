@@ -138,21 +138,19 @@ class String(Column):
             null_probability=self._null_probability,
         )
 
-    def _pydantic_field_inner(self) -> type[str] | None:
-        """Return pydantic field type for string column."""
-        from typing import Annotated
+    def _python_type(self) -> type:
+        """Return the base Python type for string column."""
+        return str
 
-        merged_kwargs = {}
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        """Return pydantic field kwargs for string constraints."""
+        kwargs = super()._pydantic_field_kwargs()
+
         if self.min_length is not None:
-            merged_kwargs["min_length"] = self.min_length
+            kwargs["min_length"] = self.min_length
         if self.max_length is not None:
-            merged_kwargs["max_length"] = self.max_length
+            kwargs["max_length"] = self.max_length
         if self.regex is not None:
-            merged_kwargs["pattern"] = self.regex
+            kwargs["pattern"] = self.regex
 
-        if merged_kwargs:
-            annotated_type: Any = Annotated[str, pydantic.Field(**merged_kwargs)]  # type: ignore[call-overload, misc]
-        else:
-            annotated_type = str
-
-        return self._make_nullable_type(annotated_type)
+        return kwargs

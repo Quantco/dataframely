@@ -236,6 +236,9 @@ class Column(ABC):
             returned pydantic field. A UserWarning is raised if custom checks are present.
         """
         import warnings
+        from typing import Annotated
+
+        from dataframely._compat import pydantic
 
         if self.check is not None:
             warnings.warn(
@@ -243,17 +246,41 @@ class Column(ABC):
                 "are not translated to pydantic constraints."
             )
 
-        return self._pydantic_field_inner()
+        # Get the base Python type
+        python_type = self._python_type()
+
+        # Apply nullability to the type
+        if self.nullable:
+            python_type = python_type | None
+
+        # Get pydantic field kwargs
+        field_kwargs = self._pydantic_field_kwargs()
+
+        # Construct the annotated type if there are constraints
+        if field_kwargs:
+            return Annotated[python_type, pydantic.Field(**field_kwargs)]  # type: ignore[call-overload]
+
+        return python_type
 
     @abstractmethod
-    def _pydantic_field_inner(self) -> Any:
-        """Subclasses implement this to return the actual pydantic field type."""
+    def _python_type(self) -> type:
+        """Return the base Python type for this column.
 
-    def _make_nullable_type(self, base_type: Any) -> Any:
-        """Helper to make a type nullable if needed."""
-        if self.nullable:
-            return base_type | None
-        return base_type
+        Subclasses must implement this to return the appropriate Python type
+        (e.g., int, str, float, etc.) without any pydantic constraints or nullability.
+        """
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        """Return kwargs for pydantic.Field initialization.
+
+        This method should be extended by subclasses and mixins to add their
+        specific constraints. Subclasses should call super() and extend the
+        returned dictionary.
+
+        Returns:
+            A dictionary of kwargs to pass to pydantic.Field.
+        """
+        return {}
 
     # ------------------------------------ HELPER ------------------------------------ #
 

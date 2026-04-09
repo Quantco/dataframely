@@ -30,6 +30,6 @@ class Bool(Column):
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_bool(n, null_probability=self._null_probability)
 
-    def _pydantic_field_inner(self) -> type[bool] | None:
-        """Return pydantic field type for bool column."""
-        return self._make_nullable_type(bool)
+    def _python_type(self) -> type:
+        """Return the base Python type for bool column."""
+        return bool

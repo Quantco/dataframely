@@ -157,8 +157,8 @@ class Struct(Column):
         }
         return super().from_dict(data)
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Struct column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Struct column."""
         from dataframely._compat import pydantic
 
         fields = {}
@@ -171,4 +171,4 @@ class Struct(Column):
             **fields,  # type: ignore
         )
 
-        return self._make_nullable_type(model)
+        return model

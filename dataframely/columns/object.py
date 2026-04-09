@@ -72,8 +72,8 @@ class Object(Column):
             "Random data sampling not implemented for 'Object' type."
         )
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Object column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Object column."""
         from typing import Any as AnyType
 
-        return self._make_nullable_type(AnyType)
+        return AnyType

@@ -142,29 +142,13 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
             null_probability=self._null_probability,
         ).cast(self.dtype)
 
-    def _pydantic_field_inner(self) -> type[int] | None:
-        """Return pydantic field type for integer column."""
-        from typing import Annotated, Literal
+    def _python_type(self) -> type:
+        """Return the base Python type for integer column."""
+        from typing import Literal
 
         if self.is_in is not None:
-            base_type: Any = Literal[tuple(self.is_in)]  # type: ignore
-        else:
-            field_kwargs = {}
-            if self.min is not None:
-                field_kwargs["ge"] = self.min
-            if self.min_exclusive is not None:
-                field_kwargs["gt"] = self.min_exclusive
-            if self.max is not None:
-                field_kwargs["le"] = self.max
-            if self.max_exclusive is not None:
-                field_kwargs["lt"] = self.max_exclusive
-
-            if field_kwargs:
-                base_type = Annotated[int, pydantic.Field(**field_kwargs)]  # type: ignore[call-overload]
-            else:
-                base_type = int
-
-        return self._make_nullable_type(base_type)
+            return Literal[tuple(self.is_in)]  # type: ignore
+        return int
 
 
 # ------------------------------------------------------------------------------------ #

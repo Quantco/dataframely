@@ -149,8 +149,8 @@ class Date(OrdinalMixin[dt.date], Column):
             null_probability=self._null_probability,
         )
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Date column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Date column."""
         import datetime as dt
         import warnings
 
@@ -161,11 +161,7 @@ class Date(OrdinalMixin[dt.date], Column):
                 "constraint that cannot be translated to pydantic."
             )
 
-        # Build the type annotation using mixin helper
-        annotated_type, _ = self._add_ordinal_constraints_to_pydantic_field(dt.date)
-
-        # Handle nullability
-        return self._make_nullable_type(annotated_type)
+        return dt.date
 
 
 @register
@@ -296,8 +292,8 @@ class Time(OrdinalMixin[dt.time], Column):
             null_probability=self._null_probability,
         )
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Time column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Time column."""
         import datetime as dt
         import warnings
 
@@ -308,11 +304,7 @@ class Time(OrdinalMixin[dt.time], Column):
                 "constraint that cannot be translated to pydantic."
             )
 
-        # Build the type annotation using mixin helper
-        annotated_type, _ = self._add_ordinal_constraints_to_pydantic_field(dt.time)
-
-        # Handle nullability
-        return self._make_nullable_type(annotated_type)
+        return dt.time
 
 
 @register
@@ -461,8 +453,8 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             return lhs.utcoffset(now) == rhs.utcoffset(now)
         return super()._attributes_match(lhs, rhs, name, column_expr)
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Datetime column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Datetime column."""
         import datetime as dt
         import warnings
 
@@ -483,11 +475,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 "constraint that cannot be translated to pydantic."
             )
 
-        # Build the type annotation using mixin helper
-        annotated_type, _ = self._add_ordinal_constraints_to_pydantic_field(dt.datetime)
-
-        # Handle nullability
-        return self._make_nullable_type(annotated_type)
+        return dt.datetime
 
 
 @register
@@ -614,8 +602,8 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
             null_probability=self._null_probability,
         )
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Duration column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Duration column."""
         import datetime as dt
         import warnings
 
@@ -631,13 +619,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 "constraint that cannot be translated to pydantic."
             )
 
-        # Build the type annotation using mixin helper
-        annotated_type, _ = self._add_ordinal_constraints_to_pydantic_field(
-            dt.timedelta
-        )
-
-        # Handle nullability
-        return self._make_nullable_type(annotated_type)
+        return dt.timedelta
 
 
 # --------------------------------------- UTILS -------------------------------------- #

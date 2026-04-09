@@ -102,13 +102,10 @@ class Enum(Column):
             null_probability=self._null_probability,
         ).cast(self.dtype)
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Enum column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Enum column."""
         from typing import Literal
 
         if len(self.categories) == 0:
-            base_type = str
-        else:
-            base_type = Literal[tuple(self.categories)]  # type: ignore
-
-        return self._make_nullable_type(base_type)
+            return str
+        return Literal[tuple(self.categories)]  # type: ignore

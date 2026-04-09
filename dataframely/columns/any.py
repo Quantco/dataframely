@@ -80,8 +80,8 @@ class Any(Column):
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return pl.repeat(None, n, dtype=pl.Null, eager=True)
 
-    def _pydantic_field_inner(self) -> type:
-        """Return pydantic field type for Any column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for Any column."""
         from typing import Any as AnyType
 
         # Any columns are always nullable

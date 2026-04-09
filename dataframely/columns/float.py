@@ -142,8 +142,8 @@ class _BaseFloat(OrdinalMixin[float], Column):
             inf_probability=self._inf_probability,
         ).cast(self.dtype)
 
-    def _pydantic_field_inner(self) -> type[float] | None:
-        """Return pydantic field type for float column."""
+    def _python_type(self) -> type:
+        """Return the base Python type for float column."""
         import warnings
 
         # Warn about untranslated constraints
@@ -164,11 +164,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
                     "NaN values, but this constraint cannot be translated to pydantic."
                 )
 
-        # Build the type annotation using mixin helper
-        annotated_type, _ = self._add_ordinal_constraints_to_pydantic_field(float)
-
-        # Handle nullability
-        return self._make_nullable_type(annotated_type)
+        return float
 
 
 # ------------------------------------------------------------------------------------ #

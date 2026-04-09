@@ -39,6 +39,6 @@ class Binary(Column):
             null_probability=self._null_probability,
         )
 
-    def _pydantic_field_inner(self) -> type[bytes] | None:
-        """Return pydantic field type for binary column."""
-        return self._make_nullable_type(bytes)
+    def _python_type(self) -> type:
+        """Return the base Python type for binary column."""
+        return bytes
