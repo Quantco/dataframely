@@ -234,6 +234,77 @@ class Column(ABC):
         """Obtain a Polars column expression for the column."""
         return pl.col(self.name)
 
+    def with_properties(self, **kwargs: Any) -> Self:
+        """Copy the current column definition while updating the provided properties.
+
+        All other properties from the original column are preserved.
+
+        Args:
+            **kwargs: Properties to update on the new column instance. The set of allowed properties depends on the type of the column.
+
+        Returns:
+            A new column instance with updated properties.
+        """
+        new_kwargs = {
+            k: getattr(self, k) for k in inspect.signature(self.__class__).parameters
+        } | kwargs
+        return self.__class__(**new_kwargs)
+
+    def with_nullable(self, nullable: bool) -> Self:
+        """Return a new column definition with specified nullability.
+
+        Args:
+            nullable: Whether the new column may contain null values.
+
+        Returns:
+            A new column instance with updated nullability.
+        """
+        return self.with_properties(nullable=nullable)
+
+    def with_alias(self, alias: str) -> Self:
+        """Return a new column definition with a specified alias.
+
+        Args:
+            alias: The alias to use for the column name.
+
+        Returns:
+            A new column instance with the specified alias.
+        """
+        return self.with_properties(alias=alias)
+
+    def with_check(self, check: Check) -> Self:
+        """Return a new column definition with a specified check.
+
+        Args:
+            check: A custom validation rule or rules for the column.
+
+        Returns:
+            A new column instance with the specified check.
+        """
+        return self.with_properties(check=check)
+
+    def with_primary_key(self, primary_key: bool) -> Self:
+        """Return a new column definition with a specified primary key status.
+
+        Args:
+            primary_key: Whether the column should be part of the primary key.
+
+        Returns:
+            A new column instance with updated primary key status.
+        """
+        return self.with_properties(primary_key=primary_key)
+
+    def with_metadata(self, metadata: dict[str, Any]) -> Self:
+        """Return a new column definition with specified metadata.
+
+        Args:
+            metadata: A dictionary of metadata to attach to the column.
+
+        Returns:
+            A new column instance with the specified metadata.
+        """
+        return self.with_properties(metadata=metadata)
+
     # ----------------------------------- SAMPLING ----------------------------------- #
 
     def sample(self, generator: Generator, n: int = 1) -> pl.Series:
