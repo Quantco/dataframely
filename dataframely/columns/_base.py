@@ -241,6 +241,7 @@ class Column(ABC):
 
         Args:
             **kwargs: Properties to update on the new column instance. The set of allowed properties depends on the type of the column.
+
         Returns:
             A new column instance with updated properties.
         """
