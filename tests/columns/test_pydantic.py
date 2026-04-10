@@ -131,6 +131,17 @@ def test_datetime_timezone_warning() -> None:
         col.pydantic_field()
 
 
+# --------------------------------------- TIME --------------------------------------- #
+
+
+def test_time_resolution_warning() -> None:
+    col = dy.Time(resolution="1h")
+    with pytest.warns(
+        match="Time column.*has a resolution constraint that cannot be translated"
+    ):
+        col.pydantic_field()
+
+
 # -------------------------------------- DECIMAL ------------------------------------- #
 
 
@@ -149,6 +160,17 @@ def test_decimal_min_max() -> None:
         model(val=decimal.Decimal("-1"))
     with pytest.raises(pydantic.ValidationError):
         model(val=decimal.Decimal("101"))
+
+
+# ------------------------------------- DURATION ------------------------------------- #
+
+
+def test_duration_resolution_warning() -> None:
+    col = dy.Duration(resolution="1h")
+    with pytest.warns(
+        match="Duration resolution is not translated to a pydantic constraint"
+    ):
+        col.pydantic_field()
 
 
 # --------------------------------------- FLOAT -------------------------------------- #
