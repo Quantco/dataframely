@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
+from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 
@@ -112,6 +112,19 @@ class String(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.large_string()
 
+    def _python_type(self) -> Any:
+        return str
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        kwargs = super()._pydantic_field_kwargs()
+        if self.min_length is not None:
+            kwargs["min_length"] = self.min_length
+        if self.max_length is not None:
+            kwargs["max_length"] = self.max_length
+        if self.regex is not None:
+            kwargs["pattern"] = self.regex
+        return kwargs
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         if (
             self.min_length is not None or self.max_length is not None
@@ -137,20 +150,3 @@ class String(Column):
             regex=regex,
             null_probability=self._null_probability,
         )
-
-    def _python_type(self) -> type:
-        """Return the base Python type for string column."""
-        return str
-
-    def _pydantic_field_kwargs(self) -> dict[str, Any]:
-        """Return pydantic field kwargs for string constraints."""
-        kwargs = super()._pydantic_field_kwargs()
-
-        if self.min_length is not None:
-            kwargs["min_length"] = self.min_length
-        if self.max_length is not None:
-            kwargs["max_length"] = self.max_length
-        if self.regex is not None:
-            kwargs["pattern"] = self.regex
-
-        return kwargs

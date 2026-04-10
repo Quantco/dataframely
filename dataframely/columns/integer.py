@@ -5,12 +5,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 from polars.datatypes.group import INTEGER_DTYPES
 
-from dataframely._compat import pa, pydantic, sa, sa_mssql, sa_TypeEngine
+from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -114,6 +114,20 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         """Minimum value of the column's type."""
         return 0 if self.is_unsigned else -(2 ** (self.num_bytes * 8 - 1))
 
+    @property
+    def _python_type(self) -> Any:
+        if self.is_in is not None:
+            return Literal[tuple(self.is_in)]
+        return int
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        kwargs = super()._pydantic_field_kwargs()
+        if "le" not in kwargs:
+            kwargs["le"] = self.max_value
+        if "ge" not in kwargs:
+            kwargs["ge"] = self.min_value
+        return kwargs
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         if self.is_in is not None:
             return generator.sample_choice(
@@ -141,14 +155,6 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
             ),
             null_probability=self._null_probability,
         ).cast(self.dtype)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for integer column."""
-        from typing import Literal
-
-        if self.is_in is not None:
-            return Literal[tuple(self.is_in)]  # type: ignore
-        return int
 
 
 # ------------------------------------------------------------------------------------ #

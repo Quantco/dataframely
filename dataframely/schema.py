@@ -16,10 +16,8 @@ import polars as pl
 import polars.exceptions as plexc
 from polars._typing import FileSource
 
-from dataframely._compat import deltalake, pydantic
-
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import PartitionSchemeOrSinkDirectory, pa, sa
+from ._compat import PartitionSchemeOrSinkDirectory, deltalake, pa, pydantic, sa
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
@@ -1340,52 +1338,26 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
-    def to_pydantic_model(cls) -> type:
+    def to_pydantic_model(cls) -> type[pydantic.BaseModel]:
         """Convert this schema to a pydantic model.
 
-        This method creates a pydantic model with fields corresponding to the columns
-        in this schema. Structured constraints (min, max, regex, etc.) are translated
-        to pydantic field constraints where possible. Custom checks and group rules
-        are not translated.
+        The pydantic model includes all columns defined in the schema along with their
+        (structured) constraints. Custom checks and schema-level rules are not included
+        in the pydantic model.
 
         Returns:
-            A pydantic model class that can be used for data validation.
-
-        Warning:
-            Custom checks defined via the `check` parameter on columns are not
-            included in the pydantic model. A UserWarning is raised if custom checks
-            are present.
-
-        Warning:
-            Group rules defined on the schema are not translated to pydantic validators.
-            A UserWarning is raised if group rules are present.
-
-        Example:
-            >>> class MySchema(dy.Schema):
-            ...     x = dy.Integer(min=0, max=100)
-            ...     y = dy.String(regex=r"^[A-Z]+$")
-            ...
-            >>> Model = MySchema.to_pydantic_model()
-            >>> # Now you can use Model for validation, e.g., with LLM APIs
+            A :mod:`pydantic` model class.
         """
-        # Check for group rules and warn if present
         if cls._schema_validation_rules():
             warnings.warn(
-                f"Schema '{cls.__name__}' has group rules. These are not currently "
-                "translated to pydantic validators."
+                "pydantic models generated from schemas do not include schema-level rules."
             )
 
-        # Build field definitions for the pydantic model
-        fields = {}
-        for col_name, col in cls.columns().items():
-            # Get the pydantic field type for this column
-            field_type = col.pydantic_field()
-            # All fields are required (use ... as default)
-            fields[col_name] = (field_type, ...)
-
-        # Create the pydantic model dynamically
         model_name = f"{cls.__name__.removesuffix('Schema')}Model"
-        return pydantic.create_model(model_name, **fields)  # type: ignore
+        fields = {
+            col_name: col.pydantic_field() for col_name, col in cls.columns().items()
+        }
+        return pydantic.create_model(model_name, **fields)
 
     # ----------------------------------- EQUALITY ----------------------------------- #
 

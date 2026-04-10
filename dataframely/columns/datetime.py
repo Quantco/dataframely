@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import warnings
 from typing import Any, cast
 
 import polars as pl
@@ -132,6 +133,16 @@ class Date(OrdinalMixin[dt.date], Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.date32()
 
+    @property
+    def _python_type(self) -> Any:
+        return dt.date
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn("Date resolution is not translated to a pydantic constraint.")
+
+        return super()._pydantic_field_kwargs()
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_date(
             n,
@@ -148,20 +159,6 @@ class Date(OrdinalMixin[dt.date], Column):
             resolution=self.resolution,
             null_probability=self._null_probability,
         )
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Date column."""
-        import datetime as dt
-        import warnings
-
-        # Warn about untranslated constraints
-        if self.resolution is not None:
-            warnings.warn(
-                f"Date column '{self.name or self.__class__.__name__}' has a resolution "
-                "constraint that cannot be translated to pydantic."
-            )
-
-        return dt.date
 
 
 @register
@@ -275,6 +272,19 @@ class Time(OrdinalMixin[dt.time], Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.time64("ns")
 
+    @property
+    def _python_type(self) -> Any:
+        return dt.time
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn(
+                f"Time column '{self.name or self.__class__.__name__}' has a resolution "
+                "constraint that cannot be translated to pydantic."
+            )
+
+        return super()._pydantic_field_kwargs()
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_time(
             n,
@@ -291,20 +301,6 @@ class Time(OrdinalMixin[dt.time], Column):
             resolution=self.resolution,
             null_probability=self._null_probability,
         )
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Time column."""
-        import datetime as dt
-        import warnings
-
-        # Warn about untranslated constraints
-        if self.resolution is not None:
-            warnings.warn(
-                f"Time column '{self.name or self.__class__.__name__}' has a resolution "
-                "constraint that cannot be translated to pydantic."
-            )
-
-        return dt.time
 
 
 @register
@@ -422,6 +418,22 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         )
         return pa.timestamp(self.time_unit, time_zone)
 
+    @property
+    def _python_type(self) -> Any:
+        return dt.datetime
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn(
+                "Datetime resolution is not translated to a pydantic constraint."
+            )
+        if self.time_zone is not None:
+            warnings.warn(
+                "Datetime time zone is not translated to a pydantic constraint."
+            )
+
+        return super()._pydantic_field_kwargs()
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_datetime(
             n,
@@ -452,30 +464,6 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             now = dt.datetime.now()
             return lhs.utcoffset(now) == rhs.utcoffset(now)
         return super()._attributes_match(lhs, rhs, name, column_expr)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Datetime column."""
-        import datetime as dt
-        import warnings
-
-        # Warn about untranslated constraints
-        if self.resolution is not None:
-            warnings.warn(
-                f"Datetime column '{self.name or self.__class__.__name__}' has a resolution "
-                "constraint that cannot be translated to pydantic."
-            )
-        if self.time_zone is not None:
-            warnings.warn(
-                f"Datetime column '{self.name or self.__class__.__name__}' has a time_zone "
-                "constraint that cannot be translated to pydantic."
-            )
-        if self.time_unit != "us":
-            warnings.warn(
-                f"Datetime column '{self.name or self.__class__.__name__}' has a time_unit "
-                "constraint that cannot be translated to pydantic."
-            )
-
-        return dt.datetime
 
 
 @register
@@ -583,6 +571,18 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.duration(self.time_unit)
 
+    @property
+    def _python_type(self) -> Any:
+        return dt.timedelta
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn(
+                "Duration resolution is not translated to a pydantic constraint."
+            )
+
+        return super()._pydantic_field_kwargs()
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # NOTE: If no duration is specified, we default to 100 years
         return generator.sample_duration(
@@ -601,25 +601,6 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
             time_unit=self.time_unit,
             null_probability=self._null_probability,
         )
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Duration column."""
-        import datetime as dt
-        import warnings
-
-        # Warn about untranslated constraints
-        if self.resolution is not None:
-            warnings.warn(
-                f"Duration column '{self.name or self.__class__.__name__}' has a resolution "
-                "constraint that cannot be translated to pydantic."
-            )
-        if self.time_unit != "us":
-            warnings.warn(
-                f"Duration column '{self.name or self.__class__.__name__}' has a time_unit "
-                "constraint that cannot be translated to pydantic."
-            )
-
-        return dt.timedelta
 
 
 # --------------------------------------- UTILS -------------------------------------- #

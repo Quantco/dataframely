@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_postgresql, sa_TypeEngine
+from dataframely._compat import pa, pydantic, sa, sa_postgresql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -117,6 +117,10 @@ class Struct(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.struct([col.pyarrow_field(name) for name, col in self.inner.items()])
 
+    def _python_type(self) -> Any:
+        fields = {name: col.pydantic_field() for name, col in self.inner.items()}
+        return pydantic.create_model("StructModel", **fields)
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         series = (
             pl.DataFrame(
@@ -156,19 +160,3 @@ class Struct(Column):
             name: column_from_dict(col) for name, col in data["inner"].items()
         }
         return super().from_dict(data)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Struct column."""
-        from dataframely._compat import pydantic
-
-        fields = {}
-        for field_name, col in self.inner.items():
-            field_type = col.pydantic_field()
-            fields[field_name] = (field_type, ...)
-
-        model = pydantic.create_model(
-            f"{self.name or 'Struct'}Model",
-            **fields,  # type: ignore
-        )
-
-        return model

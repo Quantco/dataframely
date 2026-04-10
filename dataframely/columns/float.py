@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 import sys
+import warnings
 from abc import abstractmethod
 from typing import Any
 
@@ -102,6 +103,44 @@ class _BaseFloat(OrdinalMixin[float], Column):
         """Minimum value of the column's type."""
 
     @property
+    def _python_type(self) -> Any:
+        # Warn about untranslated constraints
+        if self.allow_inf == self.allow_nan and not self.allow_inf:
+            warnings.warn(
+                f"Float column '{self.name or self.__class__.__name__}' does not allow "
+                "infinity or NaN values, but this constraint cannot be translated to pydantic."
+            )
+        else:
+            if not self.allow_inf:
+                warnings.warn(
+                    f"Float column '{self.name or self.__class__.__name__}' does not allow "
+                    "infinity values, but this constraint cannot be translated to pydantic."
+                )
+            if not self.allow_nan:
+                warnings.warn(
+                    f"Float column '{self.name or self.__class__.__name__}' does not allow "
+                    "NaN values, but this constraint cannot be translated to pydantic."
+                )
+
+        return float
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.allow_inf != self.allow_nan:
+            warnings.warn(
+                "Unequal settings of `allow_inf` and `allow_nan` cannot be translated to "
+                "pydantic constraints."
+            )
+
+        kwargs = super()._pydantic_field_kwargs()
+        if self.allow_inf == self.allow_nan:
+            kwargs["allow_inf_nan"] = self.allow_inf
+        if "le" not in kwargs:
+            kwargs["le"] = self.max_value
+        if "ge" not in kwargs:
+            kwargs["ge"] = self.min_value
+        return kwargs
+
+    @property
     def _nan_probability(self) -> float:
         """Private utility for the null probability used during sampling."""
         return 0.05 if self.allow_nan else 0
@@ -141,30 +180,6 @@ class _BaseFloat(OrdinalMixin[float], Column):
             nan_probability=self._nan_probability,
             inf_probability=self._inf_probability,
         ).cast(self.dtype)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for float column."""
-        import warnings
-
-        # Warn about untranslated constraints
-        if self.allow_inf == self.allow_nan and not self.allow_inf:
-            warnings.warn(
-                f"Float column '{self.name or self.__class__.__name__}' does not allow "
-                "infinity or NaN values, but this constraint cannot be translated to pydantic."
-            )
-        else:
-            if not self.allow_inf:
-                warnings.warn(
-                    f"Float column '{self.name or self.__class__.__name__}' does not allow "
-                    "infinity values, but this constraint cannot be translated to pydantic."
-                )
-            if not self.allow_nan:
-                warnings.warn(
-                    f"Float column '{self.name or self.__class__.__name__}' does not allow "
-                    "NaN values, but this constraint cannot be translated to pydantic."
-                )
-
-        return float
 
 
 # ------------------------------------------------------------------------------------ #

@@ -133,6 +133,18 @@ class List(Column):
         # NOTE: Polars uses `large_list`s by default.
         return pa.large_list(self.inner.pyarrow_field("item"))
 
+    def _python_type(self) -> Any:
+        inner_type = self.inner.pydantic_field()
+        return list[inner_type]  # type: ignore
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        kwargs = super()._pydantic_field_kwargs()
+        if self.min_length is not None:
+            kwargs["min_length"] = self.min_length
+        if self.max_length is not None:
+            kwargs["max_length"] = self.max_length
+        return kwargs
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # First, sample the number of items per list element
         # NOTE: We default to 32 for the upper bound as we need some kind of reasonable
@@ -176,22 +188,6 @@ class List(Column):
     def from_dict(cls, data: dict[str, Any]) -> Self:
         data["inner"] = column_from_dict(data["inner"])
         return super().from_dict(data)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for List column."""
-        inner_type = self.inner.pydantic_field()
-        return list[inner_type]  # type: ignore
-
-    def _pydantic_field_kwargs(self) -> dict[str, Any]:
-        """Return pydantic field kwargs for list constraints."""
-        kwargs = super()._pydantic_field_kwargs()
-
-        if self.min_length is not None:
-            kwargs["min_length"] = self.min_length
-        if self.max_length is not None:
-            kwargs["max_length"] = self.max_length
-
-        return kwargs
 
 
 def _list_primary_key_check(

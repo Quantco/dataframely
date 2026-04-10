@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 import sys
+import warnings
 from collections.abc import Sequence
 from typing import Any, Literal, cast
 
@@ -121,6 +122,23 @@ class Array(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return self._pyarrow_field_of_shape(self.shape).type
 
+    @property
+    def _python_type(self) -> Any:
+        inner_type = self.inner.pydantic_field()
+        return list[inner_type]  # type: ignore
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if len(self.shape) != 1:
+            warnings.warn(
+                "Multi-dimensional arrays are flattened for pydantic validation."
+            )
+
+        return {
+            **super()._pydantic_field_kwargs(),
+            "min_items": math.prod(self.shape),
+            "max_items": math.prod(self.shape),
+        }
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # Sample the inner elements in a flat series
         n_elements = n * math.prod(self.shape)
@@ -148,15 +166,3 @@ class Array(Column):
     def from_dict(cls, data: dict[str, Any]) -> Self:
         data["inner"] = column_from_dict(data["inner"])
         return super().from_dict(data)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Array column."""
-        import warnings
-
-        warnings.warn(
-            f"Array column '{self.name or self.__class__.__name__}' cannot be fully "
-            "translated to pydantic. Using list as the base type."
-        )
-
-        inner_type = self.inner.pydantic_field()
-        return list[inner_type]  # type: ignore

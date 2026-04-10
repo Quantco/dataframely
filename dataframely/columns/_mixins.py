@@ -81,9 +81,7 @@ class OrdinalMixin(Generic[T], Base):
         return result
 
     def _pydantic_field_kwargs(self) -> dict[str, Any]:
-        """Add ordinal constraints to pydantic field kwargs."""
         kwargs = super()._pydantic_field_kwargs()
-
         if self.min is not None:
             kwargs["ge"] = self.min
         if self.min_exclusive is not None:
@@ -92,7 +90,6 @@ class OrdinalMixin(Generic[T], Base):
             kwargs["le"] = self.max
         if self.max_exclusive is not None:
             kwargs["lt"] = self.max_exclusive
-
         return kwargs
 
 

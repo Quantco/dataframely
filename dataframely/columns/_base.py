@@ -5,14 +5,15 @@ from __future__ import annotations
 
 import inspect
 import sys
+import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, TypeAlias, cast
+from typing import Annotated, Any, TypeAlias, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -229,46 +230,30 @@ class Column(ABC):
 
         Returns:
             A pydantic-compatible type annotation that includes structured constraints
-            (e.g., min, max, regex) but excludes custom checks.
+            (such as `min`, `max`, ...).
 
         Warning:
-            Custom checks defined via the `check` parameter are not included in the
-            returned pydantic field. A UserWarning is raised if custom checks are present.
+            Custom checks are not translated to pydantic validators.
         """
-        import warnings
-        from typing import Annotated
-
-        from dataframely._compat import pydantic
-
         if self.check is not None:
             warnings.warn(
                 f"Custom checks for column '{self.name or self.__class__.__name__}' "
                 "are not translated to pydantic constraints."
             )
 
-        # Get the base Python type
-        python_type = self._python_type()
-
-        # Apply nullability to the type
+        python_type = self._python_type
         if self.nullable:
             python_type = python_type | None
 
-        # Get pydantic field kwargs
         field_kwargs = self._pydantic_field_kwargs()
-
-        # Construct the annotated type if there are constraints
         if field_kwargs:
-            return Annotated[python_type, pydantic.Field(**field_kwargs)]  # type: ignore[call-overload]
-
+            return Annotated[python_type, pydantic.Field(**field_kwargs)]
         return python_type
 
+    @property
     @abstractmethod
-    def _python_type(self) -> type:
-        """Return the base Python type for this column.
-
-        Subclasses must implement this to return the appropriate Python type
-        (e.g., int, str, float, etc.) without any pydantic constraints or nullability.
-        """
+    def _python_type(self) -> Any:
+        """The native Python type corresponding to this column definition."""
 
     def _pydantic_field_kwargs(self) -> dict[str, Any]:
         """Return kwargs for pydantic.Field initialization.

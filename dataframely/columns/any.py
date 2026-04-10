@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from typing import Any as AnyType
+
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
@@ -77,12 +79,9 @@ class Any(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.null()
 
+    @property
+    def _python_type(self) -> AnyType:
+        return AnyType
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return pl.repeat(None, n, dtype=pl.Null, eager=True)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Any column."""
-        from typing import Any as AnyType
-
-        # Any columns are always nullable
-        return AnyType

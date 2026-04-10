@@ -6,7 +6,7 @@ from __future__ import annotations
 import enum
 from collections.abc import Iterable
 from inspect import isclass
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 
@@ -95,17 +95,13 @@ class Enum(Column):
             dtype = pa.uint32()
         return pa.dictionary(dtype, pa.large_string())
 
+    @property
+    def _python_type(self) -> Any:
+        return Literal[tuple(self.categories)]
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(
             n,
             choices=self.categories,
             null_probability=self._null_probability,
         ).cast(self.dtype)
-
-    def _python_type(self) -> type:
-        """Return the base Python type for Enum column."""
-        from typing import Literal
-
-        if len(self.categories) == 0:
-            return str
-        return Literal[tuple(self.categories)]  # type: ignore
