@@ -14,7 +14,7 @@ pytestmark = pytest.mark.with_optionals
 
 def test_basic_model() -> None:
     schema = create_schema(
-        "test",
+        "TestSchema",
         {"x": dy.Int64(), "y": dy.String(nullable=True)},
     )
     model_cls = schema.to_pydantic_model()
