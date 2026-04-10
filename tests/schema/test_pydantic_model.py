@@ -14,7 +14,7 @@ pytestmark = pytest.mark.with_optionals
 
 def test_basic_model() -> None:
     schema = create_schema(
-        "TestSchema",
+        "test",
         {"x": dy.Int64(), "y": dy.String(nullable=True)},
     )
     model_cls = schema.to_pydantic_model()
@@ -25,7 +25,7 @@ def test_basic_model() -> None:
 
 def test_validation_success() -> None:
     schema = create_schema(
-        "TestSchema",
+        "test",
         {
             "x": dy.Int64(),
             "name": dy.String(),
@@ -41,7 +41,7 @@ def test_validation_success() -> None:
 
 def test_validation_failure() -> None:
     schema = create_schema(
-        "TestSchema",
+        "test",
         {
             "x": dy.Int64(),
             "name": dy.String(),
@@ -55,9 +55,16 @@ def test_validation_failure() -> None:
 
 def test_schema_with_rules_warns() -> None:
     schema = create_schema(
-        "TestSchema",
+        "test",
         {"x": dy.Int64()},
         rules={"my_rule": Rule(pl.col("x") > 0)},
     )
     with pytest.warns(match="pydantic models do not include schema-level rules"):
         schema.to_pydantic_model()
+
+
+def test_schema_with_alias() -> None:
+    schema = create_schema("test", {"x": dy.Int64(alias="column with space")})
+    model_cls = schema.to_pydantic_model()
+    assert model_cls.model_fields.keys() == {"column with space"}
+    model_cls(**{"column with space": 42})
