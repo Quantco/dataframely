@@ -117,6 +117,7 @@ class Struct(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.struct([col.pyarrow_field(name) for name, col in self.inner.items()])
 
+    @property
     def _python_type(self) -> Any:
         fields = {name: col.pydantic_field() for name, col in self.inner.items()}
         return pydantic.create_model("StructModel", **fields)

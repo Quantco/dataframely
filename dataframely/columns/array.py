@@ -135,8 +135,8 @@ class Array(Column):
 
         return {
             **super()._pydantic_field_kwargs(),
-            "min_items": math.prod(self.shape),
-            "max_items": math.prod(self.shape),
+            "min_length": math.prod(self.shape),
+            "max_length": math.prod(self.shape),
         }
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:

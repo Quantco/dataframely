@@ -104,24 +104,6 @@ class _BaseFloat(OrdinalMixin[float], Column):
 
     @property
     def _python_type(self) -> Any:
-        # Warn about untranslated constraints
-        if self.allow_inf == self.allow_nan and not self.allow_inf:
-            warnings.warn(
-                f"Float column '{self.name or self.__class__.__name__}' does not allow "
-                "infinity or NaN values, but this constraint cannot be translated to pydantic."
-            )
-        else:
-            if not self.allow_inf:
-                warnings.warn(
-                    f"Float column '{self.name or self.__class__.__name__}' does not allow "
-                    "infinity values, but this constraint cannot be translated to pydantic."
-                )
-            if not self.allow_nan:
-                warnings.warn(
-                    f"Float column '{self.name or self.__class__.__name__}' does not allow "
-                    "NaN values, but this constraint cannot be translated to pydantic."
-                )
-
         return float
 
     def _pydantic_field_kwargs(self) -> dict[str, Any]:

@@ -1349,9 +1349,7 @@ class Schema(BaseSchema, ABC):
             A :mod:`pydantic` model class.
         """
         if cls._schema_validation_rules():
-            warnings.warn(
-                "pydantic models generated from schemas do not include schema-level rules."
-            )
+            warnings.warn("pydantic models do not include schema-level rules.")
 
         model_name = f"{cls.__name__.removesuffix('Schema')}Model"
         fields = {
