@@ -137,7 +137,7 @@ def test_datetime_timezone_warning() -> None:
 def test_time_resolution_warning() -> None:
     col = dy.Time(resolution="1h")
     with pytest.warns(
-        match="Time column.*has a resolution constraint that cannot be translated"
+        match="Time resolution is not translated to a pydantic constraint"
     ):
         col.pydantic_field()
 

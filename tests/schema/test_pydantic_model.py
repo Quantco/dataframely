@@ -65,7 +65,7 @@ def test_schema_with_rules_warns() -> None:
         {"x": dy.Int64()},
         rules={"my_rule": Rule(pl.col("x") > 0)},
     )
-    with pytest.warns(match="pydantic models do not include schema-level rules"):
+    with pytest.warns(match="Schema-level rules are not translated to pydantic"):
         schema.to_pydantic_model()
 
 
