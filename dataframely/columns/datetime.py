@@ -278,10 +278,7 @@ class Time(OrdinalMixin[dt.time], Column):
 
     def _pydantic_field_kwargs(self) -> dict[str, Any]:
         if self.resolution is not None:
-            warnings.warn(
-                f"Time column '{self.name or self.__class__.__name__}' has a resolution "
-                "constraint that cannot be translated to pydantic."
-            )
+            warnings.warn("Time resolution is not translated to a pydantic constraint.")
 
         return super()._pydantic_field_kwargs()
 

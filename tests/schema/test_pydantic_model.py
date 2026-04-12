@@ -23,6 +23,12 @@ def test_basic_model() -> None:
     assert set(model_cls.model_fields.keys()) == {"x", "y"}
 
 
+def test_custom_name() -> None:
+    schema = create_schema("TestSchema", {"x": dy.Int64()})
+    model_cls = schema.to_pydantic_model(name="CustomModelName")
+    assert model_cls.__name__ == "CustomModelName"
+
+
 def test_validation_success() -> None:
     schema = create_schema(
         "test",
