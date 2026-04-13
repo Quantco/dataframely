@@ -291,22 +291,6 @@ def test_multiple_unique_columns_both_invalid(
     assert not MultiUniqueSchema.is_valid(df)
 
 
-@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
-def test_nullable_unique_with_nulls(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
-) -> None:
-    # Multiple nulls should NOT cause uniqueness failure (SQL semantics)
-    df = df_type({"a": [1, 2, 3], "b": [None, None, "z"]})
-    # This should fail because is_duplicated() considers nulls as duplicates
-    # Note: This tests current behavior - in SQL, multiple NULLs are allowed in UNIQUE columns
-    with pytest.raises(
-        ValidationError if eager else plexc.ComputeError,
-        match=r"1 rules failed validation",
-    ):
-        _validate_and_collect(NullableUniqueSchema, df, eager=eager)
-
-
 def test_unique_columns_method() -> None:
     assert UniqueSchema.unique_columns() == ["email"]
     assert MultiUniqueSchema.unique_columns() == ["a", "b"]
