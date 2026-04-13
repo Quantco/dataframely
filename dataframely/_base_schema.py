@@ -39,7 +39,14 @@ def _build_rules(
     # Add primary key validation to the list of rules if applicable
     primary_key = _primary_key(columns)
     if len(primary_key) > 0:
-        rules["primary_key"] = Rule(~pl.struct(primary_key).is_duplicated())
+        rules["primary_key"] = Rule(pl.struct(primary_key).is_unique())
+
+    # Add unique column validation rules
+    unique_columns = _unique_columns(columns)
+    for col_name in unique_columns:
+        # wrap the column in a struct to make `is_unique` work with list/arrays
+        # https://github.com/pola-rs/polars/issues/27286
+        rules[f"{col_name}|unique"] = Rule(pl.struct(col_name).is_unique())
 
     # Add column-specific rules
     column_rules = {
@@ -69,6 +76,10 @@ def _build_rules(
 
 def _primary_key(columns: dict[str, Column]) -> list[str]:
     return list(k for k, col in columns.items() if col.primary_key)
+
+
+def _unique_columns(columns: dict[str, Column]) -> list[str]:
+    return list(k for k, col in columns.items() if col.unique)
 
 
 # ------------------------------------------------------------------------------------ #
@@ -299,6 +310,11 @@ class BaseSchema(metaclass=SchemaMeta):
     def primary_key(cls) -> list[str]:
         """The primary key columns in this schema (possibly empty)."""
         return _primary_key(cls.columns())
+
+    @classmethod
+    def unique_columns(cls) -> list[str]:
+        """The columns with unique constraints in this schema (possibly empty)."""
+        return _unique_columns(cls.columns())
 
     @classmethod
     def _validation_rules(cls, *, with_cast: bool) -> dict[str, Rule]:

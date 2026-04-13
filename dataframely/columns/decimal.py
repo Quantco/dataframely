@@ -29,6 +29,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: decimal.Decimal | int | None = None,
         min_exclusive: decimal.Decimal | int | None = None,
         max: decimal.Decimal | int | None = None,
@@ -47,6 +48,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             min: The minimum value for decimals in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -91,6 +93,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,

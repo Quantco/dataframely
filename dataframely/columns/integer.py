@@ -26,6 +26,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: int | None = None,
         min_exclusive: int | None = None,
         max: int | None = None,
@@ -43,6 +44,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             min: The minimum value for integers in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -80,6 +82,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,

@@ -45,6 +45,7 @@ class Column(ABC):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -55,6 +56,9 @@ class Column(ABC):
                 Explicitly set `nullable=True` if you want your column to be nullable.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have ``unique=True`` without forming a composite constraint.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -78,6 +82,7 @@ class Column(ABC):
 
         self.nullable = nullable
         self.primary_key = primary_key
+        self.unique = unique
         self.check = check
         self.alias = alias
         self.metadata = metadata
@@ -198,6 +203,7 @@ class Column(ABC):
             self.sqlalchemy_dtype(dialect),
             nullable=self.nullable,
             primary_key=self.primary_key,
+            unique=self.unique,
             autoincrement=False,
         )
 

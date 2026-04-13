@@ -29,6 +29,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         allow_inf: bool = False,
         allow_nan: bool = False,
         min: float | None = None,
@@ -47,6 +48,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             allow_inf: Whether this column may contain infinity values.
             allow_nan: Whether this column may contain NaN values.
             min: The minimum value for floats in this column (inclusive).
@@ -83,6 +85,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,

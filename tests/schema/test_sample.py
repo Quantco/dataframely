@@ -261,3 +261,35 @@ def test_sample_override_sequence_with_missing_keys_and_resampling() -> None:
     assert all(df.item(i, 0) == i for i in range(250))
     assert df.item(250, 1) == "two"
     assert df.item(251, 1) == "three"
+
+
+# ----------------------------------- UNIQUE CONSTRAINT --------------------------------- #
+
+
+class UniqueSchema(dy.Schema):
+    id = dy.Int64(primary_key=True)
+    email = dy.String(unique=True)
+
+
+@pytest.mark.parametrize("n", [0, 100])
+def test_sample_unique_constraint(n: int) -> None:
+    df = UniqueSchema.sample(n, generator=Generator(seed=42))
+    assert len(df) == n
+    UniqueSchema.validate(df)
+    # Verify uniqueness
+    assert df.get_column("email").n_unique() == n
+
+
+class MultiUniqueSchema(dy.Schema):
+    a = dy.Int64(unique=True)
+    b = dy.String(unique=True)
+
+
+@pytest.mark.parametrize("n", [0, 100])
+def test_sample_multiple_unique_columns(n: int) -> None:
+    df = MultiUniqueSchema.sample(n, generator=Generator(seed=42))
+    assert len(df) == n
+    MultiUniqueSchema.validate(df)
+    # Verify uniqueness for both columns
+    assert df.get_column("a").n_unique() == n
+    assert df.get_column("b").n_unique() == n

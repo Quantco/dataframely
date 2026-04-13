@@ -26,6 +26,7 @@ class String(Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min_length: int | None = None,
         max_length: int | None = None,
         regex: str | None = None,
@@ -40,6 +41,7 @@ class String(Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
+            unique: Whether this column must contain unique values.
             min_length: The minimum byte-length of string values in this column.
             max_length: The maximum byte-length of string values in this column.
             regex: A regex that the string values in this column must match. If the
@@ -65,6 +67,7 @@ class String(Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             check=check,
             alias=alias,
             metadata=metadata,
