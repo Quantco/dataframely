@@ -21,7 +21,7 @@ class Object(Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
+        nullable: bool = False,
         primary_key: bool = False,
         check: Check | None = None,
         alias: str | None = None,

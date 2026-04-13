@@ -33,7 +33,7 @@ class Array(Column):
         inner: Column,
         shape: int | tuple[int, ...],
         *,
-        nullable: bool = True,
+        nullable: bool = False,
         # polars doesn't yet support grouping by arrays,
         # see https://github.com/pola-rs/polars/issues/22574
         primary_key: Literal[False] = False,
