@@ -5,14 +5,15 @@ from __future__ import annotations
 
 import inspect
 import sys
+import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, TypeAlias, cast
+from typing import Annotated, Any, TypeAlias, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -221,6 +222,50 @@ class Column(ABC):
     @abstractmethod
     def pyarrow_dtype(self) -> pa.DataType:
         """The :mod:`pyarrow` dtype equivalent of this column data type."""
+
+    # ----------------------------------- PYDANTIC ----------------------------------- #
+
+    def pydantic_field(self) -> Any:
+        """Obtain a pydantic field type for this column definition.
+
+        Returns:
+            A pydantic-compatible type annotation that includes structured constraints
+            (such as `min`, `max`, ...).
+
+        Warning:
+            Custom checks are not translated to pydantic validators.
+        """
+        if self.check is not None:
+            warnings.warn(
+                f"Custom checks for column '{self.name or self.__class__.__name__}' "
+                "are not translated to pydantic constraints."
+            )
+
+        python_type = self._python_type
+        if self.nullable:
+            python_type = python_type | None
+
+        field_kwargs = self._pydantic_field_kwargs()
+        if field_kwargs:
+            return Annotated[python_type, pydantic.Field(**field_kwargs)]
+        return python_type
+
+    @property
+    @abstractmethod
+    def _python_type(self) -> Any:
+        """The native Python type corresponding to this column definition."""
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        """Return kwargs for pydantic.Field initialization.
+
+        This method should be extended by subclasses and mixins to add their
+        specific constraints. Subclasses should call super() and extend the
+        returned dictionary.
+
+        Returns:
+            A dictionary of kwargs to pass to pydantic.Field.
+        """
+        return {}
 
     # ------------------------------------ HELPER ------------------------------------ #
 

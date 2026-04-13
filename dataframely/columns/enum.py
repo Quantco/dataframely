@@ -6,7 +6,7 @@ from __future__ import annotations
 import enum
 from collections.abc import Iterable
 from inspect import isclass
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 
@@ -94,6 +94,10 @@ class Enum(Column):
         else:
             dtype = pa.uint32()
         return pa.dictionary(dtype, pa.large_string())
+
+    @property
+    def _python_type(self) -> Any:
+        return Literal[tuple(self.categories)]
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(

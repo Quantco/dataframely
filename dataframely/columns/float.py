@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 import sys
+import warnings
 from abc import abstractmethod
 from typing import Any
 
@@ -100,6 +101,26 @@ class _BaseFloat(OrdinalMixin[float], Column):
     @abstractmethod
     def min_value(self) -> float:
         """Minimum value of the column's type."""
+
+    @property
+    def _python_type(self) -> Any:
+        return float
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.allow_inf != self.allow_nan:
+            warnings.warn(
+                "Unequal settings of `allow_inf` and `allow_nan` cannot be translated to "
+                "pydantic constraints."
+            )
+
+        kwargs = super()._pydantic_field_kwargs()
+        if self.allow_inf == self.allow_nan:
+            kwargs["allow_inf_nan"] = self.allow_inf
+        if "le" not in kwargs:
+            kwargs["le"] = self.max_value
+        if "ge" not in kwargs:
+            kwargs["ge"] = self.min_value
+        return kwargs
 
     @property
     def _nan_probability(self) -> float:

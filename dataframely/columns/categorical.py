@@ -71,6 +71,10 @@ class Categorical(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.dictionary(pa.uint32(), pa.large_string())
 
+    @property
+    def _python_type(self) -> Any:
+        return str
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # We simply sample low-cardinality strings here
         return generator.sample_string(

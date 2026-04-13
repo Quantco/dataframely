@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import warnings
 from typing import Any, cast
 
 import polars as pl
@@ -131,6 +132,16 @@ class Date(OrdinalMixin[dt.date], Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.date32()
+
+    @property
+    def _python_type(self) -> Any:
+        return dt.date
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn("Date resolution is not translated to a pydantic constraint.")
+
+        return super()._pydantic_field_kwargs()
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_date(
@@ -260,6 +271,16 @@ class Time(OrdinalMixin[dt.time], Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.time64("ns")
+
+    @property
+    def _python_type(self) -> Any:
+        return dt.time
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn("Time resolution is not translated to a pydantic constraint.")
+
+        return super()._pydantic_field_kwargs()
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_time(
@@ -393,6 +414,22 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             else self.time_zone
         )
         return pa.timestamp(self.time_unit, time_zone)
+
+    @property
+    def _python_type(self) -> Any:
+        return dt.datetime
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn(
+                "Datetime resolution is not translated to a pydantic constraint."
+            )
+        if self.time_zone is not None:
+            warnings.warn(
+                "Datetime time zone is not translated to a pydantic constraint."
+            )
+
+        return super()._pydantic_field_kwargs()
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_datetime(
@@ -530,6 +567,18 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.duration(self.time_unit)
+
+    @property
+    def _python_type(self) -> Any:
+        return dt.timedelta
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn(
+                "Duration resolution is not translated to a pydantic constraint."
+            )
+
+        return super()._pydantic_field_kwargs()
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # NOTE: If no duration is specified, we default to 100 years

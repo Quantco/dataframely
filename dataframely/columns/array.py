@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 import sys
+import warnings
 from collections.abc import Sequence
 from typing import Any, Literal, cast
 
@@ -120,6 +121,23 @@ class Array(Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return self._pyarrow_field_of_shape(self.shape).type
+
+    @property
+    def _python_type(self) -> Any:
+        inner_type = self.inner.pydantic_field()
+        return list[inner_type]  # type: ignore
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if len(self.shape) != 1:
+            warnings.warn(
+                "Multi-dimensional arrays are flattened for pydantic validation."
+            )
+
+        return {
+            **super()._pydantic_field_kwargs(),
+            "min_length": math.prod(self.shape),
+            "max_length": math.prod(self.shape),
+        }
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # Sample the inner elements in a flat series

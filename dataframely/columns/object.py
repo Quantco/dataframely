@@ -67,6 +67,10 @@ class Object(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         raise NotImplementedError("PyArrow column cannot have 'Object' type.")
 
+    @property
+    def _python_type(self) -> Any:
+        return Any
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         raise NotImplementedError(
             "Random data sampling not implemented for 'Object' type."

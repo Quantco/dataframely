@@ -128,6 +128,16 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         # We do not use decimal256 since its values cannot be represented in SQL Server.
         return pa.decimal128(self.precision or 38, self.scale)
 
+    @property
+    def _python_type(self) -> Any:
+        return decimal.Decimal
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        return {
+            **super()._pydantic_field_kwargs(),
+            "decimal_places": self.scale,
+        }
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # NOTE: Default precision to 38 for sampling, just like for SQL and Pyarrow
         precision = self.precision or 38
