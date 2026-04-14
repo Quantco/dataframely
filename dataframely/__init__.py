@@ -78,7 +78,6 @@ __all__ = [
     "deserialize_schema",
     "read_parquet_metadata_schema",
     "read_parquet_metadata_collection",
-    "infer_schema",
     "Any",
     "Binary",
     "Bool",
