@@ -90,7 +90,7 @@ def test_equal_polars_schema_list(inner: Column) -> None:
     ],
 )
 def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) -> None:
-    schema = create_schema("test", {"a": dy.Array(inner, shape)})
+    schema = create_schema("test", {"a": dy.Array(inner, shape, nullable=True)})
     actual = schema.to_pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
