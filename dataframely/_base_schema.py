@@ -242,6 +242,11 @@ class SchemaMeta(ABCMeta):
         result = Metadata()
         for base in kls.__bases__:
             result.update(SchemaMeta._get_metadata_recursively(base))
+        SchemaMeta._remove_overridden_columns(
+            result,
+            kls.__dict__,  # type: ignore[arg-type]
+            kls.__bases__,
+        )
         result.update(SchemaMeta._get_metadata(kls.__dict__))  # type: ignore
         return result
 
