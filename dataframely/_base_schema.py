@@ -6,6 +6,7 @@ from __future__ import annotations
 import sys
 import textwrap
 from abc import ABCMeta
+from collections.abc import Mapping
 from copy import copy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -207,7 +208,7 @@ class SchemaMeta(ABCMeta):
     @staticmethod
     def _remove_overridden_columns(
         result: Metadata,
-        namespace: dict[str, Any],
+        namespace: Mapping[str, Any],
         bases: tuple[type[object], ...],
     ) -> None:
         """Remove inherited columns that the child namespace explicitly overrides.
@@ -235,7 +236,7 @@ class SchemaMeta(ABCMeta):
     @staticmethod
     def _collect_metadata(
         bases: tuple[type[object], ...],
-        namespace: dict[str, Any],
+        namespace: Mapping[str, Any],
     ) -> Metadata:
         result = Metadata()
         for base in bases:
@@ -246,10 +247,10 @@ class SchemaMeta(ABCMeta):
 
     @staticmethod
     def _get_metadata_recursively(kls: type[object]) -> Metadata:
-        return SchemaMeta._collect_metadata(kls.__bases__, kls.__dict__)  # type: ignore[arg-type]
+        return SchemaMeta._collect_metadata(kls.__bases__, kls.__dict__)
 
     @staticmethod
-    def _get_metadata(source: dict[str, Any]) -> Metadata:
+    def _get_metadata(source: Mapping[str, Any]) -> Metadata:
         result = Metadata()
         for attr, value in {
             k: v for k, v in source.items() if not k.startswith("__")
