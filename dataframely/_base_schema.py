@@ -116,12 +116,7 @@ class SchemaMeta(ABCMeta):
         *args: Any,
         **kwargs: Any,
     ) -> SchemaMeta:
-        result = Metadata()
-        for base in bases:
-            result.update(mcs._get_metadata_recursively(base))
-        namespace_metadata = mcs._get_metadata(namespace)
-        mcs._remove_overridden_columns(result, namespace, bases)
-        result.update(namespace_metadata)
+        result = mcs._collect_metadata(bases, namespace)
         namespace[_COLUMN_ATTR] = result.columns
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
@@ -238,17 +233,20 @@ class SchemaMeta(ABCMeta):
                 result.columns.pop(parent_key, None)
 
     @staticmethod
-    def _get_metadata_recursively(kls: type[object]) -> Metadata:
+    def _collect_metadata(
+        bases: tuple[type[object], ...],
+        namespace: dict[str, Any],
+    ) -> Metadata:
         result = Metadata()
-        for base in kls.__bases__:
+        for base in bases:
             result.update(SchemaMeta._get_metadata_recursively(base))
-        SchemaMeta._remove_overridden_columns(
-            result,
-            kls.__dict__,  # type: ignore[arg-type]
-            kls.__bases__,
-        )
-        result.update(SchemaMeta._get_metadata(kls.__dict__))  # type: ignore
+        SchemaMeta._remove_overridden_columns(result, namespace, bases)
+        result.update(SchemaMeta._get_metadata(namespace))
         return result
+
+    @staticmethod
+    def _get_metadata_recursively(kls: type[object]) -> Metadata:
+        return SchemaMeta._collect_metadata(kls.__bases__, kls.__dict__)  # type: ignore[arg-type]
 
     @staticmethod
     def _get_metadata(source: dict[str, Any]) -> Metadata:
