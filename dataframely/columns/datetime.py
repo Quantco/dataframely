@@ -55,7 +55,7 @@ class Date(OrdinalMixin[dt.date], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
-            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
                 this checks uniqueness for this column independently. Multiple columns
                 can each have `unique=True` without forming a composite constraint.
             min: The minimum date for dates in this column (inclusive).
@@ -193,7 +193,7 @@ class Time(OrdinalMixin[dt.time], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
-            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
                 this checks uniqueness for this column independently. Multiple columns
                 can each have `unique=True` without forming a composite constraint.
             min: The minimum time for times in this column (inclusive).
@@ -339,7 +339,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
-            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
                 this checks uniqueness for this column independently. Multiple columns
                 can each have `unique=True` without forming a composite constraint.
             min: The minimum datetime for datetimes in this column (inclusive).
@@ -506,7 +506,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
-            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
                 this checks uniqueness for this column independently. Multiple columns
                 can each have `unique=True` without forming a composite constraint.
             min: The minimum duration for durations in this column (inclusive).
