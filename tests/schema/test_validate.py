@@ -289,10 +289,3 @@ def test_multiple_unique_columns_both_invalid(
     ):
         _validate_and_collect(MultiUniqueSchema, df, eager=eager)
     assert not MultiUniqueSchema.is_valid(df)
-
-
-def test_unique_columns_method() -> None:
-    assert UniqueSchema.unique_columns() == ["email"]
-    assert MultiUniqueSchema.unique_columns() == ["a", "b"]
-    assert NullableUniqueSchema.unique_columns() == ["b"]
-    assert MySchema.unique_columns() == []

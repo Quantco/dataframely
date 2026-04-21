@@ -46,7 +46,9 @@ class Array(Column):
             shape: The shape of the array.
             nullable: Whether this column may contain null values.
             primary_key: Whether this column is part of the primary key of the schema.
-            unique: Whether this column must contain unique values.
+            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -90,6 +92,10 @@ class Array(Column):
         array_rules: dict[str, pl.Expr] = {}
         if (rule := _list_primary_key_check(expr.arr, self.inner)) is not None:
             array_rules["primary_key"] = rule
+        if self.unique:
+            # Wrap the column in a struct to make `is_unique` work with arrays:
+            # https://github.com/pola-rs/polars/issues/27286
+            array_rules["unique"] = pl.struct(expr).is_unique()
 
         return {
             **super().validation_rules(expr),

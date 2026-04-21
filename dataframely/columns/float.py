@@ -48,7 +48,9 @@ class _BaseFloat(OrdinalMixin[float], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
-            unique: Whether this column must contain unique values.
+            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             allow_inf: Whether this column may contain infinity values.
             allow_nan: Whether this column may contain NaN values.
             min: The minimum value for floats in this column (inclusive).
