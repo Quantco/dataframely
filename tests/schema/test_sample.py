@@ -268,7 +268,7 @@ def test_sample_override_sequence_with_missing_keys_and_resampling() -> None:
 
 class UniqueSchema(dy.Schema):
     id = dy.Int64(primary_key=True)
-    email = dy.String(unique=True)
+    number = dy.Int16(unique=True)
 
 
 @pytest.mark.parametrize("n", [0, 100])
@@ -277,12 +277,12 @@ def test_sample_unique_constraint(n: int) -> None:
     assert len(df) == n
     UniqueSchema.validate(df)
     # Verify uniqueness
-    assert df.get_column("email").n_unique() == n
+    assert df.get_column("number").n_unique() == n
 
 
 class MultiUniqueSchema(dy.Schema):
-    a = dy.Int64(unique=True)
-    b = dy.String(unique=True)
+    a = dy.Int16(unique=True)
+    b = dy.Int16(unique=True)
 
 
 @pytest.mark.parametrize("n", [0, 100])
