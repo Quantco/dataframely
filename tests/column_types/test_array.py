@@ -145,6 +145,20 @@ def test_array_with_rules() -> None:
     assert failures.counts() == {"a|inner_nullability": 1, "a|inner_min_length": 1}
 
 
+def test_array_with_pk() -> None:
+    schema = create_schema(
+        "test",
+        {"a": dy.Array(dy.String(), 2, nullable=False, primary_key=True)},
+    )
+    df = pl.DataFrame(
+        {"a": [["ab", "cd"], ["ef", "gh"], ["ab", "cd"]]},
+        schema={"a": pl.Array(pl.String, 2)},
+    )
+    _, failures = schema.filter(df)
+    assert validation_mask(df, failures).to_list() == [False, True, False]
+    assert failures.counts() == {"primary_key": 2}
+
+
 def test_array_with_primary_key_rule() -> None:
     schema = create_schema(
         "test", {"a": dy.Array(dy.String(min_length=2, primary_key=True), 2)}

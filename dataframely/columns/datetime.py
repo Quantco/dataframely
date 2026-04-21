@@ -37,6 +37,7 @@ class Date(OrdinalMixin[dt.date], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.date | None = None,
         min_exclusive: dt.date | None = None,
         max: dt.date | None = None,
@@ -54,6 +55,7 @@ class Date(OrdinalMixin[dt.date], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             min: The minimum date for dates in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -101,6 +103,7 @@ class Date(OrdinalMixin[dt.date], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -170,6 +173,7 @@ class Time(OrdinalMixin[dt.time], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.time | None = None,
         min_exclusive: dt.time | None = None,
         max: dt.time | None = None,
@@ -187,6 +191,7 @@ class Time(OrdinalMixin[dt.time], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             min: The minimum time for times in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -234,6 +239,7 @@ class Time(OrdinalMixin[dt.time], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -309,6 +315,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.datetime | None = None,
         min_exclusive: dt.datetime | None = None,
         max: dt.datetime | None = None,
@@ -328,6 +335,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             min: The minimum datetime for datetimes in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -375,6 +383,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -472,6 +481,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.timedelta | None = None,
         min_exclusive: dt.timedelta | None = None,
         max: dt.timedelta | None = None,
@@ -490,6 +500,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             min: The minimum duration for durations in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -534,6 +545,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,

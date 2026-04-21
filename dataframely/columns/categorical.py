@@ -23,6 +23,7 @@ class Categorical(Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -35,6 +36,7 @@ class Categorical(Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -55,6 +57,7 @@ class Categorical(Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             check=check,
             alias=alias,
             metadata=metadata,

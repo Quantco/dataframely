@@ -7,7 +7,7 @@ import math
 import sys
 import warnings
 from collections.abc import Sequence
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 import polars as pl
 
@@ -34,9 +34,8 @@ class Array(Column):
         shape: int | tuple[int, ...],
         *,
         nullable: bool = False,
-        # polars doesn't yet support grouping by arrays,
-        # see https://github.com/pola-rs/polars/issues/22574
-        primary_key: Literal[False] = False,
+        primary_key: bool = False,
+        unique: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -47,7 +46,7 @@ class Array(Column):
             shape: The shape of the array.
             nullable: Whether this column may contain null values.
             primary_key: Whether this column is part of the primary key of the schema.
-                Not yet supported for the Array type.
+            unique: Whether this column must contain unique values.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -67,7 +66,8 @@ class Array(Column):
         """
         super().__init__(
             nullable=nullable,
-            primary_key=False,
+            primary_key=primary_key,
+            unique=unique,
             check=check,
             alias=alias,
             metadata=metadata,
