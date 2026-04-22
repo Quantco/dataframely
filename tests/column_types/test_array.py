@@ -179,3 +179,23 @@ def test_outer_nullability() -> None:
     )
     df = pl.DataFrame({"nullable": [None, None]})
     schema.validate(df, cast=True)
+
+
+def test_unique() -> None:
+    schema = create_schema("test", {"a": dy.Array(dy.Integer(), shape=2, unique=True)})
+    df = pl.DataFrame(
+        {"a": [[1, 1], [1, 2], [1, 1], [1, 3]]}, schema={"a": pl.Array(pl.Int64, 2)}
+    )
+    _, failure = schema.filter(df)
+    assert failure.counts() == {"a|unique": 2}
+    assert validation_mask(df, failure).to_list() == [False, True, False, True]
+
+
+def test_inner_unique() -> None:
+    schema = create_schema("test", {"a": dy.Array(dy.Integer(unique=True), shape=2)})
+    df = pl.DataFrame(
+        {"a": [[1, 2], [1, 1], [2, 2], [1, 4]]}, schema={"a": pl.Array(pl.Int64, 2)}
+    )
+    _, failure = schema.filter(df)
+    assert failure.counts() == {"a|inner_unique": 2}
+    assert validation_mask(df, failure).to_list() == [True, False, False, True]

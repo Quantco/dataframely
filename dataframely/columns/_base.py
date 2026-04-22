@@ -56,9 +56,9 @@ class Column(ABC):
                 Explicitly set `nullable=True` if you want your column to be nullable.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
-            unique: Whether this column must contain unique values. Unlike ``primary_key``,
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
                 this checks uniqueness for this column independently. Multiple columns
-                can each have ``unique=True`` without forming a composite constraint.
+                can each have `unique=True` without forming a composite constraint.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -131,6 +131,9 @@ class Column(ABC):
         result = {}
         if not self.nullable:
             result["nullability"] = expr.is_not_null()
+
+        if self.unique:
+            result["unique"] = expr.is_unique()
 
         if self.check is not None:
             if isinstance(self.check, Mapping):

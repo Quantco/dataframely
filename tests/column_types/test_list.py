@@ -192,3 +192,19 @@ def test_list_sampling_with_min_length(min_length: int) -> None:
     # Verify all lists have at least min_length elements
     min_list_len = cast(int, df["a"].list.len().min())
     assert min_list_len >= min_length
+
+
+def test_unique() -> None:
+    schema = create_schema("test", {"a": dy.List(dy.Integer(), unique=True)})
+    df = pl.DataFrame({"a": [[1, 1], [1, 2], [1, 1], [1, 1, 1]]})
+    _, failure = schema.filter(df)
+    assert failure.counts() == {"a|unique": 2}
+    assert validation_mask(df, failure).to_list() == [False, True, False, True]
+
+
+def test_inner_unique() -> None:
+    schema = create_schema("test", {"a": dy.List(dy.Integer(unique=True))})
+    df = pl.DataFrame({"a": [[1, 2, 3], [1, 1, 2], [1, 1], [1, 4]]})
+    _, failure = schema.filter(df)
+    assert failure.counts() == {"a|inner_unique": 2}
+    assert validation_mask(df, failure).to_list() == [True, False, False, True]

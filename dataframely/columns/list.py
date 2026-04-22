@@ -54,7 +54,9 @@ class List(Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
-            unique: Whether this column must contain unique values.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             check: A custom rule or multiple rules to run for this column. This can be:
                 - A single callable that returns a non-aggregated boolean expression.
                 The name of the rule is derived from the callable name, or defaults to
@@ -104,6 +106,10 @@ class List(Column):
         list_rules: dict[str, pl.Expr] = {}
         if (rule := _list_primary_key_check(expr.list, self.inner)) is not None:
             list_rules["primary_key"] = rule
+        if self.unique:
+            # Wrap the column in a struct to make `is_unique` work with lists:
+            # https://github.com/pola-rs/polars/issues/27286
+            list_rules["unique"] = pl.struct(expr).is_unique()
         if self.min_length is not None:
             list_rules["min_length"] = (
                 pl.when(expr.is_null())
