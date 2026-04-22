@@ -410,7 +410,9 @@ class Collection(BaseCollection, ABC):
             filtered, failures = cls.filter(data, cast=cast, eager=True)
             if any(len(failure) > 0 for failure in failures.values()):
                 errors = {
-                    member: format_rule_failures(list(failure.counts().items()))
+                    member: format_rule_failures(
+                        list(failure.counts().items()), failure.examples()
+                    )
                     for member, failure in failures.items()
                     if len(failure) > 0
                 }
