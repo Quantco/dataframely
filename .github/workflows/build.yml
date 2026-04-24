@@ -58,18 +58,20 @@ jobs:
       - name: Set version
         run: pixi run -e build set-version
       - name: Install cargo-auditable
-        if: ${{ !contains(matrix.os, 'ubuntu') }}
+        if: ${{ github.event_name == 'release' && !contains(matrix.os, 'ubuntu') }}
         run: cargo install cargo-auditable
       - name: Build wheel
         uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1.50.1
         env:
-          RUSTC_WORKSPACE_WRAPPER: cargo-auditable
+          # cargo-auditable and sccache both wrap rustc and cannot be composed.
+          # Only embed audit metadata for release builds; use sccache otherwise.
+          RUSTC_WORKSPACE_WRAPPER: ${{ github.event_name == 'release' && 'cargo-auditable' || '' }}
         with:
           command: build
           args: --out dist --release -i python3.10
           manylinux: auto
-          sccache: true
-          before-script-linux: cargo install cargo-auditable
+          sccache: ${{ github.event_name != 'release' }}
+          before-script-linux: ${{ github.event_name == 'release' && 'cargo install cargo-auditable' || '' }}
       - name: Check package
         run: pixi run -e build check-wheel
       - name: Upload package
