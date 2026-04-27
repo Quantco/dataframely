@@ -68,13 +68,13 @@ class Collection(BaseCollection, ABC):
     to 1-N relationships that are managed in separate data frames.
 
     A collection must only have type annotations for :class:`~dataframely.LazyFrame`
-    with known schema:
+    or :class:`~dataframely.DataFrame` with known schema:
 
     .. code:: python
 
         class MyCollection(dy.Collection):
             first_member: dy.LazyFrame[MyFirstSchema]
-            second_member: dy.LazyFrame[MySecondSchema]
+            second_member: dy.DataFrame[MySecondSchema]
 
     Besides, it may define *filters* (c.f. :meth:`~dataframely.filter`) and arbitrary
     methods.
@@ -788,12 +788,10 @@ class Collection(BaseCollection, ABC):
         particularly useful when :meth:`filter` is called with lazy frame inputs.
 
         Returns:
-            The same collection with all members collected once.
-
-        Note:
-            As all collection members are required to be lazy frames, the returned
-            collection's members are still "lazy". However, they are "shallow-lazy",
-            meaning they are obtained by calling `.collect().lazy()`.
+            The same collection with all members collected once. Members annotated
+            with :class:`~dataframely.DataFrame` are returned as DataFrames, while
+            members annotated with :class:`~dataframely.LazyFrame` are returned as
+            "shallow-lazy" frames (obtained by calling ``.collect().lazy()``).
         """
         lazy_dict = self._to_lazy_dict()
         dfs = pl.collect_all(lazy_dict.values())
