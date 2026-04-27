@@ -1,10 +1,9 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-
 """Tests for dy.DataFrame members in collections.
 
-Members annotated with dy.DataFrame are collected once during _init and stored
-as DataFrames, while dy.LazyFrame members remain lazy.
+Members annotated with dy.DataFrame are collected once during _init and stored as
+DataFrames, while dy.LazyFrame members remain lazy.
 """
 
 import polars as pl
