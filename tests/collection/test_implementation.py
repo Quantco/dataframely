@@ -113,12 +113,45 @@ def test_annotation_only_none_failure() -> None:
 
 
 def test_annotation_invalid_type_failure() -> None:
-    """First argument of union must be a LazyFrame."""
+    """First argument of union must be a LazyFrame or DataFrame."""
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
             "test",
             {
                 "first": int | None,
+            },
+        )
+
+
+def test_annotation_invalid_generic_type_in_union() -> None:
+    """Union with generic type that's not LazyFrame/DataFrame should fail."""
+    with pytest.raises(AnnotationImplementationError):
+        create_collection_raw(
+            "test",
+            {
+                "first": list[int] | None,
+            },
+        )
+
+
+def test_annotation_union_frame_with_non_none_type() -> None:
+    """Union of DataFrame with non-None type should fail."""
+    with pytest.raises(AnnotationImplementationError):
+        create_collection_raw(
+            "test",
+            {
+                "first": dy.DataFrame[MyTestSchema] | int,
+            },
+        )
+
+
+def test_annotation_invalid_standalone_generic() -> None:
+    """Standalone generic type that's not LazyFrame/DataFrame should fail."""
+    with pytest.raises(AnnotationImplementationError):
+        create_collection_raw(
+            "test",
+            {
+                "first": list[int],
             },
         )
 

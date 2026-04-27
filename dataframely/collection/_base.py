@@ -244,15 +244,17 @@ class CollectionMeta(ABCMeta):
                 attr, annotation_args[0], annotation_args[1]
             )
         elif origin == typing.Union:
-            # Happy path: optional member
+            # Happy path: optional member (e.g. dy.LazyFrame[Schema] | None)
             union_args = get_args(type_annotation)
             if len(union_args) != 2:
                 raise AnnotationImplementationError(attr, type_annotation)
-            if not any(get_origin(arg) is None for arg in union_args):
+            # Check that exactly one arg is None (type(None) is NoneType)
+            if not any(arg is type(None) for arg in union_args):
                 raise AnnotationImplementationError(attr, type_annotation)
 
-            not_none_args = [arg for arg in union_args if get_origin(arg) is not None]
-            if len(not_none_args) == 0:
+            # Get the non-None type
+            not_none_args = [arg for arg in union_args if arg is not type(None)]
+            if len(not_none_args) != 1:
                 raise AnnotationImplementationError(attr, type_annotation)
 
             frame_origin = get_origin(not_none_args[0])
