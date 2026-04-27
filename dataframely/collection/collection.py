@@ -32,7 +32,7 @@ from dataframely._storage import StorageBackend
 from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
 from dataframely._storage.parquet import ParquetStorageBackend
-from dataframely._typing import LazyFrame, Validation
+from dataframely._typing import DataFrame, LazyFrame, Validation
 from dataframely.exc import (
     DeserializationError,
     ValidationError,
@@ -841,6 +841,7 @@ class Collection(BaseCollection, ABC):
                 name: {
                     "schema": info.schema._as_dict(),
                     "is_optional": info.is_optional,
+                    "is_lazy": info.is_lazy,
                     "ignored_in_filters": info.ignored_in_filters,
                     "inline_for_sampling": info.inline_for_sampling,
                 }
@@ -1329,11 +1330,14 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
 
         annotations: dict[str, Any] = {}
         for name, info in decoded["members"].items():
-            lf_type = LazyFrame[_schema_from_dict(info["schema"])]  # type: ignore
+            schema = _schema_from_dict(info["schema"])
+            # Default to lazy for backwards compatibility with old serialized data
+            is_lazy = info.get("is_lazy", True)
+            frame_type = LazyFrame[schema] if is_lazy else DataFrame[schema]  # type: ignore
             if info["is_optional"]:
-                lf_type = lf_type | None  # type: ignore
+                frame_type = frame_type | None  # type: ignore
             annotations[name] = Annotated[
-                lf_type,
+                frame_type,
                 CollectionMember(
                     ignored_in_filters=info["ignored_in_filters"],
                     inline_for_sampling=info["inline_for_sampling"],
