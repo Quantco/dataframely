@@ -276,7 +276,7 @@ class DeltaCollectionStorageTester(CollectionStorageTester):
         # Since the metadata retrieval depends on the metadata being attached to the
         # latest commit, this will make the metadata unretrievable.
         fs: AbstractFileSystem = url_to_fs(path)[0]
-        for member, df in collection.to_dict().items():
+        for member, df in collection._to_lazy_dict().items():
             table = _to_delta_table(fs.sep.join([path, member]))
             df.head(0).collect().write_delta(table, mode="append")
 

@@ -107,7 +107,7 @@ def concat_collection_members(collections: Sequence[C], /) -> dict[str, pl.LazyF
     """
     if len(collections) == 0:
         raise ValueError("Cannot concatenate less than one collection.")
-    members = [c.to_dict() for c in collections]
+    members = [c._to_lazy_dict() for c in collections]
     key_union = set(members[0]).union(*members[1:])
     return {
         key: pl.concat(
