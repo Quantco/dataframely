@@ -57,20 +57,32 @@ jobs:
           environments: build
       - name: Set version
         run: pixi run -e build set-version
-      - name: Install cargo-auditable
-        if: ${{ !contains(matrix.os, 'ubuntu') }}
-        run: cargo install cargo-auditable@0.7.4 --locked
+      - name: Install cargo-auditable (macOS)
+        if: ${{ contains(matrix.os, 'macos') }}
+        run: |
+          cargo install cargo-auditable@0.7.4 --locked
+          printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
+          chmod +x /usr/local/bin/cargo-auditable-wrapper
+      - name: Install cargo-auditable (Windows)
+        if: ${{ contains(matrix.os, 'windows') }}
+        run: |
+          cargo install cargo-auditable@0.7.4 --locked
+          Set-Content -Path "C:\Windows\System32\cargo-auditable-wrapper.cmd" -Value "@cargo auditable %*"
       - name: Build wheel
         uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1.50.1
         env:
-          # cargo-auditable and sccache both wrap rustc and cannot be composed.
-          RUSTC_WORKSPACE_WRAPPER: cargo-auditable
+          # cargo-auditable is a cargo subcommand wrapper, not a rustc shim.
+          # Set CARGO to a thin wrapper that prepends "auditable" to every invocation.
+          CARGO: cargo-auditable-wrapper
         with:
           command: build
           args: --out dist --release -i python3.10
           manylinux: auto
           sccache: false
-          before-script-linux: cargo install cargo-auditable@0.7.4 --locked
+          before-script-linux: |
+            cargo install cargo-auditable@0.7.4 --locked
+            printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
+            chmod +x /usr/local/bin/cargo-auditable-wrapper
       - name: Check package
         run: pixi run -e build check-wheel
       - name: Upload package
