@@ -47,7 +47,7 @@ class CollectionFilterResult(NamedTuple, Generic[C]):
             Until https://github.com/pola-rs/polars/pull/24129 is released, the
             performance advantage of this method is limited.
         """
-        members = self.result.to_dict()
+        members = self.result._to_lazy_dict()
         collected = pl.collect_all(
             itertools.chain(
                 members.values(),

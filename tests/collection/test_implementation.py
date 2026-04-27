@@ -16,17 +16,17 @@ class MyTestSchema(dy.Schema):
     a = dy.Integer(primary_key=True)
 
 
-def test_annotation_type_failure() -> None:
-    with pytest.raises(
-        AnnotationImplementationError,
-    ):
-        create_collection(
-            "test",
-            {
-                "first": create_schema("first", {"a": dy.Integer()}),
-            },
-            annotation_base_class=dy.DataFrame,
-        )
+def test_annotation_dataframe_success() -> None:
+    """DataFrame annotations are now supported."""
+    collection = create_collection(
+        "test",
+        {
+            "first": create_schema("first", {"a": dy.Integer()}),
+        },
+        annotation_base_class=dy.DataFrame,
+    )
+    members = collection.members()
+    assert not members["first"].is_lazy
 
 
 def test_annotation_union_success() -> None:
@@ -40,14 +40,16 @@ def test_annotation_union_success() -> None:
 
 
 def test_annotation_union_with_data_frame() -> None:
-    """When we use a union annotation, it must contain one typed LazyFrame and None."""
-    with pytest.raises(AnnotationImplementationError):
-        create_collection_raw(
-            "test",
-            {
-                "first": dy.DataFrame[MyTestSchema] | None,
-            },
-        )
+    """DataFrame union with None is now supported for optional eager members."""
+    collection = create_collection_raw(
+        "test",
+        {
+            "first": dy.DataFrame[MyTestSchema] | None,
+        },
+    )
+    members = collection.members()
+    assert not members["first"].is_lazy
+    assert members["first"].is_optional
 
 
 def test_annotation_union_too_many_arg_failure() -> None:

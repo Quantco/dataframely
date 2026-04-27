@@ -735,7 +735,7 @@ class Collection(BaseCollection, ABC):
                     how=how,
                     maintain_order=maintain_order,
                 )
-                for key, lf in self.to_dict().items()
+                for key, lf in self._to_lazy_dict().items()
             }
         )
 
@@ -795,9 +795,10 @@ class Collection(BaseCollection, ABC):
             collection's members are still "lazy". However, they are "shallow-lazy",
             meaning they are obtained by calling `.collect().lazy()`.
         """
-        dfs = pl.collect_all(self.to_dict().values())
+        lazy_dict = self._to_lazy_dict()
+        dfs = pl.collect_all(lazy_dict.values())
         return self._init(
-            {key: dfs[i].lazy() for i, key in enumerate(self.to_dict().keys())}
+            {key: dfs[i].lazy() for i, key in enumerate(lazy_dict.keys())}
         )
 
     # --------------------------------- SERIALIZATION -------------------------------- #
@@ -1172,7 +1173,7 @@ class Collection(BaseCollection, ABC):
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.write_collection(
-            self.to_dict(),
+            self._to_lazy_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()
@@ -1184,7 +1185,7 @@ class Collection(BaseCollection, ABC):
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.sink_collection(
-            self.to_dict(),
+            self._to_lazy_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()
