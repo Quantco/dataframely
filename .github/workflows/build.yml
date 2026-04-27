@@ -88,6 +88,7 @@ jobs:
           args: --out dist --release -i python3.10
           manylinux: auto
           sccache: false
+          docker-options: "-e CARGO=${{ env.CARGO }}"
           before-script-linux: |
             cargo install cargo-auditable@0.7.4 --locked
             REAL_CARGO="$(which cargo)"
