@@ -252,16 +252,14 @@ class CollectionMeta(ABCMeta):
             if not any(arg is type(None) for arg in union_args):
                 raise AnnotationImplementationError(attr, type_annotation)
 
-            # Get the non-None type
-            not_none_args = [arg for arg in union_args if arg is not type(None)]
-            if len(not_none_args) != 1:
-                raise AnnotationImplementationError(attr, type_annotation)
+            # Get the non-None type (exactly one exists given prior checks)
+            not_none_arg = next(arg for arg in union_args if arg is not type(None))
 
-            frame_origin = get_origin(not_none_args[0])
+            frame_origin = get_origin(not_none_arg)
             if frame_origin is None:
                 raise AnnotationImplementationError(attr, type_annotation)
 
-            schema = get_args(not_none_args[0])[0]
+            schema = get_args(not_none_arg)[0]
             is_optional = True
         elif issubclass(origin, (TypedLazyFrame, TypedDataFrame)):
             frame_origin = origin
