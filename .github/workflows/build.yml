@@ -60,26 +60,19 @@ jobs:
       - name: Install cargo-auditable
         shell: bash
         run: |
-          # cargo-auditable must be invoked as "cargo auditable <cmd>" (subcommand form), not as a
-          # direct CARGO replacement — the latter does not support "cargo rustc --profile".
-          # A thin wrapper script bridges the gap by forwarding all args through the subcommand.
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            # before-script-linux handles installation inside the manylinux container.
-            # Set CARGO on the host so maturin-action passes it into the container.
-            echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
-          elif [[ "$RUNNER_OS" == "Windows" ]]; then
-            REAL_CARGO="$(cygpath -w "$(which cargo)")"
+          # cargo-auditable must be invoked as "cargo auditable <cmd>", not as a direct CARGO
+          # replacement — the latter does not support "cargo rustc --profile". A wrapper delegates
+          # to the real cargo via PATH (no recursion risk since CARGO is set via env, not PATH).
+          if [[ "$RUNNER_OS" != "Linux" ]]; then
             cargo install cargo-auditable@0.7.4 --locked
-            WRAPPER="C:/cargo-auditable-wrapper.cmd"
-            printf '@"%s" auditable %%*\n' "$REAL_CARGO" > "$WRAPPER"
-            echo "CARGO=$(cygpath -w "$WRAPPER")" >> "$GITHUB_ENV"
+          fi
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            printf '@cargo auditable %%*\n' > "C:/cargo-auditable-wrapper.cmd"
+            echo "CARGO=C:\\cargo-auditable-wrapper.cmd" >> "$GITHUB_ENV"
           else
-            cargo install cargo-auditable@0.7.4 --locked
-            REAL_CARGO="$(which cargo)"
-            WRAPPER="/usr/local/bin/cargo-auditable-wrapper"
-            printf '#!/bin/sh\nREAL_CARGO="%s"\nexec "$REAL_CARGO" auditable "$@"\n' "$REAL_CARGO" > "$WRAPPER"
-            chmod +x "$WRAPPER"
-            echo "CARGO=$WRAPPER" >> "$GITHUB_ENV"
+            printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
+            chmod +x /usr/local/bin/cargo-auditable-wrapper
+            echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
           fi
       - name: Build wheel
         uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1.50.1
@@ -91,8 +84,7 @@ jobs:
           docker-options: "-e CARGO=${{ env.CARGO }}"
           before-script-linux: |
             cargo install cargo-auditable@0.7.4 --locked
-            REAL_CARGO="$(which cargo)"
-            printf '#!/bin/sh\nREAL_CARGO="%s"\nexec "$REAL_CARGO" auditable "$@"\n' "$REAL_CARGO" > /usr/local/bin/cargo-auditable-wrapper
+            printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
             chmod +x /usr/local/bin/cargo-auditable-wrapper
       - name: Check package
         run: pixi run -e build check-wheel
