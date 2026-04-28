@@ -86,7 +86,7 @@ jobs:
           # where the linux build is performed.
           docker-options: case(github.event_name == 'release', "-e CARGO=${{ env.CARGO }}", '')
           before-script-linux: |
-            ${{ case(github.event_name == 'release', 'cargo install cargo-auditable@0.7.4 --locked && printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper && chmod +x /usr/local/bin/cargo-auditable-wrapper', '') }}
+            ${{ case(github.event_name == 'release', 'cargo install cargo-auditable@0.7.4 --locked && printf ''#!/bin/sh\nexec cargo auditable "$@"\n'' > /usr/local/bin/cargo-auditable-wrapper && chmod +x /usr/local/bin/cargo-auditable-wrapper', '') }}
       - name: Check package
         run: pixi run -e build check-wheel
       - name: Upload package
