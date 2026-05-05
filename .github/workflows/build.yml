@@ -57,13 +57,36 @@ jobs:
           environments: build
       - name: Set version
         run: pixi run -e build set-version
+      - name: Install cargo-auditable
+        shell: bash
+        if: github.event_name == 'release'
+        run: |
+          # cargo-auditable must be invoked as "cargo auditable <cmd>", not as a direct CARGO
+          # replacement — the latter does not support "cargo rustc --profile". A wrapper delegates
+          # to the real cargo via PATH (no recursion risk since CARGO is set via env, not PATH).
+          if [[ "$RUNNER_OS" != "Linux" ]]; then
+            cargo install cargo-auditable@0.7.4 --locked
+          fi
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            printf '@cargo auditable %%*\n' > "C:/cargo-auditable-wrapper.cmd"
+            echo "CARGO=C:\\cargo-auditable-wrapper.cmd" >> "$GITHUB_ENV"
+          else
+            printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
+            chmod +x /usr/local/bin/cargo-auditable-wrapper
+            echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
+          fi
       - name: Build wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           command: build
           args: --out dist --release -i python3.10
           manylinux: auto
-          sccache: true
+          sccache: ${{ github.event_name != 'release' }}
+          # NOTE: We also need to set up cargo-auditable inside the docker container
+          # where the linux build is performed.
+          docker-options: ${{ case(github.event_name == 'release', format('-e CARGO={0}', env.CARGO), '') }}
+          before-script-linux: |
+            ${{ case(github.event_name == 'release', 'cargo install cargo-auditable@0.7.4 --locked && printf ''#!/bin/sh\nexec cargo auditable "$@"\n'' > /usr/local/bin/cargo-auditable-wrapper && chmod +x /usr/local/bin/cargo-auditable-wrapper', '') }}
       - name: Check package
         run: pixi run -e build check-wheel
       - name: Upload package
