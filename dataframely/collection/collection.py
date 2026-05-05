@@ -32,7 +32,7 @@ from dataframely._storage import StorageBackend
 from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
 from dataframely._storage.parquet import ParquetStorageBackend
-from dataframely._typing import LazyFrame, Validation
+from dataframely._typing import DataFrame, LazyFrame, Validation
 from dataframely.exc import (
     DeserializationError,
     ValidationError,
@@ -68,13 +68,13 @@ class Collection(BaseCollection, ABC):
     to 1-N relationships that are managed in separate data frames.
 
     A collection must only have type annotations for :class:`~dataframely.LazyFrame`
-    with known schema:
+    or :class:`~dataframely.DataFrame` with known schema:
 
     .. code:: python
 
         class MyCollection(dy.Collection):
             first_member: dy.LazyFrame[MyFirstSchema]
-            second_member: dy.LazyFrame[MySecondSchema]
+            second_member: dy.DataFrame[MySecondSchema]
 
     Besides, it may define *filters* (c.f. :meth:`~dataframely.filter`) and arbitrary
     methods.
@@ -735,7 +735,7 @@ class Collection(BaseCollection, ABC):
                     how=how,
                     maintain_order=maintain_order,
                 )
-                for key, lf in self.to_dict().items()
+                for key, lf in self._to_lazy_dict().items()
             }
         )
 
@@ -788,16 +788,15 @@ class Collection(BaseCollection, ABC):
         particularly useful when :meth:`filter` is called with lazy frame inputs.
 
         Returns:
-            The same collection with all members collected once.
-
-        Note:
-            As all collection members are required to be lazy frames, the returned
-            collection's members are still "lazy". However, they are "shallow-lazy",
-            meaning they are obtained by calling `.collect().lazy()`.
+            The same collection with all members collected once. Members annotated
+            with :class:`~dataframely.DataFrame` are returned as DataFrames, while
+            members annotated with :class:`~dataframely.LazyFrame` are returned as
+            "shallow-lazy" frames (obtained by calling ``.collect().lazy()``).
         """
-        dfs = pl.collect_all(self.to_dict().values())
+        lazy_dict = self._to_lazy_dict()
+        dfs = pl.collect_all(lazy_dict.values())
         return self._init(
-            {key: dfs[i].lazy() for i, key in enumerate(self.to_dict().keys())}
+            {key: dfs[i].lazy() for i, key in enumerate(lazy_dict.keys())}
         )
 
     # --------------------------------- SERIALIZATION -------------------------------- #
@@ -842,6 +841,7 @@ class Collection(BaseCollection, ABC):
                 name: {
                     "schema": info.schema._as_dict(),
                     "is_optional": info.is_optional,
+                    "is_lazy": info.is_lazy,
                     "ignored_in_filters": info.ignored_in_filters,
                     "inline_for_sampling": info.inline_for_sampling,
                 }
@@ -1172,7 +1172,7 @@ class Collection(BaseCollection, ABC):
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.write_collection(
-            self.to_dict(),
+            self._to_lazy_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()
@@ -1184,7 +1184,7 @@ class Collection(BaseCollection, ABC):
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.sink_collection(
-            self.to_dict(),
+            self._to_lazy_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()
@@ -1330,11 +1330,14 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
 
         annotations: dict[str, Any] = {}
         for name, info in decoded["members"].items():
-            lf_type = LazyFrame[_schema_from_dict(info["schema"])]  # type: ignore
+            schema = _schema_from_dict(info["schema"])
+            # Default to lazy for backwards compatibility with old serialized data
+            is_lazy = info.get("is_lazy", True)
+            frame_type = LazyFrame[schema] if is_lazy else DataFrame[schema]  # type: ignore
             if info["is_optional"]:
-                lf_type = lf_type | None  # type: ignore
+                frame_type = frame_type | None  # type: ignore
             annotations[name] = Annotated[
-                lf_type,
+                frame_type,
                 CollectionMember(
                     ignored_in_filters=info["ignored_in_filters"],
                     inline_for_sampling=info["inline_for_sampling"],

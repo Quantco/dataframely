@@ -40,14 +40,16 @@ class CollectionFilterResult(NamedTuple, Generic[C]):
             kwargs: Keyword arguments passed directly to :meth:`polars.collect_all`.
 
         Returns:
-            The same filter result object with all lazy frames collected and exposed as
+            The same filter result object with all frames collected. Members annotated
+            with :class:`~dataframely.DataFrame` are returned as DataFrames, while
+            members annotated with :class:`~dataframely.LazyFrame` are returned as
             "shallow" lazy frames.
 
         Attention:
             Until https://github.com/pola-rs/polars/pull/24129 is released, the
             performance advantage of this method is limited.
         """
-        members = self.result.to_dict()
+        members = self.result._to_lazy_dict()
         collected = pl.collect_all(
             itertools.chain(
                 members.values(),

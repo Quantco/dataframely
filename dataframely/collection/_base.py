@@ -15,6 +15,7 @@ import polars as pl
 
 from dataframely._filter import Filter
 from dataframely._polars import FrameType
+from dataframely._typing import DataFrame as TypedDataFrame
 from dataframely._typing import LazyFrame as TypedLazyFrame
 from dataframely.exc import AnnotationImplementationError, ImplementationError
 from dataframely.schema import Schema
@@ -92,6 +93,8 @@ class MemberInfo(CollectionMember):
     schema: type[Schema]
     #: Whether the member is optional.
     is_optional: bool
+    #: Whether the member is a lazy frame.
+    is_lazy: bool = True
 
 
 @dataclass
@@ -241,38 +244,45 @@ class CollectionMeta(ABCMeta):
                 attr, annotation_args[0], annotation_args[1]
             )
         elif origin == typing.Union:
-            # Happy path: optional member
+            # Happy path: optional member (e.g. dy.LazyFrame[Schema] | None)
             union_args = get_args(type_annotation)
             if len(union_args) != 2:
                 raise AnnotationImplementationError(attr, type_annotation)
-            if not any(get_origin(arg) is None for arg in union_args):
+            # Check that exactly one arg is None (type(None) is NoneType)
+            if not any(arg is type(None) for arg in union_args):
                 raise AnnotationImplementationError(attr, type_annotation)
 
-            not_none_args = [arg for arg in union_args if get_origin(arg) is not None]
-            if len(not_none_args) == 0 or not issubclass(
-                get_origin(not_none_args[0]), TypedLazyFrame
-            ):
+            # Get the non-None type (exactly one exists given prior checks)
+            not_none_arg = next(arg for arg in union_args if arg is not type(None))
+
+            frame_origin = get_origin(not_none_arg)
+            if frame_origin is None:
                 raise AnnotationImplementationError(attr, type_annotation)
 
-            return MemberInfo(
-                schema=get_args(not_none_args[0])[0],
-                is_optional=True,
-                ignored_in_filters=collection_member.ignored_in_filters,
-                inline_for_sampling=collection_member.inline_for_sampling,
-                propagate_row_failures=collection_member.propagate_row_failures,
-            )
-        elif issubclass(origin, TypedLazyFrame):
-            # Happy path: required member
-            return MemberInfo(
-                schema=get_args(type_annotation)[0],
-                is_optional=False,
-                ignored_in_filters=collection_member.ignored_in_filters,
-                inline_for_sampling=collection_member.inline_for_sampling,
-                propagate_row_failures=collection_member.propagate_row_failures,
-            )
+            schema = get_args(not_none_arg)[0]
+            is_optional = True
+        elif issubclass(origin, (TypedLazyFrame, TypedDataFrame)):
+            frame_origin = origin
+            schema = get_args(type_annotation)[0]
+            is_optional = False
         else:
-            # Some other unknown annotation
             raise AnnotationImplementationError(attr, type_annotation)
+
+        if issubclass(frame_origin, TypedLazyFrame):
+            is_lazy = True
+        elif issubclass(frame_origin, TypedDataFrame):
+            is_lazy = False
+        else:
+            raise AnnotationImplementationError(attr, type_annotation)
+
+        return MemberInfo(
+            schema=schema,
+            is_optional=is_optional,
+            is_lazy=is_lazy,
+            ignored_in_filters=collection_member.ignored_in_filters,
+            inline_for_sampling=collection_member.inline_for_sampling,
+            propagate_row_failures=collection_member.propagate_row_failures,
+        )
 
     def __repr__(cls) -> str:
         parts = [f'[Collection "{cls.__class__.__name__}"]']
@@ -345,6 +355,16 @@ class BaseCollection(metaclass=CollectionMeta):
         }
 
     @classmethod
+    def lazy_members(cls) -> set[str]:
+        """The names of all members annotated as lazy frames."""
+        return {name for name, member in cls.members().items() if member.is_lazy}
+
+    @classmethod
+    def eager_members(cls) -> set[str]:
+        """The names of all members annotated as data frames (eager)."""
+        return {name for name, member in cls.members().items() if not member.is_lazy}
+
+    @classmethod
     def _failure_propagating_members(cls) -> set[str]:
         """The names of all members of the collection that propagate individual row
         failures to the collection."""
@@ -371,10 +391,24 @@ class BaseCollection(metaclass=CollectionMeta):
     def _filters(cls) -> dict[str, Filter[Self]]:
         return getattr(cls, _FILTER_ATTR)
 
-    def to_dict(self) -> dict[str, pl.LazyFrame]:
-        """Return a dictionary representation of this collection."""
+    def to_dict(self) -> dict[str, FrameType]:
+        """Return a dictionary representation of this collection.
+
+        Returns:
+            A dictionary mapping member names to their frames.
+            Members annotated with :class:`~dataframely.DataFrame` return DataFrames,
+            while members annotated with :class:`~dataframely.LazyFrame` return LazyFrames.
+        """
         return {
             member: getattr(self, member)
+            for member in self.member_schemas()
+            if getattr(self, member) is not None
+        }
+
+    def _to_lazy_dict(self) -> dict[str, pl.LazyFrame]:
+        """Return a dictionary with all members as lazy frames (internal use)."""
+        return {
+            member: getattr(self, member).lazy()
             for member in self.member_schemas()
             if getattr(self, member) is not None
         }
@@ -385,6 +419,12 @@ class BaseCollection(metaclass=CollectionMeta):
         for member_name, member in cls.members().items():
             if member.is_optional and member_name not in data:
                 setattr(out, member_name, None)
-            else:
+            elif member.is_lazy:
                 setattr(out, member_name, data[member_name].lazy())
+            else:
+                frame = data[member_name]
+                if isinstance(frame, pl.LazyFrame):
+                    setattr(out, member_name, frame.collect())
+                else:
+                    setattr(out, member_name, frame)
         return out
