@@ -54,7 +54,6 @@ def test_annotation_union_with_data_frame() -> None:
 
 def test_annotation_union_too_many_arg_failure() -> None:
     """Unions should have a maximum of two types in them."""
-
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
             "test",
@@ -70,7 +69,6 @@ def test_annotation_union_too_many_arg_failure() -> None:
 
 def test_annotation_union_conflicting_types_failure() -> None:
     """Unions should contain a maximum of one non-None type."""
-
     with pytest.raises(AnnotationImplementationError):
         create_collection_raw(
             "test",
