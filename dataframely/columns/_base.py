@@ -76,7 +76,6 @@ class Column(ABC):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
         """
-
         if nullable and primary_key:
             raise ValueError("Nullable primary key columns are not supported.")
 

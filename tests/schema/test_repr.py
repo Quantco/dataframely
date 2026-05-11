@@ -11,22 +11,24 @@ def test_repr_no_rules() -> None:
     class SchemaNoRules(dy.Schema):
         a = dy.Integer(nullable=True)
 
-    assert repr(SchemaNoRules) == textwrap.dedent("""\
-        [Schema "SchemaNoRules"]
-          Columns:
-            - "a": Integer(nullable=True)
-        """)
+    expected = r"""\
+    [Schema "SchemaNoRules"]
+        Columns:
+        - "a": Integer(nullable=True)
+    """
+    assert repr(SchemaNoRules) == textwrap.dedent(expected)
 
 
 def test_repr_only_column_rules() -> None:
     class SchemaColumnRules(dy.Schema):
         a = dy.Integer(min=10, nullable=True)
 
-    assert repr(SchemaColumnRules) == textwrap.dedent("""\
-        [Schema "SchemaColumnRules"]
-          Columns:
-            - "a": Integer(nullable=True, min=10)
-        """)
+    expected = r"""\
+    [Schema "SchemaColumnRules"]
+        Columns:
+        - "a": Integer(nullable=True, min=10)
+    """
+    assert repr(SchemaColumnRules) == textwrap.dedent(expected)
 
 
 class SchemaWithRules(dy.Schema):
@@ -43,23 +45,25 @@ class SchemaWithRules(dy.Schema):
 
 
 def test_repr_with_rules() -> None:
-    assert repr(SchemaWithRules) == textwrap.dedent("""\
-        [Schema "SchemaWithRules"]
-          Columns:
-            - "a": Integer(min=10)
-            - "b2": String(primary_key=True, regex='^[A-Z]{3}$')
-          Rules:
-            - "my_rule": [(col("a")) < (dyn int: 100)]
-            - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']
-        """)
+    expected = r"""\
+    [Schema "SchemaWithRules"]
+        Columns:
+        - "a": Integer(min=10)
+        - "b2": String(primary_key=True, regex='^[A-Z]{3}$')
+        Rules:
+        - "my_rule": [(col("a")) < (dyn int: 100)]
+        - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']
+    """
+    assert repr(SchemaWithRules) == textwrap.dedent(expected)
 
 
 def test_repr_enum() -> None:
     class SchemaNoRules(dy.Schema):
         a = dy.Enum(["a"], nullable=True)
 
-    assert repr(SchemaNoRules) == textwrap.dedent("""\
-        [Schema "SchemaNoRules"]
-          Columns:
-            - "a": Enum(categories=['a'], nullable=True)
-        """)
+    expected = r"""\
+    [Schema "SchemaNoRules"]
+        Columns:
+        - "a": Enum(categories=['a'], nullable=True)
+    """
+    assert repr(SchemaNoRules) == textwrap.dedent(expected)
