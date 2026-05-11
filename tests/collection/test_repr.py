@@ -28,7 +28,7 @@ class MyCollection(dy.Collection):
     reason="query plan repr changed in polars 1.39",
 )
 def test_repr_collection() -> None:
-    expected = r"""\
+    expected = """\
     [Collection "CollectionMeta"]
       Members:
         - "member_a": MySchema(optional=False, ignored_in_filters=False, inline_for_sampling=False)

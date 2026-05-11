@@ -11,7 +11,7 @@ def test_repr_no_rules() -> None:
     class SchemaNoRules(dy.Schema):
         a = dy.Integer(nullable=True)
 
-    expected = r"""\
+    expected = """\
     [Schema "SchemaNoRules"]
         Columns:
         - "a": Integer(nullable=True)
@@ -23,7 +23,7 @@ def test_repr_only_column_rules() -> None:
     class SchemaColumnRules(dy.Schema):
         a = dy.Integer(min=10, nullable=True)
 
-    expected = r"""\
+    expected = """\
     [Schema "SchemaColumnRules"]
         Columns:
         - "a": Integer(nullable=True, min=10)
@@ -45,7 +45,7 @@ class SchemaWithRules(dy.Schema):
 
 
 def test_repr_with_rules() -> None:
-    expected = r"""\
+    expected = """\
     [Schema "SchemaWithRules"]
         Columns:
         - "a": Integer(min=10)
@@ -61,7 +61,7 @@ def test_repr_enum() -> None:
     class SchemaNoRules(dy.Schema):
         a = dy.Enum(["a"], nullable=True)
 
-    expected = r"""\
+    expected = """\
     [Schema "SchemaNoRules"]
         Columns:
         - "a": Enum(categories=['a'], nullable=True)
