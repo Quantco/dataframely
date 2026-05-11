@@ -56,8 +56,8 @@ except ImportError:
 
 try:
     import pyarrow as pa
-except ImportError:
-    pa = _DummyModule("pyarrow")
+except ImportError:  # pragma: no cover
+    pa = _DummyModule("pyarrow")  # type: ignore
 
 # -------------------------------------- PYDANTIC ------------------------------------ #
 

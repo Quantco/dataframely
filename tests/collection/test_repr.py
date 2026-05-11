@@ -28,17 +28,18 @@ class MyCollection(dy.Collection):
     reason="query plan repr changed in polars 1.39",
 )
 def test_repr_collection() -> None:
-    assert repr(MyCollection) == textwrap.dedent("""\
-        [Collection "CollectionMeta"]
-          Members:
-            - "member_a": MySchema(optional=False, ignored_in_filters=False, inline_for_sampling=False)
-            - "member_b": MySchema(optional=False, ignored_in_filters=False, inline_for_sampling=False)
-          Filters:
-            - "member_a_member_b_one_to_one":
-                INNER JOIN:
-                LEFT PLAN ON: [col("a")]
-                  DF ["a"]; PROJECT */1 COLUMNS
-                RIGHT PLAN ON: [col("a")]
-                  DF ["a"]; PROJECT */1 COLUMNS
-                END INNER JOIN
-        """)
+    expected = """\
+    [Collection "CollectionMeta"]
+      Members:
+        - "member_a": MySchema(optional=False, ignored_in_filters=False, inline_for_sampling=False)
+        - "member_b": MySchema(optional=False, ignored_in_filters=False, inline_for_sampling=False)
+      Filters:
+        - "member_a_member_b_one_to_one":
+            INNER JOIN:
+            LEFT PLAN ON: [col("a")]
+              DF ["a"]; PROJECT */1 COLUMNS
+            RIGHT PLAN ON: [col("a")]
+              DF ["a"]; PROJECT */1 COLUMNS
+            END INNER JOIN
+    """
+    assert repr(MyCollection) == textwrap.dedent(expected)

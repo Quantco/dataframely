@@ -29,9 +29,8 @@ class Generator:
     specifying a lower (inclusive) and an upper (exclusive) bound for the type to be
     sampled.
 
-    These methods can be used to sample higher-level types. To this end, users may
-    also directly access the underlying `numpy_generator` to reuse the generator's
-    seeding.
+    These methods can be used to sample higher-level types. To this end, users may also
+    directly access the underlying `numpy_generator` to reuse the generator's seeding.
     """
 
     def __init__(self, seed: int | None = None) -> None:
