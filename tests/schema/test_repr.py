@@ -13,7 +13,7 @@ def test_repr_no_rules() -> None:
 
     expected = """\
     [Schema "SchemaNoRules"]
-        Columns:
+      Columns:
         - "a": Integer(nullable=True)
     """
     assert repr(SchemaNoRules) == textwrap.dedent(expected)
@@ -25,7 +25,7 @@ def test_repr_only_column_rules() -> None:
 
     expected = """\
     [Schema "SchemaColumnRules"]
-        Columns:
+      Columns:
         - "a": Integer(nullable=True, min=10)
     """
     assert repr(SchemaColumnRules) == textwrap.dedent(expected)
@@ -47,10 +47,10 @@ class SchemaWithRules(dy.Schema):
 def test_repr_with_rules() -> None:
     expected = """\
     [Schema "SchemaWithRules"]
-        Columns:
+      Columns:
         - "a": Integer(min=10)
         - "b2": String(primary_key=True, regex='^[A-Z]{3}$')
-        Rules:
+      Rules:
         - "my_rule": [(col("a")) < (dyn int: 100)]
         - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']
     """
@@ -63,7 +63,7 @@ def test_repr_enum() -> None:
 
     expected = """\
     [Schema "SchemaNoRules"]
-        Columns:
+      Columns:
         - "a": Enum(categories=['a'], nullable=True)
     """
     assert repr(SchemaNoRules) == textwrap.dedent(expected)
