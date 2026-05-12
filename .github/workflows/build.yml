@@ -60,9 +60,8 @@ jobs:
       - name: Install cargo-auditable
         if: github.event_name == 'release' && !startsWith(matrix.os, 'ubuntu')
         run: cargo install cargo-auditable@0.7.4 --locked
-        shell: bash
       - name: Prepare cargo-auditable wrapper (macOS)
-        if: github.event_name == 'release' && startsWith(matrix.os, 'macos')
+        if: github.event_name == 'release' && runner.os == 'macOS'
         run: |
           # cargo-auditable must be invoked as "cargo auditable <cmd>", not as a direct CARGO
           # replacement — the latter does not support "cargo rustc --profile". A wrapper delegates
@@ -71,7 +70,7 @@ jobs:
           chmod +x /usr/local/bin/cargo-auditable-wrapper
           echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
       - name: Prepare cargo-auditable wrapper (Windows)
-        if: github.event_name == 'release' && matrix.os == 'windows-latest'
+        if: github.event_name == 'release' && runner.os == 'Windows'
         shell: bash
         run: |
           printf '@cargo auditable %%*\n' > "C:/cargo-auditable-wrapper.cmd"
