@@ -58,7 +58,7 @@ jobs:
       - name: Set version
         run: pixi run -e build set-version
       - name: Install cargo-auditable
-        if: github.event_name == 'release' && !startsWith(matrix.os, 'ubuntu')
+        if: github.event_name == 'release' && runner.os != 'Linux'
         run: cargo install cargo-auditable@0.7.4 --locked
       - name: Prepare cargo-auditable wrapper (macOS)
         if: github.event_name == 'release' && runner.os == 'macOS'
