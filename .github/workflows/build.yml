@@ -58,23 +58,24 @@ jobs:
       - name: Set version
         run: pixi run -e build set-version
       - name: Install cargo-auditable
+        if: github.event_name == 'release' && !startsWith(matrix.os, 'linux')
+        run: cargo install cargo-auditable@0.7.4 --locked
         shell: bash
-        if: github.event_name == 'release'
+      - name: Prepare cargo-auditable wrapper (macOS)
+        if: github.event_name == 'release' && startsWith(matrix.os, 'macos')
         run: |
           # cargo-auditable must be invoked as "cargo auditable <cmd>", not as a direct CARGO
           # replacement — the latter does not support "cargo rustc --profile". A wrapper delegates
           # to the real cargo via PATH (no recursion risk since CARGO is set via env, not PATH).
-          if [[ "$RUNNER_OS" != "Linux" ]]; then
-            cargo install cargo-auditable@0.7.4 --locked
-          fi
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            printf '@cargo auditable %%*\n' > "C:/cargo-auditable-wrapper.cmd"
-            echo "CARGO=C:\\cargo-auditable-wrapper.cmd" >> "$GITHUB_ENV"
-          else
-            printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
-            chmod +x /usr/local/bin/cargo-auditable-wrapper
-            echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
-          fi
+          printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
+          chmod +x /usr/local/bin/cargo-auditable-wrapper
+          echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
+      - name: Prepare cargo-auditable wrapper (Windows)
+        if: github.event_name == 'release' && matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          printf '@cargo auditable %%*\n' > "C:/cargo-auditable-wrapper.cmd"
+          echo "CARGO=C:\\cargo-auditable-wrapper.cmd" >> "$GITHUB_ENV"
       - name: Build wheel
         uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1.50.1
         with:
