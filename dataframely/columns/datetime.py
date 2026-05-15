@@ -69,15 +69,19 @@ class Date(OrdinalMixin[dt.date], Column):
                 For example, a value `1mo` expects all dates to be on the first of the
                 month. Note that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -207,15 +211,19 @@ class Time(OrdinalMixin[dt.time], Column):
                 For example, a value `1h` expects all times to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -357,15 +365,19 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 `America/New_York`.
             time_unit: Unit of time. Defaults to `us` (microseconds).
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -521,15 +533,19 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 that this setting does *not* affect the storage resolution.
             time_unit: Unit of time. Defaults to `us` (microseconds).
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
