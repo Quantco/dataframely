@@ -78,6 +78,9 @@ select = [
 [tool.ruff.lint.pep8-naming]
 classmethod-decorators = ["dataframely.rule"]
 
+[tool.ruff.lint.per-file-ignores]
+"docs/guides/examples/real-world.ipynb" = ["F811"]
+
 [tool.ruff.format]
 indent-style = "space"
 quote-style = "double"

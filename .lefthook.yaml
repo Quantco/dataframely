@@ -46,6 +46,8 @@ pre-commit:
             glob: "*"
             file_types: text
             run: pixi {run} check-merge-conflict --assume-in-merge {staged_files}
+            exclude:
+              - "*.rst"
           - name: typos
             glob: "*"
             file_types: text
