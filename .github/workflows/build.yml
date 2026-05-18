@@ -17,13 +17,42 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up pixi
+<<<<<<< before updating
         uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           environments: build
       - name: Set version
         run: pixi run -e build set-version
+||||||| last update
+        uses: prefix-dev/setup-pixi@19eac09b398e3d0c747adc7921926a6d802df4da # v0.8.8
+        with:
+          environments: build
+=======
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+      - name: Derive version
+        id: version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: echo "version=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
+      - name: Replace version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          sed -i -e "s/0.0.0/${STEPS_VERSION_OUTPUTS_VERSION}/g" pyproject.toml
+        env:
+          STEPS_VERSION_OUTPUTS_VERSION: ${{ steps.version.outputs.version }}
+>>>>>>> after updating
       - name: Build project
+<<<<<<< before updating
         run: pixi run -e build build-sdist
+||||||| last update
+        run: pixi run -e build build-wheel
+      - name: Check package
+        run: pixi run check-wheel
+=======
+        run: pixi run build-wheel
+      - name: Check package
+        run: pixi run check-wheel
+>>>>>>> after updating
       - name: Upload package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -88,7 +117,7 @@ jobs:
           before-script-linux: |
             ${{ case(github.event_name == 'release', 'cargo install cargo-auditable@0.7.4 --locked && printf ''#!/bin/sh\nexec cargo auditable "$@"\n'' > /usr/local/bin/cargo-auditable-wrapper && chmod +x /usr/local/bin/cargo-auditable-wrapper', '') }}
       - name: Check package
-        run: pixi run -e build check-wheel
+        run: pixi run check-wheel
       - name: Upload package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
