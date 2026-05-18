@@ -10,7 +10,6 @@ postinstall-release = "pip install --no-build-isolation --no-deps --disable-pip-
 
 [dependencies]
 python = ">=3.10"
-hatchling = "*"
 
 fsspec = ">=2025.9"
 numpy = "*"
@@ -71,12 +70,10 @@ pydantic-core = ">=2.33.2,<3"
 sqlalchemy = ">=2"
 
 [feature.build.dependencies]
-python = "*"
-hatchling = "*"
 python-build = "*"
-version = "*"
+setuptools-scm = "*"
 twine = ">=6"
-
+wheel = "*"
 [feature.build.target.unix.dependencies]
 sed = "*"
 
@@ -87,9 +84,8 @@ check-wheel = "twine check dist/*"
 set-version = "sed -i \"s/0.0.0/$(python -m setuptools_scm)/\" pyproject.toml"
 
 [feature.lint.dependencies]
-lefthook = "*"
 insert-license-header = "*"
-pre-commit = "*"
+lefthook = "*"
 pre-commit-hooks = "*"
 prettier = "*"
 ruff = "*"
@@ -98,8 +94,8 @@ typos = "*"
 zizmor = "*"
 
 [feature.lint.tasks]
-pre-commit-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
+pre-commit-install = "lefthook install"
 
 [feature.py310.dependencies]
 python = "3.10.*"
@@ -117,9 +113,6 @@ python = "3.13.*"
 [feature.py314.dependencies]
 python = "3.14.*"
 
-[feature.py314.dependencies]
-python = "3.14.*"
-
 [feature.polars-minimal.dependencies]
 # NOTE: Update docs/faq.md when updating this.
 polars = "1.35.*"
@@ -132,14 +125,7 @@ polars = "1.39.*"
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
-<<<<<<< before updating
 build = ["build"]
-py314 = ["polars-latest", "py314", "test"]
-||||||| last update
-build = ["build"]
-=======
-py314 = ["py314", "test"]
->>>>>>> after updating
 default = ["dev", "lint", "optionals", "polars-latest", "py314", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
@@ -150,6 +136,7 @@ py310 = ["polars-latest", "py310", "test"]
 py311 = ["polars-latest", "py311", "test"]
 py312 = ["polars-latest", "py312", "test"]
 py313 = ["polars-latest", "py313", "test"]
+py314 = ["polars-latest", "py314", "test"]
 
 # Test with optional dependencies
 py314-optionals = ["optionals", "polars-latest", "py314", "test"]
@@ -164,6 +151,3 @@ default-polars-minimal = [
   "test",
 ]
 polars-minimal = ["polars-minimal", "py314", "test"]
-
-[dependencies]
-dataframely = { path = "." }

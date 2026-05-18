@@ -28,6 +28,12 @@ pre-commit:
           - name: taplo
             glob: "*.toml"
             run: pixi {run} taplo format {staged_files}
+          - name: cargo-fmt
+            glob: "*.rs"
+            run: pixi {run} cargo fmt
+          - name: cargo-clippy
+            glob: "*.rs"
+            run: pixi {run} cargo clippy --all-targets
           - name: trailing-whitespace-fixer
             glob: "*"
             file_types: text
