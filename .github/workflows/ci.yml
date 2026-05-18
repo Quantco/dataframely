@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  pre-commit-checks:
-    name: Pre-commit Checks
+  lint:
+    name: Lint
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
@@ -31,8 +31,10 @@ jobs:
         run: rustup show
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - name: pre-commit
-        run: pixi run pre-commit-run --color=always --show-diff-on-failure
+      - name: Run linting
+        run: pixi run lint
+        env:
+          CLICOLOR_FORCE: 1
 
   unit-tests:
     name: Unit Tests (${{ contains(matrix.os, 'ubuntu') && 'Linux' || (contains(matrix.os, 'windows') && 'Windows' || 'macOS') }}) - ${{ matrix.environment }}
