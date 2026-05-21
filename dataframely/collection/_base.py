@@ -422,9 +422,6 @@ class BaseCollection(metaclass=CollectionMeta):
             elif member.is_lazy:
                 setattr(out, member_name, data[member_name].lazy())
             else:
-                frame = data[member_name]
-                if isinstance(frame, pl.LazyFrame):
-                    setattr(out, member_name, frame.collect())
-                else:
-                    setattr(out, member_name, frame)
+                setattr(out, member_name, data[member_name].lazy().collect())
+
         return out

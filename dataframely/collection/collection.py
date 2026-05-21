@@ -795,9 +795,7 @@ class Collection(BaseCollection, ABC):
         """
         lazy_dict = self._to_lazy_dict()
         dfs = pl.collect_all(lazy_dict.values())
-        return self._init(
-            {key: dfs[i].lazy() for i, key in enumerate(lazy_dict.keys())}
-        )
+        return self._init(dict(zip(lazy_dict, dfs)))
 
     # --------------------------------- SERIALIZATION -------------------------------- #
 
