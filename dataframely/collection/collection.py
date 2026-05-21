@@ -735,7 +735,7 @@ class Collection(BaseCollection, ABC):
                     how=how,
                     maintain_order=maintain_order,
                 )
-                for key, lf in self._to_lazy_dict().items()
+                for key, lf in self.to_dict().items()
             }
         )
 
@@ -793,7 +793,7 @@ class Collection(BaseCollection, ABC):
             members annotated with :class:`~dataframely.LazyFrame` are returned as
             "shallow-lazy" frames (obtained by calling ``.collect().lazy()``).
         """
-        lazy_dict = self._to_lazy_dict()
+        lazy_dict = self.to_dict()
         dfs = pl.collect_all(lazy_dict.values())
         return self._init(dict(zip(lazy_dict, dfs)))
 
@@ -1170,7 +1170,7 @@ class Collection(BaseCollection, ABC):
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.write_collection(
-            self._to_lazy_dict(),
+            self.to_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()
@@ -1182,7 +1182,7 @@ class Collection(BaseCollection, ABC):
         # Utility method encapsulating the interaction with the StorageBackend
 
         backend.sink_collection(
-            self._to_lazy_dict(),
+            self.to_dict(),
             serialized_collection=self.serialize(),
             serialized_schemas={
                 key: schema.serialize() for key, schema in self.member_schemas().items()

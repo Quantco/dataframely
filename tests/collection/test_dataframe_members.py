@@ -136,15 +136,3 @@ def test_mixed_collection_returns_correct_types(
     collection = MixedCollection.validate(valid_data)
     assert isinstance(collection.users, pl.DataFrame)
     assert isinstance(collection.orders, pl.LazyFrame)
-
-
-def test_to_dict_returns_correct_types(valid_data: dict[str, pl.DataFrame]) -> None:
-    eager = EagerCollection.validate(valid_data)
-    result = eager.to_dict()
-    assert isinstance(result["users"], pl.DataFrame)
-    assert isinstance(result["orders"], pl.DataFrame)
-
-    mixed = MixedCollection.validate(valid_data)
-    result = mixed.to_dict()
-    assert isinstance(result["users"], pl.DataFrame)
-    assert isinstance(result["orders"], pl.LazyFrame)

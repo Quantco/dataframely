@@ -391,22 +391,8 @@ class BaseCollection(metaclass=CollectionMeta):
     def _filters(cls) -> dict[str, Filter[Self]]:
         return getattr(cls, _FILTER_ATTR)
 
-    def to_dict(self) -> dict[str, pl.DataFrame | pl.LazyFrame]:
-        """Return a dictionary representation of this collection.
-
-        Returns:
-            A dictionary mapping member names to their frames.
-            Members annotated with :class:`~dataframely.DataFrame` return DataFrames,
-            while members annotated with :class:`~dataframely.LazyFrame` return LazyFrames.
-        """
-        return {
-            member: getattr(self, member)
-            for member in self.member_schemas()
-            if getattr(self, member) is not None
-        }
-
-    def _to_lazy_dict(self) -> dict[str, pl.LazyFrame]:
-        """Return a dictionary with all members as lazy frames (internal use)."""
+    def to_dict(self) -> dict[str, pl.LazyFrame]:
+        """Return a dictionary with all members as lazy frames."""
         return {
             member: getattr(self, member).lazy()
             for member in self.member_schemas()
