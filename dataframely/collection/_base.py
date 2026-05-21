@@ -391,7 +391,7 @@ class BaseCollection(metaclass=CollectionMeta):
     def _filters(cls) -> dict[str, Filter[Self]]:
         return getattr(cls, _FILTER_ATTR)
 
-    def to_dict(self) -> dict[str, FrameType]:
+    def to_dict(self) -> dict[str, pl.DataFrame | pl.LazyFrame]:
         """Return a dictionary representation of this collection.
 
         Returns:
