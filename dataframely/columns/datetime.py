@@ -46,6 +46,7 @@ class Date(OrdinalMixin[dt.date], Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -88,6 +89,7 @@ class Date(OrdinalMixin[dt.date], Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if resolution is not None:
             offset_time = pl.Series([EPOCH_DATETIME]).dt.offset_by(resolution).dt.time()
@@ -117,6 +119,7 @@ class Date(OrdinalMixin[dt.date], Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
         self.resolution = resolution
 
@@ -188,6 +191,7 @@ class Time(OrdinalMixin[dt.time], Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -230,6 +234,7 @@ class Time(OrdinalMixin[dt.time], Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if resolution is not None:
             offset_date = pl.Series([EPOCH_DATETIME]).dt.offset_by(resolution).dt.date()
@@ -259,6 +264,7 @@ class Time(OrdinalMixin[dt.time], Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
         self.resolution = resolution
 
@@ -338,6 +344,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -384,6 +391,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if resolution is not None and min is not None:
             if not datetime_matches_resolution(min, resolution):
@@ -409,6 +417,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
         self.resolution = resolution
         self.time_zone = time_zone
@@ -509,6 +518,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -552,6 +562,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if resolution is not None and min is not None:
             if not timedelta_matches_resolution(min, resolution):
@@ -577,6 +588,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
         self.resolution = resolution
         self.time_unit = time_unit

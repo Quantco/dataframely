@@ -39,6 +39,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -79,6 +80,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if min is not None and min < self.min_value:
             raise ValueError("Minimum value is too small for the data type.")
@@ -99,6 +101,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
 
     @classproperty

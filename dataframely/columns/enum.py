@@ -32,6 +32,7 @@ class Enum(Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -66,6 +67,7 @@ class Enum(Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         super().__init__(
             nullable=nullable,
@@ -74,6 +76,7 @@ class Enum(Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
         if isclass(categories) and issubclass(categories, enum.Enum):
             categories = (item.value for item in categories)

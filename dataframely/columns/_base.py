@@ -49,6 +49,7 @@ class Column(ABC):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -79,6 +80,7 @@ class Column(ABC):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if nullable and primary_key:
             raise ValueError("Nullable primary key columns are not supported.")
@@ -89,6 +91,7 @@ class Column(ABC):
         self.check = check
         self.alias = alias
         self.metadata = metadata
+        self.description = description
         # The name may be overridden by the schema on column access.
         self._name = ""
 
@@ -277,7 +280,10 @@ class Column(ABC):
         Returns:
             A dictionary of kwargs to pass to pydantic.Field.
         """
-        return {}
+        kwargs: dict[str, Any] = {}
+        if self.description is not None:
+            kwargs["description"] = self.description
+        return kwargs
 
     # ------------------------------------ HELPER ------------------------------------ #
 
@@ -361,6 +367,17 @@ class Column(ABC):
             A new column instance with the specified metadata.
         """
         return self.with_properties(metadata=metadata)
+
+    def with_description(self, description: str) -> Self:
+        """Return a new column definition with the specified description.
+
+        Args:
+            description: A human-readable description of the column.
+
+        Returns:
+            A new column instance with the specified description.
+        """
+        return self.with_properties(description=description)
 
     # ----------------------------------- SAMPLING ----------------------------------- #
 
