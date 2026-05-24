@@ -12,7 +12,7 @@ else:
     from typing_extensions import Unpack
 
 
-class Options(TypedDict):
+class Options(TypedDict, total=False):
     #: The maximum number of iterations to use for "fuzzy" sampling.
     max_sampling_iterations: int
     #: The maximum number of examples to include in failure messages.

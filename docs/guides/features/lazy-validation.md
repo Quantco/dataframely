@@ -39,3 +39,27 @@ For collections, the error message for `eager=False` is limited and non-determin
 information about a single member and, if multiple members fail validation, the member that the error message refers to
 may vary across executions.
 ```
+
+```{note}
+When the lazy frame is collected on the polars _streaming_ engine, lazy validation may not surface _all_ validation
+issues: validation is aborted as soon as the first failure is encountered. As a result, both the set of rules reported
+in the error message and the specific failure surfaced may be non-deterministic across executions.
+```
+
+## Including failure examples in error messages
+
+By default, validation error messages report only the name of each failing rule and the number of rows that violated it.
+For easier debugging, dataframely can additionally include a few example rows for each failing rule. This is configured
+via {meth}`~dataframely.Config.set_max_failure_examples` (or the `max_failure_examples` keyword on the
+{class}`~dataframely.Config` context manager) and applies to both `eager=True` and `eager=False`:
+
+```python
+import dataframely as dy
+
+with dy.Config(max_failure_examples=5):
+    MySchema.validate(df)
+```
+
+For column-level rules, examples include the value in the offending column. For schema-level rules, examples include all
+data columns of the schema, except for the `primary_key` rule where examples are limited to the primary key columns.
+The default value of `0` disables examples entirely.

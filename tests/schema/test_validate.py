@@ -130,10 +130,37 @@ def test_invalid_primary_key(
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"1 rules failed validation",
-    ) as exc_info:
+    ):
         _validate_and_collect(MySchema, df, eager=eager)
-    exc_info.match(r"with 2 distinct examples")
     assert not MySchema.is_valid(df)
+
+
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
+def test_invalid_primary_key_with_examples(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+) -> None:
+    df = df_type({"a": [1, 1], "b": ["x", "y"], "c": ["1", "2"]})
+    with dy.Config(max_failure_examples=5):
+        with pytest.raises(
+            ValidationError if eager else plexc.ComputeError,
+            match=r"'primary_key' failed for 2 rows; examples: \[\{'a': 1\}\]",
+        ):
+            _validate_and_collect(MySchema, df, eager=eager)
+
+
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
+def test_invalid_column_contents_with_examples(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+) -> None:
+    df = df_type({"a": [1, 2, 3], "b": ["x", "longtext", None], "c": ["1", None, "3"]})
+    with dy.Config(max_failure_examples=5):
+        with pytest.raises(
+            ValidationError if eager else plexc.ComputeError,
+            match=r"examples: \[\{'b': 'longtext'\}\]",
+        ):
+            _validate_and_collect(MySchema, df, eager=eager)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
