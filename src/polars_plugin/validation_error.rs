@@ -130,12 +130,41 @@ fn format_examples(examples: Option<&DataFrame>) -> String {
     let Some(df) = examples else {
         return String::new();
     };
+    let column_names: Vec<&str> = df
+        .get_column_names()
+        .into_iter()
+        .map(|s| s.as_str())
+        .collect();
     format!(
         "; examples: [{}]",
         (0..df.height())
-            .map(|i| format!("{:#?}", df.get_row(i).unwrap()))
+            .map(|i| {
+                let row = df.get_row(i).unwrap();
+                let fields = column_names
+                    .iter()
+                    .zip(row.0.iter())
+                    .map(|(name, value)| format!("'{}': {}", name, format_any_value(value)))
+                    .join(", ");
+                format!("{{{}}}", fields)
+            })
             .join(", ")
     )
+}
+
+fn format_any_value(value: &AnyValue) -> String {
+    match value {
+        AnyValue::Null => "None".to_string(),
+        AnyValue::Boolean(b) => {
+            if *b {
+                "True".to_string()
+            } else {
+                "False".to_string()
+            }
+        }
+        AnyValue::String(s) => format!("'{}'", s),
+        AnyValue::StringOwned(s) => format!("'{}'", s),
+        _ => format!("{}", value),
+    }
 }
 
 /* ---------------------------------------- FAILURE INFO --------------------------------------- */
