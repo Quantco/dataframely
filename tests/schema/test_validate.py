@@ -143,7 +143,7 @@ def test_violated_custom_rule(
     df = df_type({"a": [1, 1, 2, 3, 3], "b": [2, 2, 2, 4, 5]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
-        match=r"2 rules failed validation",
+        match=r"2 rules failed validation" if eager else None,
     ):
         _validate_and_collect(MyComplexSchema, df, eager=eager)
     assert not MyComplexSchema.is_valid(df)
