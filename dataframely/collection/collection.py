@@ -33,6 +33,7 @@ from dataframely._storage.constants import COLLECTION_METADATA_KEY
 from dataframely._storage.delta import DeltaStorageBackend
 from dataframely._storage.parquet import ParquetStorageBackend
 from dataframely._typing import LazyFrame, Validation
+from dataframely.config import Config
 from dataframely.exc import (
     DeserializationError,
     ValidationError,
@@ -420,6 +421,7 @@ class Collection(BaseCollection, ABC):
                         failures_from=failure._df.select(counts.keys()),
                         examples_from=failure.invalid(),
                         primary_key_columns=cls.member_schemas()[member].primary_key(),
+                        max_examples=Config.options["max_failure_examples"],
                     )
 
                 details = [

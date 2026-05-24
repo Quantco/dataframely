@@ -10,9 +10,6 @@ use super::RuleFailure;
 
 create_exception!(exc, PyRuleValidationError, PyException);
 
-const MAX_EXAMPLES_ENV_NAME: &str = "DATAFRAMELY_MAX_VALIDATION_FAILURE_EXAMPLES";
-const DEFAULT_MAX_EXAMPLES: usize = 0;
-
 /* -------------------------------------- VALIDATION ERROR ------------------------------------- */
 
 pub struct RuleValidationError<'a> {
@@ -27,6 +24,7 @@ impl<'a> RuleValidationError<'a> {
         failures_from: Option<DataFrame>,
         examples_from: Option<DataFrame>,
         primary_key_columns: Vec<String>,
+        max_examples: usize,
     ) -> Self {
         let num_rule_failures = failure_counts.len();
         let (flat_column_errors, schema_errors): (Vec<_>, Vec<_>) = failure_counts
@@ -51,6 +49,7 @@ impl<'a> RuleValidationError<'a> {
                                 failures_from.as_ref(),
                                 examples_from.as_ref(),
                                 Some(vec![key.to_string()]),
+                                max_examples,
                             )
                         })
                         .collect::<Vec<_>>(),
@@ -75,6 +74,7 @@ impl<'a> RuleValidationError<'a> {
                     failures_from.as_ref(),
                     examples_from.as_ref(),
                     data_columns,
+                    max_examples,
                 )
             })
             .collect();
@@ -181,12 +181,9 @@ impl<'a> RuleFailureInfo<'a> {
         failures_from: Option<&DataFrame>,
         examples_from: Option<&DataFrame>,
         data_columns: Option<Vec<String>>,
+        max_examples: usize,
     ) -> Self {
         // Check if we should return any examples at all
-        let max_examples = std::env::var(MAX_EXAMPLES_ENV_NAME)
-            .ok()
-            .and_then(|val| val.parse::<usize>().ok())
-            .unwrap_or(DEFAULT_MAX_EXAMPLES);
         if max_examples == 0 {
             return Self {
                 failure,
@@ -239,6 +236,7 @@ pub fn format_rule_failures(
     failures_from: Option<PyDataFrame>,
     examples_from: Option<PyDataFrame>,
     primary_key_columns: Vec<String>,
+    max_examples: usize,
 ) -> String {
     let validation_error = RuleValidationError::new(
         failures
@@ -251,6 +249,7 @@ pub fn format_rule_failures(
         failures_from.map(|df| df.into()),
         examples_from.map(|df| df.into()),
         primary_key_columns,
+        max_examples,
     );
     return validation_error.to_string(None);
 }

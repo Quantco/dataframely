@@ -8,6 +8,8 @@ from typing import TypeAlias
 import polars as pl
 from polars.plugins import register_plugin_function
 
+from dataframely.config import Config
+
 PLUGIN_PATH = Path(__file__).parent
 
 IntoExpr: TypeAlias = pl.Expr | str
@@ -99,6 +101,7 @@ def all_rules_required(
             "schema_name": schema_name,
             "num_rule_columns": num_rule_columns,
             "primary_key_columns": primary_key_columns or [],
+            "max_failure_examples": Config.options["max_failure_examples"],
         },
         use_abs_path=True,
         is_elementwise=True,

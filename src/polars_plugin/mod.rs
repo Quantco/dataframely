@@ -62,9 +62,10 @@ pub fn all_rules(inputs: &[Series]) -> PolarsResult<Series> {
 struct RequiredValidationKwargs {
     schema_name: String,
     null_is_valid: bool,
-    primary_key_columns: Option<Vec<String>>,
     #[serde(default)]
     num_rule_columns: Option<usize>,
+    primary_key_columns: Option<Vec<String>>,
+    max_failure_examples: usize,
 }
 
 /// Reduce a set of boolean columns into a single boolean scalar, AND-ing all values.
@@ -114,6 +115,7 @@ pub fn all_rules_required(
         Some(failures_from),
         Some(examples_from),
         kwargs.primary_key_columns.unwrap_or_default(),
+        kwargs.max_failure_examples,
     );
     Err(polars_err!(ComputeError: format!("\n{}", error.to_string(Some(&kwargs.schema_name)))))
 }

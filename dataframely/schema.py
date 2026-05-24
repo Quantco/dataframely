@@ -583,6 +583,7 @@ class Schema(BaseSchema, ABC):
                         failures_from=failure._df.select(counts.keys()),
                         examples_from=failure.invalid(),
                         primary_key_columns=cls.primary_key(),
+                        max_examples=Config.options["max_failure_examples"],
                     )
                 )
             return out

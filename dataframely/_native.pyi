@@ -8,6 +8,7 @@ def format_rule_failures(
     failures_from: pl.DataFrame | None,
     examples_from: pl.DataFrame | None,
     primary_key_columns: list[str],
+    max_examples: int | None,
 ) -> str:
     """
     Format rule failures with the same logic that produces validation errors from the
@@ -18,11 +19,12 @@ def format_rule_failures(
             failures with a count of at least 1.
         failures_from: The data frame containing the rule columns providing the
             failures.
-        max_examples: The maximum number of examples to include for each failure. No
-            effect if `examples_from` is not provided.
+        examples_from: The data frame containing the example rows for each failure.
         primary_key_columns: The primary key columns of the schema for which to format
-            rule failures. This is only relevant if `examples_from` is provided and
-            allows for better error messages for the "primary_key" rule.
+            rule failures. This is only relevant if `failures_from` and `examples_from`
+            are provided and allows for better error messages for the "primary_key" rule.
+        max_examples: The maximum number of examples to include for each failure. This is
+            only relevant if `failures_from` and `examples_from` are provided.
 
     Returns:
         The formatted rule failures.

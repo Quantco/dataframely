@@ -15,11 +15,14 @@ else:
 class Options(TypedDict):
     #: The maximum number of iterations to use for "fuzzy" sampling.
     max_sampling_iterations: int
+    #: The maximum number of examples to include in failure messages.
+    max_failure_examples: int
 
 
 def default_options() -> Options:
     return {
         "max_sampling_iterations": 10_000,
+        "max_failure_examples": 0,
     }
 
 
@@ -39,6 +42,11 @@ class Config(contextlib.ContextDecorator):
         """Set the maximum number of sampling iterations to use on
         :meth:`Schema.sample`."""
         Config.options["max_sampling_iterations"] = iterations
+
+    @staticmethod
+    def set_max_failure_examples(max_examples: int) -> None:
+        """Set the maximum number of examples to include in failure messages."""
+        Config.options["max_failure_examples"] = max_examples
 
     @staticmethod
     def restore_defaults() -> None:
