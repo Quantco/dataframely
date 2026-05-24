@@ -409,13 +409,19 @@ class Collection(BaseCollection, ABC):
             # information to properly construct a useful error message.
             filtered, failures = cls.filter(data, cast=cast, eager=True)
             if any(len(failure) > 0 for failure in failures.values()):
-                errors = {
-                    member: format_rule_failures(
-                        list(failure.counts().items()), failure.examples()
+                errors: dict[str, str] = {}
+                for member, failure in failures.items():
+                    if len(failure) == 0:
+                        continue
+
+                    counts = failure.counts()
+                    errors[member] = format_rule_failures(
+                        list(counts.items()),
+                        failures_from=failure._df.select(counts.keys()),
+                        examples_from=failure.invalid(),
+                        primary_key_columns=cls.member_schemas()[member].primary_key(),
                     )
-                    for member, failure in failures.items()
-                    if len(failure) > 0
-                }
+
                 details = [
                     f" > Member '{member}' failed validation:\n"
                     + textwrap.indent(error, "   ")
@@ -453,7 +459,11 @@ class Collection(BaseCollection, ABC):
                         )
                         .filter(
                             all_rules_required(
-                                filter_names, null_is_valid=False, schema_name=name
+                                filter_names,
+                                null_is_valid=False,
+                                schema_name=name,
+                                data_columns=cls.common_primary_key(),
+                                primary_key_columns=cls.common_primary_key(),
                             )
                         )
                         .drop(filter_names)

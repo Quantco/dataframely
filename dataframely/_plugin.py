@@ -60,6 +60,7 @@ def all_rules_required(
     null_is_valid: bool = True,
     schema_name: str,
     data_columns: Iterable[IntoExpr] | None = None,
+    primary_key_columns: list[str] | None,
 ) -> pl.Expr:
     """Execute :mod:`~polars.all_horizontal` and `.all` for a set of rules.
 
@@ -80,6 +81,8 @@ def all_rules_required(
         data_columns: Optional data columns to include for generating example rows in
             error messages. If provided, up to 5 distinct example rows are included
             for each failing rule.
+        primary_key_columns: Optional list of primary key columns which are used for
+            better error messages if data columns are provided.
 
     Returns:
         A scalar boolean expression.
@@ -95,6 +98,7 @@ def all_rules_required(
             "null_is_valid": null_is_valid,
             "schema_name": schema_name,
             "num_rule_columns": num_rule_columns,
+            "primary_key_columns": primary_key_columns or [],
         },
         use_abs_path=True,
         is_elementwise=True,

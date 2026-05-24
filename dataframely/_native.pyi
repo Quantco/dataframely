@@ -1,8 +1,13 @@
 from typing import overload
 
+import polars as pl
+
 def format_rule_failures(
     failures: list[tuple[str, int]],
-    examples: dict[str, list[str]] | None = None,
+    *,
+    failures_from: pl.DataFrame | None,
+    examples_from: pl.DataFrame | None,
+    primary_key_columns: list[str],
 ) -> str:
     """
     Format rule failures with the same logic that produces validation errors from the
@@ -11,9 +16,13 @@ def format_rule_failures(
     Args:
         failures: The name of the failures and their counts. This should only include
             failures with a count of at least 1.
-        examples: Optional mapping from rule name to a list of example row strings.
-            When provided, up to ``len(examples[rule])`` distinct examples are included
-            in the formatted message for each rule.
+        failures_from: The data frame containing the rule columns providing the
+            failures.
+        max_examples: The maximum number of examples to include for each failure. No
+            effect if `examples_from` is not provided.
+        primary_key_columns: The primary key columns of the schema for which to format
+            rule failures. This is only relevant if `examples_from` is provided and
+            allows for better error messages for the "primary_key" rule.
 
     Returns:
         The formatted rule failures.
