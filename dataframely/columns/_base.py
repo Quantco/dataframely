@@ -453,7 +453,7 @@ class Column(ABC):
                     else getattr(self, param)
                 )
                 for param in inspect.signature(self.__class__.__init__).parameters
-                if param not in ("self", "alias")
+                if param not in ("self", "alias", "description")
             },
         }
 
@@ -502,8 +502,9 @@ class Column(ABC):
             for attr in attributes.parameters
             # NOTE: We do not want to compare the `alias` here as the comparison should
             #  only evaluate the type and its constraints. Names are checked in
-            #  :meth:`Schema.matches`.
-            if attr not in ("self", "alias")
+            #  :meth:`Schema.matches`. The `description` is also excluded as it is
+            #  human-readable documentation rather than a semantic constraint.
+            if attr not in ("self", "alias", "description")
         )
 
     def _attributes_match(
@@ -523,7 +524,9 @@ class Column(ABC):
                 self.__class__.__init__
             ).parameters.items()
             if attribute
-            not in ["self", "alias"]  # alias is always equal to the column name here
+            # alias is always equal to the column name here; description is
+            # human-readable documentation rather than a semantic constraint
+            not in ["self", "alias", "description"]
             and not (
                 # Do not include attributes that are set to their default value
                 getattr(self, attribute) == param_details.default

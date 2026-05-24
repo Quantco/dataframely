@@ -19,24 +19,32 @@ class SchemaWithDescription(dy.Schema):
 
 
 def test_description_attribute() -> None:
+    # Act / Assert
     assert SchemaWithDescription.a.description == "The number of widgets."
     assert SchemaWithDescription.b.description is None
 
 
 def test_with_description() -> None:
+    # Arrange
     col = dy.Int64()
-    assert col.description is None
+
+    # Act
     updated = col.with_description("hello")
-    assert updated.description == "hello"
-    # Original is unchanged.
+
+    # Assert
     assert col.description is None
+    assert updated.description == "hello"
 
 
 @pytest.mark.parametrize("column_type", ALL_COLUMN_TYPES)
 def test_description_in_pydantic_field(column_type: type[Column]) -> None:
+    # Arrange
     col = column_type(description="my description")
+
+    # Act
     field = col.pydantic_field()
-    # Expect an Annotated[..., FieldInfo(description=...)]
+
+    # Assert
     assert get_origin(field) is Annotated or hasattr(field, "__metadata__")
     metadata = get_args(field)[1:]
     field_info = next((m for m in metadata if hasattr(m, "description")), None)
@@ -45,9 +53,14 @@ def test_description_in_pydantic_field(column_type: type[Column]) -> None:
 
 
 def test_description_propagated_through_model() -> None:
+    # Arrange
     col = dy.Int64(description="The number of widgets.")
     model = pydantic.create_model("Test", val=col.pydantic_field())
+
+    # Act
     schema = model.model_json_schema()
+
+    # Assert
     assert schema["properties"]["val"]["description"] == "The number of widgets."
 
 
@@ -62,8 +75,11 @@ def test_description_propagated_through_model() -> None:
     ],
 )
 def test_description_for_compound_columns(col: Column) -> None:
-    assert col.description == "my description"
+    # Act
     field = col.pydantic_field()
+
+    # Assert
+    assert col.description == "my description"
     metadata = getattr(field, "__metadata__", ())
     field_info = next((m for m in metadata if hasattr(m, "description")), None)
     assert field_info is not None
@@ -71,10 +87,13 @@ def test_description_for_compound_columns(col: Column) -> None:
 
 
 def test_no_description_no_field_info() -> None:
-    # When neither description nor any other constraint is set, the pydantic
-    # field should not embed a description.
+    # Arrange
     col = dy.Bool()
+
+    # Act
     field = col.pydantic_field()
+
+    # Assert
     metadata = getattr(field, "__metadata__", ())
     for m in metadata:
         assert getattr(m, "description", None) is None
