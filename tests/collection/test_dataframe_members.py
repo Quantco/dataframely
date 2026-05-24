@@ -75,42 +75,33 @@ def valid_data() -> dict[str, pl.DataFrame]:
 # ------------------------------------------------------------------------------------ #
 
 
-def test_eager_member_detection() -> None:
-    members = EagerCollection.members()
-    assert not members["users"].is_lazy
-    assert not members["orders"].is_lazy
-
-
-def test_lazy_member_detection() -> None:
-    members = LazyCollection.members()
-    assert members["users"].is_lazy
-    assert members["orders"].is_lazy
-
-
-def test_mixed_member_detection() -> None:
-    members = MixedCollection.members()
-    assert not members["users"].is_lazy
-    assert members["orders"].is_lazy
+@pytest.mark.parametrize(
+    ("collection_cls", "expected_lazy", "expected_eager"),
+    [
+        (EagerCollection, set(), {"users", "orders"}),
+        (LazyCollection, {"users", "orders"}, set()),
+        (MixedCollection, {"orders"}, {"users"}),
+        (OptionalEagerCollection, set(), {"users", "orders"}),
+    ],
+)
+def test_member_detection(
+    collection_cls: type[dy.Collection],
+    expected_lazy: set[str],
+    expected_eager: set[str],
+) -> None:
+    members = collection_cls.members()
+    for name in expected_lazy:
+        assert members[name].is_lazy
+    for name in expected_eager:
+        assert not members[name].is_lazy
+    assert collection_cls.lazy_members() == expected_lazy
+    assert collection_cls.eager_members() == expected_eager
 
 
 def test_optional_eager_member_detection() -> None:
     members = OptionalEagerCollection.members()
-    assert not members["users"].is_lazy
-    assert not members["orders"].is_lazy
     assert not members["users"].is_optional
     assert members["orders"].is_optional
-
-
-def test_lazy_members_helper() -> None:
-    assert EagerCollection.lazy_members() == set()
-    assert LazyCollection.lazy_members() == {"users", "orders"}
-    assert MixedCollection.lazy_members() == {"orders"}
-
-
-def test_eager_members_helper() -> None:
-    assert EagerCollection.eager_members() == {"users", "orders"}
-    assert LazyCollection.eager_members() == set()
-    assert MixedCollection.eager_members() == {"users"}
 
 
 # ------------------------------------------------------------------------------------ #
@@ -118,21 +109,19 @@ def test_eager_members_helper() -> None:
 # ------------------------------------------------------------------------------------ #
 
 
-def test_eager_member_returns_dataframe(valid_data: dict[str, pl.DataFrame]) -> None:
-    collection = EagerCollection.validate(valid_data)
-    assert isinstance(collection.users, pl.DataFrame)
-    assert isinstance(collection.orders, pl.DataFrame)
-
-
-def test_lazy_member_returns_lazyframe(valid_data: dict[str, pl.DataFrame]) -> None:
-    collection = LazyCollection.validate(valid_data)
-    assert isinstance(collection.users, pl.LazyFrame)
-    assert isinstance(collection.orders, pl.LazyFrame)
-
-
-def test_mixed_collection_returns_correct_types(
+@pytest.mark.parametrize(
+    ("collection_cls", "expected_types"),
+    [
+        (EagerCollection, {"users": pl.DataFrame, "orders": pl.DataFrame}),
+        (LazyCollection, {"users": pl.LazyFrame, "orders": pl.LazyFrame}),
+        (MixedCollection, {"users": pl.DataFrame, "orders": pl.LazyFrame}),
+    ],
+)
+def test_member_access_returns_correct_type(
+    collection_cls: type[dy.Collection],
+    expected_types: dict[str, type],
     valid_data: dict[str, pl.DataFrame],
 ) -> None:
-    collection = MixedCollection.validate(valid_data)
-    assert isinstance(collection.users, pl.DataFrame)
-    assert isinstance(collection.orders, pl.LazyFrame)
+    collection = collection_cls.validate(valid_data)
+    for name, expected_type in expected_types.items():
+        assert isinstance(getattr(collection, name), expected_type)
