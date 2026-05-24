@@ -29,6 +29,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: decimal.Decimal | int | None = None,
         min_exclusive: decimal.Decimal | int | None = None,
         max: decimal.Decimal | int | None = None,
@@ -47,6 +48,9 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             min: The minimum value for decimals in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -54,15 +58,19 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -91,6 +99,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -127,6 +136,16 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         # If precision is None, we pass decimal128's maximum precision of 38 to be safe.
         # We do not use decimal256 since its values cannot be represented in SQL Server.
         return pa.decimal128(self.precision or 38, self.scale)
+
+    @property
+    def _python_type(self) -> Any:
+        return decimal.Decimal
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        return {
+            **super()._pydantic_field_kwargs(),
+            "decimal_places": self.scale,
+        }
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # NOTE: Default precision to 38 for sampling, just like for SQL and Pyarrow

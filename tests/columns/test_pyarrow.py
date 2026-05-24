@@ -90,7 +90,7 @@ def test_equal_polars_schema_list(inner: Column) -> None:
     ],
 )
 def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) -> None:
-    schema = create_schema("test", {"a": dy.Array(inner, shape)})
+    schema = create_schema("test", {"a": dy.Array(inner, shape, nullable=True)})
     actual = schema.to_pyarrow_schema()
     expected = schema.create_empty().to_arrow().schema
     assert actual == expected
@@ -266,3 +266,11 @@ def test_datetime_time_unit(time_unit: TimeUnit) -> None:
         "test", {"a": dy.Datetime(time_unit=time_unit, nullable=True)}
     )
     assert str(schema.to_pyarrow_schema()) == f"a: timestamp[{time_unit}]"
+
+
+@pytest.mark.parametrize("time_unit", ["ns", "us", "ms"])
+def test_duration_time_unit(time_unit: TimeUnit) -> None:
+    schema = create_schema(
+        "test", {"a": dy.Duration(time_unit=time_unit, nullable=True)}
+    )
+    assert str(schema.to_pyarrow_schema()) == f"a: duration[{time_unit}]"

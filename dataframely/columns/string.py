@@ -26,6 +26,7 @@ class String(Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min_length: int | None = None,
         max_length: int | None = None,
         regex: str | None = None,
@@ -40,21 +41,28 @@ class String(Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             min_length: The minimum byte-length of string values in this column.
             max_length: The maximum byte-length of string values in this column.
             regex: A regex that the string values in this column must match. If the
                 regex does not use start and end anchors (i.e. `^` and `$`), the
                 regex must only be _contained_ in the string.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -65,6 +73,7 @@ class String(Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             check=check,
             alias=alias,
             metadata=metadata,
@@ -111,6 +120,20 @@ class String(Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.large_string()
+
+    @property
+    def _python_type(self) -> Any:
+        return str
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        kwargs = super()._pydantic_field_kwargs()
+        if self.min_length is not None:
+            kwargs["min_length"] = self.min_length
+        if self.max_length is not None:
+            kwargs["max_length"] = self.max_length
+        if self.regex is not None:
+            kwargs["pattern"] = self.regex
+        return kwargs
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         if (

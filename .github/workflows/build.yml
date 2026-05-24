@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           environments: build
       - name: Set version
@@ -25,7 +25,7 @@ jobs:
       - name: Build project
         run: pixi run -e build build-sdist
       - name: Upload package
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sdist
           path: dist/*
@@ -52,25 +52,45 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           environments: build
       - name: Set version
         run: pixi run -e build set-version
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.10"
+      - name: Install cargo-auditable
+        if: github.event_name == 'release' && runner.os != 'Linux'
+        run: cargo install cargo-auditable@0.7.4 --locked
+      - name: Prepare cargo-auditable wrapper (macOS)
+        if: github.event_name == 'release' && runner.os == 'macOS'
+        run: |
+          # cargo-auditable must be invoked as "cargo auditable <cmd>", not as a direct CARGO
+          # replacement — the latter does not support "cargo rustc --profile". A wrapper delegates
+          # to the real cargo via PATH (no recursion risk since CARGO is set via env, not PATH).
+          printf '#!/bin/sh\nexec cargo auditable "$@"\n' > /usr/local/bin/cargo-auditable-wrapper
+          chmod +x /usr/local/bin/cargo-auditable-wrapper
+          echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
+      - name: Prepare cargo-auditable wrapper (Windows)
+        if: github.event_name == 'release' && runner.os == 'Windows'
+        shell: bash
+        run: |
+          printf '@cargo auditable %%*\n' > "C:/cargo-auditable-wrapper.cmd"
+          echo "CARGO=C:\\cargo-auditable-wrapper.cmd" >> "$GITHUB_ENV"
       - name: Build wheel
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0 # zizmor: ignore[cache-poisoning]
         with:
           command: build
-          args: --out dist --release
+          args: --out dist --release -i python3.10
           manylinux: auto
-          sccache: true
+          sccache: ${{ github.event_name != 'release' }}
+          # NOTE: We also need to set up cargo-auditable inside the docker container
+          # where the linux build is performed.
+          docker-options: ${{ case(github.event_name == 'release', format('-e CARGO={0}', env.CARGO), '') }}
+          before-script-linux: |
+            ${{ case(github.event_name == 'release', 'cargo install cargo-auditable@0.7.4 --locked && printf ''#!/bin/sh\nexec cargo auditable "$@"\n'' > /usr/local/bin/cargo-auditable-wrapper && chmod +x /usr/local/bin/cargo-auditable-wrapper', '') }}
       - name: Check package
         run: pixi run -e build check-wheel
       - name: Upload package
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheel-${{ matrix.target-platform }}
           path: dist/*
@@ -84,9 +104,9 @@ jobs:
       id-token: write
     environment: pypi
     steps:
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: dist
           merge-multiple: true
       - name: Publish package on PyPi
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0

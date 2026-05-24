@@ -21,8 +21,7 @@ class Object(Column):
     def __init__(
         self,
         *,
-        nullable: bool = True,
-        primary_key: bool = False,
+        nullable: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -30,17 +29,20 @@ class Object(Column):
         """
         Args:
             nullable: Whether this column may contain null values.
-            primary_key: Whether this column is part of the primary key of the schema.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -50,7 +52,6 @@ class Object(Column):
         """
         super().__init__(
             nullable=nullable,
-            primary_key=primary_key,
             check=check,
             alias=alias,
             metadata=metadata,
@@ -66,6 +67,10 @@ class Object(Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         raise NotImplementedError("PyArrow column cannot have 'Object' type.")
+
+    @property
+    def _python_type(self) -> Any:
+        return Any
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         raise NotImplementedError(

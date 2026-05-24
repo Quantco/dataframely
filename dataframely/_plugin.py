@@ -30,6 +30,7 @@ def all_rules_horizontal(rules: IntoExpr | Iterable[IntoExpr]) -> pl.Expr:
         function_name="all_rules_horizontal",
         args=rules,
         use_abs_path=True,
+        is_elementwise=True,
     )
 
 
@@ -62,9 +63,14 @@ def all_rules_required(
 ) -> pl.Expr:
     """Execute :mod:`~polars.all_horizontal` and `.all` for a set of rules.
 
-    Contrary to :meth:`all_rules`, this method raises a
-    :mod:`~polars.exceptions.ComputeError` at execution time if any rule indicates a
-    validation failure. The `ComputeError` includes a helpful error message.
+    This method differs from :meth:`all_rules` in two ways:
+
+    - It raises a :mod:`~polars.exceptions.ComputeError` at execution time if any
+      rule indicates a validation failure. The `ComputeError` includes a helpful error
+      message.
+    - It broadcasts the resulting boolean series to the length of the input. This allows
+      element-wise evaluation and making this a non-blocking operation on the streaming
+      engine.
 
     Args:
         rules: The rules to evaluate.
@@ -91,5 +97,5 @@ def all_rules_required(
             "num_rule_columns": num_rule_columns,
         },
         use_abs_path=True,
-        returns_scalar=True,
+        is_elementwise=True,
     )

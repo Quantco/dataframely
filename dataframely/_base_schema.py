@@ -6,6 +6,7 @@ from __future__ import annotations
 import sys
 import textwrap
 from abc import ABCMeta
+from collections.abc import Mapping
 from copy import copy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -21,11 +22,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
 
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
+
 
 # --------------------------------------- UTILS -------------------------------------- #
 
@@ -39,7 +40,7 @@ def _build_rules(
     # Add primary key validation to the list of rules if applicable
     primary_key = _primary_key(columns)
     if len(primary_key) > 0:
-        rules["primary_key"] = Rule(~pl.struct(primary_key).is_duplicated())
+        rules["primary_key"] = Rule(pl.struct(primary_key).is_unique())
 
     # Add column-specific rules
     column_rules = {
@@ -84,6 +85,25 @@ class Metadata:
     rules: dict[str, RuleFactory] = field(default_factory=dict)
 
     def update(self, other: Self) -> None:
+        """Merge another Metadata instance into this one.
+
+        Overlapping keys are allowed if and only if they refer to the *same* underlying
+        object. This accommodates multiple-inheritance / diamond patterns where the same
+        base schema is visited more than once.
+        """
+        # Detect conflicting column definitions: same name, different Column instance
+        duplicated_column_names = self.columns.keys() & other.columns.keys()
+        conflicting_columns = {
+            name
+            for name in duplicated_column_names
+            if self.columns[name] is not other.columns[name]
+        }
+        if conflicting_columns:
+            raise ImplementationError(
+                f"Columns {conflicting_columns} are duplicated with conflicting definitions."
+            )
+
+        # All clear
         self.columns.update(other.columns)
         self.rules.update(other.rules)
 
@@ -97,10 +117,7 @@ class SchemaMeta(ABCMeta):
         *args: Any,
         **kwargs: Any,
     ) -> SchemaMeta:
-        result = Metadata()
-        for base in bases:
-            result.update(mcs._get_metadata_recursively(base))
-        result.update(mcs._get_metadata(namespace))
+        result = mcs._collect_metadata(bases, namespace)
         namespace[_COLUMN_ATTR] = result.columns
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
@@ -189,20 +206,58 @@ class SchemaMeta(ABCMeta):
             return val
 
     @staticmethod
-    def _get_metadata_recursively(kls: type[object]) -> Metadata:
+    def _remove_overridden_columns(
+        result: Metadata,
+        namespace: Mapping[str, Any],
+        bases: tuple[type[object], ...],
+    ) -> None:
+        """Remove inherited columns that the child namespace explicitly overrides.
+
+        Before merging the child namespace, we must drop any parent columns whose
+        attribute name is redefined in the child. This allows subclasses to redefine
+        inherited columns while still detecting genuine alias conflicts.
+
+        In multiple-inheritance scenarios, the same attribute name may appear in more
+        than one base with different aliases, so we walk all parent MROs and collect
+        every matching column key to remove.
+        """
+        for attr, value in namespace.items():
+            if not isinstance(value, Column):
+                continue
+            keys_to_remove: set[str] = set()
+            for base in bases:
+                for parent_cls in base.__mro__:
+                    parent_col = parent_cls.__dict__.get(attr)
+                    if parent_col is not None and isinstance(parent_col, Column):
+                        keys_to_remove.add(parent_col.alias or attr)
+            for parent_key in keys_to_remove:
+                result.columns.pop(parent_key, None)
+
+    @staticmethod
+    def _collect_metadata(
+        bases: tuple[type[object], ...],
+        namespace: Mapping[str, Any],
+    ) -> Metadata:
         result = Metadata()
-        for base in kls.__bases__:
+        for base in bases:
             result.update(SchemaMeta._get_metadata_recursively(base))
-        result.update(SchemaMeta._get_metadata(kls.__dict__))  # type: ignore
+        SchemaMeta._remove_overridden_columns(result, namespace, bases)
+        result.update(SchemaMeta._get_metadata(namespace))
         return result
 
     @staticmethod
-    def _get_metadata(source: dict[str, Any]) -> Metadata:
+    def _get_metadata_recursively(kls: type[object]) -> Metadata:
+        return SchemaMeta._collect_metadata(kls.__bases__, kls.__dict__)
+
+    @staticmethod
+    def _get_metadata(source: Mapping[str, Any]) -> Metadata:
         result = Metadata()
         for attr, value in {
             k: v for k, v in source.items() if not k.startswith("__")
         }.items():
             if isinstance(value, Column):
+                if (col_name := value.alias or attr) in result.columns:
+                    raise ImplementationError(f"Column {col_name!r} is duplicated.")
                 result.columns[value.alias or attr] = value
             if isinstance(value, RuleFactory):
                 # We must ensure that custom rules do not clash with internal rules.

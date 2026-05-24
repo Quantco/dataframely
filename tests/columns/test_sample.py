@@ -184,7 +184,7 @@ def test_sample_list(generator: Generator) -> None:
 
 
 def test_sample_array(generator: Generator) -> None:
-    column = dy.Array(dy.Bool(nullable=True), (2, 3))
+    column = dy.Array(dy.Bool(nullable=True), (2, 3), nullable=True)
     samples = sample_and_validate(column, generator, n=10_000)
     assert samples.is_null().any()
     assert set(samples.arr.len()) == {2, None}

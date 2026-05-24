@@ -32,10 +32,11 @@ myst-parser = "*"
 nbsphinx = "*"
 numpydoc = "*"
 pydata-sphinx-theme = "*"
-sphinx = ">=8.2"
+sphinx = ">=8.2,<9"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-toolbox = "*"
+
 [feature.docs.tasks]
 docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
 readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
@@ -47,7 +48,7 @@ mypy = ">=1.13"
 pandas = "*"
 pandas-stubs = "*"
 pyodbc = "*"
-pytest = ">=6"
+pytest = "*"
 pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
@@ -71,7 +72,7 @@ sqlalchemy = ">=2"
 [feature.build.dependencies]
 python-build = "*"
 setuptools-scm = "*"
-twine = "*"
+twine = ">=6"
 wheel = "*"
 [feature.build.target.unix.dependencies]
 sed = "*"
@@ -83,17 +84,18 @@ check-wheel = "twine check dist/*"
 set-version = "sed -i \"s/0.0.0/$(python -m setuptools_scm)/\" pyproject.toml"
 
 [feature.lint.dependencies]
-docformatter = "*"
 insert-license-header = "*"
-pre-commit = "*"
+lefthook = "*"
 pre-commit-hooks = "*"
 prettier = "*"
 ruff = "*"
 taplo = "*"
 typos = "*"
+zizmor = "*"
+
 [feature.lint.tasks]
-pre-commit-install = "pre-commit install"
-pre-commit-run = "pre-commit run -a"
+lint = "lefthook run pre-commit --all-files"
+pre-commit-install = "lefthook install"
 
 [feature.py310.dependencies]
 python = "3.10.*"
@@ -117,7 +119,7 @@ polars = "1.35.*"
 
 [feature.polars-latest.dependencies]
 # NOTE: Update docs/faq.md when updating this.
-polars = "1.38.*"
+polars = "1.39.*"
 
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"

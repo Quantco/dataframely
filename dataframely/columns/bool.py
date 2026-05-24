@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_TypeEngine
@@ -26,6 +28,10 @@ class Bool(Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.bool_()
+
+    @property
+    def _python_type(self) -> Any:
+        return bool
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_bool(n, null_probability=self._null_probability)

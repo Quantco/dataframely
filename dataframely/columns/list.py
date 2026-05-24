@@ -35,6 +35,7 @@ class List(Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         min_length: int | None = None,
@@ -53,16 +54,23 @@ class List(Column):
                 In a future release, `nullable=False` will be the default if `nullable`
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -73,6 +81,7 @@ class List(Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             check=check,
             alias=alias,
             metadata=metadata,
@@ -101,6 +110,10 @@ class List(Column):
         list_rules: dict[str, pl.Expr] = {}
         if (rule := _list_primary_key_check(expr.list, self.inner)) is not None:
             list_rules["primary_key"] = rule
+        if self.unique:
+            # Wrap the column in a struct to make `is_unique` work with lists:
+            # https://github.com/pola-rs/polars/issues/27286
+            list_rules["unique"] = pl.struct(expr).is_unique()
         if self.min_length is not None:
             list_rules["min_length"] = (
                 pl.when(expr.is_null())
@@ -132,6 +145,19 @@ class List(Column):
     def pyarrow_dtype(self) -> pa.DataType:
         # NOTE: Polars uses `large_list`s by default.
         return pa.large_list(self.inner.pyarrow_field("item"))
+
+    @property
+    def _python_type(self) -> Any:
+        inner_type = self.inner.pydantic_field()
+        return list[inner_type]  # type: ignore
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        kwargs = super()._pydantic_field_kwargs()
+        if self.min_length is not None:
+            kwargs["min_length"] = self.min_length
+        if self.max_length is not None:
+            kwargs["max_length"] = self.max_length
+        return kwargs
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # First, sample the number of items per list element

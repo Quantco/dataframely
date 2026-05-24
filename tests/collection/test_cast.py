@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import polars as pl
-import polars.exceptions as plexc
 import pytest
 
 import dataframely as dy
+from dataframely.exc import SchemaError
 
 
 class FirstSchema(dy.Schema):
@@ -48,12 +48,12 @@ def test_cast_invalid_members(df_type: type[pl.DataFrame] | type[pl.LazyFrame]) 
 
 def test_cast_invalid_member_schema_eager() -> None:
     first = pl.DataFrame({"b": [3]})
-    with pytest.raises(plexc.ColumnNotFoundError):
+    with pytest.raises(SchemaError):
         Collection.cast({"first": first})
 
 
 def test_cast_invalid_member_schema_lazy() -> None:
     first = pl.LazyFrame({"b": [3]})
     collection = Collection.cast({"first": first})
-    with pytest.raises(plexc.ColumnNotFoundError):
+    with pytest.raises(SchemaError):
         collection.collect_all()

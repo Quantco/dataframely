@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 
@@ -99,7 +99,9 @@ class RuleFactory:
     """Factory class for rules created within schemas."""
 
     def __init__(
-        self, validation_fn: Callable[[Any], pl.Expr], group_columns: list[str] | None
+        self,
+        validation_fn: Callable[[Any], pl.Expr],
+        group_columns: list[str] | Literal["primary_key"] | None,
     ) -> None:
         self.validation_fn = validation_fn
         self.group_columns = group_columns
@@ -116,16 +118,28 @@ class RuleFactory:
 
     def make(self, schema: Any) -> Rule:
         """Create a new rule from this factory."""
-        if self.group_columns is not None:
+        group_columns: list[str] | None
+        if self.group_columns == "primary_key":
+            from dataframely.exc import ImplementationError
+
+            group_columns = schema.primary_key()
+            if not group_columns:
+                raise ImplementationError(
+                    "Rule uses `group_by='primary_key'` but the schema has no"
+                    " primary key."
+                )
+        else:
+            group_columns = self.group_columns
+        if group_columns is not None:
             return GroupRule(
                 expr=lambda: self.validation_fn(schema),
-                group_columns=self.group_columns,
+                group_columns=group_columns,
             )
         return Rule(expr=lambda: self.validation_fn(schema))
 
 
 def rule(
-    *, group_by: list[str] | None = None
+    *, group_by: list[str] | Literal["primary_key"] | None = None
 ) -> Callable[[ValidationFunction], RuleFactory]:
     """Mark a function as a rule to evaluate during validation.
 
@@ -147,7 +161,10 @@ def rule(
         group_by: An optional list of columns to group by for rules operating on groups
             of rows. If this list is provided, the returned expression must return a
             single boolean value, i.e. some kind of aggregation function must be used
-            (e.g. `sum`, `any`, ...).
+            (e.g. `sum`, `any`, ...). Pass ``"primary_key"`` to dynamically resolve to
+            the schema's primary key columns at class creation time. This is useful for
+            defining rules in mixin classes where the primary key is not known at
+            definition time.
 
     Note:
         You'll need to explicitly handle `null` values in your columns when defining

@@ -6,7 +6,7 @@ from __future__ import annotations
 import enum
 from collections.abc import Iterable
 from inspect import isclass
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 
@@ -28,6 +28,7 @@ class Enum(Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -42,16 +43,23 @@ class Enum(Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -62,6 +70,7 @@ class Enum(Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             check=check,
             alias=alias,
             metadata=metadata,
@@ -94,6 +103,10 @@ class Enum(Column):
         else:
             dtype = pa.uint32()
         return pa.dictionary(dtype, pa.large_string())
+
+    @property
+    def _python_type(self) -> Any:
+        return Literal[tuple(self.categories)]
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_choice(

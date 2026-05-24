@@ -29,9 +29,8 @@ class Generator:
     specifying a lower (inclusive) and an upper (exclusive) bound for the type to be
     sampled.
 
-    These methods can be used to sample higher-level types. To this end, users may
-    also directly access the underlying `numpy_generator` to reuse the generator's
-    seeding.
+    These methods can be used to sample higher-level types. To this end, users may also
+    directly access the underlying `numpy_generator` to reuse the generator's seeding.
     """
 
     def __init__(self, seed: int | None = None) -> None:
@@ -376,6 +375,7 @@ class Generator:
         min: dt.timedelta,
         max: dt.timedelta,
         resolution: str | None = None,
+        time_unit: TimeUnit = "us",
         null_probability: float = 0.0,
     ) -> pl.Series:
         """Sample a list of durations in the provided range.
@@ -386,6 +386,7 @@ class Generator:
             max: The maximum duration to sample (exclusive).
             resolution: The resolution that durations in the column must have. This uses
                 the formatting language used by :mod:`polars` datetime `round` method.
+            time_unit: The time unit of the duration column. Defaults to `us` (microseconds).
             null_probability: The probability of an element being `null`.
 
         Returns:
@@ -410,7 +411,7 @@ class Generator:
                 max=max_microseconds,
                 null_probability=null_probability,
             )
-        ).cast(pl.Duration)
+        ).cast(pl.Duration(time_unit=time_unit))
 
         if resolution is not None:
             ref_dt = pl.lit(EPOCH_DATETIME)

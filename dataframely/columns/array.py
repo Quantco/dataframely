@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import math
 import sys
+import warnings
 from collections.abc import Sequence
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 import polars as pl
 
@@ -32,10 +33,9 @@ class Array(Column):
         inner: Column,
         shape: int | tuple[int, ...],
         *,
-        nullable: bool = True,
-        # polars doesn't yet support grouping by arrays,
-        # see https://github.com/pola-rs/polars/issues/22574
-        primary_key: Literal[False] = False,
+        nullable: bool = False,
+        primary_key: bool = False,
+        unique: bool = False,
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -46,17 +46,23 @@ class Array(Column):
             shape: The shape of the array.
             nullable: Whether this column may contain null values.
             primary_key: Whether this column is part of the primary key of the schema.
-                Not yet supported for the Array type.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -66,7 +72,8 @@ class Array(Column):
         """
         super().__init__(
             nullable=nullable,
-            primary_key=False,
+            primary_key=primary_key,
+            unique=unique,
             check=check,
             alias=alias,
             metadata=metadata,
@@ -89,6 +96,10 @@ class Array(Column):
         array_rules: dict[str, pl.Expr] = {}
         if (rule := _list_primary_key_check(expr.arr, self.inner)) is not None:
             array_rules["primary_key"] = rule
+        if self.unique:
+            # Wrap the column in a struct to make `is_unique` work with arrays:
+            # https://github.com/pola-rs/polars/issues/27286
+            array_rules["unique"] = pl.struct(expr).is_unique()
 
         return {
             **super().validation_rules(expr),
@@ -120,6 +131,23 @@ class Array(Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return self._pyarrow_field_of_shape(self.shape).type
+
+    @property
+    def _python_type(self) -> Any:
+        inner_type = self.inner.pydantic_field()
+        return list[inner_type]  # type: ignore
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if len(self.shape) != 1:
+            warnings.warn(
+                "Multi-dimensional arrays are flattened for pydantic validation."
+            )
+
+        return {
+            **super()._pydantic_field_kwargs(),
+            "min_length": math.prod(self.shape),
+            "max_length": math.prod(self.shape),
+        }
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # Sample the inner elements in a flat series

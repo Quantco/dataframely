@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 import sys
+import warnings
 from abc import abstractmethod
 from typing import Any
 
@@ -28,6 +29,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         allow_inf: bool = False,
         allow_nan: bool = False,
         min: float | None = None,
@@ -46,6 +48,9 @@ class _BaseFloat(OrdinalMixin[float], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             allow_inf: Whether this column may contain infinity values.
             allow_nan: Whether this column may contain NaN values.
             min: The minimum value for floats in this column (inclusive).
@@ -55,15 +60,19 @@ class _BaseFloat(OrdinalMixin[float], Column):
             max_exclusive: Like `max` but exclusive. May not be specified if `max`
                 is specified and vice versa.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -82,6 +91,7 @@ class _BaseFloat(OrdinalMixin[float], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -100,6 +110,26 @@ class _BaseFloat(OrdinalMixin[float], Column):
     @abstractmethod
     def min_value(self) -> float:
         """Minimum value of the column's type."""
+
+    @property
+    def _python_type(self) -> Any:
+        return float
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.allow_inf != self.allow_nan:
+            warnings.warn(
+                "Unequal settings of `allow_inf` and `allow_nan` cannot be translated to "
+                "pydantic constraints."
+            )
+
+        kwargs = super()._pydantic_field_kwargs()
+        if self.allow_inf == self.allow_nan:
+            kwargs["allow_inf_nan"] = self.allow_inf
+        if "le" not in kwargs:
+            kwargs["le"] = self.max_value
+        if "ge" not in kwargs:
+            kwargs["ge"] = self.min_value
+        return kwargs
 
     @property
     def _nan_probability(self) -> float:

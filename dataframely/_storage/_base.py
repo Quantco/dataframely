@@ -195,7 +195,6 @@ class StorageBackend(ABC):
         self, **kwargs: Any
     ) -> tuple[pl.DataFrame, SerializedRules, SerializedSchema]:
         """Read the failure info from the storage backend."""
-
         lf, rule_metadata, schema_metadata = self.scan_failure_info(**kwargs)
         return (
             lf.collect(),

@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from typing import Any as AnyType
+
 import polars as pl
 
 from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
@@ -32,15 +34,19 @@ class Any(Column):
         """
         Args:
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -76,6 +82,10 @@ class Any(Column):
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.null()
+
+    @property
+    def _python_type(self) -> AnyType:
+        return AnyType
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return pl.repeat(None, n, dtype=pl.Null, eager=True)

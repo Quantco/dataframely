@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import warnings
 from typing import Any, cast
 
 import polars as pl
@@ -36,6 +37,7 @@ class Date(OrdinalMixin[dt.date], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.date | None = None,
         min_exclusive: dt.date | None = None,
         max: dt.date | None = None,
@@ -53,6 +55,9 @@ class Date(OrdinalMixin[dt.date], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             min: The minimum date for dates in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -64,15 +69,19 @@ class Date(OrdinalMixin[dt.date], Column):
                 For example, a value `1mo` expects all dates to be on the first of the
                 month. Note that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -100,6 +109,7 @@ class Date(OrdinalMixin[dt.date], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -132,6 +142,16 @@ class Date(OrdinalMixin[dt.date], Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.date32()
 
+    @property
+    def _python_type(self) -> Any:
+        return dt.date
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn("Date resolution is not translated to a pydantic constraint.")
+
+        return super()._pydantic_field_kwargs()
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_date(
             n,
@@ -159,6 +179,7 @@ class Time(OrdinalMixin[dt.time], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.time | None = None,
         min_exclusive: dt.time | None = None,
         max: dt.time | None = None,
@@ -176,6 +197,9 @@ class Time(OrdinalMixin[dt.time], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             min: The minimum time for times in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -187,15 +211,19 @@ class Time(OrdinalMixin[dt.time], Column):
                 For example, a value `1h` expects all times to be full hours. Note
                 that this setting does *not* affect the storage resolution.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -223,6 +251,7 @@ class Time(OrdinalMixin[dt.time], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -261,6 +290,16 @@ class Time(OrdinalMixin[dt.time], Column):
     def pyarrow_dtype(self) -> pa.DataType:
         return pa.time64("ns")
 
+    @property
+    def _python_type(self) -> Any:
+        return dt.time
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn("Time resolution is not translated to a pydantic constraint.")
+
+        return super()._pydantic_field_kwargs()
+
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_time(
             n,
@@ -288,6 +327,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.datetime | None = None,
         min_exclusive: dt.datetime | None = None,
         max: dt.datetime | None = None,
@@ -307,6 +347,9 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             min: The minimum datetime for datetimes in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -322,15 +365,19 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 `America/New_York`.
             time_unit: Unit of time. Defaults to `us` (microseconds).
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -354,6 +401,7 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -393,6 +441,22 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
             else self.time_zone
         )
         return pa.timestamp(self.time_unit, time_zone)
+
+    @property
+    def _python_type(self) -> Any:
+        return dt.datetime
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn(
+                "Datetime resolution is not translated to a pydantic constraint."
+            )
+        if self.time_zone is not None:
+            warnings.warn(
+                "Datetime time zone is not translated to a pydantic constraint."
+            )
+
+        return super()._pydantic_field_kwargs()
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         return generator.sample_datetime(
@@ -435,11 +499,13 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: dt.timedelta | None = None,
         min_exclusive: dt.timedelta | None = None,
         max: dt.timedelta | None = None,
         max_exclusive: dt.timedelta | None = None,
         resolution: str | None = None,
+        time_unit: TimeUnit = "us",
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -452,6 +518,9 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             min: The minimum duration for durations in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -462,16 +531,21 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 the formatting language used by :mod:`polars` datetime `truncate` method.
                 For example, a value `1h` expects all durations to be full hours. Note
                 that this setting does *not* affect the storage resolution.
+            time_unit: Unit of time. Defaults to `us` (microseconds).
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -495,6 +569,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -504,10 +579,11 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
             metadata=metadata,
         )
         self.resolution = resolution
+        self.time_unit = time_unit
 
     @property
     def dtype(self) -> pl.DataType:
-        return pl.Duration()
+        return pl.Duration(time_unit=self.time_unit)
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
         result = super().validation_rules(expr)
@@ -526,7 +602,19 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return pa.duration("us")
+        return pa.duration(self.time_unit)
+
+    @property
+    def _python_type(self) -> Any:
+        return dt.timedelta
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        if self.resolution is not None:
+            warnings.warn(
+                "Duration resolution is not translated to a pydantic constraint."
+            )
+
+        return super()._pydantic_field_kwargs()
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         # NOTE: If no duration is specified, we default to 100 years
@@ -543,6 +631,7 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 default=dt.timedelta(days=365 * 100),
             ),
             resolution=self.resolution,
+            time_unit=self.time_unit,
             null_probability=self._null_probability,
         )
 

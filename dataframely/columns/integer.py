@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 from polars.datatypes.group import INTEGER_DTYPES
@@ -26,6 +26,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         *,
         nullable: bool = False,
         primary_key: bool = False,
+        unique: bool = False,
         min: int | None = None,
         min_exclusive: int | None = None,
         max: int | None = None,
@@ -43,6 +44,9 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
                 is not specified.
             primary_key: Whether this column is part of the primary key of the schema.
                 If `True`, `nullable` is automatically set to `False`.
+            unique: Whether this column must contain unique values. Unlike `primary_key`,
+                this checks uniqueness for this column independently. Multiple columns
+                can each have `unique=True` without forming a composite constraint.
             min: The minimum value for integers in this column (inclusive).
             min_exclusive: Like `min` but exclusive. May not be specified if `min`
                 is specified and vice versa.
@@ -52,15 +56,19 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
             is_in: A (non-contiguous) list of integers indicating valid values in this
                 column. If specified, both `min` and `max` must not bet set.
             check: A custom rule or multiple rules to run for this column. This can be:
+
                 - A single callable that returns a non-aggregated boolean expression.
-                The name of the rule is derived from the callable name, or defaults to
-                "check" for lambdas.
+                  The name of the rule is derived from the callable name, or defaults to
+                  "check" for lambdas.
+
                 - A list of callables, where each callable returns a non-aggregated
-                boolean expression. The name of the rule is derived from the callable
-                name, or defaults to "check" for lambdas. Where multiple rules result
-                in the same name, the suffix __i is appended to the name.
+                  boolean expression. The name of the rule is derived from the callable
+                  name, or defaults to "check" for lambdas. Where multiple rules result
+                  in the same name, the suffix __i is appended to the name.
+
                 - A dictionary mapping rule names to callables, where each callable
-                returns a non-aggregated boolean expression.
+                  returns a non-aggregated boolean expression.
+
                 All rule names provided here are given the prefix `"check_"`.
             alias: An overwrite for this column's name which allows for using a column
                 name that is not a valid Python identifier. Especially note that setting
@@ -80,6 +88,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
+            unique=unique,
             min=min,
             min_exclusive=min_exclusive,
             max=max,
@@ -113,6 +122,20 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
     def min_value(self) -> int:
         """Minimum value of the column's type."""
         return 0 if self.is_unsigned else -(2 ** (self.num_bytes * 8 - 1))
+
+    @property
+    def _python_type(self) -> Any:
+        if self.is_in is not None:
+            return Literal[tuple(self.is_in)]
+        return int
+
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        kwargs = super()._pydantic_field_kwargs()
+        if "le" not in kwargs:
+            kwargs["le"] = self.max_value
+        if "ge" not in kwargs:
+            kwargs["ge"] = self.min_value
+        return kwargs
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
         if self.is_in is not None:

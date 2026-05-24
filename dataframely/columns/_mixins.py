@@ -80,6 +80,18 @@ class OrdinalMixin(Generic[T], Base):
             result["max_exclusive"] = expr < self.max_exclusive  # type: ignore
         return result
 
+    def _pydantic_field_kwargs(self) -> dict[str, Any]:
+        kwargs = super()._pydantic_field_kwargs()
+        if self.min is not None:
+            kwargs["ge"] = self.min
+        if self.min_exclusive is not None:
+            kwargs["gt"] = self.min_exclusive
+        if self.max is not None:
+            kwargs["le"] = self.max
+        if self.max_exclusive is not None:
+            kwargs["lt"] = self.max_exclusive
+        return kwargs
+
 
 # ------------------------------------ IS IN MIXIN ----------------------------------- #
 
