@@ -59,10 +59,10 @@ def all_rules(rules: IntoExpr | Iterable[IntoExpr]) -> pl.Expr:
 def all_rules_required(
     rules: IntoExpr | Iterable[IntoExpr],
     *,
+    data_columns: Iterable[IntoExpr],
     null_is_valid: bool = True,
     schema_name: str,
-    data_columns: Iterable[IntoExpr] | None = None,
-    primary_key_columns: list[str] | None,
+    primary_key_columns: list[str] | None = None,
 ) -> pl.Expr:
     """Execute :mod:`~polars.all_horizontal` and `.all` for a set of rules.
 
@@ -77,12 +77,12 @@ def all_rules_required(
 
     Args:
         rules: The rules to evaluate.
+        data_columns: Data columns to include for generating example rows in error
+            messages. If `max_failure_examples` is configured in `dy.Config`, values
+            are extracted from here.
         schema_name: The name of the schema being validated. This is used to produce
             better error messages.
         null_is_valid: Whether to treat null values as valid (i.e., `true`).
-        data_columns: Optional data columns to include for generating example rows in
-            error messages. If provided, up to 5 distinct example rows are included
-            for each failing rule.
         primary_key_columns: Optional list of primary key columns which are used for
             better error messages if data columns are provided.
 

@@ -158,7 +158,7 @@ def test_invalid_column_contents_with_examples(
     with dy.Config(max_failure_examples=5):
         with pytest.raises(
             ValidationError if eager else plexc.ComputeError,
-            match=r"examples: \[\{'b': 'longtext'\}\]" if eager else None,
+            match=r"examples: \[\{'b': 'longtext'\}\]" if eager else r"examples: \[",
         ):
             _validate_and_collect(MySchema, df, eager=eager)
 

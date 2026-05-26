@@ -8,7 +8,7 @@ def format_rule_failures(
     failures_from: pl.DataFrame | None,
     examples_from: pl.DataFrame | None,
     primary_key_columns: list[str],
-    max_examples: int | None,
+    max_examples: int,
 ) -> str:
     """
     Format rule failures with the same logic that produces validation errors from the
