@@ -56,7 +56,7 @@ def test_config_env_var_override(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DATAFRAMELY_MAX_SAMPLING_ITERATIONS")
         importlib.reload(_config)
         # Re-bind dy.Config to the reloaded module's class to keep state consistent.
-        dy.Config = _config.Config
+        dy.Config = _config.Config  # type: ignore
         dy.Config.restore_defaults()
 
 
