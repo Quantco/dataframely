@@ -86,5 +86,10 @@ def all_rules_required(
         args=rules,
         kwargs={"null_is_valid": null_is_valid, "schema_name": schema_name},
         use_abs_path=True,
+        # NOTE: Conceptually, we're reducing the input to a single boolean value here.
+        #  However, we set this option to ensure that the plugin does not become
+        #  blocking on the streaming engine. A single boolean value is simply
+        #  broadcast and we're indifferent to actually finding all validation failures
+        #  during `validate` (and simply fail-fast).
         is_elementwise=True,
     )
