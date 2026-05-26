@@ -84,6 +84,55 @@ def test_roundtrip_matches(collection: type[dy.Collection]) -> None:
     assert collection.matches(decoded)
 
 
+# --------------------------------- DATAFRAME MEMBERS -------------------------------- #
+
+
+class EagerSchema(dy.Schema):
+    id = dy.Int64(primary_key=True)
+
+
+class MixedEagerCollection(dy.Collection):
+    """Collection with mixed DataFrame and LazyFrame members."""
+
+    eager: dy.DataFrame[EagerSchema]
+    lazy: dy.LazyFrame[EagerSchema]
+
+
+def test_serialize_includes_is_lazy() -> None:
+    """Serialization includes the is_lazy field for each member."""
+    serialized = MixedEagerCollection.serialize()
+    decoded = json.loads(serialized)
+
+    assert decoded["members"]["eager"]["is_lazy"] is False
+    assert decoded["members"]["lazy"]["is_lazy"] is True
+
+
+def test_roundtrip_dataframe_members() -> None:
+    """DataFrame members round-trip correctly through serialization."""
+    serialized = MixedEagerCollection.serialize()
+    decoded = dy.deserialize_collection(serialized)
+
+    assert MixedEagerCollection.matches(decoded)
+    assert not decoded.members()["eager"].is_lazy
+    assert decoded.members()["lazy"].is_lazy
+
+
+def test_deserialize_without_is_lazy_defaults_to_lazy() -> None:
+    """Old serialized data without is_lazy defaults to lazy for backwards compat."""
+    collection = create_collection(
+        "test", {"s1": create_schema("schema1", {"a": dy.Int64()})}
+    )
+    serialized = collection.serialize()
+
+    # Remove is_lazy from serialized data to simulate old format
+    decoded_dict = json.loads(serialized)
+    del decoded_dict["members"]["s1"]["is_lazy"]
+    modified = json.dumps(decoded_dict)
+
+    result = dy.deserialize_collection(modified)
+    assert result.members()["s1"].is_lazy is True
+
+
 # ----------------------------- DESERIALIZATION FAILURES ----------------------------- #
 
 
