@@ -8,6 +8,8 @@ from typing import TypeAlias
 import polars as pl
 from polars.plugins import register_plugin_function
 
+from dataframely.config import Config
+
 PLUGIN_PATH = Path(__file__).parent
 
 IntoExpr: TypeAlias = pl.Expr | str
@@ -57,8 +59,10 @@ def all_rules(rules: IntoExpr | Iterable[IntoExpr]) -> pl.Expr:
 def all_rules_required(
     rules: IntoExpr | Iterable[IntoExpr],
     *,
+    data_columns: Iterable[IntoExpr],
     null_is_valid: bool = True,
     schema_name: str,
+    primary_key_columns: list[str] | None = None,
 ) -> pl.Expr:
     """Execute :mod:`~polars.all_horizontal` and `.all` for a set of rules.
 
@@ -73,18 +77,32 @@ def all_rules_required(
 
     Args:
         rules: The rules to evaluate.
+        data_columns: Data columns to include for generating example rows in error
+            messages. If `max_failure_examples` is configured in `dy.Config`, values
+            are extracted from here.
         schema_name: The name of the schema being validated. This is used to produce
             better error messages.
         null_is_valid: Whether to treat null values as valid (i.e., `true`).
+        primary_key_columns: Optional list of primary key columns which are used for
+            better error messages if data columns are provided.
 
     Returns:
         A scalar boolean expression.
     """
+    rules_list = [rules] if isinstance(rules, pl.Expr) else list(rules)
+    num_rule_columns = len(rules_list)
+    data_columns_list = list(data_columns) if data_columns is not None else []
     return register_plugin_function(
         plugin_path=PLUGIN_PATH,
         function_name="all_rules_required",
-        args=rules,
-        kwargs={"null_is_valid": null_is_valid, "schema_name": schema_name},
+        args=[*rules_list, *data_columns_list],
+        kwargs={
+            "null_is_valid": null_is_valid,
+            "schema_name": schema_name,
+            "num_rule_columns": num_rule_columns,
+            "primary_key_columns": primary_key_columns or [],
+            "max_failure_examples": Config.options["max_failure_examples"],
+        },
         use_abs_path=True,
         # NOTE: Conceptually, we're reducing the input to a single boolean value here.
         #  However, we set this option to ensure that the plugin does not become

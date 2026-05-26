@@ -210,6 +210,22 @@ def test_validate_without_filter_with_rule_violation_eager(
     exc.match(r"'min' failed for 1 rows")
 
 
+def test_validate_with_single_member_rule_violation_eager() -> None:
+    # Only the `second` member has a rule violation; the `first` member is valid.
+    # This exercises the branch that skips members without failures while still
+    # producing an error for the failing one.
+    data = {
+        "first": pl.LazyFrame({"a": [1, 2, 3], "b": [1, 2, 3]}),
+        "second": pl.LazyFrame({"a": [1, 2, 3], "b": [0, 1, 2]}),
+    }
+    with pytest.raises(ValidationError, match=r"1 members failed validation") as exc:
+        SimpleCollection.validate(data)
+
+    exc.match(r"Member 'second' failed validation")
+    exc.match(r"'min' failed for 1 rows")
+    assert "Member 'first'" not in str(exc.value)
+
+
 def test_validate_without_filter_with_rule_violation_lazy(
     data_without_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
 ) -> None:

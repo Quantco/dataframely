@@ -62,18 +62,28 @@ pub fn all_rules(inputs: &[Series]) -> PolarsResult<Series> {
 struct RequiredValidationKwargs {
     schema_name: String,
     null_is_valid: bool,
+    #[serde(default)]
+    num_rule_columns: Option<usize>,
+    primary_key_columns: Option<Vec<String>>,
+    max_failure_examples: usize,
 }
 
 /// Reduce a set of boolean columns into a single boolean scalar, AND-ing all values.
 /// Null values are treated as `true`.
 /// In contrast to `all_rules`, this function raises an error if the returned value would be
 /// `false`, including details about the `false` values (i.e. "rules" that failed).
+/// The first `num_rule_columns` inputs are boolean rule columns; any remaining inputs are
+/// data columns used to generate example rows in error messages.
 #[polars_expr(output_type=Boolean)]
 pub fn all_rules_required(
     inputs: &[Series],
     kwargs: RequiredValidationKwargs,
 ) -> PolarsResult<Series> {
-    let failures = compute_rule_failures(inputs, kwargs.null_is_valid)?;
+    let num_rule = kwargs.num_rule_columns.unwrap_or(inputs.len());
+    let rule_inputs = &inputs[..num_rule];
+    let data_inputs = &inputs[num_rule..];
+
+    let failures = compute_rule_failures(rule_inputs, kwargs.null_is_valid)?;
 
     // If there's any failure, we know that validation failed and use the failure object for an
     // informative error message. If no failure exists, we simply return a series with a single
@@ -85,7 +95,27 @@ pub fn all_rules_required(
         return Ok(column.take_materialized_series());
     }
 
-    // Aggregate failure counts into a validation error.
-    let error = RuleValidationError::new(failures);
+    // Aggregate failures into a validation error
+    let failures_from = DataFrame::new(
+        rule_inputs[0].len(),
+        rule_inputs
+            .iter()
+            .map(|s| s.clone().into_column())
+            .collect(),
+    )?;
+    let examples_from = DataFrame::new(
+        data_inputs[0].len(),
+        data_inputs
+            .iter()
+            .map(|s| s.clone().into_column())
+            .collect(),
+    )?;
+    let error = RuleValidationError::new(
+        failures,
+        Some(failures_from),
+        Some(examples_from),
+        kwargs.primary_key_columns.unwrap_or_default(),
+        kwargs.max_failure_examples,
+    );
     Err(polars_err!(ComputeError: format!("\n{}", error.to_string(Some(&kwargs.schema_name)))))
 }

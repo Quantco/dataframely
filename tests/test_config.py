@@ -15,6 +15,15 @@ def test_config_global() -> None:
     dy.Config.restore_defaults()
 
 
+def test_config_global_max_failure_examples() -> None:
+    try:
+        dy.Config.set_max_failure_examples(7)
+        assert dy.Config.options["max_failure_examples"] == 7
+    finally:
+        dy.Config.restore_defaults()
+    assert dy.Config.options["max_failure_examples"] == 0
+
+
 def test_config_local() -> None:
     try:
         with dy.Config(max_sampling_iterations=35):

@@ -576,8 +576,15 @@ class Schema(BaseSchema, ABC):
         if eager:
             out, failure = cls.filter(df, cast=cast, eager=True)
             if len(failure) > 0:
+                counts = failure.counts()
                 raise ValidationError(
-                    format_rule_failures(list(failure.counts().items()))
+                    format_rule_failures(
+                        list(counts.items()),
+                        failures_from=failure._df.select(counts.keys()),
+                        examples_from=failure.invalid(),
+                        primary_key_columns=cls.primary_key(),
+                        max_examples=Config.options["max_failure_examples"],
+                    )
                 )
             return out
         else:
@@ -587,7 +594,14 @@ class Schema(BaseSchema, ABC):
             if rules := cls._validation_rules(with_cast=False):
                 lf = (
                     lf.pipe(with_evaluation_rules, rules)
-                    .filter(all_rules_required(rules.keys(), schema_name=cls.__name__))
+                    .filter(
+                        all_rules_required(
+                            rules.keys(),
+                            schema_name=cls.__name__,
+                            data_columns=cls.column_names(),
+                            primary_key_columns=cls.primary_key(),
+                        )
+                    )
                     .drop(rules.keys())
                 )
             return lf  # type: ignore
