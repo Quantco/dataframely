@@ -59,7 +59,7 @@ class Config(contextlib.ContextDecorator):
     @staticmethod
     def restore_defaults() -> None:
         """Restore the defaults of the configuration."""
-        Config.options = _DEFAULT_OPTIONS
+        Config.options = _DEFAULT_OPTIONS.copy()
 
     # ------------------------------------ CONTEXT ----------------------------------- #
 
