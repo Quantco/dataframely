@@ -317,3 +317,15 @@ def test_multiple_unique_columns_both_invalid(
     ):
         _validate_and_collect(MultiUniqueSchema, df, eager=eager)
     assert not MultiUniqueSchema.is_valid(df)
+
+
+# ----------------------------------- PERFORMANCE ------------------------------------ #
+
+
+def test_lazy_validate_does_not_block_streaming_engine() -> None:
+    schema = create_schema("test", {"a": dy.Int64(), "b": dy.Int64()})
+    lf = pl.LazyFrame({"a": [1, 2, 3], "b": [2, 3, 4]}).lazy()
+    out = schema.validate(lf, eager=False)
+    graph = out.show_graph(engine="streaming", plan_stage="physical", raw_output=True)
+    assert graph is not None
+    assert "in-memory-map" not in graph

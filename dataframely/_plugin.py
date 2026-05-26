@@ -104,5 +104,10 @@ def all_rules_required(
             "max_failure_examples": Config.options["max_failure_examples"],
         },
         use_abs_path=True,
+        # NOTE: Conceptually, we're reducing the input to a single boolean value here.
+        #  However, we set this option to ensure that the plugin does not become
+        #  blocking on the streaming engine. A single boolean value is simply
+        #  broadcast and we're indifferent to actually finding all validation failures
+        #  during `validate` (and simply fail-fast).
         is_elementwise=True,
     )
