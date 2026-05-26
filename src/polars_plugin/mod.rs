@@ -81,7 +81,8 @@ pub fn all_rules_required(
     // neither actually runs the filter logic, nor does it copy any data. It's essentially a no-op
     // that is not optimized away in a lazy frame.
     if failures.is_empty() {
-        return Ok(BooleanChunked::new(PlSmallStr::EMPTY, [true]).into_series());
+        let column = Column::new_scalar(PlSmallStr::EMPTY, Scalar::from(true), 1);
+        return Ok(column.take_materialized_series());
     }
 
     // Aggregate failure counts into a validation error.

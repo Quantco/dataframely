@@ -30,6 +30,7 @@ def all_rules_horizontal(rules: IntoExpr | Iterable[IntoExpr]) -> pl.Expr:
         function_name="all_rules_horizontal",
         args=rules,
         use_abs_path=True,
+        is_elementwise=True,
     )
 
 
@@ -61,9 +62,14 @@ def all_rules_required(
 ) -> pl.Expr:
     """Execute :mod:`~polars.all_horizontal` and `.all` for a set of rules.
 
-    Contrary to :meth:`all_rules`, this method raises a
-    :mod:`~polars.exceptions.ComputeError` at execution time if any rule indicates a
-    validation failure. The `ComputeError` includes a helpful error message.
+    This method differs from :meth:`all_rules` in two ways:
+
+    - It raises a :mod:`~polars.exceptions.ComputeError` at execution time if any
+      rule indicates a validation failure. The `ComputeError` includes a helpful error
+      message.
+    - It broadcasts the resulting boolean series to the length of the input. This allows
+      element-wise evaluation and making this a non-blocking operation on the streaming
+      engine.
 
     Args:
         rules: The rules to evaluate.
@@ -80,5 +86,10 @@ def all_rules_required(
         args=rules,
         kwargs={"null_is_valid": null_is_valid, "schema_name": schema_name},
         use_abs_path=True,
-        returns_scalar=True,
+        # NOTE: Conceptually, we're reducing the input to a single boolean value here.
+        #  However, we set this option to ensure that the plugin does not become
+        #  blocking on the streaming engine. A single boolean value is simply
+        #  broadcast and we're indifferent to actually finding all validation failures
+        #  during `validate` (and simply fail-fast).
+        is_elementwise=True,
     )

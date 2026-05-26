@@ -115,7 +115,7 @@ def test_invalid_column_contents(
     df = df_type({"a": [1, 2, 3], "b": ["x", "longtext", None], "c": ["1", None, "3"]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
-        match=r"2 rules failed validation",
+        match=r"2 rules failed validation" if eager else None,
     ):
         _validate_and_collect(MySchema, df, eager=eager)
     assert not MySchema.is_valid(df)
@@ -143,7 +143,7 @@ def test_violated_custom_rule(
     df = df_type({"a": [1, 1, 2, 3, 3], "b": [2, 2, 2, 4, 5]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
-        match=r"2 rules failed validation",
+        match=r"2 rules failed validation" if eager else None,
     ):
         _validate_and_collect(MyComplexSchema, df, eager=eager)
     assert not MyComplexSchema.is_valid(df)
@@ -285,7 +285,19 @@ def test_multiple_unique_columns_both_invalid(
     df = df_type({"a": [1, 1, 3], "b": ["x", "y", "y"]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
-        match=r"2 rules failed validation",
+        match=r"2 rules failed validation" if eager else None,
     ):
         _validate_and_collect(MultiUniqueSchema, df, eager=eager)
     assert not MultiUniqueSchema.is_valid(df)
+
+
+# ----------------------------------- PERFORMANCE ------------------------------------ #
+
+
+def test_lazy_validate_does_not_block_streaming_engine() -> None:
+    schema = create_schema("test", {"a": dy.Int64(), "b": dy.Int64()})
+    lf = pl.LazyFrame({"a": [1, 2, 3], "b": [2, 3, 4]}).lazy()
+    out = schema.validate(lf, eager=False)
+    graph = out.show_graph(engine="streaming", plan_stage="physical", raw_output=True)
+    assert graph is not None
+    assert "in-memory-map" not in graph

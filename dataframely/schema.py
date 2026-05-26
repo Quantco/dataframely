@@ -549,6 +549,12 @@ class Schema(BaseSchema, ABC):
                 should raise upon failure. If `False`, the returned lazy frame will
                 fail to collect if the validation does not pass.
 
+                Note:
+                    If running on the streaming engine, lazy validation will potentially
+                    not surface *all* validation issues as the validation is aborted
+                    once the first failure is encountered. Likewise, the reported
+                    validation failure can be non-deterministic.
+
         Returns:
             The input eager or lazy frame, wrapped in a generic version of the
             input's data frame type to reflect schema adherence. Columns not defined
