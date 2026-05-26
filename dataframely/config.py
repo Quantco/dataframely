@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import contextlib
+import os
 import sys
 from types import TracebackType
-from typing import TypedDict
+from typing import Any, TypedDict, cast, get_type_hints
 
 if sys.version_info >= (3, 11):
     from typing import Unpack
@@ -17,22 +18,37 @@ class Options(TypedDict):
     max_sampling_iterations: int
 
 
-def default_options() -> Options:
+_ENV_PREFIX = "DATAFRAMELY_"
+
+
+def _builtin_defaults() -> Options:
     return {
         "max_sampling_iterations": 10_000,
     }
+
+
+def _init_options() -> Options:
+    options: dict[str, Any] = dict(_builtin_defaults())
+    for key, target_type in get_type_hints(Options).items():
+        env_name = f"{_ENV_PREFIX}{key.upper()}"
+        if env_name in os.environ:
+            options[key] = target_type(os.environ[env_name])
+    return cast(Options, options)
+
+
+_DEFAULT_OPTIONS = _init_options()
 
 
 class Config(contextlib.ContextDecorator):
     """An object to track global configuration for operations in dataframely."""
 
     #: The currently valid config options.
-    options: Options = default_options()
+    options: Options = _DEFAULT_OPTIONS.copy()
     #: Singleton stack to track where to go back after exiting a context.
     _stack: list[Options] = []
 
     def __init__(self, **options: Unpack[Options]) -> None:
-        self._local_options: Options = {**default_options(), **options}
+        self._local_options: Options = {**_DEFAULT_OPTIONS, **options}
 
     @staticmethod
     def set_max_sampling_iterations(iterations: int) -> None:
@@ -43,7 +59,7 @@ class Config(contextlib.ContextDecorator):
     @staticmethod
     def restore_defaults() -> None:
         """Restore the defaults of the configuration."""
-        Config.options = default_options()
+        Config.options = _DEFAULT_OPTIONS
 
     # ------------------------------------ CONTEXT ----------------------------------- #
 
