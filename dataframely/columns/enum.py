@@ -105,7 +105,7 @@ class Enum(Column):
             dtype = pa.uint16()
         else:
             dtype = pa.uint32()
-        return pa.dictionary(dtype, pa.large_string())
+        return pa.dictionary(dtype, pa.large_string(), ordered=True)
 
     @property
     def _python_type(self) -> Any:
