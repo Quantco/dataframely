@@ -41,15 +41,28 @@ TESTERS = [
     ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
     indirect=True,
 )
+@pytest.mark.parametrize(
+    "schema",
+    [
+        create_schema("test", {"a": dy.Int64(), "b": dy.String()}),
+        create_schema(
+            "test",
+            {
+                "a": dy.Int64(description="first column"),
+                "b": dy.String(description="second column"),
+            },
+        ),
+    ],
+)
 def test_read_write_if_schema_matches(
     tester: SchemaStorageTester,
     any_tmp_path: str,
     mocker: pytest_mock.MockerFixture,
     validation: Validation,
     lazy: Literal[True] | Literal[False],
+    schema: type[dy.Schema],
 ) -> None:
     # Arrange
-    schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
     df = schema.create_empty()
     tester.write_typed(schema, df, any_tmp_path, lazy=lazy)
 

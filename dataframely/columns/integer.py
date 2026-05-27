@@ -35,6 +35,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -75,6 +76,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if min is not None and min < self.min_value:
             raise ValueError("`min` is too small for the data type.")
@@ -97,6 +99,7 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
 
     @classproperty

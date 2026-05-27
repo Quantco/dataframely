@@ -49,6 +49,7 @@ class Column(ABC):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -79,6 +80,7 @@ class Column(ABC):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if nullable and primary_key:
             raise ValueError("Nullable primary key columns are not supported.")
@@ -89,6 +91,7 @@ class Column(ABC):
         self.check = check
         self.alias = alias
         self.metadata = metadata
+        self.description = description
         # The name may be overridden by the schema on column access.
         self._name = ""
 
@@ -277,7 +280,10 @@ class Column(ABC):
         Returns:
             A dictionary of kwargs to pass to pydantic.Field.
         """
-        return {}
+        kwargs: dict[str, Any] = {}
+        if self.description is not None:
+            kwargs["description"] = self.description
+        return kwargs
 
     # ------------------------------------ HELPER ------------------------------------ #
 
@@ -362,6 +368,17 @@ class Column(ABC):
         """
         return self.with_properties(metadata=metadata)
 
+    def with_description(self, description: str) -> Self:
+        """Return a new column definition with the specified description.
+
+        Args:
+            description: A human-readable description of the column.
+
+        Returns:
+            A new column instance with the specified description.
+        """
+        return self.with_properties(description=description)
+
     # ----------------------------------- SAMPLING ----------------------------------- #
 
     def sample(self, generator: Generator, n: int = 1) -> pl.Series:
@@ -436,7 +453,7 @@ class Column(ABC):
                     else getattr(self, param)
                 )
                 for param in inspect.signature(self.__class__.__init__).parameters
-                if param not in ("self", "alias")
+                if param not in ("self", "alias", "description")
             },
         }
 
@@ -485,8 +502,9 @@ class Column(ABC):
             for attr in attributes.parameters
             # NOTE: We do not want to compare the `alias` here as the comparison should
             #  only evaluate the type and its constraints. Names are checked in
-            #  :meth:`Schema.matches`.
-            if attr not in ("self", "alias")
+            #  :meth:`Schema.matches`. The `description` is also excluded as it is
+            #  human-readable documentation rather than a semantic constraint.
+            if attr not in ("self", "alias", "description")
         )
 
     def _attributes_match(
@@ -506,7 +524,9 @@ class Column(ABC):
                 self.__class__.__init__
             ).parameters.items()
             if attribute
-            not in ["self", "alias"]  # alias is always equal to the column name here
+            # alias is always equal to the column name here; description is
+            # human-readable documentation rather than a semantic constraint
+            not in ["self", "alias", "description"]
             and not (
                 # Do not include attributes that are set to their default value
                 getattr(self, attribute) == param_details.default

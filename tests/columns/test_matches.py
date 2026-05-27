@@ -19,6 +19,8 @@ import dataframely as dy
         (dy.Int32(), dy.Int32(), True),
         (dy.Int32(), dy.Int32(alias="foo"), True),
         (dy.Int32(alias="bar"), dy.Int32(alias="foo"), True),
+        (dy.Int32(), dy.Int32(description="foo"), True),
+        (dy.Int32(description="bar"), dy.Int32(description="foo"), True),
         (dy.String(regex="^a$"), dy.String(regex="^a$"), True),
         (dy.String(regex="^a$"), dy.String(regex="^b$"), False),
         (

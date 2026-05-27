@@ -37,6 +37,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         check: Check | None = None,
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
+        description: str | None = None,
     ):
         """
         Args:
@@ -77,6 +78,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
+            description: A human-readable description of the column.
         """
         if isinstance(min, int):
             min = decimal.Decimal(min)
@@ -107,6 +109,7 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             check=check,
             alias=alias,
             metadata=metadata,
+            description=description,
         )
         self.precision = precision
         self.scale = scale
