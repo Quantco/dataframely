@@ -75,6 +75,12 @@ jobs:
         run: |
           printf '@cargo auditable %%*\n' > "C:/cargo-auditable-wrapper.cmd"
           echo "CARGO=C:\\cargo-auditable-wrapper.cmd" >> "$GITHUB_ENV"
+      - name: Prepare cargo-auditable wrapper (Linux)
+        # The wrapper itself is created inside the manylinux container by
+        # `before-script-linux` below; here we only point CARGO at it on the
+        # host so maturin-action forwards the value via `-e CARGO=...`.
+        if: github.event_name == 'release' && runner.os == 'Linux'
+        run: echo "CARGO=/usr/local/bin/cargo-auditable-wrapper" >> "$GITHUB_ENV"
       - name: Build wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0 # zizmor: ignore[cache-poisoning]
         with:
