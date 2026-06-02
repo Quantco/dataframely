@@ -86,12 +86,12 @@ maximal lengths can be particularly important for primary key columns. Some data
 By default, {class}`~dataframely.Enum` maps to fixed-length `CHAR` or `VARCHAR` columns so stored values remain plain strings. For PostgreSQL setups that use database-level `ENUM` types (for example with Alembic autogenerate), set `sqlalchemy_use_enum=True`:
 
 ```python
-from enum import StrEnum
+from enum import Enum
 
 import dataframely as dy
 
 
-class Status(StrEnum):
+class Status(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
 

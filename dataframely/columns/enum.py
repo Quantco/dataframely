@@ -78,7 +78,9 @@ class Enum(Column):
                 when ``sqlalchemy_use_enum=True``. If omitted and ``categories`` is a
                 Python :class:`enum.Enum` subclass, SQLAlchemy uses the enum class name
                 (lowercased). Otherwise the SQL column name from
-                :meth:`~dataframely.Schema.to_sqlalchemy_columns` is used.
+                :meth:`~dataframely.Schema.to_sqlalchemy_columns` is used. For Python
+                enums, persisted values are the enum members' ``.value`` strings (not
+                member names), matching :attr:`categories`.
         """
         super().__init__(
             nullable=nullable,
@@ -108,14 +110,9 @@ class Enum(Column):
 
     def sqlalchemy_column(self, name: str, dialect: sa.Dialect) -> sa.Column:
         if self.sqlalchemy_use_enum:
-            return sa.Column(
-                name,
-                self._sqlalchemy_enum_type(dialect, column_name=name),
-                nullable=self.nullable,
-                primary_key=self.primary_key,
-                unique=self.unique,
-                autoincrement=False,
-            )
+            column = super().sqlalchemy_column(name, dialect)
+            column.type = self._sqlalchemy_enum_type(dialect, column_name=name)
+            return column
         return super().sqlalchemy_column(name, dialect)
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
@@ -136,6 +133,7 @@ class Enum(Column):
         if self._enum_class is not None:
             if name is not None:
                 kwargs["name"] = name
+            kwargs["values_callable"] = lambda enum: [member.value for member in enum]
             return sa.Enum(self._enum_class, **kwargs)
         if name is None:
             name = column_name

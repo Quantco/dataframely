@@ -212,6 +212,13 @@ def test_enum_sqlalchemy_native(column: Column, dialect: Dialect, datatype: str)
     assert columns[0].type.compile(dialect) == datatype
 
 
+def test_enum_sqlalchemy_native_python_enum_uses_member_values() -> None:
+    column = dy.Enum(_Status, sqlalchemy_use_enum=True)
+    schema = create_schema("test", {"a": column})
+    sa_type = schema.to_sqlalchemy_columns(PGDialect_psycopg2())[0].type
+    assert list(sa_type.enums) == column.categories
+
+
 def test_enum_sqlalchemy_native_string_categories_use_column_name() -> None:
     class TestSchema(dy.Schema):
         status = dy.Enum(["foo", "bar"], sqlalchemy_use_enum=True)
