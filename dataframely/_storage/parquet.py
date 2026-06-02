@@ -53,13 +53,13 @@ class ParquetStorageBackend(StorageBackend):
     def scan_frame(self, **kwargs: Any) -> tuple[pl.LazyFrame, SerializedSchema | None]:
         source = kwargs.pop("source")
         lf = pl.scan_parquet(source, **kwargs)
-        metadata = _read_serialized_schema(source)
+        metadata = _read_serialized_schema(source, **_metadata_read_options(kwargs))
         return lf, metadata
 
     def read_frame(self, **kwargs: Any) -> tuple[pl.DataFrame, SerializedSchema | None]:
         source = kwargs.pop("source")
         df = pl.read_parquet(source, **kwargs)
-        metadata = _read_serialized_schema(source)
+        metadata = _read_serialized_schema(source, **_metadata_read_options(kwargs))
         return df, metadata
 
     # ------------------------------ Collections ---------------------------------------
@@ -159,12 +159,18 @@ class ParquetStorageBackend(StorageBackend):
                     else pl.read_parquet(scan_path, **kwargs).lazy()
                 )
                 if is_file:
-                    collection_types.append(_read_serialized_collection(source_path))
+                    collection_types.append(
+                        _read_serialized_collection(
+                            source_path, **_metadata_read_options(kwargs)
+                        )
+                    )
                 else:
                     prefix = get_file_prefix(fs)
                     for file in fs.glob(fs.sep.join([source_path, "**", "*.parquet"])):
                         collection_types.append(
-                            _read_serialized_collection(f"{prefix}{file}")
+                            _read_serialized_collection(
+                                f"{prefix}{file}", **_metadata_read_options(kwargs)
+                            )
                         )
 
         return data, collection_types
@@ -234,7 +240,7 @@ class ParquetStorageBackend(StorageBackend):
         file = kwargs.pop("file")
 
         # Meta data
-        metadata = pl.read_parquet_metadata(file)
+        metadata = pl.read_parquet_metadata(file, **_metadata_read_options(kwargs))
         serialized_schema = assert_failure_info_metadata(
             metadata.get(SCHEMA_METADATA_KEY)
         )
@@ -245,11 +251,29 @@ class ParquetStorageBackend(StorageBackend):
         return lf, serialized_rules, serialized_schema
 
 
-def _read_serialized_collection(path: str) -> SerializedCollection | None:
-    meta = pl.read_parquet_metadata(path)
+def _metadata_read_options(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Extract the options required to reach the data store for a metadata read.
+
+    The parquet metadata is read separately from the data itself. We must forward the
+    same storage-related options (e.g. ``storage_options`` and ``credential_provider``)
+    so that metadata reads against non-AWS S3-compatible stores (lakeFS, MinIO, R2, …)
+    hit the correct endpoint and credentials instead of falling back to the default AWS
+    credential chain and endpoint.
+    """
+    return {
+        key: kwargs[key]
+        for key in ("storage_options", "credential_provider")
+        if key in kwargs
+    }
+
+
+def _read_serialized_collection(
+    path: str, **read_options: Any
+) -> SerializedCollection | None:
+    meta = pl.read_parquet_metadata(path, **read_options)
     return meta.get(COLLECTION_METADATA_KEY)
 
 
-def _read_serialized_schema(path: str) -> SerializedSchema | None:
-    meta = pl.read_parquet_metadata(path)
+def _read_serialized_schema(path: str, **read_options: Any) -> SerializedSchema | None:
+    meta = pl.read_parquet_metadata(path, **read_options)
     return meta.get(SCHEMA_METADATA_KEY)
