@@ -80,8 +80,9 @@ def test_read_parquet_uses_storage_options_for_metadata(
     path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
     MySchema.write_parquet(df, file=path, storage_options=s3_storage_options)
 
-    # Act: `validation="forbid"` only returns if the metadata schema is read and matches,
-    # so a passing read proves the metadata read used the forwarded `storage_options`.
+    # Act
+    # `validation="forbid"` only returns if the metadata schema is read and matches, so
+    # a passing read proves the metadata read used the forwarded `storage_options`.
     if lazy:
         out: pl.DataFrame = MySchema.scan_parquet(
             path, validation="forbid", storage_options=s3_storage_options

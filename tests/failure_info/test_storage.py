@@ -182,8 +182,9 @@ def test_read_parquet_uses_storage_options_for_metadata(
     path = f"{s3_bucket}/{uuid.uuid4()}/failure.parquet"
     failure.write_parquet(path, storage_options=s3_storage_options)
 
-    # Act: reading failure info always reads the rule/schema metadata, so a successful
-    # read proves the metadata read used the forwarded `storage_options`.
+    # Act
+    # Reading failure info always reads the rule/schema metadata, so a successful read
+    # proves the metadata read used the forwarded `storage_options`.
     if lazy:
         read = dy.FailureInfo.scan_parquet(path, storage_options=s3_storage_options)
     else:
