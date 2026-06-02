@@ -504,11 +504,7 @@ def test_read_parquet_metadata_collection_uses_storage_options(
     s3_bucket: str,
     s3_storage_options: dict[str, str],
 ) -> None:
-    """The standalone `read_parquet_metadata_collection` helper must forward
-    `storage_options` to the metadata read.
-
-    Regression test for https://github.com/Quantco/dataframely/issues/352.
-    """
+    """`read_parquet_metadata_collection` must forward `storage_options` to the read."""
     # Arrange
     path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
     pl.DataFrame({"a": [1, 2, 3]}).write_parquet(

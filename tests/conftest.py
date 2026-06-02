@@ -48,13 +48,10 @@ def s3_tmp_path(s3_server: str, s3_bucket: str, monkeypatch: pytest.MonkeyPatch)
 def s3_storage_options(
     s3_server: str, monkeypatch: pytest.MonkeyPatch
 ) -> dict[str, str]:
-    """Credentials and endpoint for the moto server, supplied *only* via
-    ``storage_options``.
+    """Credentials and endpoint for the moto server, supplied only via storage options.
 
-    Unlike :func:`s3_tmp_path`, this fixture deletes the ``AWS_*`` environment
-    variables so the store is unreachable through the default credential chain. A read
-    therefore succeeds only if ``storage_options`` is forwarded to it -- which is what
-    the regression tests for https://github.com/Quantco/dataframely/issues/352 assert.
+    Unlike :func:`s3_tmp_path`, the ``AWS_*`` environment variables are removed, so the
+    store is reachable only when ``storage_options`` is forwarded to a read.
     """
     for var in (
         "AWS_ENDPOINT_URL",

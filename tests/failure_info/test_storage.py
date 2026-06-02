@@ -174,11 +174,8 @@ def test_read_parquet_uses_storage_options_for_metadata(
     s3_storage_options: dict[str, str],
     lazy: bool,
 ) -> None:
-    """`FailureInfo.scan_parquet`/`read_parquet` must forward `storage_options` to the
-    rule/schema metadata read, not just the data read.
-
-    Regression test for https://github.com/Quantco/dataframely/issues/352.
-    """
+    """`storage_options` must reach the rule/schema metadata read, not just the data
+    read."""
     # Arrange
     df = pl.DataFrame({"a": [4, 5, 6, 6, 7, 8], "b": [1, 2, 3, 4, 5, 6]})
     _, failure = MySchema.filter(df)

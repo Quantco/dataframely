@@ -73,22 +73,15 @@ def test_read_parquet_uses_storage_options_for_metadata(
     s3_storage_options: dict[str, str],
     lazy: bool,
 ) -> None:
-    """`scan_parquet`/`read_parquet` must forward `storage_options` to the embedded
-    schema metadata read, not just the data read.
-
-    Regression test for https://github.com/Quantco/dataframely/issues/352: against
-    non-AWS S3-compatible stores (lakeFS, MinIO, R2, …) reached purely via
-    `storage_options`, the metadata read previously fell back to the default AWS
-    credential chain and endpoint, breaking typed reads.
-    """
+    """`storage_options` must reach the embedded schema metadata read, not just the
+    data read."""
     # Arrange
     df = MySchema.validate(pl.DataFrame({"a": [1, 2, 3]}), cast=True)
     path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
     MySchema.write_parquet(df, file=path, storage_options=s3_storage_options)
 
-    # Act: `validation="forbid"` only returns if the schema stored in the metadata is
-    # read successfully and matches, so a passing read proves the metadata read used the
-    # forwarded `storage_options`.
+    # Act: `validation="forbid"` only returns if the metadata schema is read and matches,
+    # so a passing read proves the metadata read used the forwarded `storage_options`.
     if lazy:
         out: pl.DataFrame = MySchema.scan_parquet(
             path, validation="forbid", storage_options=s3_storage_options
@@ -107,11 +100,7 @@ def test_read_parquet_metadata_schema_uses_storage_options(
     s3_bucket: str,
     s3_storage_options: dict[str, str],
 ) -> None:
-    """The standalone `read_parquet_metadata_schema` helper must forward
-    `storage_options` to the metadata read.
-
-    Regression test for https://github.com/Quantco/dataframely/issues/352.
-    """
+    """`read_parquet_metadata_schema` must forward `storage_options` to the read."""
     # Arrange
     path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
     MySchema.write_parquet(
