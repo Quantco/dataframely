@@ -68,60 +68,59 @@ def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:
 
 @pytest.mark.s3
 @pytest.mark.parametrize("lazy", [True, False])
-def test_read_parquet_metadata_uses_storage_options(
-    s3_server: str,
+def test_read_parquet_uses_storage_options_for_metadata(
     s3_bucket: str,
-    monkeypatch: pytest.MonkeyPatch,
+    s3_storage_options: dict[str, str],
     lazy: bool,
 ) -> None:
-    """The embedded-schema metadata read must use the same ``storage_options`` as the
-    data read.
+    """`scan_parquet`/`read_parquet` must forward `storage_options` to the embedded
+    schema metadata read, not just the data read.
 
     Regression test for https://github.com/Quantco/dataframely/issues/352: against
     non-AWS S3-compatible stores (lakeFS, MinIO, R2, …) reached purely via
-    ``storage_options``, the metadata read previously fell back to the default AWS
+    `storage_options`, the metadata read previously fell back to the default AWS
     credential chain and endpoint, breaking typed reads.
     """
-    # Arrange: provide credentials and endpoint *only* via `storage_options`, never via
-    # the environment, so the metadata read fails unless the options are forwarded.
-    for var in (
-        "AWS_ENDPOINT_URL",
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_ALLOW_HTTP",
-        "AWS_S3_ALLOW_UNSAFE_RENAME",
-        "AWS_DEFAULT_REGION",
-        "AWS_REGION",
-    ):
-        monkeypatch.delenv(var, raising=False)
-
-    storage_options = {
-        "aws_access_key_id": "testing",
-        "aws_secret_access_key": "testing",
-        "aws_endpoint_url": s3_server,
-        "aws_region": "us-east-1",
-        "aws_allow_http": "true",
-    }
+    # Arrange
+    df = MySchema.validate(pl.DataFrame({"a": [1, 2, 3]}), cast=True)
     path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
-
-    df = MySchema.create_empty()
-    MySchema.write_parquet(df, file=path, storage_options=storage_options)
+    MySchema.write_parquet(df, file=path, storage_options=s3_storage_options)
 
     # Act: `validation="forbid"` only returns if the schema stored in the metadata is
     # read successfully and matches, so a passing read proves the metadata read used the
     # forwarded `storage_options`.
     if lazy:
         out: pl.DataFrame = MySchema.scan_parquet(
-            path, validation="forbid", storage_options=storage_options
+            path, validation="forbid", storage_options=s3_storage_options
         ).collect()
     else:
         out = MySchema.read_parquet(
-            path, validation="forbid", storage_options=storage_options
+            path, validation="forbid", storage_options=s3_storage_options
         )
 
     # Assert
     assert_frame_equal(df, out)
 
-    # The standalone metadata helper must forward `storage_options` too.
-    schema = dy.read_parquet_metadata_schema(path, storage_options=storage_options)
+
+@pytest.mark.s3
+def test_read_parquet_metadata_schema_uses_storage_options(
+    s3_bucket: str,
+    s3_storage_options: dict[str, str],
+) -> None:
+    """The standalone `read_parquet_metadata_schema` helper must forward
+    `storage_options` to the metadata read.
+
+    Regression test for https://github.com/Quantco/dataframely/issues/352.
+    """
+    # Arrange
+    path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
+    MySchema.write_parquet(
+        MySchema.create_empty(), file=path, storage_options=s3_storage_options
+    )
+
+    # Act
+    schema = dy.read_parquet_metadata_schema(path, storage_options=s3_storage_options)
+
+    # Assert
     assert schema is not None
+    assert schema.matches(MySchema)

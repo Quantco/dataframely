@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+import uuid
+
 import polars as pl
 import pytest
 from fsspec import AbstractFileSystem, url_to_fs
@@ -163,6 +165,37 @@ def test_write_parquet_custom_metadata(
 
     # Assert
     assert pl.read_parquet_metadata(p)["custom"] == "test"
+
+
+@pytest.mark.s3
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_parquet_uses_storage_options_for_metadata(
+    s3_bucket: str,
+    s3_storage_options: dict[str, str],
+    lazy: bool,
+) -> None:
+    """`FailureInfo.scan_parquet`/`read_parquet` must forward `storage_options` to the
+    rule/schema metadata read, not just the data read.
+
+    Regression test for https://github.com/Quantco/dataframely/issues/352.
+    """
+    # Arrange
+    df = pl.DataFrame({"a": [4, 5, 6, 6, 7, 8], "b": [1, 2, 3, 4, 5, 6]})
+    _, failure = MySchema.filter(df)
+    path = f"{s3_bucket}/{uuid.uuid4()}/failure.parquet"
+    failure.write_parquet(path, storage_options=s3_storage_options)
+
+    # Act: reading failure info always reads the rule/schema metadata, so a successful
+    # read proves the metadata read used the forwarded `storage_options`.
+    if lazy:
+        read = dy.FailureInfo.scan_parquet(path, storage_options=s3_storage_options)
+    else:
+        read = dy.FailureInfo.read_parquet(path, storage_options=s3_storage_options)
+
+    # Assert
+    assert_frame_equal(failure._lf, read._lf)
+    assert failure._rule_columns == read._rule_columns
+    assert MySchema.matches(read.schema)
 
 
 def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:

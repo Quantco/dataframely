@@ -501,45 +501,25 @@ def test_read_invalid_parquet_metadata_collection(
 
 @pytest.mark.s3
 def test_read_parquet_metadata_collection_uses_storage_options(
-    s3_server: str,
     s3_bucket: str,
-    monkeypatch: pytest.MonkeyPatch,
+    s3_storage_options: dict[str, str],
 ) -> None:
-    """`read_parquet_metadata_collection` must forward `storage_options` to the
-    metadata read.
+    """The standalone `read_parquet_metadata_collection` helper must forward
+    `storage_options` to the metadata read.
 
     Regression test for https://github.com/Quantco/dataframely/issues/352.
     """
-    # Arrange: credentials/endpoint are provided *only* via `storage_options`, never via
-    # the environment, so the metadata read fails unless the options are forwarded.
-    for var in (
-        "AWS_ENDPOINT_URL",
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_ALLOW_HTTP",
-        "AWS_S3_ALLOW_UNSAFE_RENAME",
-        "AWS_DEFAULT_REGION",
-        "AWS_REGION",
-    ):
-        monkeypatch.delenv(var, raising=False)
-
-    storage_options = {
-        "aws_access_key_id": "testing",
-        "aws_secret_access_key": "testing",
-        "aws_endpoint_url": s3_server,
-        "aws_region": "us-east-1",
-        "aws_allow_http": "true",
-    }
+    # Arrange
     path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
     pl.DataFrame({"a": [1, 2, 3]}).write_parquet(
         path,
         metadata={COLLECTION_METADATA_KEY: MyCollection.serialize()},
-        storage_options=storage_options,
+        storage_options=s3_storage_options,
     )
 
     # Act
     collection = dy.read_parquet_metadata_collection(
-        path, storage_options=storage_options
+        path, storage_options=s3_storage_options
     )
 
     # Assert
