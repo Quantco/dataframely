@@ -147,6 +147,7 @@ class ParquetStorageBackend(StorageBackend):
         # between lazy and eager reads
         data = {}
         collection_types = []
+        metadata_options = _metadata_read_options(kwargs)
 
         fs: AbstractFileSystem = url_to_fs(path)[0]
         for key in members:
@@ -160,16 +161,14 @@ class ParquetStorageBackend(StorageBackend):
                 )
                 if is_file:
                     collection_types.append(
-                        _read_serialized_collection(
-                            source_path, **_metadata_read_options(kwargs)
-                        )
+                        _read_serialized_collection(source_path, **metadata_options)
                     )
                 else:
                     prefix = get_file_prefix(fs)
                     for file in fs.glob(fs.sep.join([source_path, "**", "*.parquet"])):
                         collection_types.append(
                             _read_serialized_collection(
-                                f"{prefix}{file}", **_metadata_read_options(kwargs)
+                                f"{prefix}{file}", **metadata_options
                             )
                         )
 
