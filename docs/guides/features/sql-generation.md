@@ -81,6 +81,27 @@ the maximal length of the string is inferred from the regular expression if poss
 maximal lengths can be particularly important for primary key columns. Some database systems, such as Microsoft SQL Server, do not allow `VARCHAR(max)` columns (unbounded strings) to be used as primary keys.
 ```
 
+## Native SQL enums (optional)
+
+By default, {class}`~dataframely.Enum` maps to fixed-length `CHAR` or `VARCHAR` columns so stored values remain plain strings. For PostgreSQL setups that use database-level `ENUM` types (for example with Alembic autogenerate), set `sqlalchemy_use_enum=True`:
+
+```python
+from enum import StrEnum
+
+import dataframely as dy
+
+
+class Status(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+
+
+class Staged(dy.Schema):
+    status = dy.Enum(Status, sqlalchemy_use_enum=True)
+```
+
+When `categories` is a Python `enum.Enum` subclass, SQLAlchemy uses the enum class name (lowercased) as the database enum type name. For string category lists, the SQL column name is used by default; override it with `sqlalchemy_enum_name` if needed. On dialects without native enums (such as Microsoft SQL Server), SQLAlchemy falls back to `VARCHAR` with a check constraint.
+
 ## Collections of multiple tables
 
 If you have an entire `dy.Collection`, it's also easy to generate one table for each member table of the collection.

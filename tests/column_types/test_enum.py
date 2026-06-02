@@ -108,3 +108,43 @@ def test_sequences_and_enums(
     S = create_schema("test", {"x": dy.Enum(categories1)})
     df = pl.DataFrame({"x": pl.Series(["a", "b"], dtype=pl.Enum(categories2))})
     S.validate(df)
+
+
+def test_matches_sqlalchemy_use_enum() -> None:
+    expr = pl.element()
+    assert dy.Enum(["a", "b"]).matches(dy.Enum(["a", "b"]), expr)
+    assert not dy.Enum(["a", "b"], sqlalchemy_use_enum=True).matches(
+        dy.Enum(["a", "b"]), expr
+    )
+    assert dy.Enum(["a", "b"], sqlalchemy_use_enum=True).matches(
+        dy.Enum(["a", "b"], sqlalchemy_use_enum=True), expr
+    )
+
+
+def test_matches_sqlalchemy_enum_name() -> None:
+    expr = pl.element()
+    assert not dy.Enum(
+        ["a", "b"],
+        sqlalchemy_use_enum=True,
+        sqlalchemy_enum_name="one",
+    ).matches(
+        dy.Enum(
+            ["a", "b"],
+            sqlalchemy_use_enum=True,
+            sqlalchemy_enum_name="two",
+        ),
+        expr,
+    )
+
+
+def test_as_dict_from_dict_sqlalchemy_enum_flags() -> None:
+    column = dy.Enum(
+        ["a", "b"],
+        sqlalchemy_use_enum=True,
+        sqlalchemy_enum_name="my_enum",
+    )
+    data = column.as_dict(pl.element())
+    restored = dy.Enum.from_dict(data)
+    assert restored.sqlalchemy_use_enum is True
+    assert restored.sqlalchemy_enum_name == "my_enum"
+    assert restored.categories == ["a", "b"]

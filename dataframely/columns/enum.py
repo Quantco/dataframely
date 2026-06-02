@@ -33,6 +33,8 @@ class Enum(Column):
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
+        sqlalchemy_use_enum: bool = False,
+        sqlalchemy_enum_name: str | None = None,
     ):
         """
         Args:
@@ -68,6 +70,15 @@ class Enum(Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
             description: A human-readable description of the column.
+            sqlalchemy_use_enum: When ``True``, map this column to :class:`sqlalchemy.Enum`
+                in :meth:`~dataframely.Schema.to_sqlalchemy_columns` instead of
+                ``CHAR`` / ``VARCHAR``. Use this for PostgreSQL native enum types and
+                Alembic schema drift detection. Defaults to ``False`` (string columns).
+            sqlalchemy_enum_name: Optional name for the SQLAlchemy / database enum type
+                when ``sqlalchemy_use_enum=True``. If omitted and ``categories`` is a
+                Python :class:`enum.Enum` subclass, SQLAlchemy uses the enum class name
+                (lowercased). Otherwise the SQL column name from
+                :meth:`~dataframely.Schema.to_sqlalchemy_columns` is used.
         """
         super().__init__(
             nullable=nullable,
@@ -78,7 +89,11 @@ class Enum(Column):
             metadata=metadata,
             description=description,
         )
+        self.sqlalchemy_use_enum = sqlalchemy_use_enum
+        self.sqlalchemy_enum_name = sqlalchemy_enum_name
+        self._enum_class: type[enum.Enum] | None = None
         if isclass(categories) and issubclass(categories, enum.Enum):
+            self._enum_class = categories
             categories = (item.value for item in categories)
         self.categories = list(categories)
 
@@ -91,11 +106,48 @@ class Enum(Column):
             return False
         return self.categories == dtype.categories.to_list()
 
+    def sqlalchemy_column(self, name: str, dialect: sa.Dialect) -> sa.Column:
+        if self.sqlalchemy_use_enum:
+            return sa.Column(
+                name,
+                self._sqlalchemy_enum_type(dialect, column_name=name),
+                nullable=self.nullable,
+                primary_key=self.primary_key,
+                unique=self.unique,
+                autoincrement=False,
+            )
+        return super().sqlalchemy_column(name, dialect)
+
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
+        if self.sqlalchemy_use_enum:
+            column_name = self._name or None
+            return self._sqlalchemy_enum_type(dialect, column_name=column_name)
         category_lengths = [len(c) for c in self.categories]
         if all(length == category_lengths[0] for length in category_lengths):
             return sa.CHAR(category_lengths[0])
         return sa.String(max(category_lengths))
+
+    def _sqlalchemy_enum_type(
+        self, _dialect: sa.Dialect, *, column_name: str | None
+    ) -> sa_TypeEngine:
+        length = max(len(c) for c in self.categories)
+        kwargs: dict[str, Any] = {"length": length}
+        name = self.sqlalchemy_enum_name
+        if self._enum_class is not None:
+            if name is not None:
+                kwargs["name"] = name
+            return sa.Enum(self._enum_class, **kwargs)
+        if name is None:
+            name = column_name
+        if name is None:
+            raise ValueError(
+                "sqlalchemy_enum_name is required for dy.Enum with string categories "
+                "and sqlalchemy_use_enum=True when not building columns via "
+                "Schema.to_sqlalchemy_columns(). Alternatively, pass a Python "
+                "enum.Enum class as categories."
+            )
+        kwargs["name"] = name
+        return sa.Enum(*self.categories, **kwargs)
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
