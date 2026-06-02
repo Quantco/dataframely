@@ -121,3 +121,7 @@ def test_read_parquet_metadata_uses_storage_options(
 
     # Assert
     assert_frame_equal(df, out)
+
+    # The standalone metadata helper must forward `storage_options` too.
+    schema = dy.read_parquet_metadata_schema(path, storage_options=storage_options)
+    assert schema is not None
