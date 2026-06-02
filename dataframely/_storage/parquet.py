@@ -252,17 +252,19 @@ class ParquetStorageBackend(StorageBackend):
 
 
 def _metadata_read_options(kwargs: dict[str, Any]) -> dict[str, Any]:
-    """Extract the options required to reach the data store for a metadata read.
+    """Select the storage-related options to forward to a parquet metadata read.
 
-    The parquet metadata is read separately from the data itself. We must forward the
-    same storage-related options (e.g. ``storage_options`` and ``credential_provider``)
-    so that metadata reads against non-AWS S3-compatible stores (lakeFS, MinIO, R2, …)
-    hit the correct endpoint and credentials instead of falling back to the default AWS
-    credential chain and endpoint.
+    The metadata is read separately from the data, via
+    :meth:`polars.read_parquet_metadata`. That function accepts only a narrow subset of
+    the options understood by :meth:`polars.read_parquet`/:meth:`polars.scan_parquet`,
+    so we cannot simply forward all ``kwargs``. We forward exactly the options that
+    determine *how the store is reached* so that metadata reads against non-AWS
+    S3-compatible stores (lakeFS, MinIO, R2, …) hit the correct endpoint and credentials
+    instead of falling back to the default AWS credential chain and endpoint.
     """
     return {
         key: kwargs[key]
-        for key in ("storage_options", "credential_provider")
+        for key in ("storage_options", "credential_provider", "retries")
         if key in kwargs
     }
 

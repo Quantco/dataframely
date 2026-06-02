@@ -1423,8 +1423,7 @@ def read_parquet_metadata_schema(
     Args:
         source: Path to a parquet file or a file-like object that contains the metadata.
         kwargs: Additional keyword arguments passed directly to
-            :meth:`polars.read_parquet_metadata`, e.g. ``storage_options`` and
-            ``credential_provider`` to reach non-AWS S3-compatible stores.
+            :meth:`polars.read_parquet_metadata`.
 
     Returns:
         The schema that was serialized to the metadata. `None` if no schema metadata
