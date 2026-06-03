@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+import inspect
 from collections.abc import Iterable
 from typing import Any
 
@@ -250,15 +251,14 @@ class ParquetStorageBackend(StorageBackend):
         return lf, serialized_rules, serialized_schema
 
 
+# `read_parquet_metadata` has no `**kwargs`, so unrecognized keys raise `TypeError`.
+_METADATA_READ_PARAMS = frozenset(
+    inspect.signature(pl.read_parquet_metadata).parameters
+) - {"source"}
+
+
 def _metadata_read_options(kwargs: dict[str, Any]) -> dict[str, Any]:
-    # Forward only the options that `read_parquet_metadata` accepts (it has a narrower
-    # signature than `read_parquet`/`scan_parquet`) so the metadata read reaches the
-    # same store as the data read.
-    return {
-        key: kwargs[key]
-        for key in ("storage_options", "credential_provider", "retries")
-        if key in kwargs
-    }
+    return {k: v for k, v in kwargs.items() if k in _METADATA_READ_PARAMS}
 
 
 def _read_serialized_collection(
