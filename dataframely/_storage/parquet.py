@@ -251,7 +251,6 @@ class ParquetStorageBackend(StorageBackend):
         return lf, serialized_rules, serialized_schema
 
 
-# `read_parquet_metadata` has no `**kwargs`, so unrecognized keys raise `TypeError`.
 _METADATA_READ_PARAMS = frozenset(
     inspect.signature(pl.read_parquet_metadata).parameters
 ) - {"source"}

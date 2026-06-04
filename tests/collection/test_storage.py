@@ -501,21 +501,21 @@ def test_read_invalid_parquet_metadata_collection(
 
 @pytest.mark.s3
 def test_read_parquet_metadata_collection_uses_storage_options(
-    s3_bucket: str,
-    s3_storage_options: dict[str, str],
+    s3_isolated: tuple[str, dict[str, str]],
 ) -> None:
     """`read_parquet_metadata_collection` must forward `storage_options` to the read."""
     # Arrange
-    path = f"{s3_bucket}/{uuid.uuid4()}/df.parquet"
+    bucket, storage_options = s3_isolated
+    path = f"{bucket}/{uuid.uuid4()}/df.parquet"
     pl.DataFrame({"a": [1, 2, 3]}).write_parquet(
         path,
         metadata={COLLECTION_METADATA_KEY: MyCollection.serialize()},
-        storage_options=s3_storage_options,
+        storage_options=storage_options,
     )
 
     # Act
     collection = dy.read_parquet_metadata_collection(
-        path, storage_options=s3_storage_options
+        path, storage_options=storage_options
     )
 
     # Assert

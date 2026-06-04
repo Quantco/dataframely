@@ -170,25 +170,25 @@ def test_write_parquet_custom_metadata(
 @pytest.mark.s3
 @pytest.mark.parametrize("lazy", [True, False])
 def test_read_parquet_uses_storage_options_for_metadata(
-    s3_bucket: str,
-    s3_storage_options: dict[str, str],
+    s3_isolated: tuple[str, dict[str, str]],
     lazy: bool,
 ) -> None:
     """`storage_options` must reach the rule/schema metadata read, not just the data
     read."""
     # Arrange
+    bucket, storage_options = s3_isolated
     df = pl.DataFrame({"a": [4, 5, 6, 6, 7, 8], "b": [1, 2, 3, 4, 5, 6]})
     _, failure = MySchema.filter(df)
-    path = f"{s3_bucket}/{uuid.uuid4()}/failure.parquet"
-    failure.write_parquet(path, storage_options=s3_storage_options)
+    path = f"{bucket}/{uuid.uuid4()}/failure.parquet"
+    failure.write_parquet(path, storage_options=storage_options)
 
     # Act
     # Reading failure info always reads the rule/schema metadata, so a successful read
     # proves the metadata read used the forwarded `storage_options`.
     if lazy:
-        read = dy.FailureInfo.scan_parquet(path, storage_options=s3_storage_options)
+        read = dy.FailureInfo.scan_parquet(path, storage_options=storage_options)
     else:
-        read = dy.FailureInfo.read_parquet(path, storage_options=s3_storage_options)
+        read = dy.FailureInfo.read_parquet(path, storage_options=storage_options)
 
     # Assert
     assert_frame_equal(failure._lf, read._lf)
