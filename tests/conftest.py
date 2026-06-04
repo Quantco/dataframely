@@ -47,7 +47,7 @@ def s3_tmp_path(s3_server: str, s3_bucket: str, monkeypatch: pytest.MonkeyPatch)
 @pytest.fixture()
 def s3_isolated(
     s3_server: str, monkeypatch: pytest.MonkeyPatch
-) -> tuple[str, dict[str, str]]:
+) -> Iterator[tuple[str, dict[str, str]]]:
     """A freshly-named bucket that is only reachable via the returned ``storage_options``.
 
     Polars caches object stores per bucket, and these caches live Rust-side and are not
@@ -68,16 +68,23 @@ def s3_isolated(
     ):
         monkeypatch.delenv(var, raising=False)
     bucket = f"isolated-{uuid.uuid4()}"
-    boto3.client(
+    client = boto3.client(
         "s3", endpoint_url=s3_server, aws_access_key_id="", aws_secret_access_key=""
-    ).create_bucket(Bucket=bucket)
-    return f"s3://{bucket}", {
-        "aws_access_key_id": "testing",
-        "aws_secret_access_key": "testing",
-        "aws_endpoint_url": s3_server,
-        "aws_region": "us-east-1",
-        "aws_allow_http": "true",
-    }
+    )
+    client.create_bucket(Bucket=bucket)
+    yield (
+        f"s3://{bucket}",
+        {
+            "aws_access_key_id": "testing",
+            "aws_secret_access_key": "testing",
+            "aws_endpoint_url": s3_server,
+            "aws_region": "us-east-1",
+            "aws_allow_http": "true",
+        },
+    )
+    for obj in client.list_objects_v2(Bucket=bucket).get("Contents", []):
+        client.delete_object(Bucket=bucket, Key=obj["Key"])
+    client.delete_bucket(Bucket=bucket)
 
 
 @pytest.fixture()
