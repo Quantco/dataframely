@@ -9,6 +9,8 @@ import re
 
 import polars as pl
 
+from dataframely._compat import _polars_version_tuple
+
 _POLARS_DTYPE_MAP: dict[type[pl.DataType], str] = {
     pl.Boolean: "Bool",
     pl.Int8: "Int8",
@@ -147,13 +149,17 @@ def _get_dtype_args(dtype: pl.DataType, series: pl.Series) -> list[str]:
         return [repr(dtype.categories.to_list())]
 
     if isinstance(dtype, pl.List):
-        return [_dtype_to_column_code(series.explode(empty_as_null=False))]
+        if _polars_version_tuple >= (1, 36, 0):
+            return [_dtype_to_column_code(series.explode(empty_as_null=False))]
+        return [_dtype_to_column_code(series.explode())]
 
     if isinstance(dtype, pl.Array):
-        return [
-            _dtype_to_column_code(series.explode(empty_as_null=False)),
-            f"shape={dtype.size}",
-        ]
+        if _polars_version_tuple >= (1, 36, 0):
+            return [
+                _dtype_to_column_code(series.explode(empty_as_null=False)),
+                f"shape={dtype.size}",
+            ]
+        return [_dtype_to_column_code(series.explode()), f"shape={dtype.size}"]
 
     if isinstance(dtype, pl.Struct):
         fields_parts = []
