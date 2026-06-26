@@ -147,10 +147,13 @@ def _get_dtype_args(dtype: pl.DataType, series: pl.Series) -> list[str]:
         return [repr(dtype.categories.to_list())]
 
     if isinstance(dtype, pl.List):
-        return [_dtype_to_column_code(series.explode())]
+        return [_dtype_to_column_code(series.explode(empty_as_null=False))]
 
     if isinstance(dtype, pl.Array):
-        return [_dtype_to_column_code(series.explode()), f"shape={dtype.size}"]
+        return [
+            _dtype_to_column_code(series.explode(empty_as_null=False)),
+            f"shape={dtype.size}",
+        ]
 
     if isinstance(dtype, pl.Struct):
         fields_parts = []
