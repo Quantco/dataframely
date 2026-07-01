@@ -77,7 +77,7 @@ class Enum(Column):
                 when ``sqlalchemy_use_enum=True``. If omitted and ``categories`` is a
                 Python :class:`enum.Enum` subclass, the lowercased enum class is used.
                 Otherwise, the name of the column is used.
-                The ersisted values are the enum members' ``.value`` strings (not
+                The persisted values are the enum members' ``.value`` strings (not
                 member names), matching :attr:`categories`.
         """
         super().__init__(
