@@ -73,7 +73,7 @@ class Enum(Column):
             sqlalchemy_use_enum: When ``True``, map this column to :class:`sqlalchemy.Enum`
                 in :meth:`~dataframely.Schema.to_sqlalchemy_columns` instead of
                 ``CHAR`` / ``VARCHAR``. Use this for PostgreSQL native enum types and
-                Alembic schema drift detection. Defaults to ``False`` (string columns).
+                Alembic schema drift detection.
             sqlalchemy_enum_name: Optional name for the SQLAlchemy / database enum type
                 when ``sqlalchemy_use_enum=True``. If omitted and ``categories`` is a
                 Python :class:`enum.Enum` subclass, SQLAlchemy uses the enum class name
