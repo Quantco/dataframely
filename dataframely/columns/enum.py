@@ -72,8 +72,7 @@ class Enum(Column):
             description: A human-readable description of the column.
             sqlalchemy_use_enum: When ``True``, map this column to :class:`sqlalchemy.Enum`
                 in :meth:`~dataframely.Schema.to_sqlalchemy_columns` instead of
-                ``CHAR`` / ``VARCHAR``. Use this for PostgreSQL native enum types and
-                Alembic schema drift detection.
+                ``CHAR`` / ``VARCHAR``.
             sqlalchemy_enum_name: Optional name for the SQLAlchemy / database enum type
                 when ``sqlalchemy_use_enum=True``. If omitted and ``categories`` is a
                 Python :class:`enum.Enum` subclass, SQLAlchemy uses the enum class name
@@ -93,8 +92,9 @@ class Enum(Column):
         )
         if sqlalchemy_enum_name and not sqlalchemy_use_enum:
             raise ValueError(
-                "sqlalchemy_enum_name has no effect when sqlalchemy_use_enum=False."
+                "`sqlalchemy_enum_name` has no effect when `sqlalchemy_use_enum=False`."
             )
+
         self.sqlalchemy_use_enum = sqlalchemy_use_enum
         self.sqlalchemy_enum_name = sqlalchemy_enum_name
         if isclass(categories) and issubclass(categories, enum.Enum):
@@ -110,6 +110,8 @@ class Enum(Column):
 
             categories = (item.value for item in categories)
 
+        if self.sqlalchemy_use_enum and not self.sqlalchemy_enum_name:
+            raise ValueError("`sqlalchemy_enum_name` is required when ")
         self.categories = list(categories)
 
     @property
