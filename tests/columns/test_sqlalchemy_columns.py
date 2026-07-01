@@ -1,7 +1,7 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
-from enum import Enum
+from enum import StrEnum
 
 import pytest
 
@@ -175,7 +175,7 @@ def test_raise_for_object_column(dialect: Dialect) -> None:
         dy.Object().sqlalchemy_dtype(dialect)
 
 
-class _Status(str, Enum):
+class _Status(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
 

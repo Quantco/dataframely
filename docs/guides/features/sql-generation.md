@@ -83,7 +83,7 @@ maximal lengths can be particularly important for primary key columns. Some data
 
 ## Native SQL enums (optional)
 
-By default, {class}`~dataframely.Enum` maps to `sa.CHAR` or `sa.String` columns so stored values remain plain strings. For PostgreSQL setups that use database-level `ENUM` types (for example with Alembic autogenerate), set `sqlalchemy_use_enum=True`:
+By default, {class}`~dataframely.Enum` maps to `sa.CHAR` or `sa.String` columns so stored values remain plain strings. For PostgreSQL setups that use database-level `ENUM` types (for example with Alembic autogenerate), you may set `sqlalchemy_use_enum=True` to instead generate native enums:
 
 ```python
 from enum import Enum, auto
