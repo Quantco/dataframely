@@ -75,10 +75,9 @@ class Enum(Column):
                 ``CHAR`` / ``VARCHAR``.
             sqlalchemy_enum_name: Optional name for the SQLAlchemy / database enum type
                 when ``sqlalchemy_use_enum=True``. If omitted and ``categories`` is a
-                Python :class:`enum.Enum` subclass, SQLAlchemy uses the enum class name
-                (lowercased). Otherwise the SQL column name from
-                :meth:`~dataframely.Schema.to_sqlalchemy_columns` is used. For Python
-                enums, persisted values are the enum members' ``.value`` strings (not
+                Python :class:`enum.Enum` subclass, the lowercased enum class is used.
+                Otherwise, the name of the column is used.
+                The ersisted values are the enum members' ``.value`` strings (not
                 member names), matching :attr:`categories`.
         """
         super().__init__(
