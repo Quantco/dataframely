@@ -121,6 +121,15 @@ def test_matches_sqlalchemy_use_enum() -> None:
     )
 
 
+def test_matches_sqlalchemy_use_enum_fails_on_internal_name_mismatch() -> None:
+    class MyEnum(str, Enum):
+        x = "x"
+
+    assert not dy.Enum(MyEnum, sqlalchemy_use_enum=True).matches(
+        dy.Enum(["x"], sqlalchemy_use_enum=True), pl.element()
+    )
+
+
 def test_matches_sqlalchemy_enum_name() -> None:
     expr = pl.element()
     assert dy.Enum(

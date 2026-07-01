@@ -233,11 +233,3 @@ def test_enum_sqlalchemy_native_string_categories_use_column_name() -> None:
         column.sqlalchemy_dtype(PGDialect_psycopg2()).compile(PGDialect_psycopg2())
         == "status"
     )
-
-
-def test_enum_sqlalchemy_native_string_categories_requires_name_without_column() -> (
-    None
-):
-    column = dy.Enum(["foo", "bar"], sqlalchemy_use_enum=True)
-    with pytest.raises(ValueError, match="sqlalchemy_enum_name is required"):
-        column.sqlalchemy_dtype(PGDialect_psycopg2())
