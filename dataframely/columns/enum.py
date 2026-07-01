@@ -109,8 +109,6 @@ class Enum(Column):
 
             categories = (item.value for item in categories)
 
-        if self.sqlalchemy_use_enum and not self.sqlalchemy_enum_name:
-            raise ValueError("`sqlalchemy_enum_name` is required when ")
         self.categories = list(categories)
 
     @property
