@@ -33,6 +33,8 @@ class Enum(Column):
         alias: str | None = None,
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
+        sqlalchemy_use_enum: bool = False,
+        sqlalchemy_enum_name: str | None = None,
     ):
         """
         Args:
@@ -68,6 +70,15 @@ class Enum(Column):
                 names, the specified alias is the only valid name.
             metadata: A dictionary of metadata to attach to the column.
             description: A human-readable description of the column.
+            sqlalchemy_use_enum: When ``True``, map this column to :class:`sqlalchemy.Enum`
+                in :meth:`~dataframely.Schema.to_sqlalchemy_columns` instead of
+                ``CHAR`` / ``VARCHAR``.
+            sqlalchemy_enum_name: Optional name for the SQLAlchemy / database enum type
+                when ``sqlalchemy_use_enum=True``. If omitted and ``categories`` is a
+                Python :class:`enum.Enum` subclass, the lowercased enum class is used.
+                Otherwise, the name of the column is used.
+                The persisted values are the enum members' ``.value`` strings (not
+                member names), matching :attr:`categories`.
         """
         super().__init__(
             nullable=nullable,
@@ -78,8 +89,26 @@ class Enum(Column):
             metadata=metadata,
             description=description,
         )
+        if sqlalchemy_enum_name and not sqlalchemy_use_enum:
+            raise ValueError(
+                "`sqlalchemy_enum_name` has no effect when `sqlalchemy_use_enum=False`."
+            )
+
+        self.sqlalchemy_use_enum = sqlalchemy_use_enum
+        self.sqlalchemy_enum_name = sqlalchemy_enum_name
         if isclass(categories) and issubclass(categories, enum.Enum):
+            # If the user passed an Enum type, we want to determine a default name
+            # based on the Enum class name, which is also what sqlalchemy does.
+            # One could instead keep a reference to the Enum class around and pass it
+            # to sqlalchemy later on, but that will interfere with the base-class implementations
+            # of `matches` and `to_dict` / `from_dict`.
+            if self.sqlalchemy_use_enum:
+                self.sqlalchemy_enum_name = (
+                    self.sqlalchemy_enum_name or categories.__name__.lower()
+                )
+
             categories = (item.value for item in categories)
+
         self.categories = list(categories)
 
     @property
@@ -92,6 +121,10 @@ class Enum(Column):
         return self.categories == dtype.categories.to_list()
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
+        if self.sqlalchemy_use_enum:
+            return sa.Enum(
+                *self.categories, name=self.sqlalchemy_enum_name or self._name
+            )
         category_lengths = [len(c) for c in self.categories]
         if all(length == category_lengths[0] for length in category_lengths):
             return sa.CHAR(category_lengths[0])

@@ -1,10 +1,13 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from enum import Enum
+from typing import cast
+
 import pytest
 
 import dataframely as dy
-from dataframely._compat import Dialect, MSDialect_pyodbc, PGDialect_psycopg2
+from dataframely._compat import Dialect, MSDialect_pyodbc, PGDialect_psycopg2, sa
 from dataframely.columns import Column
 from dataframely.testing import COLUMN_TYPES, create_schema
 
@@ -171,3 +174,62 @@ def test_raise_for_object_column(dialect: Dialect) -> None:
         NotImplementedError, match="SQL column cannot have 'Object' type."
     ):
         dy.Object().sqlalchemy_dtype(dialect)
+
+
+class _Status(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+
+
+@pytest.mark.parametrize(
+    ("column", "dialect", "datatype"),
+    [
+        (
+            dy.Enum(["foo", "bar"], sqlalchemy_use_enum=True),
+            PGDialect_psycopg2(),
+            "a",
+        ),
+        (
+            dy.Enum(
+                ["foo", "bar"],
+                sqlalchemy_use_enum=True,
+                sqlalchemy_enum_name="my_status",
+            ),
+            PGDialect_psycopg2(),
+            "my_status",
+        ),
+        (dy.Enum(_Status, sqlalchemy_use_enum=True), PGDialect_psycopg2(), "_status"),
+        (
+            dy.Enum(["foo", "bar"], sqlalchemy_use_enum=True),
+            MSDialect_pyodbc(),
+            "VARCHAR(3)",
+        ),
+    ],
+)
+def test_enum_sqlalchemy_native(
+    column: Column, dialect: Dialect, datatype: str
+) -> None:
+    schema = create_schema("test", {"a": column})
+    columns = schema.to_sqlalchemy_columns(dialect)
+    assert len(columns) == 1
+    assert columns[0].type.compile(dialect) == datatype
+
+
+def test_enum_sqlalchemy_native_python_enum_uses_member_values() -> None:
+    column = dy.Enum(_Status, sqlalchemy_use_enum=True)
+    schema = create_schema("test", {"a": column})
+    sa_type = cast(
+        sa.sql.sqltypes.Enum, schema.to_sqlalchemy_columns(PGDialect_psycopg2())[0].type
+    )
+    assert list(sa_type.enums) == column.categories
+
+
+def test_enum_sqlalchemy_native_string_categories_use_column_name() -> None:
+    class TestSchema(dy.Schema):
+        status = dy.Enum(["foo", "bar"], sqlalchemy_use_enum=True)
+
+    column = TestSchema.columns()["status"]
+    assert (
+        column.sqlalchemy_dtype(PGDialect_psycopg2()).compile(PGDialect_psycopg2())
+        == "status"
+    )

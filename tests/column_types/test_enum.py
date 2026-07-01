@@ -108,3 +108,69 @@ def test_sequences_and_enums(
     S = create_schema("test", {"x": dy.Enum(categories1)})
     df = pl.DataFrame({"x": pl.Series(["a", "b"], dtype=pl.Enum(categories2))})
     S.validate(df)
+
+
+def test_matches_sqlalchemy_use_enum() -> None:
+    expr = pl.element()
+    assert dy.Enum(["a", "b"]).matches(dy.Enum(["a", "b"]), expr)
+    assert not dy.Enum(["a", "b"], sqlalchemy_use_enum=True).matches(
+        dy.Enum(["a", "b"]), expr
+    )
+    assert dy.Enum(["a", "b"], sqlalchemy_use_enum=True).matches(
+        dy.Enum(["a", "b"], sqlalchemy_use_enum=True), expr
+    )
+
+
+def test_matches_sqlalchemy_use_enum_fails_on_internal_name_mismatch() -> None:
+    class MyEnum(str, Enum):
+        x = "x"
+
+    assert not dy.Enum(MyEnum, sqlalchemy_use_enum=True).matches(
+        dy.Enum(["x"], sqlalchemy_use_enum=True), pl.element()
+    )
+
+
+def test_matches_sqlalchemy_enum_name() -> None:
+    expr = pl.element()
+    assert dy.Enum(
+        ["a", "b"],
+        sqlalchemy_use_enum=True,
+        sqlalchemy_enum_name="one",
+    ).matches(
+        dy.Enum(
+            ["a", "b"],
+            sqlalchemy_use_enum=True,
+            sqlalchemy_enum_name="one",
+        ),
+        expr,
+    )
+    assert not dy.Enum(
+        ["a", "b"],
+        sqlalchemy_use_enum=True,
+        sqlalchemy_enum_name="one",
+    ).matches(
+        dy.Enum(
+            ["a", "b"],
+            sqlalchemy_use_enum=True,
+            sqlalchemy_enum_name="two",
+        ),
+        expr,
+    )
+
+
+def test_sqlalchemy_enum_name_without_use_enum_raises() -> None:
+    with pytest.raises(ValueError, match="`sqlalchemy_enum_name` has no effect"):
+        dy.Enum(["a", "b"], sqlalchemy_enum_name="my_enum")
+
+
+def test_as_dict_from_dict_sqlalchemy_enum_flags() -> None:
+    column = dy.Enum(
+        ["a", "b"],
+        sqlalchemy_use_enum=True,
+        sqlalchemy_enum_name="my_enum",
+    )
+    data = column.as_dict(pl.element())
+    restored = dy.Enum.from_dict(data)
+    assert restored.sqlalchemy_use_enum is True
+    assert restored.sqlalchemy_enum_name == "my_enum"
+    assert restored.categories == ["a", "b"]

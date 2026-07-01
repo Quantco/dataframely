@@ -81,6 +81,41 @@ the maximal length of the string is inferred from the regular expression if poss
 maximal lengths can be particularly important for primary key columns. Some database systems, such as Microsoft SQL Server, do not allow `VARCHAR(max)` columns (unbounded strings) to be used as primary keys.
 ```
 
+## Native SQL enums
+
+By default, {class}`~dataframely.Enum` maps to `sa.CHAR` or `sa.String` columns so stored values remain plain strings. You may set `sqlalchemy_use_enum=True` to instead generate native enums:
+
+```python
+from enum import Enum, auto
+
+import sqlalchemy as sa
+import dataframely as dy
+from sqlalchemy.dialects.postgresql import dialect as pg_dialect
+from sqlalchemy.dialects.mssql import dialect as mssql_dialect
+
+
+class Status(str, Enum):
+    PENDING = auto()
+    APPROVED = auto()
+
+
+class Staged(dy.Schema):
+    status = dy.Enum(Status, sqlalchemy_use_enum=True)
+```
+
+This will translate the `~dataframely.Enum` to a `~sqlalchemy.Enum`:
+
+```python
+>>> Staged.to_sqlalchemy_columns(pg_dialect())
+[Column('status', Enum('1', '2', name='status'), table=None, nullable=False)]
+```
+
+Depending on the database dialect you use, `sqlalchemy` will render this accordingly.
+For example, `postgresql` supports native enums, and `sqlalchemy` will create a native enum column, while in MSSQL, where this is not supported, it will fall back to `VARCHAR`.
+
+When `categories` is a Python `enum.Enum` subclass, `sqlalchemy` uses the enum class name (lowercased) as the database enum type name.
+For string category lists, the SQL column name is used by default; override it with `sqlalchemy_enum_name` if needed.
+
 ## Collections of multiple tables
 
 If you have an entire `dy.Collection`, it's also easy to generate one table for each member table of the collection.
