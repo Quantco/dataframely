@@ -91,6 +91,10 @@ class Enum(Column):
             metadata=metadata,
             description=description,
         )
+        if sqlalchemy_enum_name and not sqlalchemy_use_enum:
+            raise ValueError(
+                "sqlalchemy_enum_name has no effect when sqlalchemy_use_enum=False."
+            )
         self.sqlalchemy_use_enum = sqlalchemy_use_enum
         self.sqlalchemy_enum_name = sqlalchemy_enum_name
         self._enum_class: type[enum.Enum] | None = None
@@ -108,13 +112,6 @@ class Enum(Column):
             return False
         return self.categories == dtype.categories.to_list()
 
-    def sqlalchemy_column(self, name: str, dialect: sa.Dialect) -> sa.Column:
-        if self.sqlalchemy_use_enum:
-            column = super().sqlalchemy_column(name, dialect)
-            column.type = self._sqlalchemy_enum_type(dialect, column_name=name)
-            return column
-        return super().sqlalchemy_column(name, dialect)
-
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         if self.sqlalchemy_use_enum:
             column_name = self._name or None
@@ -127,25 +124,36 @@ class Enum(Column):
     def _sqlalchemy_enum_type(
         self, _dialect: sa.Dialect, *, column_name: str | None
     ) -> sa_TypeEngine:
-        length = max(len(c) for c in self.categories)
-        kwargs: dict[str, Any] = {"length": length}
-        name = self.sqlalchemy_enum_name
-        if self._enum_class is not None:
-            if name is not None:
-                kwargs["name"] = name
-            kwargs["values_callable"] = lambda enum: [member.value for member in enum]
-            return sa.Enum(self._enum_class, **kwargs)
-        if name is None:
-            name = column_name
-        if name is None:
-            raise ValueError(
-                "sqlalchemy_enum_name is required for dy.Enum with string categories "
-                "and sqlalchemy_use_enum=True when not building columns via "
-                "Schema.to_sqlalchemy_columns(). Alternatively, pass a Python "
-                "enum.Enum class as categories."
-            )
-        kwargs["name"] = name
-        return sa.Enum(*self.categories, **kwargs)
+        match self._enum_class:
+            case None:
+                # Enum built from inputting string-categories: requires an
+                # explicit name (from sqlalchemy_enum_name or the SQL column
+                # name set by Schema.to_sqlalchemy_columns).
+                name = self.sqlalchemy_enum_name or column_name
+                if name is None:
+                    raise ValueError(
+                        "sqlalchemy_enum_name is required for dy.Enum with string "
+                        "categories and sqlalchemy_use_enum=True when not building "
+                        "columns via Schema.to_sqlalchemy_columns(). Alternatively, "
+                        "pass a Python enum.Enum class as categories."
+                    )
+                return sa.Enum(*self.categories, name=name)
+            case enum_class:
+                # dy.Enum was constructed from a Python enum.Enum class.
+                # Persist .value strings (not member names) to stay consistent
+                # with how dy.Enum stores self.categories.
+                # Omit name entirely when unset — passing name=None suppresses
+                # SQLAlchemy's default of using the class name (lowercased).
+                name_kwargs: dict[str, str] = (
+                    {"name": self.sqlalchemy_enum_name}
+                    if self.sqlalchemy_enum_name is not None
+                    else {}
+                )
+                return sa.Enum(
+                    enum_class,
+                    values_callable=lambda e: [m.value for m in e],
+                    **name_kwargs,
+                )
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:

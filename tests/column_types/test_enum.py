@@ -123,6 +123,18 @@ def test_matches_sqlalchemy_use_enum() -> None:
 
 def test_matches_sqlalchemy_enum_name() -> None:
     expr = pl.element()
+    assert dy.Enum(
+        ["a", "b"],
+        sqlalchemy_use_enum=True,
+        sqlalchemy_enum_name="one",
+    ).matches(
+        dy.Enum(
+            ["a", "b"],
+            sqlalchemy_use_enum=True,
+            sqlalchemy_enum_name="one",
+        ),
+        expr,
+    )
     assert not dy.Enum(
         ["a", "b"],
         sqlalchemy_use_enum=True,
@@ -135,6 +147,11 @@ def test_matches_sqlalchemy_enum_name() -> None:
         ),
         expr,
     )
+
+
+def test_sqlalchemy_enum_name_without_use_enum_raises() -> None:
+    with pytest.raises(ValueError, match="sqlalchemy_enum_name has no effect"):
+        dy.Enum(["a", "b"], sqlalchemy_enum_name="my_enum")
 
 
 def test_as_dict_from_dict_sqlalchemy_enum_flags() -> None:

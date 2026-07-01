@@ -83,24 +83,34 @@ maximal lengths can be particularly important for primary key columns. Some data
 
 ## Native SQL enums (optional)
 
-By default, {class}`~dataframely.Enum` maps to fixed-length `CHAR` or `VARCHAR` columns so stored values remain plain strings. For PostgreSQL setups that use database-level `ENUM` types (for example with Alembic autogenerate), set `sqlalchemy_use_enum=True`:
+By default, {class}`~dataframely.Enum` maps to `sa.CHAR` or `sa.String` columns so stored values remain plain strings. For PostgreSQL setups that use database-level `ENUM` types (for example with Alembic autogenerate), set `sqlalchemy_use_enum=True`:
 
 ```python
-from enum import Enum
+from enum import Enum, auto
 
+import sqlalchemy as sa
 import dataframely as dy
+from sqlalchemy.dialects.postgresql import dialect as pg_dialect
+from sqlalchemy.dialects.mssql import dialect as mssql_dialect
 
 
 class Status(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
+    PENDING = auto()
+    APPROVED = auto()
 
 
 class Staged(dy.Schema):
     status = dy.Enum(Status, sqlalchemy_use_enum=True)
+
+
+pg_cols = Staged.to_sqlalchemy_columns(pg_dialect()())
+# pg_cols[0].type is sa.Enum — compiles to: "status" (PostgreSQL native ENUM)
+
+mssql_cols = Staged.to_sqlalchemy_columns(mssql_dialect()())
+# mssql_cols[0].type falls back to VARCHAR with a CHECK constraint
 ```
 
-When `categories` is a Python `enum.Enum` subclass, SQLAlchemy uses the enum class name (lowercased) as the database enum type name. For string category lists, the SQL column name is used by default; override it with `sqlalchemy_enum_name` if needed. On dialects without native enums (such as Microsoft SQL Server), SQLAlchemy falls back to `VARCHAR` with a check constraint.
+When `categories` is a Python `enum.Enum` subclass, SQLAlchemy uses the enum class name (lowercased) as the database enum type name. For string category lists, the SQL column name is used by default; override it with `sqlalchemy_enum_name` if needed. On dialects without native enums (such as Microsoft SQL Server), SQLAlchemy falls back to `sa.String` with a check constraint.
 
 ## Collections of multiple tables
 
