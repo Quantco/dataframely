@@ -8,11 +8,21 @@ import sys
 import textwrap
 import warnings
 from abc import ABC
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict
 from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Annotated, Any, Literal, cast, overload
+from typing import (
+    IO,
+    Annotated,
+    Any,
+    Concatenate,
+    Literal,
+    ParamSpec,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import polars as pl
 import polars.exceptions as plexc
@@ -52,6 +62,9 @@ else:
     from typing_extensions import Self
 
 _FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 class Collection(BaseCollection, ABC):
@@ -810,6 +823,33 @@ class Collection(BaseCollection, ABC):
         lazy_dict = self.to_dict()
         dfs = pl.collect_all(lazy_dict.values())
         return self._init(dict(zip(lazy_dict, dfs)))
+
+    def pipe(
+        self,
+        function: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        """Apply a function to this collection.
+
+        This method allows to chain operations on a collection in a fluent style,
+        analogously to :meth:`polars.LazyFrame.pipe`.
+
+        Args:
+            function: The callable to apply. It receives this collection as its first
+                argument, followed by any additional ``args`` and ``kwargs``.
+            args: Additional positional arguments to pass to ``function``.
+            kwargs: Additional keyword arguments to pass to ``function``.
+
+        Returns:
+            The return value of ``function`` when called as described.
+
+        Example:
+            >>> def add_prefix(collection: MyCollection, prefix: str) -> MyCollection:
+            ...     ...
+            >>> result = my_collection.pipe(add_prefix, prefix="foo")
+        """
+        return function(self, *args, **kwargs)
 
     # --------------------------------- SERIALIZATION -------------------------------- #
 
