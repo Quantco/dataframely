@@ -832,7 +832,7 @@ class Collection(BaseCollection, ABC):
     ) -> T:
         """Apply a function to this collection.
 
-        This method allows to chain operations on a collection in a fluent style,
+        This method allows chaining operations on a collection in a fluent style,
         analogously to :meth:`polars.LazyFrame.pipe`.
 
         Args:
