@@ -645,6 +645,8 @@ class Collection(BaseCollection, ABC):
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(True))
 
+                lfs_with_eval[member_name] = lf_with_eval
+
             lfs_with_eval = collect_all_if(lfs_with_eval, eager)
             for member_name, lf_with_eval in lfs_with_eval.items():
                 member_info = cls.members()[member_name]
