@@ -31,7 +31,7 @@ from dataframely._compat import deltalake
 from dataframely._filter import Filter
 from dataframely._native import format_rule_failures
 from dataframely._plugin import all_rules_required
-from dataframely._polars import FrameType, collect_if
+from dataframely._polars import FrameType, collect_all_if
 from dataframely._serialization import (
     SERIALIZATION_FORMAT_VERSION,
     SchemaJSONDecoder,
@@ -605,28 +605,25 @@ class Collection(BaseCollection, ABC):
             result_cls = cls._init(results)
             primary_key = cls.common_primary_key()
 
-            keep: dict[str, pl.LazyFrame] = {}
-            for name, filter in filters.items():
-                keep[name] = (
-                    filter.logic(result_cls)
-                    .select(primary_key)
-                    .pipe(collect_if, eager)
-                    .lazy()
-                )
+            keep = {
+                name: filter.logic(result_cls).select(primary_key)
+                for name, filter in filters.items()
+            }
+            keep = collect_all_if(keep, eager)
 
-            drop: dict[str, pl.LazyFrame] = {}
-            for failure_propagating_member in failure_propagating_members:
-                annotation_column = f"{failure_propagating_member}|failure_propagation"
-                drop[annotation_column] = (
+            drop: dict[str, pl.LazyFrame] = {
+                f"{failure_propagating_member}|failure_propagation": (
                     failures[failure_propagating_member]
                     ._lf.select(primary_key)
                     .unique()
-                    .pipe(collect_if, eager)
-                    .lazy()
                 )
+                for failure_propagating_member in failure_propagating_members
+            }
+            drop = collect_all_if(drop, eager)
 
             # Now we can iterate over the results and left-join onto each individual
-            # filter to obtain independent boolean indicators of whether to keep the row
+            # filter to obtain independent boolean indicators of whether to keep the row.
+            lfs_with_eval: dict[str, pl.LazyFrame] = {}
             for member_name, filtered in results.items():
                 member_info = cls.members()[member_name]
                 if member_info.ignored_in_filters:
@@ -648,8 +645,8 @@ class Collection(BaseCollection, ABC):
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(True))
 
-                lf_with_eval = lf_with_eval.pipe(collect_if, eager).lazy()
-
+            lfs_with_eval = collect_all_if(lfs_with_eval, eager)
+            for member_name, lf_with_eval in lfs_with_eval.items():
                 # Filtering `lf_with_eval` by the rows for which all joins
                 # "succeeded", we can identify the rows that pass all the filters. We
                 # keep these rows for the result.
