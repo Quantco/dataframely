@@ -814,6 +814,9 @@ class Collection(BaseCollection, ABC):
         This method collects all members in parallel for maximum efficiency. It is
         particularly useful when :meth:`filter` is called with lazy frame inputs.
 
+        Args:
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all`.
+
         Returns:
             The same collection with all members collected once. Members annotated
             with :class:`~dataframely.DataFrame` are returned as DataFrames, while
