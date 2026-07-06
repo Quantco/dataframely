@@ -661,8 +661,12 @@ class Collection(BaseCollection, ABC):
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(True))
 
+                lfs_with_eval[member_name] = lf_with_eval
+
             lfs_with_eval = collect_all_if(lfs_with_eval, eager, **kwargs)
             for member_name, lf_with_eval in lfs_with_eval.items():
+                member_info = cls.members()[member_name]
+
                 # Filtering `lf_with_eval` by the rows for which all joins
                 # "succeeded", we can identify the rows that pass all the filters. We
                 # keep these rows for the result.
