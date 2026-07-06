@@ -3,14 +3,15 @@
 For the purpose of this guide, let's assume that we're working with data that we use to predict housing prices.
 To this end, we want to ensure that all the data we're using meets several expectations.
 As a running example, consider the following data set:
-| `zip_code` | `num_bedrooms` | `num_bathrooms` | `price`|
-|-------|--------------|--------------|----------|
-| "01234" | 2 | 1 | 100,000 |
-| "01234" | 2 | 2 | 110,000 |
-| "1" | 1 | 1 | 50,000 |
-| "213" | NULL | 1 | 80,000 |
-| "123" | NULL | 0 | 60,000 |
-| "213" | 2 | 8 | 160,000
+
+| `zip_code` | `num_bedrooms` | `num_bathrooms` | `price` |
+| ---------- | -------------- | --------------- | ------- |
+| "01234"    | 2              | 1               | 100,000 |
+| "01234"    | 2              | 2               | 110,000 |
+| "1"        | 1              | 1               | 50,000  |
+| "213"      | NULL           | 1               | 80,000  |
+| "123"      | NULL           | 0               | 60,000  |
+| "213"      | 2              | 8               | 160,000 |
 
 ## Creating a {class}`~dataframely.Schema` class
 
