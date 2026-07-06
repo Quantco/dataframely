@@ -84,9 +84,9 @@ def require_relationship_one_to_at_least_one(
         columns, filtered to ensure a 1:{1,N} relationship.
     """
     if drop_duplicates:
-        return lhs.unique(on, keep="none").join(rhs.unique(on), on=on)
+        return lhs.unique(on, keep="none").join(rhs, on=on, how="semi")
 
-    return lhs.join(rhs.unique(on), on=on)
+    return lhs.join(rhs, on=on, how="semi")
 
 
 # ------------------------------------------------------------------------------------ #
