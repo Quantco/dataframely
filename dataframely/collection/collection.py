@@ -112,10 +112,7 @@ class Collection(BaseCollection, ABC):
             An instance of this collection.
         """
         return cls._init(
-            {
-                name: member.schema.create_empty()
-                for name, member in cls.members().items()
-            }
+            {name: member.schema.create_empty() for name, member in cls.members().items()}
         )
 
     @classmethod
@@ -189,11 +186,7 @@ class Collection(BaseCollection, ABC):
                 :meth:`_preprocess_sample` method appropriately.
         """
         # Preconditions
-        if (
-            num_rows is not None
-            and overrides is not None
-            and len(overrides) != num_rows
-        ):
+        if num_rows is not None and overrides is not None and len(overrides) != num_rows:
             raise ValueError("`num_rows` mismatches the length of `overrides`.")
         if num_rows is None and overrides is None:
             num_rows = 1
@@ -205,22 +198,15 @@ class Collection(BaseCollection, ABC):
 
         # 1) Preprocess all samples to make sampling efficient and ensure shared primary
         #    keys.
-        samples = (
-            overrides
-            if overrides is not None
-            else [{} for _ in range(cast(int, num_rows))]
-        )
+        samples = overrides if overrides is not None else [{} for _ in range(cast(int, num_rows))]
         processed_samples = [
-            cls._preprocess_sample(dict(sample.items()), i, g)
-            for i, sample in enumerate(samples)
+            cls._preprocess_sample(dict(sample.items()), i, g) for i, sample in enumerate(samples)
         ]
 
         # 2) Ensure that all samples have primary keys assigned to ensure that we
         #    can properly sample members.
         if requires_dependent_sampling:
-            if not all(
-                all(k in sample for k in primary_key) for sample in processed_samples
-            ):
+            if not all(all(k in sample for k in primary_key) for sample in processed_samples):
                 raise ValueError("All samples must contain the common primary keys.")
 
         # 3) Sample all members independently. If we have a common primary key, we need
@@ -438,13 +424,10 @@ class Collection(BaseCollection, ABC):
                     )
 
                 details = [
-                    f" > Member '{member}' failed validation:\n"
-                    + textwrap.indent(error, "   ")
+                    f" > Member '{member}' failed validation:\n" + textwrap.indent(error, "   ")
                     for member, error in errors.items()
                 ]
-                message = "\n".join(
-                    [f"{len(errors)} members failed validation:"] + details
-                )
+                message = "\n".join([f"{len(errors)} members failed validation:"] + details)
                 raise ValidationError(message)
             return filtered
         else:
@@ -462,16 +445,12 @@ class Collection(BaseCollection, ABC):
                 primary_key = cls.common_primary_key()
                 filter_names = list(filters.keys())
                 keep = [
-                    filter.logic(result_cls).select(
-                        *primary_key, pl.lit(True).alias(name)
-                    )
+                    filter.logic(result_cls).select(*primary_key, pl.lit(True).alias(name))
                     for name, filter in filters.items()
                 ]
                 members = {
                     name: (
-                        _join_all(
-                            lf, *keep, on=primary_key, how="left", maintain_order="left"
-                        )
+                        _join_all(lf, *keep, on=primary_key, how="left", maintain_order="left")
                         .filter(
                             all_rules_required(
                                 filter_names,
@@ -608,10 +587,7 @@ class Collection(BaseCollection, ABC):
             keep: dict[str, pl.LazyFrame] = {}
             for name, filter in filters.items():
                 keep[name] = (
-                    filter.logic(result_cls)
-                    .select(primary_key)
-                    .pipe(collect_if, eager)
-                    .lazy()
+                    filter.logic(result_cls).select(primary_key).pipe(collect_if, eager).lazy()
                 )
 
             drop: dict[str, pl.LazyFrame] = {}
@@ -695,9 +671,7 @@ class Collection(BaseCollection, ABC):
                     failure_lf = failure_lf.with_columns(
                         pl.coalesce(
                             name,
-                            pl.col(f"{_FILTER_COLUMN_PREFIX}{name}").cast(
-                                pl.dtype_of(name)
-                            ),
+                            pl.col(f"{_FILTER_COLUMN_PREFIX}{name}").cast(pl.dtype_of(name)),
                         )
                         for name in member_info.schema.column_names()
                     ).drop(
@@ -808,7 +782,7 @@ class Collection(BaseCollection, ABC):
 
     # ---------------------------------- COLLECTION ---------------------------------- #
 
-    def collect_all(self) -> Self:
+    def collect_all(self, **kwargs: Any) -> Self:
         """Collect all members of the collection.
 
         This method collects all members in parallel for maximum efficiency. It is
@@ -821,7 +795,7 @@ class Collection(BaseCollection, ABC):
             "shallow-lazy" frames (obtained by calling ``.collect().lazy()``).
         """
         lazy_dict = self.to_dict()
-        dfs = pl.collect_all(lazy_dict.values())
+        dfs = pl.collect_all(lazy_dict.values(), **kwargs)
         return self._init(dict(zip(lazy_dict, dfs)))
 
     def pipe(
@@ -900,8 +874,7 @@ class Collection(BaseCollection, ABC):
                 for name, info in cls.members().items()
             },
             "filters": {
-                name: filter.logic(cls.create_empty())
-                for name, filter in cls._filters().items()
+                name: filter.logic(cls.create_empty()) for name, filter in cls._filters().items()
             },
         }
         return json.dumps(result, cls=SchemaJSONEncoder)
@@ -1062,9 +1035,7 @@ class Collection(BaseCollection, ABC):
             **kwargs,
         )
 
-    def write_delta(
-        self, target: str | Path | deltalake.DeltaTable, **kwargs: Any
-    ) -> None:
+    def write_delta(self, target: str | Path | deltalake.DeltaTable, **kwargs: Any) -> None:
         """Write the members of this collection to Delta Lake tables.
 
         This method writes each member to a Delta Lake table at the provided target location.
@@ -1262,9 +1233,7 @@ class Collection(BaseCollection, ABC):
         # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
         # missing or broken collection metadata.
         strict = validation == "forbid"
-        collection_types = _deserialize_types(
-            serialized_collection_types, strict=strict
-        )
+        collection_types = _deserialize_types(serialized_collection_types, strict=strict)
         collection_type = _reconcile_collection_types(collection_types)
 
         if cls._requires_validation_for_reading_parquets(collection_type, validation):
@@ -1291,9 +1260,7 @@ class Collection(BaseCollection, ABC):
             else "no collection schema to check validity can be read from the source"
         )
         if validation == "forbid":
-            raise ValidationRequiredError(
-                f"Cannot read collection without validation: {msg}."
-            )
+            raise ValidationRequiredError(f"Cannot read collection without validation: {msg}.")
         if validation == "warn":
             warnings.warn(f"Reading parquet file requires validation: {msg}.")
         return True
@@ -1330,15 +1297,11 @@ def read_parquet_metadata_collection(
 
 
 @overload
-def deserialize_collection(
-    data: str, strict: Literal[True] = True
-) -> type[Collection]: ...
+def deserialize_collection(data: str, strict: Literal[True] = True) -> type[Collection]: ...
 
 
 @overload
-def deserialize_collection(
-    data: str, strict: Literal[False]
-) -> type[Collection] | None: ...
+def deserialize_collection(data: str, strict: Literal[False]) -> type[Collection] | None: ...
 
 
 @overload
@@ -1409,9 +1372,7 @@ def deserialize_collection(data: str, strict: bool = True) -> type[Collection] |
         )
     except (ValueError, TypeError, JSONDecodeError, plexc.ComputeError) as e:
         if strict:
-            raise DeserializationError(
-                "The Collection metadata could not be deserialized"
-            ) from e
+            raise DeserializationError("The Collection metadata could not be deserialized") from e
         return None
 
 
@@ -1430,9 +1391,7 @@ def _join_all(
     return result
 
 
-def _extract_keys_if_exist(
-    data: Mapping[str, Any], keys: Sequence[str]
-) -> dict[str, Any]:
+def _extract_keys_if_exist(data: Mapping[str, Any], keys: Sequence[str]) -> dict[str, Any]:
     return {key: data[key] for key in keys if key in data}
 
 
