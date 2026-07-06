@@ -380,7 +380,13 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def validate(
-        cls, data: Mapping[str, FrameType], /, *, cast: bool = False, eager: bool = True
+        cls,
+        data: Mapping[str, FrameType],
+        /,
+        *,
+        cast: bool = False,
+        eager: bool = True,
+        **kwargs: Any,
     ) -> Self:
         """Validate that a set of data frames satisfy the collection's invariants.
 
@@ -400,6 +406,8 @@ class Collection(BaseCollection, ABC):
                 :meth:`~polars.LazyFrame.collect` on the individual member or
                 :meth:`collect_all` on the collection. Note that, in the latter case,
                 information from error messages is limited.
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` when
+                `eager=True`.
 
         Raises:
             ValueError: If an insufficient set of input data frames is provided, i.e. if
@@ -421,7 +429,7 @@ class Collection(BaseCollection, ABC):
         if eager:
             # If we perform the validation eagerly, we call filter and check the failure
             # information to properly construct a useful error message.
-            filtered, failures = cls.filter(data, cast=cast, eager=True)
+            filtered, failures = cls.filter(data, cast=cast, eager=True, **kwargs)
             if any(len(failure) > 0 for failure in failures.values()):
                 errors: dict[str, str] = {}
                 for member, failure in failures.items():
@@ -535,7 +543,13 @@ class Collection(BaseCollection, ABC):
 
     @classmethod
     def filter(
-        cls, data: Mapping[str, FrameType], /, *, cast: bool = False, eager: bool = True
+        cls,
+        data: Mapping[str, FrameType],
+        /,
+        *,
+        cast: bool = False,
+        eager: bool = True,
+        **kwargs: Any,
     ) -> CollectionFilterResult[Self]:
         """Filter the members data frame by their schemas and the collection's filters.
 
@@ -551,6 +565,8 @@ class Collection(BaseCollection, ABC):
             eager: Whether the filter operation should be performed eagerly.
                 Note that until https://github.com/pola-rs/polars/pull/24129 is
                 released, eagerly filtering can provide significant speedups.
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` when
+                `eager=True`.
 
         Returns:
             A named tuple with fields `result` and `failure`. The `result` field
@@ -609,7 +625,7 @@ class Collection(BaseCollection, ABC):
                 name: filter.logic(result_cls).select(primary_key)
                 for name, filter in filters.items()
             }
-            keep = collect_all_if(keep, eager)
+            keep = collect_all_if(keep, eager, **kwargs)
 
             drop: dict[str, pl.LazyFrame] = {
                 f"{failure_propagating_member}|failure_propagation": (
@@ -619,7 +635,7 @@ class Collection(BaseCollection, ABC):
                 )
                 for failure_propagating_member in failure_propagating_members
             }
-            drop = collect_all_if(drop, eager)
+            drop = collect_all_if(drop, eager, **kwargs)
 
             # Now we can iterate over the results and left-join onto each individual
             # filter to obtain independent boolean indicators of whether to keep the row.
@@ -645,7 +661,7 @@ class Collection(BaseCollection, ABC):
                         maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(True))
 
-            lfs_with_eval = collect_all_if(lfs_with_eval, eager)
+            lfs_with_eval = collect_all_if(lfs_with_eval, eager, **kwargs)
             for member_name, lf_with_eval in lfs_with_eval.items():
                 # Filtering `lf_with_eval` by the rows for which all joins
                 # "succeeded", we can identify the rows that pass all the filters. We
@@ -710,7 +726,7 @@ class Collection(BaseCollection, ABC):
 
         result = CollectionFilterResult(cls._init(results), failures)
         if eager:
-            return result.collect_all()
+            return result.collect_all(**kwargs)
         return result
 
     def join(
@@ -815,7 +831,7 @@ class Collection(BaseCollection, ABC):
             The same collection with all members collected once. Members annotated
             with :class:`~dataframely.DataFrame` are returned as DataFrames, while
             members annotated with :class:`~dataframely.LazyFrame` are returned as
-            "shallow-lazy" frames (obtained by calling ``.collect().lazy()``).
+            "shallow-lazy" frames (obtained by calling `.collect().lazy()`).
         """
         lazy_dict = self.to_dict()
         dfs = pl.collect_all(lazy_dict.values())

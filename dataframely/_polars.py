@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import polars as pl
 from polars.datatypes import DataTypeClass
@@ -41,18 +41,18 @@ def timedelta_matches_resolution(d: dt.timedelta, resolution: str) -> bool:
     return datetime_matches_resolution(EPOCH_DATETIME + d, resolution)
 
 
-def collect_if(lf: pl.LazyFrame, condition: bool) -> pl.LazyFrame:
+def collect_if(lf: pl.LazyFrame, condition: bool, **kwargs: Any) -> pl.LazyFrame:
     """Collect a lazy frame based on `condition`."""
     if condition:
-        return lf.collect().lazy()
+        return lf.collect(**kwargs).lazy()
     return lf
 
 
 def collect_all_if(
-    lfs: dict[str, pl.LazyFrame], condition: bool
+    lfs: dict[str, pl.LazyFrame], condition: bool, **kwargs: Any
 ) -> dict[str, pl.LazyFrame]:
     """Collect the lazy frames in the dictionary based on `condition`."""
     if condition:
-        dfs = pl.collect_all(lfs.values())
+        dfs = pl.collect_all(lfs.values(), **kwargs)
         return {k: v.lazy() for k, v in zip(lfs.keys(), dfs)}
     return lfs

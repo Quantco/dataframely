@@ -501,6 +501,7 @@ class Schema(BaseSchema, ABC):
         *,
         cast: bool = False,
         eager: Literal[True] = True,
+        **kwargs: Any,
     ) -> DataFrame[Self]: ...
 
     @overload
@@ -512,6 +513,7 @@ class Schema(BaseSchema, ABC):
         *,
         cast: bool = False,
         eager: Literal[False],
+        **kwargs: Any,
     ) -> LazyFrame[Self]: ...
 
     @overload
@@ -523,6 +525,7 @@ class Schema(BaseSchema, ABC):
         *,
         cast: bool = False,
         eager: bool,
+        **kwargs: Any,
     ) -> DataFrame[Self] | LazyFrame[Self]: ...
 
     @classmethod
@@ -533,6 +536,7 @@ class Schema(BaseSchema, ABC):
         *,
         cast: bool = False,
         eager: bool = True,
+        **kwargs: Any,
     ) -> DataFrame[Self] | LazyFrame[Self]:
         """Validate that a data frame satisfies the schema.
 
@@ -554,6 +558,7 @@ class Schema(BaseSchema, ABC):
                     not surface *all* validation issues as the validation is aborted
                     once the first failure is encountered. Likewise, the reported
                     validation failure can be non-deterministic.
+            kwargs: Keyword arguments passed directly to :meth:`collect` when `eager=True`.
 
         Returns:
             The input eager or lazy frame, wrapped in a generic version of the
@@ -574,7 +579,7 @@ class Schema(BaseSchema, ABC):
                 `eager=False`.
         """
         if eager:
-            out, failure = cls.filter(df, cast=cast, eager=True)
+            out, failure = cls.filter(df, cast=cast, eager=True, **kwargs)
             if len(failure) > 0:
                 counts = failure.counts()
                 raise ValidationError(
@@ -699,6 +704,7 @@ class Schema(BaseSchema, ABC):
         *,
         cast: bool = False,
         eager: bool = True,
+        **kwargs: Any,
     ) -> FilterResult[Self] | LazyFilterResult[Self]:
         """Filter the data frame by the rules of this schema, returning `(valid,
         failures)`.
@@ -709,16 +715,15 @@ class Schema(BaseSchema, ABC):
         succeeds.
 
         Args:
-            df: The data frame to filter for valid rows.
-                The data frame is collected within this method, regardless of whether
-                a :class:`~polars.DataFrame` or :class:`~polars.LazyFrame` is passed.
-            cast:
-                Whether columns with a wrong data type in the input data frame are
+            df: The data frame to filter for valid rows. The data frame is collected
+                within this method, regardless of whether a :class:`~polars.DataFrame`
+                or :class:`~polars.LazyFrame` is passed.
+            cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible. Rows for which the
                 cast fails for any column are filtered out.
             eager: Whether the filter operation should be performed eagerly. If `False`, the
-                returned lazy frame will
-                fail to collect if the validation does not pass.
+                returned lazy frame will fail to collect if the validation does not pass.
+            kwargs: Keyword arguments passed directly to :meth:`collect` when `eager=True`.
 
         Returns:
             A tuple of the validated rows in the input data frame (potentially
@@ -755,7 +760,7 @@ class Schema(BaseSchema, ABC):
         )
         if rules := cls._validation_rules(with_cast=cast):
             evaluated = lf.pipe(cls._with_evaluated_rules, rules).pipe(
-                collect_if, eager
+                collect_if, eager, **kwargs
             )
             filtered = evaluated.filter(pl.col(_COLUMN_VALID)).select(
                 cls.column_names()
