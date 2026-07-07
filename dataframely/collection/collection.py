@@ -386,6 +386,7 @@ class Collection(BaseCollection, ABC):
         *,
         cast: bool = False,
         eager: bool = True,
+        skip_member_validation: bool = False,
         **kwargs: Any,
     ) -> Self:
         """Validate that a set of data frames satisfy the collection's invariants.
@@ -406,6 +407,11 @@ class Collection(BaseCollection, ABC):
                 :meth:`~polars.LazyFrame.collect` on the individual member or
                 :meth:`collect_all` on the collection. Note that, in the latter case,
                 information from error messages is limited.
+            skip_member_validation: Whether to skip validating individual members and only
+                apply the collection filters. **Use this option with caution** as it
+                requires the caller to ensure that the individual members have been
+                validated. This option is particularly useful in performance-critical
+                scenarios where the members are known to be valid.
             kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
                 :meth:`polars.LazyFrame.collect` when `eager=True`.
 
@@ -429,7 +435,13 @@ class Collection(BaseCollection, ABC):
         if eager:
             # If we perform the validation eagerly, we call filter and check the failure
             # information to properly construct a useful error message.
-            filtered, failures = cls.filter(data, cast=cast, eager=True, **kwargs)
+            filtered, failures = cls.filter(
+                data,
+                cast=cast,
+                eager=True,
+                skip_member_validation=skip_member_validation,
+                **kwargs,
+            )
             if any(len(failure) > 0 for failure in failures.values()):
                 errors: dict[str, str] = {}
                 for member, failure in failures.items():
@@ -460,7 +472,17 @@ class Collection(BaseCollection, ABC):
             # efficiently as we cannot easily propagate error messages from different
             # members anyways.
             members: dict[str, pl.LazyFrame] = {
-                name: member.schema.validate(data[name].lazy(), cast=cast, eager=False)
+                name: (
+                    (
+                        member.schema.cast(data[name].lazy())
+                        if cast
+                        else data[name].lazy()
+                    )
+                    if skip_member_validation
+                    else member.schema.validate(
+                        data[name].lazy(), cast=cast, eager=False
+                    )
+                )
                 for name, member in cls.members().items()
                 if name in data
             }
@@ -556,6 +578,7 @@ class Collection(BaseCollection, ABC):
         *,
         cast: bool = False,
         eager: bool = True,
+        skip_member_validation: bool = False,
         **kwargs: Any,
     ) -> CollectionFilterResult[Self]:
         """Filter the members data frame by their schemas and the collection's filters.
@@ -572,6 +595,11 @@ class Collection(BaseCollection, ABC):
             eager: Whether the filter operation should be performed eagerly.
                 Note that until https://github.com/pola-rs/polars/pull/24129 is
                 released, eagerly filtering can provide significant speedups.
+            skip_member_validation: Whether to skip filtering individual members and only
+                apply the collection filters. **Use this option with caution** as it
+                requires the caller to ensure that the individual members have been
+                validated. This option is particularly useful in performance-critical
+                scenarios where the members are known to already be valid.
             kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
                 :meth:`polars.LazyFrame.collect` when `eager=True`.
 
@@ -615,10 +643,20 @@ class Collection(BaseCollection, ABC):
             if member.is_optional and member_name not in data:
                 continue
 
-            member_result, failures[member_name] = member.schema.filter(
-                data[member_name].lazy(), cast=cast, eager=eager, **kwargs
-            )
-            results[member_name] = member_result.lazy()
+            if skip_member_validation:
+                results[member_name] = (
+                    member.schema.cast(data[member_name].lazy())
+                    if cast
+                    else data[member_name].lazy()
+                )
+                failures[member_name] = FailureInfo._create_empty(
+                    member.schema, with_casting_rules=cast
+                )
+            else:
+                member_result, failures[member_name] = member.schema.filter(
+                    data[member_name].lazy(), cast=cast, eager=eager, **kwargs
+                )
+                results[member_name] = member_result.lazy()
 
         # Once we've done that, we can apply the filters on this collection. To this end,
         # we iterate over all filters and store the filter results.
