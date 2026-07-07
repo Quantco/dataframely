@@ -406,8 +406,8 @@ class Collection(BaseCollection, ABC):
                 :meth:`~polars.LazyFrame.collect` on the individual member or
                 :meth:`collect_all` on the collection. Note that, in the latter case,
                 information from error messages is limited.
-            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` when
-                `eager=True`.
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
+                :meth:`polars.LazyFrame.collect` when `eager=True`.
 
         Raises:
             ValueError: If an insufficient set of input data frames is provided, i.e. if
@@ -497,7 +497,9 @@ class Collection(BaseCollection, ABC):
             return cls._init(members)
 
     @classmethod
-    def is_valid(cls, data: Mapping[str, FrameType], /, *, cast: bool = False) -> bool:
+    def is_valid(
+        cls, data: Mapping[str, FrameType], /, *, cast: bool = False, **kwargs: Any
+    ) -> bool:
         """Utility method to check whether :meth:`validate` raises an exception.
 
         Args:
@@ -505,7 +507,9 @@ class Collection(BaseCollection, ABC):
                 dictionary must contain exactly one entry per member with the name of
                 the member as key.
             cast: Whether columns with a wrong data type in the member data frame are
-                cast to their schemas' defined data types if possible.
+                cast to their schemas' defined data types if possible.]
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
+                :meth:`polars.LazyFrame.collect`.
 
         Returns:
             Whether the provided members satisfy the invariants of the collection.
@@ -520,7 +524,7 @@ class Collection(BaseCollection, ABC):
         members: dict[str, pl.LazyFrame] = {}
         for member, schema in cls.member_schemas().items():
             if member in data:
-                if not schema.is_valid(data[member], cast=cast):
+                if not schema.is_valid(data[member], cast=cast, **kwargs):
                     return False
                 members[member] = data[member].lazy()
 
@@ -531,9 +535,12 @@ class Collection(BaseCollection, ABC):
             keep = [filter.logic(result_cls).select(primary_key) for filter in filters]
             joined = _join_all(*keep, on=primary_key, how="inner")
             removed_rows = pl.collect_all(
-                data[member].lazy().join(joined, on=primary_key, how="anti")
-                for member in cls.members()
-                if member in data
+                (
+                    data[member].lazy().join(joined, on=primary_key, how="anti")
+                    for member in cls.members()
+                    if member in data
+                ),
+                **kwargs,
             )
             return all(df.is_empty() for df in removed_rows)
 
@@ -565,8 +572,8 @@ class Collection(BaseCollection, ABC):
             eager: Whether the filter operation should be performed eagerly.
                 Note that until https://github.com/pola-rs/polars/pull/24129 is
                 released, eagerly filtering can provide significant speedups.
-            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` when
-                `eager=True`.
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
+                :meth:`polars.LazyFrame.collect` when `eager=True`.
 
         Returns:
             A named tuple with fields `result` and `failure`. The `result` field
@@ -609,7 +616,7 @@ class Collection(BaseCollection, ABC):
                 continue
 
             member_result, failures[member_name] = member.schema.filter(
-                data[member_name].lazy(), cast=cast, eager=eager
+                data[member_name].lazy(), cast=cast, eager=eager, **kwargs
             )
             results[member_name] = member_result.lazy()
 
@@ -651,14 +658,14 @@ class Collection(BaseCollection, ABC):
                         filter_keep.lazy().with_columns(pl.lit(True).alias(name)),
                         on=primary_key,
                         how="left",
-                        maintain_order="left",
+                        # maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
                 for name, filter_drop in drop.items():
                     lf_with_eval = lf_with_eval.join(
                         filter_drop.with_columns(pl.lit(False).alias(name)),
                         on=primary_key,
                         how="left",
-                        maintain_order="left",
+                        # maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(True))
 
                 lfs_with_eval[member_name] = lf_with_eval
