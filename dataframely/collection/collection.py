@@ -658,14 +658,14 @@ class Collection(BaseCollection, ABC):
                         filter_keep.lazy().with_columns(pl.lit(True).alias(name)),
                         on=primary_key,
                         how="left",
-                        # maintain_order="left",
+                        maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(False))
                 for name, filter_drop in drop.items():
                     lf_with_eval = lf_with_eval.join(
                         filter_drop.with_columns(pl.lit(False).alias(name)),
                         on=primary_key,
                         how="left",
-                        # maintain_order="left",
+                        maintain_order="left",
                     ).with_columns(pl.col(name).fill_null(True))
 
                 lfs_with_eval[member_name] = lf_with_eval
