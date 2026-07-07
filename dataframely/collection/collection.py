@@ -832,11 +832,14 @@ class Collection(BaseCollection, ABC):
 
     # ---------------------------------- COLLECTION ---------------------------------- #
 
-    def collect_all(self) -> Self:
+    def collect_all(self, **kwargs: Any) -> Self:
         """Collect all members of the collection.
 
         This method collects all members in parallel for maximum efficiency. It is
         particularly useful when :meth:`filter` is called with lazy frame inputs.
+
+        Args:
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all`.
 
         Returns:
             The same collection with all members collected once. Members annotated
@@ -845,7 +848,7 @@ class Collection(BaseCollection, ABC):
             "shallow-lazy" frames (obtained by calling `.collect().lazy()`).
         """
         lazy_dict = self.to_dict()
-        dfs = pl.collect_all(lazy_dict.values())
+        dfs = pl.collect_all(lazy_dict.values(), **kwargs)
         return self._init(dict(zip(lazy_dict, dfs)))
 
     def pipe(
