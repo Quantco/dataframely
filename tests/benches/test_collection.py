@@ -15,13 +15,13 @@ def partitioned_dataset(dataset: pl.DataFrame) -> dict[str, pl.DataFrame]:
             "elevation",
             "aspect",
             "slope",
-            idx=pl.int_range(pl.len(), dtype=pl.UInt32),
+            idx=pl.int_range(pl.len(), dtype=pl.UInt32).shuffle(),
         ),
         "second": dataset.select(
             "horizontal_distance_to_hydrology",
             "vertical_distance_to_hydrology",
             "horizontal_distance_to_roadways",
-            idx=pl.int_range(pl.len(), dtype=pl.UInt32),
+            idx=pl.int_range(pl.len(), dtype=pl.UInt32).shuffle(),
         ),
     }
 
