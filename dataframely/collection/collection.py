@@ -507,7 +507,7 @@ class Collection(BaseCollection, ABC):
                 dictionary must contain exactly one entry per member with the name of
                 the member as key.
             cast: Whether columns with a wrong data type in the member data frame are
-                cast to their schemas' defined data types if possible.]
+                cast to their schemas' defined data types if possible.
             kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
                 :meth:`polars.LazyFrame.collect`.
 
