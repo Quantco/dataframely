@@ -106,6 +106,17 @@ class FailureInfo(Generic[S]):
         self._rule_columns = rule_columns
         self.schema = schema
 
+    @classmethod
+    def _create_empty(cls, schema: type[S], with_casting_rules: bool) -> FailureInfo[S]:
+        rules = schema._validation_rules(with_cast=with_casting_rules)
+        lf = pl.LazyFrame(
+            schema={
+                **schema.to_polars_schema(),  # type: ignore
+                **{rule: pl.Boolean for rule in rules},
+            }
+        )
+        return cls(lf=lf, rule_columns=list(rules.keys()), schema=schema)
+
     @cached_property
     def _df(self) -> pl.DataFrame:
         return self._lf.collect()
