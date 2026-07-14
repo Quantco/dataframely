@@ -1072,7 +1072,7 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             Reading with `validation != "skip"` is deprecated. Starting with
             dataframely v3, this method reads the data without inspecting any schema
             metadata and without running validation. Pass `validation="skip"` to opt
@@ -1138,7 +1138,7 @@ class Collection(BaseCollection, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             Reading with `validation != "skip"` is deprecated. Starting with
             dataframely v3, this method reads the data without inspecting any schema
             metadata and without running validation. Pass `validation="skip"` to opt
@@ -1186,7 +1186,7 @@ class Collection(BaseCollection, ABC):
 
             This method suffers from the same limitations as :meth:`~dataframely.Schema.serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Write the
             individual members with :meth:`polars.DataFrame.write_delta` instead.
         """
@@ -1256,7 +1256,7 @@ class Collection(BaseCollection, ABC):
 
             Be aware that this method suffers from the same limitations as :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Read the
             individual members with :meth:`polars.scan_delta` and call :meth:`validate`
             explicitly instead.
@@ -1327,7 +1327,7 @@ class Collection(BaseCollection, ABC):
 
             Be aware that this method suffers from the same limitations as :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Read the
             individual members with :meth:`polars.read_delta` and call :meth:`validate`
             explicitly instead.

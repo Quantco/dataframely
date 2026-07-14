@@ -925,7 +925,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Use
             :meth:`polars.DataFrame.write_parquet` directly instead.
         """
@@ -961,7 +961,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Use
             :meth:`polars.LazyFrame.sink_parquet` directly instead.
         """
@@ -1019,7 +1019,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Use
             :meth:`polars.read_parquet` and call :meth:`validate` explicitly instead.
         """
@@ -1083,7 +1083,7 @@ class Schema(BaseSchema, ABC):
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Use
             :meth:`polars.scan_parquet` and call :meth:`validate` explicitly instead.
         """
@@ -1165,7 +1165,7 @@ class Schema(BaseSchema, ABC):
             without re-validating. Only use appends if you are certain that they do not
             break your schema.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Use
             :meth:`polars.DataFrame.write_delta` directly instead.
         """
@@ -1228,7 +1228,7 @@ class Schema(BaseSchema, ABC):
 
             This method suffers from the same limitations as :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Use
             :meth:`polars.scan_delta` and call :meth:`validate` explicitly instead.
         """
@@ -1298,7 +1298,7 @@ class Schema(BaseSchema, ABC):
 
             This method suffers from the same limitations as :meth:`serialize`.
 
-        .. deprecated::
+        .. deprecated:: 3.0.0
             This method is deprecated and will be removed in dataframely v3. Use
             :meth:`polars.read_delta` and call :meth:`validate` explicitly instead.
         """
