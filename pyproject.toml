@@ -107,10 +107,13 @@ addopts = "--import-mode=importlib --benchmark-skip -m 'not s3'"
 filterwarnings = [
   # By default, all warnings should yield errors
   "error",
-  # Almost all tests are oblivious to the value of `nullable`. Let's ignore the warning as long as it exists.
-  "ignore:The 'nullable' argument was not explicitly set:FutureWarning",
   # boto3 still uses .utcnow()
   "ignore::DeprecationWarning:botocore.*:",
+  # I/O deprecation warnings (see #367) are asserted in dedicated tests via
+  # `pytest.warns`; silence them elsewhere so existing tests keep exercising the
+  # still-present functionality.
+  "ignore:.*Reading a collection with .validation.*:DeprecationWarning",
+  "ignore:.*deprecated and will be removed in dataframely v3.*:DeprecationWarning",
 ]
 markers = [
   "s3: tests that run against and S3 backend",

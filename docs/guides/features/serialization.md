@@ -1,5 +1,27 @@
 # Serialization
 
+```{warning}
+Most of the I/O functionality described on this page is **deprecated** and will be
+removed in dataframely v3 (see [#367](https://github.com/Quantco/dataframely/issues/367)).
+Calling any of these methods now emits a {class}`DeprecationWarning`. Specifically:
+
+- All I/O methods on {class}`~dataframely.Schema`
+  ({meth}`~dataframely.Schema.write_parquet`, {meth}`~dataframely.Schema.sink_parquet`,
+  {meth}`~dataframely.Schema.read_parquet`, {meth}`~dataframely.Schema.scan_parquet`,
+  {meth}`~dataframely.Schema.write_delta`, {meth}`~dataframely.Schema.read_delta`,
+  {meth}`~dataframely.Schema.scan_delta`) are deprecated. Use the corresponding
+  `polars` functions directly and call {meth}`~dataframely.Schema.validate` explicitly
+  where validation is required.
+- The `deltalake` I/O methods on {class}`~dataframely.Collection`
+  ({meth}`~dataframely.Collection.write_delta`, {meth}`~dataframely.Collection.read_delta`,
+  {meth}`~dataframely.Collection.scan_delta`) are deprecated.
+- {meth}`~dataframely.Collection.read_parquet` and
+  {meth}`~dataframely.Collection.scan_parquet` continue to exist, but reading with
+  `validation != "skip"` is deprecated: metadata will no longer be inspected and
+  validation will no longer run implicitly. Pass `validation="skip"` to opt into the
+  future behavior, or call {meth}`~dataframely.Collection.validate` explicitly.
+```
+
 `dataframely` provides support for easily storing and reading validated data.
 `polars` already provides native support for serializing data frames into different storage
 backends. For the storage of the data itself, `dataframely` usually dispatches to polars-native

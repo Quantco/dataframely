@@ -26,17 +26,16 @@ As always, automated testing is useful here, but we also recommend checking the 
 [published on GitHub](https://github.com/Quantco/dataframely/releases).
 
 In order to give users a heads-up before breaking changes are released, we introduce
-[FutureWarnings](https://docs.python.org/3/library/exceptions.html#FutureWarning).
+[DeprecationWarnings](https://docs.python.org/3/library/exceptions.html#DeprecationWarning).
 Warnings are the most direct and effective tool at our disposal for reaching users directly.
 We therefore generally recommend that users do not silence such warnings explicitly, but instead migrate their code
 proactively, whenever possible.
 However, we also understand that the need for migration may catch users at an inconvenient time, and a temporary band
 aid solution might be required.
-Users can disable `FutureWarnings` either through
-[python builtins](https://docs.python.org/3/library/warnings.html#warnings.filterwarnings),
-builtins from tools
-like [pytest](https://docs.pytest.org/en/stable/how-to/capture-warnings.html#controlling-warnings),
-or by setting the `DATAFRAMELY_NO_FUTURE_WARNINGS` environment variable to `true` or `1`.
+Users can disable `DeprecationWarnings` either through
+[python builtins](https://docs.python.org/3/library/warnings.html#warnings.filterwarnings)
+or through builtins from tools
+like [pytest](https://docs.pytest.org/en/stable/how-to/capture-warnings.html#controlling-warnings).
 
 ## Experimental features
 
