@@ -18,6 +18,7 @@ from polars._typing import FileSource
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
 from ._compat import PartitionSchemeOrSinkDirectory, deltalake, pa, pydantic, sa
+from ._deprecation import deprecated
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
@@ -897,6 +898,10 @@ class Schema(BaseSchema, ABC):
     # ------------------------------------ PARQUET ----------------------------------- #
 
     @classmethod
+    @deprecated(
+        "`Schema.write_parquet` is deprecated and will be removed in dataframely v3. "
+        "Use `polars.DataFrame.write_parquet` directly instead."
+    )
     def write_parquet(
         cls, df: DataFrame[Self], /, file: str | Path | IO[bytes], **kwargs: Any
     ) -> None:
@@ -919,10 +924,18 @@ class Schema(BaseSchema, ABC):
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Use
+            :meth:`polars.DataFrame.write_parquet` directly instead.
         """
         cls._write(df=df, backend=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
+    @deprecated(
+        "`Schema.sink_parquet` is deprecated and will be removed in dataframely v3. "
+        "Use `polars.LazyFrame.sink_parquet` directly instead."
+    )
     def sink_parquet(
         cls,
         lf: LazyFrame[Self],
@@ -947,10 +960,18 @@ class Schema(BaseSchema, ABC):
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Use
+            :meth:`polars.LazyFrame.sink_parquet` directly instead.
         """
         cls._sink(lf=lf, backend=ParquetStorageBackend(), file=file, **kwargs)
 
     @classmethod
+    @deprecated(
+        "`Schema.read_parquet` is deprecated and will be removed in dataframely v3. "
+        "Use `polars.read_parquet` and call `validate` explicitly instead."
+    )
     def read_parquet(
         cls,
         source: FileSource,
@@ -997,6 +1018,10 @@ class Schema(BaseSchema, ABC):
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Use
+            :meth:`polars.read_parquet` and call :meth:`validate` explicitly instead.
         """
         return cls._read(
             ParquetStorageBackend(),
@@ -1007,6 +1032,10 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
+    @deprecated(
+        "`Schema.scan_parquet` is deprecated and will be removed in dataframely v3. "
+        "Use `polars.scan_parquet` and call `validate` explicitly instead."
+    )
     def scan_parquet(
         cls,
         source: FileSource,
@@ -1053,6 +1082,10 @@ class Schema(BaseSchema, ABC):
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Use
+            :meth:`polars.scan_parquet` and call :meth:`validate` explicitly instead.
         """
         return cls._read(
             ParquetStorageBackend(),
@@ -1099,6 +1132,10 @@ class Schema(BaseSchema, ABC):
 
     # --------------------------------- Delta -----------------------------------------#
     @classmethod
+    @deprecated(
+        "`Schema.write_delta` is deprecated and will be removed in dataframely v3. "
+        "Use `polars.DataFrame.write_delta` directly instead."
+    )
     def write_delta(
         cls,
         df: DataFrame[Self],
@@ -1127,6 +1164,10 @@ class Schema(BaseSchema, ABC):
             in violation of group constraints that dataframely cannot catch
             without re-validating. Only use appends if you are certain that they do not
             break your schema.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Use
+            :meth:`polars.DataFrame.write_delta` directly instead.
         """
         DeltaStorageBackend().write_frame(
             df=df,
@@ -1135,6 +1176,10 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
+    @deprecated(
+        "`Schema.scan_delta` is deprecated and will be removed in dataframely v3. "
+        "Use `polars.scan_delta` and call `validate` explicitly instead."
+    )
     def scan_delta(
         cls,
         source: str | Path | deltalake.DeltaTable,
@@ -1182,6 +1227,10 @@ class Schema(BaseSchema, ABC):
             that are not through dataframely will result in losing the metadata.
 
             This method suffers from the same limitations as :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Use
+            :meth:`polars.scan_delta` and call :meth:`validate` explicitly instead.
         """
         return cls._read(
             DeltaStorageBackend(),
@@ -1192,6 +1241,10 @@ class Schema(BaseSchema, ABC):
         )
 
     @classmethod
+    @deprecated(
+        "`Schema.read_delta` is deprecated and will be removed in dataframely v3. "
+        "Use `polars.read_delta` and call `validate` explicitly instead."
+    )
     def read_delta(
         cls,
         source: str | Path | deltalake.DeltaTable,
@@ -1244,6 +1297,10 @@ class Schema(BaseSchema, ABC):
             break your schema.
 
             This method suffers from the same limitations as :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Use
+            :meth:`polars.read_delta` and call :meth:`validate` explicitly instead.
         """
         return cls._read(
             DeltaStorageBackend(),

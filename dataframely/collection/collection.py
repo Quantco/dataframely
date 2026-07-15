@@ -28,6 +28,7 @@ import polars as pl
 import polars.exceptions as plexc
 
 from dataframely._compat import deltalake
+from dataframely._deprecation import deprecated, issue_deprecation_warning
 from dataframely._filter import Filter
 from dataframely._native import format_rule_failures
 from dataframely._plugin import all_rules_required
@@ -62,6 +63,15 @@ else:
     from typing_extensions import Self
 
 _FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
+
+#: Deprecation message emitted when reading a collection with implicit validation, i.e.
+#: with any ``validation`` other than ``"skip"`` (see #367).
+_IMPLICIT_VALIDATION_DEPRECATION = (
+    "Reading a collection with `validation != 'skip'` is deprecated. Starting with "
+    "dataframely v3, data is read without inspecting schema metadata and without "
+    "running validation. Pass `validation='skip'` to opt into the future behavior, or "
+    "call `validate` explicitly if you require validation."
+)
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -1061,7 +1071,16 @@ class Collection(BaseCollection, ABC):
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            Reading with `validation != "skip"` is deprecated. Starting with
+            dataframely v3, this method reads the data without inspecting any schema
+            metadata and without running validation. Pass `validation="skip"` to opt
+            into this behavior, or call :meth:`validate` explicitly if you require
+            validation.
         """
+        if validation != "skip":
+            issue_deprecation_warning(_IMPLICIT_VALIDATION_DEPRECATION)
         return cls._read(
             backend=ParquetStorageBackend(),
             validation=validation,
@@ -1118,7 +1137,16 @@ class Collection(BaseCollection, ABC):
         Attention:
             Be aware that this method suffers from the same limitations as
             :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            Reading with `validation != "skip"` is deprecated. Starting with
+            dataframely v3, this method reads the data without inspecting any schema
+            metadata and without running validation. Pass `validation="skip"` to opt
+            into this behavior, or call :meth:`validate` explicitly if you require
+            validation.
         """
+        if validation != "skip":
+            issue_deprecation_warning(_IMPLICIT_VALIDATION_DEPRECATION)
         return cls._read(
             backend=ParquetStorageBackend(),
             validation=validation,
@@ -1127,6 +1155,10 @@ class Collection(BaseCollection, ABC):
             **kwargs,
         )
 
+    @deprecated(
+        "`Collection.write_delta` is deprecated and will be removed in dataframely v3. "
+        "Write the individual members with `polars.DataFrame.write_delta` instead."
+    )
     def write_delta(
         self, target: str | Path | deltalake.DeltaTable, **kwargs: Any
     ) -> None:
@@ -1153,6 +1185,10 @@ class Collection(BaseCollection, ABC):
             break your schema.
 
             This method suffers from the same limitations as :meth:`~dataframely.Schema.serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Write the
+            individual members with :meth:`polars.DataFrame.write_delta` instead.
         """
         self._write(
             backend=DeltaStorageBackend(),
@@ -1161,6 +1197,11 @@ class Collection(BaseCollection, ABC):
         )
 
     @classmethod
+    @deprecated(
+        "`Collection.scan_delta` is deprecated and will be removed in dataframely v3. "
+        "Read the individual members with `polars.scan_delta` and call `validate` "
+        "explicitly instead."
+    )
     def scan_delta(
         cls,
         source: str | Path | deltalake.DeltaTable,
@@ -1214,6 +1255,11 @@ class Collection(BaseCollection, ABC):
             break your schema.
 
             Be aware that this method suffers from the same limitations as :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Read the
+            individual members with :meth:`polars.scan_delta` and call :meth:`validate`
+            explicitly instead.
         """
         return cls._read(
             backend=DeltaStorageBackend(),
@@ -1223,6 +1269,11 @@ class Collection(BaseCollection, ABC):
         )
 
     @classmethod
+    @deprecated(
+        "`Collection.read_delta` is deprecated and will be removed in dataframely v3. "
+        "Read the individual members with `polars.read_delta` and call `validate` "
+        "explicitly instead."
+    )
     def read_delta(
         cls,
         source: str | Path | deltalake.DeltaTable,
@@ -1275,6 +1326,11 @@ class Collection(BaseCollection, ABC):
             break your schema.
 
             Be aware that this method suffers from the same limitations as :meth:`serialize`.
+
+        .. deprecated:: 3.0.0
+            This method is deprecated and will be removed in dataframely v3. Read the
+            individual members with :meth:`polars.read_delta` and call :meth:`validate`
+            explicitly instead.
         """
         return cls._read(
             backend=DeltaStorageBackend(),
