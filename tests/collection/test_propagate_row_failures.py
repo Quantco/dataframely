@@ -78,8 +78,42 @@ def invalid_b() -> pl.LazyFrame:
     )
 
 
+class IgnoredPropagatingCollection(dy.Collection):
+    a: dy.LazyFrame[MyTestSchema]
+    b: Annotated[
+        dy.LazyFrame[MyTestSchema2],
+        dy.CollectionMember(ignored_in_filters=True, propagate_row_failures=True),
+    ]
+
+
 def test_collection_propagate_row_failures_meta() -> None:
     assert MyTestCollection._failure_propagating_members() == {"b"}
+
+
+def test_collection_propagate_row_failures_ignored_in_filters_meta() -> None:
+    # `ignored_in_filters` disables propagation, so `b` must not be listed.
+    assert IgnoredPropagatingCollection._failure_propagating_members() == set()
+
+
+def test_collection_propagate_row_failures_ignored_in_filters(
+    valid_a: pl.LazyFrame,
+    invalid_b: pl.LazyFrame,
+) -> None:
+    # Arrange
+    dfs = {
+        "a": valid_a,
+        "b": invalid_b,
+    }
+
+    # Act
+    success, failures = IgnoredPropagatingCollection.filter(
+        dfs,
+        cast=True,
+    )
+
+    # Assert: An ignored member does not propagate its row failures, so `a` keeps all rows.
+    assert success.a.select("shared").collect().to_series().to_list() == [1, 2, 3]
+    assert "b|failure_propagation" not in failures["a"].counts()
 
 
 def test_collection_propagate_row_failure_no_propagation(
