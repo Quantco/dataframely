@@ -377,7 +377,7 @@ class BaseCollection(metaclass=CollectionMeta):
         return {
             name
             for name, member in cls.members().items()
-            if member.propagate_row_failures
+            if member.propagate_row_failures and not member.ignored_in_filters
         }
 
     @classmethod
