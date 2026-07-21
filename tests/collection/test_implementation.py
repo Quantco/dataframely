@@ -245,3 +245,28 @@ def test_collection_primary_key_but_not_common() -> None:
             },
             filters={"testfilter": Filter(lambda c: c.first.filter(pl.col("a") > 0))},
         )
+
+
+def test_collection_propagate_row_failures_no_common_primary_key() -> None:
+    """Propagating row failures requires a common primary key between members."""
+
+    class FirstSchema(dy.Schema):
+        a = dy.Integer(primary_key=True)
+
+    class SecondSchema(dy.Schema):
+        b = dy.Integer(primary_key=True)
+
+    with pytest.raises(
+        ImplementationError,
+        match=r"Members of a collection must have an overlapping primary key",
+    ):
+        create_collection_raw(
+            "test",
+            annotations={
+                "first": Annotated[
+                    dy.LazyFrame[FirstSchema],
+                    dy.CollectionMember(propagate_row_failures=True),
+                ],
+                "second": dy.LazyFrame[SecondSchema],
+            },
+        )
