@@ -133,8 +133,14 @@ class CollectionMeta(ABCMeta):
         ]
 
         # 1) Check that there are overlapping primary keys that allow the application
-        # of filters.
-        if len(non_ignored_member_schemas) > 0 and len(result.filters) > 0:
+        # of filters and the propagation of row failures.
+        has_failure_propagation = any(
+            member.propagate_row_failures and not member.ignored_in_filters
+            for member in result.members.values()
+        )
+        if len(non_ignored_member_schemas) > 0 and (
+            len(result.filters) > 0 or has_failure_propagation
+        ):
             if len(_common_primary_key(non_ignored_member_schemas)) == 0:
                 raise ImplementationError(
                     "Members of a collection must have an overlapping primary key "
