@@ -144,7 +144,7 @@ class CollectionMeta(ABCMeta):
             if len(_common_primary_key(non_ignored_member_schemas)) == 0:
                 raise ImplementationError(
                     "Members of a collection must have an overlapping primary key "
-                    "but did not find any."
+                    "if they use filters or failure-propagation, but did not find any."
                 )
 
         # 2) Check that filter names do not overlap with any column or rule names

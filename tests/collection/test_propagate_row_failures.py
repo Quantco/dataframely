@@ -99,14 +99,19 @@ def test_collection_propagate_row_failures_ignored_in_filters(
     valid_a: pl.LazyFrame,
     invalid_b: pl.LazyFrame,
 ) -> None:
+    # Arrange
+    dfs = {
+        "a": valid_a,
+        "b": invalid_b,
+    }
+
+    # Act
     success, failures = IgnoredPropagatingCollection.filter(
-        {
-            "a": valid_a,
-            "b": invalid_b,
-        },
+        dfs,
         cast=True,
     )
-    # An ignored member does not propagate its row failures, so `a` keeps all rows.
+
+    # Assert: An ignored member does not propagate its row failures, so `a` keeps all rows.
     assert success.a.select("shared").collect().to_series().to_list() == [1, 2, 3]
     assert "b|failure_propagation" not in failures["a"].counts()
 
