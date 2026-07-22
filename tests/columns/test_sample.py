@@ -199,6 +199,24 @@ def test_sample_struct(generator: Generator) -> None:
     assert len(samples) == 10_000
 
 
+@pytest.mark.parametrize(("arr_size", "n_samples"), [(1, 1), (2, 1), (3, 2), (2, 10)])
+def test_sample_array_list(arr_size: int, n_samples: int, generator: Generator) -> None:
+    """Test sampling for Array(List(...)) columns."""
+    column = dy.Array(dy.List(dy.Bool()), arr_size)
+    samples = sample_and_validate(column, generator, n=n_samples)
+    assert len(samples) == n_samples
+
+
+def test_sample_nested_array(generator: Generator) -> None:
+    """Test sampling for Array(Array(...)) columns."""
+    column = dy.Array(dy.Array(dy.Int64(), 2), 3)
+    samples = sample_and_validate(column, generator, n=10)
+    assert len(samples) == 10
+    # Check that the shape is correct (accounting for nulls)
+    non_null_lengths = samples.arr.len().drop_nulls()
+    assert all(non_null_lengths == 3)
+
+
 # --------------------------------------- UTILS -------------------------------------- #
 
 
