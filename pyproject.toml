@@ -114,6 +114,8 @@ filterwarnings = [
   # still-present functionality.
   "ignore:.*Reading a collection with .validation.*:DeprecationWarning",
   "ignore:.*deprecated and will be removed in dataframely v3.*:DeprecationWarning",
+  # polars' deprecation warning for horizontal concatenation cannot be solved, we are already using it correctly
+  "ignore:the default behavior of `how='horizontal'` for `concat` is deprecated:DeprecationWarning",
 ]
 markers = [
   "s3: tests that run against and S3 backend",
