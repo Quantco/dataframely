@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from pathlib import Path
+
 import polars as pl
 import polars.exceptions as plexc
 import pytest
@@ -317,6 +319,25 @@ def test_multiple_unique_columns_both_invalid(
     ):
         _validate_and_collect(MultiUniqueSchema, df, eager=eager)
     assert not MultiUniqueSchema.is_valid(df)
+
+
+def test_lazy_validation_scan_parquet_length(tmp_path: Path) -> None:
+    # Arrange
+    schema = create_schema("test", {"a": dy.Int64(), "b": dy.String()})
+    df = schema.sample(10)
+    df.write_parquet(tmp_path / "test.parquet")
+
+    # Act
+    height = (
+        pl.scan_parquet(tmp_path / "test.parquet")
+        .pipe(schema.validate, eager=False)
+        .select(pl.len())
+        .collect()
+        .item()
+    )
+
+    # Assert
+    assert height == 10
 
 
 # ----------------------------------- PERFORMANCE ------------------------------------ #

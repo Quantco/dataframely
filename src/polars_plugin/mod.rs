@@ -3,6 +3,7 @@ mod utils;
 mod validation_error;
 
 use polars::prelude::*;
+use polars_arrow::bitmap::Bitmap;
 use polars_core::POOL;
 use pyo3_polars::derive::polars_expr;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -86,13 +87,12 @@ pub fn all_rules_required(
     let failures = compute_rule_failures(rule_inputs, kwargs.null_is_valid)?;
 
     // If there's any failure, we know that validation failed and use the failure object for an
-    // informative error message. If no failure exists, we simply return a series with a single
-    // boolean value to filter by. When filtering on a series with a single value of `true`, polars
-    // neither actually runs the filter logic, nor does it copy any data. It's essentially a no-op
-    // that is not optimized away in a lazy frame.
+    // informative error message. If no failure exists, we return a bitmap with the "unset bits"
+    // flags set to 0 to trigger a fast-path in the filter executed by the caller.
     if failures.is_empty() {
-        let column = Column::new_scalar(PlSmallStr::EMPTY, Scalar::from(true), 1);
-        return Ok(column.take_materialized_series());
+        let bitmap = Bitmap::new_with_value(true, inputs[0].len());
+        let ca = BooleanChunked::from_bitmap(PlSmallStr::EMPTY, bitmap);
+        return Ok(ca.into_series());
     }
 
     // Aggregate failures into a validation error

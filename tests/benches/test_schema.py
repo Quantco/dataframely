@@ -33,8 +33,14 @@ class RowWiseValidationSchema(dy.Schema):
 
 
 @pytest.mark.benchmark(group="schema-row-wise")
-def test_row_wise_validate(benchmark: BenchmarkFixture, dataset: pl.DataFrame) -> None:
-    benchmark(RowWiseValidationSchema.validate, dataset)
+@pytest.mark.parametrize("eager", [True, False])
+def test_row_wise_validate(
+    benchmark: BenchmarkFixture, dataset: pl.DataFrame, eager: bool
+) -> None:
+    def benchmark_fn() -> None:
+        RowWiseValidationSchema.validate(dataset, eager=eager).lazy().collect()
+
+    benchmark(benchmark_fn)
 
 
 @pytest.mark.benchmark(group="schema-row-wise")
