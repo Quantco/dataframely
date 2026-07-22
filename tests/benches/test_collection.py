@@ -70,6 +70,17 @@ def test_single_filter_filter(
     benchmark(benchmark_fn)
 
 
+@pytest.mark.benchmark(group="collection-filter-single")
+def test_single_filter_filter_lazy(
+    benchmark: BenchmarkFixture, partitioned_dataset: dict[str, pl.DataFrame]
+) -> None:
+    def benchmark_fn() -> None:
+        result = SingleFilterCollection.filter(partitioned_dataset, eager=False)
+        result.collect_all()
+
+    benchmark(benchmark_fn)
+
+
 # ----------------------------------- MULTI FILTER ---------------------------------- #
 
 
