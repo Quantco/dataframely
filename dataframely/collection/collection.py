@@ -395,7 +395,7 @@ class Collection(BaseCollection, ABC):
         /,
         *,
         cast: bool = False,
-        eager: bool = True,
+        lazy: bool = False,
         skip_member_validation: bool = False,
         **kwargs: Any,
     ) -> Self:
@@ -407,13 +407,11 @@ class Collection(BaseCollection, ABC):
                 the member as key.
             cast: Whether columns with a wrong data type in the member data frame are
                 cast to their schemas' defined data types if possible.
-            eager: Whether the validation should be performed eagerly. If `True`, this
-                method raises a validation error and the returned collection contains
-                "shallow" lazy frames, i.e., lazy frames by simply calling
-                :meth:`~polars.DataFrame.lazy` on the validated data frame. If
-                `False`, this method only raises a `ValueError` if `data` does
-                not contain data for all required members. The returned collection
-                contains "true" lazy frames that will be validated upon calling
+            lazy: Whether the validation should be performed lazily. If `False`, this
+                method raises a validation error. If `True`, this method only raises a
+                `ValueError` if (1) `data` does not contain data for all required
+                members or (2) the collection defines any of its members as eager.
+                Validation will then be performed when calling
                 :meth:`~polars.LazyFrame.collect` on the individual member or
                 :meth:`collect_all` on the collection. Note that, in the latter case,
                 information from error messages is limited.
@@ -423,15 +421,15 @@ class Collection(BaseCollection, ABC):
                 validated. This option is particularly useful in performance-critical
                 scenarios where the members are known to be valid.
             kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
-                :meth:`polars.LazyFrame.collect` when `eager=True`.
+                :meth:`polars.LazyFrame.collect` when `lazy=False`.
 
         Raises:
             ValueError: If an insufficient set of input data frames is provided, i.e. if
                 any required member of this collection is missing in the input.
-            ValidationError: If `eager=True` and any of the input data frames does not
+            ValidationError: If `lazy=False` and any of the input data frames does not
                 satisfy its schema definition or the filters on this collection result
                 in the removal of at least one row across any of the input data frames.
-                If `eager=False`, a :class:`~polars.exceptions.ComputeError` is raised
+                If `lazy=False`, a :class:`~polars.exceptions.ComputeError` is raised
                 upon collecting.
 
         Returns:
@@ -440,15 +438,16 @@ class Collection(BaseCollection, ABC):
             collection did not remove rows from any member. The input order of each
             member is maintained.
         """
+        cls._validate_lazy_param(lazy)
         cls._validate_input_keys(data)
 
-        if eager:
+        if not lazy:
             # If we perform the validation eagerly, we call filter and check the failure
             # information to properly construct a useful error message.
             filtered, failures = cls.filter(
                 data,
                 cast=cast,
-                eager=True,
+                lazy=False,
                 skip_member_validation=skip_member_validation,
                 **kwargs,
             )
@@ -489,9 +488,7 @@ class Collection(BaseCollection, ABC):
                         else data[name].lazy()
                     )
                     if skip_member_validation
-                    else member.schema.validate(
-                        data[name].lazy(), cast=cast, eager=False
-                    )
+                    else member.schema.validate(data[name].lazy(), cast=cast, lazy=True)
                 )
                 for name, member in cls.members().items()
                 if name in data
@@ -587,7 +584,7 @@ class Collection(BaseCollection, ABC):
         /,
         *,
         cast: bool = False,
-        eager: bool = True,
+        lazy: bool = False,
         skip_member_validation: bool = False,
         **kwargs: Any,
     ) -> CollectionFilterResult[Self]:
@@ -602,16 +599,18 @@ class Collection(BaseCollection, ABC):
                 :class:`~polars.LazyFrame`.
             cast: Whether columns with a wrong data type in the member data frame are
                 cast to their schemas' defined data types if possible.
-            eager: Whether the filter operation should be performed eagerly.
-                Note that until https://github.com/pola-rs/polars/pull/24129 is
-                released, eagerly filtering can provide significant speedups.
+            lazy: Whether the filter operation should be performed lazily. Note that,
+                before polars v1.43.0, eager filtering provided significant speedups due
+                to https://github.com/pola-rs/polars/pull/24129. As of polars v1.43.0,
+                lazy filtering is equally fast, provided that `POLARS_ALLOW_NESTED_CSPE=1`
+                is set.
             skip_member_validation: Whether to skip filtering individual members and only
                 apply the collection filters. **Use this option with caution** as it
                 requires the caller to ensure that the individual members have been
                 validated. This option is particularly useful in performance-critical
                 scenarios where the members are known to already be valid.
             kwargs: Keyword arguments passed directly to :meth:`polars.collect_all` and
-                :meth:`polars.LazyFrame.collect` when `eager=True`.
+                :meth:`polars.LazyFrame.collect` when `lazy=False`.
 
         Returns:
             A named tuple with fields `result` and `failure`. The `result` field
@@ -643,6 +642,7 @@ class Collection(BaseCollection, ABC):
                 failed_df = failure.invoice.invalid()
                 print(failed_df)
         """
+        cls._validate_lazy_param(lazy)
         cls._validate_input_keys(data)
 
         # First, we iterate over all members in this collection and filter them
@@ -664,7 +664,11 @@ class Collection(BaseCollection, ABC):
                 )
             else:
                 member_result, failures[member_name] = member.schema.filter(
-                    data[member_name].lazy(), cast=cast, eager=eager, **kwargs
+                    data[member_name].lazy()
+                    if lazy
+                    else data[member_name].lazy().collect(**kwargs),
+                    cast=cast,
+                    **kwargs,
                 )
                 results[member_name] = member_result.lazy()
 
@@ -680,7 +684,7 @@ class Collection(BaseCollection, ABC):
                 name: filter.logic(result_cls).select(primary_key)
                 for name, filter in filters.items()
             }
-            keep = collect_all_if(keep, eager, **kwargs)
+            keep = collect_all_if(keep, not lazy, **kwargs)
 
             drop: dict[str, pl.LazyFrame] = {
                 f"{failure_propagating_member}|failure_propagation": (
@@ -690,7 +694,7 @@ class Collection(BaseCollection, ABC):
                 )
                 for failure_propagating_member in failure_propagating_members
             }
-            drop = collect_all_if(drop, eager, **kwargs)
+            drop = collect_all_if(drop, not lazy, **kwargs)
 
             # Now we can iterate over the results and left-join onto each individual
             # filter to obtain independent boolean indicators of whether to keep the row.
@@ -718,7 +722,7 @@ class Collection(BaseCollection, ABC):
 
                 lfs_with_eval[member_name] = lf_with_eval
 
-            lfs_with_eval = collect_all_if(lfs_with_eval, eager, **kwargs)
+            lfs_with_eval = collect_all_if(lfs_with_eval, not lazy, **kwargs)
             for member_name, lf_with_eval in lfs_with_eval.items():
                 member_info = cls.members()[member_name]
 
@@ -784,9 +788,9 @@ class Collection(BaseCollection, ABC):
                 )
 
         result = CollectionFilterResult(cls._init(results), failures)
-        if eager:
-            return result.collect_all(**kwargs)
-        return result
+        if lazy:
+            return result
+        return result.collect_all(**kwargs)
 
     def join(
         self,
@@ -1420,6 +1424,13 @@ class Collection(BaseCollection, ABC):
         return True
 
     # ----------------------------------- UTILITIES ---------------------------------- #
+
+    @classmethod
+    def _validate_lazy_param(cls, lazy: bool, /) -> None:
+        if lazy and any(not member.is_lazy for member in cls.members().values()):
+            raise ValueError(
+                "Cannot use `lazy=True` on a collection with eager members."
+            )
 
     @classmethod
     def _validate_input_keys(cls, data: Mapping[str, FrameType], /) -> None:
