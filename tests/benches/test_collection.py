@@ -75,7 +75,7 @@ def test_single_filter_filter_lazy(
     benchmark: BenchmarkFixture, partitioned_dataset: dict[str, pl.DataFrame]
 ) -> None:
     def benchmark_fn() -> None:
-        result = SingleFilterCollection.filter(partitioned_dataset, eager=False)
+        result = SingleFilterCollection.filter(partitioned_dataset, lazy=True)
         result.collect_all()
 
     benchmark(benchmark_fn)

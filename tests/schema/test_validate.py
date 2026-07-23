@@ -55,10 +55,11 @@ def _validate_and_collect(
     df: pl.DataFrame | pl.LazyFrame,
     *,
     cast: bool = False,
-    eager: bool,
 ) -> pl.DataFrame:
-    result = schema.validate(df, cast=cast, eager=eager)
-    if eager:
+    # Whether validation is performed eagerly is now determined by the input type: an
+    # eager data frame raises within `validate`, a lazy frame raises upon collection.
+    result = schema.validate(df, cast=cast)
+    if isinstance(df, pl.DataFrame):
         assert isinstance(result, pl.DataFrame)
         return result
     else:
@@ -70,37 +71,34 @@ def _validate_and_collect(
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_missing_columns(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
     df = df_type({"a": [1], "b": [""]})
     with pytest.raises(SchemaError, match=r"1 missing columns for schema 'MySchema'"):
-        _validate_and_collect(MySchema, df, eager=eager)
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_invalid_dtype(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
     df = df_type({"a": [1], "b": [1], "c": [1]})
     with pytest.raises(
         SchemaError,
         match=r"2 columns with invalid dtype for schema 'MySchema'",
     ):
-        _validate_and_collect(MySchema, df, eager=eager)
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_invalid_dtype_cast(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
     df = df_type({"a": [1], "b": [1], "c": [1]})
-    actual = _validate_and_collect(MySchema, df, cast=True, eager=eager)
+    actual = _validate_and_collect(MySchema, df, cast=True)
     expected = pl.DataFrame({"a": [1], "b": ["1"], "c": ["1"]})
     assert_frame_equal(actual, expected)
     assert MySchema.is_valid(df, cast=True)
@@ -110,84 +108,83 @@ def test_invalid_dtype_cast(
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_invalid_column_contents(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     df = df_type({"a": [1, 2, 3], "b": ["x", "longtext", None], "c": ["1", None, "3"]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"2 rules failed validation" if eager else None,
     ):
-        _validate_and_collect(MySchema, df, eager=eager)
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_invalid_primary_key(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     df = df_type({"a": [1, 1], "b": ["x", "y"], "c": ["1", "2"]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"1 rules failed validation",
     ):
-        _validate_and_collect(MySchema, df, eager=eager)
+        _validate_and_collect(MySchema, df)
     assert not MySchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_invalid_primary_key_with_examples(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     df = df_type({"a": [1, 1], "b": ["x", "y"], "c": ["1", "2"]})
     with dy.Config(max_failure_examples=5):
         with pytest.raises(
             ValidationError if eager else plexc.ComputeError,
             match=r"'primary_key' failed for 2 rows; examples: \[\{'a': 1\}\]",
         ):
-            _validate_and_collect(MySchema, df, eager=eager)
+            _validate_and_collect(MySchema, df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_invalid_column_contents_with_examples(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     df = df_type({"a": [1, 2, 3], "b": ["x", "longtext", None], "c": ["1", None, "3"]})
     with dy.Config(max_failure_examples=5):
         with pytest.raises(
             ValidationError if eager else plexc.ComputeError,
             match=r"examples: \[\{'b': 'longtext'\}\]" if eager else r"examples: \[",
         ):
-            _validate_and_collect(MySchema, df, eager=eager)
+            _validate_and_collect(MySchema, df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_violated_custom_rule(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     df = df_type({"a": [1, 1, 2, 3, 3], "b": [2, 2, 2, 4, 5]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"2 rules failed validation" if eager else None,
     ):
-        _validate_and_collect(MyComplexSchema, df, eager=eager)
+        _validate_and_collect(MyComplexSchema, df)
     assert not MyComplexSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_success_multi_row_strip_cast(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
     df = df_type(
         {"a": [1, 2, 3], "b": ["x", "y", "z"], "c": [1, None, None], "d": [1, 2, 3]}
     )
-    actual = _validate_and_collect(MySchema, df, cast=True, eager=eager)
+    actual = _validate_and_collect(MySchema, df, cast=True)
     expected = pl.DataFrame(
         {"a": [1, 2, 3], "b": ["x", "y", "z"], "c": ["1", None, None]}
     )
@@ -197,19 +194,18 @@ def test_success_multi_row_strip_cast(
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 @pytest.mark.parametrize("schema", [MyComplexSchema, MyComplexSchemaWithLazyRules])
-@pytest.mark.parametrize("eager", [True, False])
 def test_group_rule_on_nulls(
     df_type: type[pl.DataFrame] | type[pl.LazyFrame],
     schema: type[MyComplexSchema] | type[MyComplexSchemaWithLazyRules],
-    eager: bool,
 ) -> None:
+    eager = df_type is pl.DataFrame
     # The schema is violated because we have multiple "b" values for the same "a" value
     df = df_type({"a": [None, None], "b": [1, 2]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"1 rules failed validation",
     ):
-        _validate_and_collect(schema, df, cast=True, eager=eager)
+        _validate_and_collect(schema, df, cast=True)
     assert not schema.is_valid(df, cast=True)
 
 
@@ -250,9 +246,8 @@ class NullableUniqueSchema(dy.Schema):
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_unique_constraint_valid(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
     df = df_type(
         {
@@ -261,63 +256,62 @@ def test_unique_constraint_valid(
             "name": ["A", "B", "C"],
         }
     )
-    result = _validate_and_collect(UniqueSchema, df, eager=eager)
+    result = _validate_and_collect(UniqueSchema, df)
     assert len(result) == 3
     assert UniqueSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_unique_constraint_invalid(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     df = df_type({"id": [1, 2], "email": ["a@x.com", "a@x.com"], "name": ["A", "B"]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"1 rules failed validation",
     ):
-        _validate_and_collect(UniqueSchema, df, eager=eager)
+        _validate_and_collect(UniqueSchema, df)
     assert not UniqueSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_multiple_unique_columns_valid(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
     df = df_type({"a": [1, 2, 3], "b": ["x", "y", "z"]})
-    result = _validate_and_collect(MultiUniqueSchema, df, eager=eager)
+    result = _validate_and_collect(MultiUniqueSchema, df)
     assert len(result) == 3
     assert MultiUniqueSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_multiple_unique_columns_one_invalid(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     # a is unique, b has duplicates
     df = df_type({"a": [1, 2, 3], "b": ["x", "x", "z"]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"1 rules failed validation",
     ):
-        _validate_and_collect(MultiUniqueSchema, df, eager=eager)
+        _validate_and_collect(MultiUniqueSchema, df)
     assert not MultiUniqueSchema.is_valid(df)
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
-@pytest.mark.parametrize("eager", [True, False])
 def test_multiple_unique_columns_both_invalid(
-    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame],
 ) -> None:
+    eager = df_type is pl.DataFrame
     # Both columns have duplicates
     df = df_type({"a": [1, 1, 3], "b": ["x", "y", "y"]})
     with pytest.raises(
         ValidationError if eager else plexc.ComputeError,
         match=r"2 rules failed validation" if eager else None,
     ):
-        _validate_and_collect(MultiUniqueSchema, df, eager=eager)
+        _validate_and_collect(MultiUniqueSchema, df)
     assert not MultiUniqueSchema.is_valid(df)
 
 
@@ -330,7 +324,7 @@ def test_lazy_validation_scan_parquet_length(tmp_path: Path) -> None:
     # Act
     height = (
         pl.scan_parquet(tmp_path / "test.parquet")
-        .pipe(schema.validate, eager=False)
+        .pipe(schema.validate)
         .select(pl.len())
         .collect()
         .item()
@@ -346,7 +340,7 @@ def test_lazy_validation_scan_parquet_length(tmp_path: Path) -> None:
 def test_lazy_validate_does_not_block_streaming_engine() -> None:
     schema = create_schema("test", {"a": dy.Int64(), "b": dy.Int64()})
     lf = pl.LazyFrame({"a": [1, 2, 3], "b": [2, 3, 4]}).lazy()
-    out = schema.validate(lf, eager=False)
+    out = schema.validate(lf)
     graph = out.show_graph(engine="streaming", plan_stage="physical", raw_output=True)
     assert graph is not None
     assert "in-memory-map" not in graph
