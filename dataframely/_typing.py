@@ -17,8 +17,6 @@ S = TypeVar("S", bound=BaseSchema, covariant=True)
 P = ParamSpec("P")
 R = TypeVar("R")
 
-Validation = Literal["allow", "forbid", "warn", "skip"]
-
 
 def inherit_signature(  # pragma: no cover
     target_fn: Callable[P, Any],

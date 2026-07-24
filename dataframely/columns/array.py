@@ -15,7 +15,7 @@ from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import column_from_dict, register
+from ._registry import register
 from .list import _list_primary_key_check
 
 if sys.version_info >= (3, 11):
@@ -169,13 +169,3 @@ class Array(Column):
         if name == "inner":
             return cast(Column, lhs).matches(cast(Column, rhs), pl.element())
         return super()._attributes_match(lhs, rhs, name, column_expr)
-
-    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
-        result = super().as_dict(expr)
-        result["inner"] = self.inner.as_dict(pl.element())
-        return result
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        data["inner"] = column_from_dict(data["inner"])
-        return super().from_dict(data)

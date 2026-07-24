@@ -2,19 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from ._base import BaseCollection
-from .collection import (
-    Collection,
-    CollectionMember,
-    deserialize_collection,
-    read_parquet_metadata_collection,
-)
+from .collection import Collection
 from .filter_result import CollectionFilterResult
 
-__all__ = [
-    "BaseCollection",
-    "Collection",
-    "CollectionMember",
-    "CollectionFilterResult",
-    "deserialize_collection",
-    "read_parquet_metadata_collection",
-]
+__all__ = ["BaseCollection", "Collection", "CollectionFilterResult"]

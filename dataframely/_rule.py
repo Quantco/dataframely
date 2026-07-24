@@ -271,30 +271,3 @@ def _with_group_rules(lf: pl.LazyFrame, rules: dict[str, GroupRule]) -> pl.LazyF
             frame, on=list(group_columns), nulls_equal=True, maintain_order="left"
         )
     return result
-
-
-# ------------------------------------------------------------------------------------ #
-#                                        FACTORY                                       #
-# ------------------------------------------------------------------------------------ #
-
-_TYPE_MAPPING: dict[str, type[Rule]] = {
-    Rule.__name__: Rule,
-    GroupRule.__name__: GroupRule,
-}
-
-
-def rule_from_dict(data: dict[str, Any]) -> Rule:
-    """Dynamically read a rule object from a dictionary.
-
-    Args:
-        data: The dictionary obtained by calling :meth:`~Rule.asdict` on a rule object.
-            The dictionary must contain a key `"rule_type"` that indicates which rule
-            type to instantiate.
-
-    Returns:
-        The rule object as read from `data`.
-    """
-    name = data["rule_type"]
-    if name not in _TYPE_MAPPING:
-        raise ValueError(f"Unknown rule type: {name}")
-    return _TYPE_MAPPING[name].from_dict(data)

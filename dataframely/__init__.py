@@ -13,13 +13,8 @@ except importlib.metadata.PackageNotFoundError as e:  # pragma: no cover
 from . import random
 from ._filter import filter
 from ._rule import rule
-from ._typing import DataFrame, LazyFrame, Validation
-from .collection import (
-    Collection,
-    CollectionMember,
-    deserialize_collection,
-    read_parquet_metadata_collection,
-)
+from ._typing import DataFrame, LazyFrame
+from .collection import Collection
 from .columns import (
     Any,
     Array,
@@ -51,14 +46,13 @@ from .columns import (
     UInt64,
 )
 from .config import Config
-from .exc import DeserializationError
 from .filter_result import FailureInfo
 from .functional import (
     concat_collection_members,
     require_relationship_one_to_at_least_one,
     require_relationship_one_to_one,
 )
-from .schema import Schema, deserialize_schema, read_parquet_metadata_schema
+from .schema import Schema
 
 __all__ = [
     "random",
@@ -67,17 +61,12 @@ __all__ = [
     "DataFrame",
     "LazyFrame",
     "Collection",
-    "CollectionMember",
-    "deserialize_collection",
     "Config",
     "FailureInfo",
     "concat_collection_members",
     "require_relationship_one_to_at_least_one",
     "require_relationship_one_to_one",
     "Schema",
-    "deserialize_schema",
-    "read_parquet_metadata_schema",
-    "read_parquet_metadata_collection",
     "Any",
     "Binary",
     "Bool",
@@ -106,6 +95,4 @@ __all__ = [
     "List",
     "Array",
     "Object",
-    "Validation",
-    "DeserializationError",
 ]

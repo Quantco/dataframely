@@ -3,58 +3,26 @@
 
 from __future__ import annotations
 
-import json
+import os
 import sys
 import textwrap
-import warnings
 from abc import ABC
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict
-from json import JSONDecodeError
 from pathlib import Path
-from typing import (
-    IO,
-    Annotated,
-    Any,
-    Concatenate,
-    Literal,
-    ParamSpec,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
 
 import polars as pl
-import polars.exceptions as plexc
 
-from dataframely._compat import deltalake
-from dataframely._deprecation import deprecated, issue_deprecation_warning
-from dataframely._filter import Filter
 from dataframely._native import format_rule_failures
 from dataframely._plugin import all_rules_required
 from dataframely._polars import FrameType, collect_all_if
-from dataframely._serialization import (
-    SERIALIZATION_FORMAT_VERSION,
-    SchemaJSONDecoder,
-    SchemaJSONEncoder,
-    serialization_versions,
-)
-from dataframely._storage import StorageBackend
-from dataframely._storage.constants import COLLECTION_METADATA_KEY
-from dataframely._storage.delta import DeltaStorageBackend
-from dataframely._storage.parquet import ParquetStorageBackend
-from dataframely._typing import DataFrame, LazyFrame, Validation
 from dataframely.config import Config
-from dataframely.exc import (
-    DeserializationError,
-    ValidationError,
-    ValidationRequiredError,
-)
+from dataframely.exc import ValidationError
 from dataframely.filter_result import FailureInfo
 from dataframely.random import Generator
-from dataframely.schema import _schema_from_dict
 
-from ._base import BaseCollection, CollectionMember
+from ._base import BaseCollection
 from .filter_result import CollectionFilterResult
 
 if sys.version_info >= (3, 11):
@@ -63,15 +31,6 @@ else:
     from typing_extensions import Self
 
 _FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
-
-#: Deprecation message emitted when reading a collection with implicit validation, i.e.
-#: with any ``validation`` other than ``"skip"`` (see #367).
-_IMPLICIT_VALIDATION_DEPRECATION = (
-    "Reading a collection with `validation != 'skip'` is deprecated. Starting with "
-    "dataframely v3, data is read without inspecting schema metadata and without "
-    "running validation. Pass `validation='skip'` to opt into the future behavior, or "
-    "call `validate` explicitly if you require validation."
-)
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -780,7 +739,6 @@ class Collection(BaseCollection, ABC):
                 failures[member_name] = FailureInfo(
                     lf=failure_lf,
                     rule_columns=failure._rule_columns + all_filter_columns,
-                    schema=failure.schema,
                 )
 
         result = CollectionFilterResult(cls._init(results), failures)
@@ -926,61 +884,6 @@ class Collection(BaseCollection, ABC):
         """
         return function(self, *args, **kwargs)
 
-    # --------------------------------- SERIALIZATION -------------------------------- #
-
-    @classmethod
-    def serialize(cls) -> str:
-        """Serialize the metadata for this collection to a JSON string.
-
-        This method does NOT serialize any data frames, but only the _structure_ of the
-        collection, similar to :meth:`dataframely.Schema.serialize`.
-
-        Returns:
-            The serialized collection.
-
-        Note:
-            Serialization within dataframely itself will remain backwards-compatible
-            at least within a major version. Until further notice, it will also be
-            backwards-compatible across major versions.
-
-        Attention:
-            Serialization of :mod:`polars` expressions and lazy frames is not guaranteed
-            to be stable across versions of polars. This affects collections with
-            filters or members that define custom rules or columns with custom checks:
-            a collection serialized with one version of polars may not be deserializable
-            with another version of polars.
-
-        Attention:
-            This functionality is considered unstable. It may be changed at any time
-            without it being considered a breaking change.
-
-        Raises:
-            TypeError:
-                If a column of any member contains metadata that is not JSON-serializable.
-            ValueError:
-                If a column of any member is not a "native" dataframely column
-                type but a custom subclass.
-        """
-        result = {
-            "versions": serialization_versions(),
-            "name": cls.__name__,
-            "members": {
-                name: {
-                    "schema": info.schema._as_dict(),
-                    "is_optional": info.is_optional,
-                    "is_lazy": info.is_lazy,
-                    "ignored_in_filters": info.ignored_in_filters,
-                    "inline_for_sampling": info.inline_for_sampling,
-                }
-                for name, info in cls.members().items()
-            },
-            "filters": {
-                name: filter.logic(cls.create_empty())
-                for name, filter in cls._filters().items()
-            },
-        }
-        return json.dumps(result, cls=SchemaJSONEncoder)
-
     # ---------------------------------- PERSISTENCE --------------------------------- #
 
     def write_parquet(self, directory: str | Path, **kwargs: Any) -> None:
@@ -993,13 +896,13 @@ class Collection(BaseCollection, ABC):
         Args:
             directory: The directory where the Parquet files should be written to.
                 The `mkdir` kwarg controls whether the directory is created if needed.
-            kwargs: Additional keyword arguments passed to :meth:`polars.DataFrame.write_parquet`.
-                `metadata` may only be provided if it is a dictionary.
-
-        Attention:
-            This method suffers from the same limitations as :meth:`~dataframely.Schema.serialize`.
+            kwargs: Additional keyword arguments passed to
+                :meth:`polars.DataFrame.write_parquet`.
         """
-        self._write(ParquetStorageBackend(), directory=directory, **kwargs)
+        for member, lf in self.to_dict().items():
+            lf.collect().write_parquet(
+                os.path.join(str(directory), f"{member}.parquet"), **kwargs
+            )
 
     def sink_parquet(self, directory: str | Path, **kwargs: Any) -> None:
         """Stream the members of this collection into parquet files in a directory.
@@ -1009,23 +912,18 @@ class Collection(BaseCollection, ABC):
         members which are not provided in the current collection.
 
         Args:
-            directory: The directory where the Parquet files should be written to. If
-                the directory does not exist, it is created automatically, including all
-                of its parents.
-            kwargs: Additional keyword arguments passed to :meth:`polars.LazyFrame.sink_parquet`.
-                `metadata` may only be provided if it is a dictionary.
-
-        Attention:
-            This method suffers from the same limitations as :meth:`~dataframely.Schema.serialize`.
+            directory: The directory where the Parquet files should be written to.
+                The `mkdir` kwarg controls whether the directory is created if needed.
+            kwargs: Additional keyword arguments passed to
+                :meth:`polars.LazyFrame.sink_parquet`.
         """
-        self._sink(ParquetStorageBackend(), directory=directory, **kwargs)
+        for member, lf in self.to_dict().items():
+            lf.sink_parquet(os.path.join(str(directory), f"{member}.parquet"), **kwargs)
 
     @classmethod
     def read_parquet(
         cls,
         directory: str | Path,
-        *,
-        validation: Validation = "warn",
         **kwargs: Any,
     ) -> Self:
         """Read all collection members from parquet files in a directory.
@@ -1035,24 +933,6 @@ class Collection(BaseCollection, ABC):
 
         Args:
             directory: The directory where the Parquet files should be read from.
-                Parquet files may have been written with Hive partitioning.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the schema data from the parquet
-                  files. If the stored collection schema matches this collection
-                  schema, the collection is read without validation. If the stored
-                  schema mismatches this schema, no valid metadata can be found in
-                  the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the metadata stores a valid collection schema that matches
-                  this collection.
-                - `"skip"`: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. *Use this option
-                  carefully*.
-
             kwargs: Additional keyword arguments passed directly to
                 :func:`polars.read_parquet`.
 
@@ -1060,41 +940,34 @@ class Collection(BaseCollection, ABC):
             The initialized collection.
 
         Raises:
-            ValidationRequiredError:
-                If no collection schema can be read from the
-                directory and `validation` is set to `"forbid"`.
-            ValueError:
-                If the provided directory does not contain parquet files for
+            ValueError: If the provided directory does not contain parquet files for
                 all required members.
-            ValidationError: If the collection cannot be validated.
+            FileNotFoundError: If any required member cannot be read.
 
         Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            Reading with `validation != "skip"` is deprecated. Starting with
-            dataframely v3, this method reads the data without inspecting any schema
-            metadata and without running validation. Pass `validation="skip"` to opt
-            into this behavior, or call :meth:`validate` explicitly if you require
-            validation.
+            This method does _not_ validate that the loaded parquet files satisfy
+            the collection's invariants. It is the user's responsibility to ensure
+            that the data is valid. When reading from "untrusted" sources, it is
+            recommended to use :meth:`validate` or :meth:`filter`.
         """
-        if validation != "skip":
-            issue_deprecation_warning(_IMPLICIT_VALIDATION_DEPRECATION)
-        return cls._read(
-            backend=ParquetStorageBackend(),
-            validation=validation,
-            directory=directory,
-            lazy=False,
-            **kwargs,
-        )
+        members = {}
+        for member, info in cls.members().items():
+            try:
+                members[member] = pl.read_parquet(
+                    os.path.join(str(directory), f"{member}.parquet"), **kwargs
+                )
+            except FileNotFoundError:
+                if info.is_optional:
+                    continue
+                raise
+
+        cls._validate_input_keys(members)
+        return cls._init(members)
 
     @classmethod
     def scan_parquet(
         cls,
         directory: str | Path,
-        *,
-        validation: Validation = "warn",
         **kwargs: Any,
     ) -> Self:
         """Lazily read all collection members from parquet files in a directory.
@@ -1104,24 +977,6 @@ class Collection(BaseCollection, ABC):
 
         Args:
             directory: The directory where the Parquet files should be read from.
-                Parquet files may have been written with Hive partitioning.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the schema data from the parquet
-                  files. If the stored collection schema matches this collection
-                  schema, the collection is read without validation. If the stored
-                  schema mismatches this schema no metadata can be found in
-                  the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the metadata stores a collection schema that matches
-                  this collection.
-                - `"skip"`: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. *Use this option
-                  carefully*.
-
             kwargs: Additional keyword arguments passed directly to
                 :func:`polars.scan_parquet` for all members.
 
@@ -1129,295 +984,28 @@ class Collection(BaseCollection, ABC):
             The initialized collection.
 
         Raises:
-            ValidationRequiredError: If no collection schema can be read from the
-                directory and `validation` is set to `"forbid"`.
             ValueError: If the provided directory does not contain parquet files for
                 all required members.
 
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            Reading with `validation != "skip"` is deprecated. Starting with
-            dataframely v3, this method reads the data without inspecting any schema
-            metadata and without running validation. Pass `validation="skip"` to opt
-            into this behavior, or call :meth:`validate` explicitly if you require
-            validation.
-        """
-        if validation != "skip":
-            issue_deprecation_warning(_IMPLICIT_VALIDATION_DEPRECATION)
-        return cls._read(
-            backend=ParquetStorageBackend(),
-            validation=validation,
-            directory=directory,
-            lazy=True,
-            **kwargs,
-        )
-
-    @deprecated(
-        "`Collection.write_delta` is deprecated and will be removed in dataframely v3. "
-        "Write the individual members with `polars.DataFrame.write_delta` instead."
-    )
-    def write_delta(
-        self, target: str | Path | deltalake.DeltaTable, **kwargs: Any
-    ) -> None:
-        """Write the members of this collection to Delta Lake tables.
-
-        This method writes each member to a Delta Lake table at the provided target location.
-        The target can be a path, URI, or an existing DeltaTable object.
-        No table is written for optional members which are not provided in the current collection.
-
-        Args:
-            target: The location or DeltaTable where the data should be written.
-                If the location does not exist, it is created automatically,
-                including all of its parents.
-            kwargs: Additional keyword arguments passed to :meth:`polars.DataFrame.write_delta`.
+        Note:
+            Members which are defined as eager in the collection will be collected.
 
         Attention:
-            Schema metadata is stored as custom commit metadata. Only the schema
-            information from the last commit is used, so any table modifications
-            that are not through dataframely will result in losing the metadata.
-
-            Be aware that appending to an existing table via mode="append" may result
-            in violation of group constraints that dataframely cannot catch
-            without re-validating. Only use appends if you are certain that they do not
-            break your schema.
-
-            This method suffers from the same limitations as :meth:`~dataframely.Schema.serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Write the
-            individual members with :meth:`polars.DataFrame.write_delta` instead.
+            This method does _not_ validate that the scanned parquet files satisfy
+            the collection's invariants. It is the user's responsibility to ensure
+            that the data is valid. When reading from "untrusted" sources, it is
+            recommended to use :meth:`validate` or :meth:`filter`.
         """
-        self._write(
-            backend=DeltaStorageBackend(),
-            target=target,
-            **kwargs,
-        )
-
-    @classmethod
-    @deprecated(
-        "`Collection.scan_delta` is deprecated and will be removed in dataframely v3. "
-        "Read the individual members with `polars.scan_delta` and call `validate` "
-        "explicitly instead."
-    )
-    def scan_delta(
-        cls,
-        source: str | Path | deltalake.DeltaTable,
-        *,
-        validation: Validation = "warn",
-        **kwargs: Any,
-    ) -> Self:
-        """Lazily read all collection members from Delta Lake tables.
-
-        This method reads each member from a Delta Lake table at the provided source location.
-        The source can be a path, URI, or an existing DeltaTable object. Optional members are only read if present.
-
-        Args:
-            source: The location or DeltaTable to read from.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the schema data from the parquet
-                  files. If the stored collection schema matches this collection
-                  schema, the collection is read without validation. If the stored
-                  schema mismatches this schema no metadata can be found in
-                  the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the metadata stores a collection schema that matches
-                  this collection.
-                - `"skip"`: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. *Use this option
-                  carefully*.
-
-            kwargs: Additional keyword arguments passed to :func:`polars.scan_delta`.
-
-        Returns:
-            The initialized collection.
-
-        Raises:
-            ValidationRequiredError:
-                If no collection schema can be read from the source and `validation` is set to `"forbid"`.
-            ValueError:
-                If the provided source does not contain Delta tables for all required members.
-
-        Attention:
-            Schema metadata is stored as custom commit metadata. Only the schema
-            information from the last commit is used, so any table modifications
-            that are not through dataframely will result in losing the metadata.
-
-            Be aware that appending to an existing table via mode="append" may result
-            in violation of group constraints that dataframely cannot catch
-            without re-validating. Only use appends if you are certain that they do not
-            break your schema.
-
-            Be aware that this method suffers from the same limitations as :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Read the
-            individual members with :meth:`polars.scan_delta` and call :meth:`validate`
-            explicitly instead.
-        """
-        return cls._read(
-            backend=DeltaStorageBackend(),
-            validation=validation,
-            lazy=True,
-            source=source,
-        )
-
-    @classmethod
-    @deprecated(
-        "`Collection.read_delta` is deprecated and will be removed in dataframely v3. "
-        "Read the individual members with `polars.read_delta` and call `validate` "
-        "explicitly instead."
-    )
-    def read_delta(
-        cls,
-        source: str | Path | deltalake.DeltaTable,
-        *,
-        validation: Validation = "warn",
-        **kwargs: Any,
-    ) -> Self:
-        """Read all collection members from Delta Lake tables.
-
-        This method reads each member from a Delta Lake table at the provided source location.
-        The source can be a path, URI, or an existing DeltaTable object. Optional members are only read if present.
-
-        Args:
-            source: The location or DeltaTable to read from.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the schema data from the parquet
-                  files. If the stored collection schema matches this collection
-                  schema, the collection is read without validation. If the stored
-                  schema mismatches this schema no metadata can be found in
-                  the parquets, or the files have conflicting metadata,
-                  this method automatically runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the metadata stores a collection schema that matches
-                  this collection.
-                - `"skip"`: The method never runs validation and simply reads the
-                  data, entrusting the user that the schema is valid. *Use this option
-                  carefully*.
-
-            kwargs: Additional keyword arguments passed directly to :func:`polars.read_delta`.
-
-        Returns:
-            The initialized collection.
-
-        Raises:
-            ValidationRequiredError: If no collection schema can be read from the source and `validation` is set to `"forbid"`.
-            ValueError: If the provided source does not contain Delta tables for all required members.
-            ValidationError: If the collection cannot be validated.
-
-        Attention:
-            Schema metadata is stored as custom commit metadata. Only the schema
-            information from the last commit is used, so any table modifications
-            that are not through dataframely will result in losing the metadata.
-
-            Be aware that appending to an existing table via mode="append" may result
-            in violation of group constraints that dataframely cannot catch
-            without re-validating. Only use appends if you are certain that they do not
-            break your schema.
-
-            Be aware that this method suffers from the same limitations as :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Read the
-            individual members with :meth:`polars.read_delta` and call :meth:`validate`
-            explicitly instead.
-        """
-        return cls._read(
-            backend=DeltaStorageBackend(),
-            validation=validation,
-            lazy=False,
-            source=source,
-        )
-
-    # -------------------------------- Storage --------------------------------------- #
-
-    def _write(self, backend: StorageBackend, **kwargs: Any) -> None:
-        # Utility method encapsulating the interaction with the StorageBackend
-
-        backend.write_collection(
-            self.to_dict(),
-            serialized_collection=self.serialize(),
-            serialized_schemas={
-                key: schema.serialize() for key, schema in self.member_schemas().items()
-            },
-            **kwargs,
-        )
-
-    def _sink(self, backend: StorageBackend, **kwargs: Any) -> None:
-        # Utility method encapsulating the interaction with the StorageBackend
-
-        backend.sink_collection(
-            self.to_dict(),
-            serialized_collection=self.serialize(),
-            serialized_schemas={
-                key: schema.serialize() for key, schema in self.member_schemas().items()
-            },
-            **kwargs,
-        )
-
-    @classmethod
-    def _read(
-        cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
-    ) -> Self:
-        # Utility method encapsulating the interaction with the StorageBackend
-
-        if lazy:
-            data, serialized_collection_types = backend.scan_collection(
-                members=cls.member_schemas().keys(), **kwargs
-            )
-        else:
-            data, serialized_collection_types = backend.read_collection(
-                members=cls.member_schemas().keys(), **kwargs
+        members = {}
+        for member in cls.members():
+            # NOTE: When using `scan_parquet`, we cannot fail if a required member is
+            #  missing.
+            members[member] = pl.scan_parquet(
+                os.path.join(str(directory), f"{member}.parquet"), **kwargs
             )
 
-        # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
-        # missing or broken collection metadata.
-        strict = validation == "forbid"
-        collection_types = _deserialize_types(
-            serialized_collection_types, strict=strict
-        )
-        collection_type = _reconcile_collection_types(collection_types)
-
-        if cls._requires_validation_for_reading_parquets(collection_type, validation):
-            return cls.validate(data, cast=True)
-        return cls.cast(data)
-
-    @classmethod
-    def _requires_validation_for_reading_parquets(
-        cls,
-        collection_type: type[Collection] | None,
-        validation: Validation,
-    ) -> bool:
-        if validation == "skip":
-            return False
-
-        if collection_type is not None and cls.matches(collection_type):
-            return False
-
-        # Now we definitely need to run validation. However, we emit different
-        # information to the user depending on the value of `validate`.
-        msg = (
-            "current collection schema does not match stored collection schema"
-            if collection_type is not None
-            else "no collection schema to check validity can be read from the source"
-        )
-        if validation == "forbid":
-            raise ValidationRequiredError(
-                f"Cannot read collection without validation: {msg}."
-            )
-        if validation == "warn":
-            warnings.warn(f"Reading parquet file requires validation: {msg}.")
-        return True
+        cls._validate_input_keys(members)
+        return cls._init(members)
 
     # ----------------------------------- UTILITIES ---------------------------------- #
 
@@ -1430,110 +1018,6 @@ class Collection(BaseCollection, ABC):
             raise ValueError(
                 f"Input misses {len(missing)} required members: {', '.join(missing)}."
             )
-
-
-def read_parquet_metadata_collection(
-    source: str | Path | IO[bytes] | bytes,
-) -> type[Collection] | None:
-    """Read a dataframely Collection type from the metadata of a parquet file.
-
-    Args:
-        source: Path to a parquet file or a file-like object that contains the metadata.
-
-    Returns:
-        The collection that was serialized to the metadata. `None` if no collection
-        metadata is found or the deserialization fails.
-    """
-    metadata = pl.read_parquet_metadata(source)
-    if (schema_metadata := metadata.get(COLLECTION_METADATA_KEY)) is not None:
-        return deserialize_collection(schema_metadata, strict=False)
-    return None
-
-
-@overload
-def deserialize_collection(
-    data: str, strict: Literal[True] = True
-) -> type[Collection]: ...
-
-
-@overload
-def deserialize_collection(
-    data: str, strict: Literal[False]
-) -> type[Collection] | None: ...
-
-
-@overload
-def deserialize_collection(data: str, strict: bool) -> type[Collection] | None: ...
-
-
-def deserialize_collection(data: str, strict: bool = True) -> type[Collection] | None:
-    """Deserialize a collection from a JSON string.
-
-    This method allows to dynamically load a collection from its serialization, without
-    having to know the collection to load in advance.
-
-    Args:
-        data: The JSON string created via :meth:`Collection.serialize`.
-        strict: Whether to raise an exception if the collection cannot be deserialized.
-
-    Returns:
-        The collection loaded from the JSON data.
-
-    Raises:
-        DeserializationError: If the collection can not be deserialized
-            and `strict=True`.
-
-    Attention:
-        The returned collection **cannot** be used to create instances of the
-        collection as filters cannot be correctly recovered from the serialized format
-        as of polars 1.31. Thus, you should only use static information from the
-        returned collection.
-
-    Attention:
-        This functionality is considered unstable. It may be changed at any time
-        without it being considered a breaking change.
-
-    See also:
-        :meth:`Collection.serialize` for additional information on serialization.
-    """
-    try:
-        decoded = json.loads(data, cls=SchemaJSONDecoder)
-        if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
-            raise ValueError(f"Unsupported schema format version: {format}")
-
-        annotations: dict[str, Any] = {}
-        for name, info in decoded["members"].items():
-            schema = _schema_from_dict(info["schema"])
-            # Default to lazy for backwards compatibility with old serialized data
-            is_lazy = info.get("is_lazy", True)
-            frame_type = LazyFrame[schema] if is_lazy else DataFrame[schema]  # type: ignore
-            if info["is_optional"]:
-                frame_type = frame_type | None  # type: ignore
-            annotations[name] = Annotated[
-                frame_type,
-                CollectionMember(
-                    ignored_in_filters=info["ignored_in_filters"],
-                    inline_for_sampling=info["inline_for_sampling"],
-                ),
-            ]
-
-        return type(
-            f"{decoded['name']}_dynamic",
-            (Collection,),
-            {
-                "__annotations__": annotations,
-                **{
-                    name: Filter(logic=lambda _, logic=logic: logic)  # type: ignore
-                    for name, logic in decoded["filters"].items()
-                },
-            },
-        )
-    except (ValueError, TypeError, JSONDecodeError, plexc.ComputeError) as e:
-        if strict:
-            raise DeserializationError(
-                "The Collection metadata could not be deserialized"
-            ) from e
-        return None
 
 
 # --------------------------------------- UTILS -------------------------------------- #
@@ -1555,36 +1039,3 @@ def _extract_keys_if_exist(
     data: Mapping[str, Any], keys: Sequence[str]
 ) -> dict[str, Any]:
     return {key: data[key] for key in keys if key in data}
-
-
-def _deserialize_types(
-    serialized_collection_types: Iterable[str | None],
-    strict: bool = True,
-) -> list[type[Collection]]:
-    collection_types = []
-    for t in serialized_collection_types:
-        if t is None:
-            continue
-        collection_type = deserialize_collection(t, strict=strict)
-        if collection_type is not None:
-            collection_types.append(collection_type)
-
-    return collection_types
-
-
-def _reconcile_collection_types(
-    collection_types: Iterable[type[Collection] | None],
-) -> type[Collection] | None:
-    # When reading serialized collections, we may have collection type information from multiple sources
-    # (E.g. one set of information for each parquet file).
-    # This function determines which of them should finally be used
-    if not (collection_types := list(collection_types)):
-        return None
-    if (first_type := collection_types[0]) is None:
-        return None
-    for t in collection_types[1:]:
-        if t is None:
-            return None
-        if not first_type.matches(t):
-            return None
-    return first_type

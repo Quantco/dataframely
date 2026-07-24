@@ -63,9 +63,7 @@ class CollectionFilterResult(NamedTuple, Generic[C]):
             ),
             failure={
                 key: FailureInfo(
-                    collected[len(members) + i].lazy(),
-                    failure._rule_columns,
-                    failure.schema,
+                    collected[len(members) + i].lazy(), failure._rule_columns
                 )
                 for i, (key, failure) in enumerate(self.failure.items())
             },

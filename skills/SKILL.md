@@ -224,14 +224,6 @@ Synthetic data for collections should be generated as follows:
     the collection member names.
 - Always use `MyCollection.create_empty()` instead of sampling with empty overrides when an empty collection is needed.
 
-## I/O Conventions
-
-When writing typed data frames to disk, prefer using `MySchema.write_...` instead of using `write_...` directly on the
-data frame. This ensures that schema metadata is persisted alongside the data and can be leveraged when reading the
-data back in.
-
-When reading typed data frames from disk, prefer using `MySchema.read_...` instead of using `pl.read_...` directly from
-
 # Getting more information
 
 `dataframely` provides clear function signatures, type hints and docstrings for the full public API. For more

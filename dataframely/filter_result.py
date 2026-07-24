@@ -12,12 +12,7 @@ from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
 import polars as pl
 
 from dataframely._base_schema import BaseSchema
-from dataframely._compat import deltalake
 
-from ._compat import PartitionSchemeOrSinkDirectory
-from ._storage import StorageBackend
-from ._storage.delta import DeltaStorageBackend
-from ._storage.parquet import ParquetStorageBackend
 from ._typing import DataFrame, LazyFrame
 
 if sys.version_info >= (3, 11):
@@ -42,7 +37,7 @@ class FilterResult(NamedTuple, Generic[S]):
     #: The rows that passed validation.
     result: DataFrame[S]
     #: Information about the rows that failed validation.
-    failure: FailureInfo[S]
+    failure: FailureInfo
 
 
 class LazyFilterResult(NamedTuple, Generic[S]):
@@ -51,7 +46,7 @@ class LazyFilterResult(NamedTuple, Generic[S]):
     #: The rows that passed validation.
     result: LazyFrame[S]
     #: Information about the rows that failed validation.
-    failure: FailureInfo[S]
+    failure: FailureInfo
 
     def collect_all(self, **kwargs: Any) -> FilterResult[S]:
         """Collect the results from the filter operation.
@@ -76,16 +71,14 @@ class LazyFilterResult(NamedTuple, Generic[S]):
         return FilterResult(
             # Whether the type ignore is necessary depends on the polars version.
             result=result_df,  # type: ignore[arg-type,unused-ignore]
-            failure=FailureInfo(
-                failure_df.lazy(), self.failure._rule_columns, self.failure.schema
-            ),
+            failure=FailureInfo(failure_df.lazy(), self.failure._rule_columns),
         )
 
 
 # ----------------------------------- FAILURE INFO ----------------------------------- #
 
 
-class FailureInfo(Generic[S]):
+class FailureInfo:
     """A container carrying information about rows failing validation in
     :meth:`Schema.filter`."""
 
@@ -96,26 +89,23 @@ class FailureInfo(Generic[S]):
     _lf: pl.LazyFrame
     #: The columns in `_lf` which are used for validation.
     _rule_columns: list[str]
-    #: The schema used to create the input data frame.
-    schema: type[S]
 
-    def __init__(
-        self, lf: pl.LazyFrame, rule_columns: list[str], schema: type[S]
-    ) -> None:
+    def __init__(self, lf: pl.LazyFrame, rule_columns: list[str]) -> None:
         self._lf = lf
         self._rule_columns = rule_columns
-        self.schema = schema
 
     @classmethod
-    def _create_empty(cls, schema: type[S], with_casting_rules: bool) -> FailureInfo[S]:
+    def _create_empty(
+        cls, schema: type[Schema], with_casting_rules: bool
+    ) -> FailureInfo:
         rules = schema._validation_rules(with_cast=with_casting_rules)
         lf = pl.LazyFrame(
             schema={
-                **schema.to_polars_schema(),  # type: ignore
+                **schema.to_polars_schema(),
                 **{rule: pl.Boolean for rule in rules},
             }
         )
-        return cls(lf=lf, rule_columns=list(rules.keys()), schema=schema)
+        return cls(lf=lf, rule_columns=list(rules.keys()))
 
     @cached_property
     def _df(self) -> pl.DataFrame:
@@ -187,24 +177,19 @@ class FailureInfo(Generic[S]):
 
         Args:
             file: The file path or writable file-like object to which to write the
-                parquet file. This should be a path to a directory if writing a
-                partitioned dataset. The `mkdir` kwarg controls whether the directory
-                is created if needed.
+                parquet file.
             kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.write_parquet`. ``metadata`` may only be provided if it
+                :meth:`polars.write_parquet`. `metadata` may only be provided if it
                 is a dictionary.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`Schema.serialize`.
         """
-        self._write(ParquetStorageBackend(), file=file, **kwargs)
+        metadata = kwargs.pop("metadata", {})
+        self._df.write_parquet(
+            file,
+            metadata={**metadata, "rule_columns": json.dumps(self._rule_columns)},
+            **kwargs,
+        )
 
-    def sink_parquet(
-        self,
-        file: str | Path | IO[bytes] | PartitionSchemeOrSinkDirectory,
-        **kwargs: Any,
-    ) -> None:
+    def sink_parquet(self, file: str | Path | IO[bytes], **kwargs: Any) -> None:
         """Stream the failure info to a single parquet file.
 
         Writes the invalid rows along with additional boolean rule columns indicating
@@ -213,22 +198,20 @@ class FailureInfo(Generic[S]):
 
         Args:
             file: The file path or writable file-like object to which to write the
-                parquet file. This should be a path to a directory if writing a
-                partitioned dataset.
+                parquet file.
             kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.sink_parquet`. ``metadata`` may only be provided if it
+                :meth:`polars.sink_parquet`. `metadata` may only be provided if it
                 is a dictionary.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`Schema.serialize`.
         """
-        self._sink(ParquetStorageBackend(), file=file, **kwargs)
+        metadata = kwargs.pop("metadata", {})
+        self._lf.sink_parquet(
+            file,
+            metadata={**metadata, "rule_columns": json.dumps(self._rule_columns)},
+            **kwargs,
+        )
 
     @classmethod
-    def read_parquet(
-        cls, source: str | Path | IO[bytes], **kwargs: Any
-    ) -> FailureInfo[Schema]:
+    def read_parquet(cls, source: str | Path | IO[bytes], **kwargs: Any) -> FailureInfo:
         """Read a parquet file with the failure info.
 
         Args:
@@ -238,172 +221,45 @@ class FailureInfo(Generic[S]):
 
         Returns:
             The failure info object.
-
-        Raises:
-            ValueError: If no appropriate metadata can be found.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`Schema.serialize`
         """
-        return cls._read(
-            backend=ParquetStorageBackend(), file=source, lazy=False, **kwargs
+        metadata = pl.read_parquet_metadata(
+            source,
+            storage_options=kwargs.get("storage_options"),
+            credential_provider=kwargs.get("credential_provider"),
+            retries=kwargs.get("retries"),
+        )
+        return cls(
+            pl.read_parquet(source, **kwargs).lazy(),
+            rule_columns=json.loads(metadata["rule_columns"]),
         )
 
     @classmethod
-    def scan_parquet(
-        cls, source: str | Path | IO[bytes], **kwargs: Any
-    ) -> FailureInfo[Schema]:
-        """Lazily read a parquet file with the failure info.
+    def scan_parquet(cls, source: str | Path | IO[bytes], **kwargs: Any) -> FailureInfo:
+        """Scan a parquet file with the failure info.
+
+        Note that this method eagerly reads the parquet metadata to identify rule
+        columns in the written parquet file.
 
         Args:
             source: Path, directory, or file-like object from which to read the data.
+            kwargs: Additional keyword arguments passed directly to
+                :meth:`polars.scan_parquet`.
 
         Returns:
             The failure info object.
 
         Raises:
             ValueError: If no appropriate metadata can be found.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`Schema.serialize`
         """
-        return cls._read(
-            backend=ParquetStorageBackend(), file=source, lazy=True, **kwargs
+        metadata = pl.read_parquet_metadata(
+            source,
+            storage_options=kwargs.get("storage_options"),
+            credential_provider=kwargs.get("credential_provider"),
+            retries=kwargs.get("retries"),
         )
-
-    def write_delta(
-        self,
-        /,
-        target: str | Path | deltalake.DeltaTable,
-        **kwargs: Any,
-    ) -> None:
-        """Write the failure info to a delta lake table.
-
-        Writes the invalid rows along with additional boolean rule columns indicating
-        which validation rules failed. Unlike :meth:`invalid`, this includes columns
-        for each rule, where ``False`` indicates the rule failed for that row.
-
-        Args:
-            target: The file path or DeltaTable to which to write the delta lake data.
-            kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.write_delta`.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`Schema.serialize`.
-        """
-        self._write(DeltaStorageBackend(), target=target, **kwargs)
-
-    @classmethod
-    def read_delta(
-        cls, source: str | Path | deltalake.DeltaTable, **kwargs: Any
-    ) -> FailureInfo[Schema]:
-        """Read a delta lake table with the failure info.
-
-        Args:
-            source: Path or DeltaTable from which to read the data.
-            kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.read_delta`.
-
-        Returns:
-            The failure info object.
-
-        Raises:
-            ValueError: If no appropriate metadata can be found.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`Schema.serialize`.
-        """
-        return cls._read(
-            backend=DeltaStorageBackend(), source=source, lazy=False, **kwargs
-        )
-
-    @classmethod
-    def scan_delta(
-        cls, source: str | Path | deltalake.DeltaTable, **kwargs: Any
-    ) -> FailureInfo[Schema]:
-        """Lazily read a delta lake table with the failure info.
-
-        Args:
-            source: Path or DeltaTable from which to read the data.
-            kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.scan_delta`.
-
-        Returns:
-            The failure info object.
-
-        Raises:
-            ValueError: If no appropriate metadata can be found.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`Schema.serialize`.
-        """
-        return cls._read(
-            backend=DeltaStorageBackend(), source=source, lazy=True, **kwargs
-        )
-
-    # -------------------------------- Storage --------------------------------------- #
-
-    def _sink(
-        self,
-        backend: StorageBackend,
-        **kwargs: Any,
-    ) -> None:
-        # Utility method encapsulating the interaction with the StorageBackend
-
-        backend.sink_failure_info(
-            lf=self._lf,
-            serialized_rules=json.dumps(self._rule_columns),
-            serialized_schema=self.schema.serialize(),  # type: ignore[attr-defined]
-            **kwargs,
-        )
-
-    def _write(
-        self,
-        backend: StorageBackend,
-        **kwargs: Any,
-    ) -> None:
-        # Utility method encapsulating the interaction with the StorageBackend
-
-        backend.write_failure_info(
-            df=self._df,
-            serialized_rules=json.dumps(self._rule_columns),
-            serialized_schema=self.schema.serialize(),  # type: ignore[attr-defined]
-            **kwargs,
-        )
-
-    @classmethod
-    def _read(
-        cls,
-        backend: StorageBackend,
-        lazy: bool,
-        **kwargs: Any,
-    ) -> FailureInfo[Schema]:
-        # Utility method encapsulating the interaction with the StorageBackend
-
-        from .schema import Schema, deserialize_schema
-
-        if lazy:
-            lf, serialized_rules, serialized_schema = backend.scan_failure_info(
-                **kwargs
-            )
-        else:
-            df, serialized_rules, serialized_schema = backend.read_failure_info(
-                **kwargs
-            )
-            lf = df.lazy()
-
-        schema = deserialize_schema(serialized_schema, strict=False) or type(
-            UNKNOWN_SCHEMA_NAME, (Schema,), {}
-        )
-        return FailureInfo(
-            lf,
-            json.loads(serialized_rules),
-            schema=schema,
+        return cls(
+            pl.scan_parquet(source, **kwargs),
+            rule_columns=json.loads(metadata["rule_columns"]),
         )
 
 
