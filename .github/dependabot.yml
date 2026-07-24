@@ -12,3 +12,16 @@ updates:
       prefix: ci
     cooldown:
       default-days: 7
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    versioning-strategy: lockfile-only
+    groups:
+      cargo:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: build
+    cooldown:
+      default-days: 7
