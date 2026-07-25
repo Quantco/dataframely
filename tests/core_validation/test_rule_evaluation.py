@@ -106,3 +106,22 @@ def test_multiple_group_rules() -> None:
         }
     )
     assert_frame_equal(actual, expected)
+
+
+def test_dynamic_column_selection_with_group_rule() -> None:
+    # The group rule adds a boolean column to the frame. A simple rule that selects
+    # columns dynamically must not see it (see #332).
+    lf = pl.LazyFrame({"a": [1, 1, 2], "x": [False, False, True]})
+    rules: dict[str, Rule] = {
+        "no_bool_set": Rule(~pl.any_horizontal(pl.col(pl.Boolean))),
+        "unique_x": GroupRule(pl.col("x").n_unique() == 1, group_columns=["a"]),
+    }
+    actual = evaluate_rules(lf, rules)
+
+    expected = pl.LazyFrame(
+        {
+            "no_bool_set": [True, True, False],
+            "unique_x": [True, True, True],
+        }
+    )
+    assert_frame_equal(actual, expected, check_column_order=False)

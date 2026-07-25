@@ -218,12 +218,15 @@ def with_evaluation_rules(lf: pl.LazyFrame, rules: dict[str, Rule]) -> pl.LazyFr
 
     # Before we can select all of the simple expressions, we need to turn the
     # group rules into something to use in a `select` statement as well.
+    # NOTE: The simple expressions are evaluated BEFORE the group rules are joined onto
+    #  the frame. Otherwise, rules using dynamic column selection (e.g.
+    #  `pl.col(pl.Boolean)`) would also select the boolean group rule columns.
     result = (
         # NOTE: A value of `null` always validates successfully as nullability should
         #  already be checked via dedicated rules.
-        lf.pipe(_with_group_rules, group_rules).with_columns(
+        lf.with_columns(
             **{name: expr.fill_null(True) for name, expr in simple_exprs.items()},
-        )
+        ).pipe(_with_group_rules, group_rules)
     )
 
     # If there is at least one rule that checks for successful dtype casting, we need
