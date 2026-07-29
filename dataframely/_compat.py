@@ -52,13 +52,6 @@ except ImportError:
     class Dialect:  # type: ignore # noqa: N801
         pass
 
-# -------------------------------------- PYARROW ------------------------------------- #
-
-try:
-    import pyarrow as pa
-except ImportError:  # pragma: no cover
-    pa = _DummyModule("pyarrow")  # type: ignore
-
 # -------------------------------------- PYDANTIC ------------------------------------ #
 
 try:

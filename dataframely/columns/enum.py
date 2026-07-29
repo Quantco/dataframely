@@ -131,16 +131,6 @@ class Enum(Column):
         return sa.String(max(category_lengths))
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        if len(self.categories) <= 2**8 - 1:
-            dtype = pa.uint8()
-        elif len(self.categories) <= 2**16 - 1:
-            dtype = pa.uint16()
-        else:
-            dtype = pa.uint32()
-        return pa.dictionary(dtype, pa.large_string(), ordered=True)
-
-    @property
     def _python_type(self) -> Any:
         return Literal[tuple(self.categories)]
 

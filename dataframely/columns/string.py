@@ -121,10 +121,6 @@ class String(Column):
         return sa.String()
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.large_string()
-
-    @property
     def _python_type(self) -> Any:
         return str
 

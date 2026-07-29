@@ -123,18 +123,6 @@ class Array(Column):
                     f"SQL column cannot have 'Array' type for dialect '{dialect}'."
                 )
 
-    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
-        if shape:
-            size, *rest = shape
-            inner_type = self._pyarrow_field_of_shape(rest)
-            return pa.field("item", pa.list_(inner_type, size), nullable=True)
-        else:
-            return self.inner.pyarrow_field("item")
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return self._pyarrow_field_of_shape(self.shape).type
-
     @property
     def _python_type(self) -> Any:
         inner_type = self.inner.pydantic_field()

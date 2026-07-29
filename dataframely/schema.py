@@ -1412,17 +1412,6 @@ class Schema(BaseSchema, ABC):
         ]
 
     @classmethod
-    def to_pyarrow_schema(cls) -> pa.Schema:
-        """Obtain the pyarrow schema for this schema.
-
-        Returns:
-            A :mod:`pyarrow` schema that mirrors the schema defined by this class.
-        """
-        return pa.schema(
-            [col.pyarrow_field(name) for name, col in cls.columns().items()]
-        )
-
-    @classmethod
     def to_pydantic_model(cls, name: str | None = None) -> type[pydantic.BaseModel]:
         """Convert this schema to a pydantic model.
 

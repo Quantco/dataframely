@@ -134,13 +134,6 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
             return sa.Numeric(self.precision, self.scale)
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        # PyArrow requires an explicit value for precision.
-        # If precision is None, we pass decimal128's maximum precision of 38 to be safe.
-        # We do not use decimal256 since its values cannot be represented in SQL Server.
-        return pa.decimal128(self.precision or 38, self.scale)
-
-    @property
     def _python_type(self) -> Any:
         return decimal.Decimal
 

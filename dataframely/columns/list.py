@@ -145,11 +145,6 @@ class List(Column):
                 )
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        # NOTE: Polars uses `large_list`s by default.
-        return pa.large_list(self.inner.pyarrow_field("item"))
-
-    @property
     def _python_type(self) -> Any:
         inner_type = self.inner.pydantic_field()
         return list[inner_type]  # type: ignore

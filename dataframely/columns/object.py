@@ -68,10 +68,6 @@ class Object(Column):
         raise NotImplementedError("SQL column cannot have 'Object' type.")
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        raise NotImplementedError("PyArrow column cannot have 'Object' type.")
-
-    @property
     def _python_type(self) -> Any:
         return Any
 

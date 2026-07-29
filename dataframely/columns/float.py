@@ -193,10 +193,6 @@ class Float(_BaseFloat):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Float()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.float64()
-
     @classproperty
     def max_value(self) -> float:
         return float(np.finfo(np.float64).max)
@@ -217,10 +213,6 @@ class Float32(_BaseFloat):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.REAL()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.float32()
-
     @classproperty
     def max_value(self) -> float:
         return float(np.finfo(np.float32).max)
@@ -240,10 +232,6 @@ class Float64(_BaseFloat):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Float()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.float64()
 
     @classproperty
     def max_value(self) -> float:

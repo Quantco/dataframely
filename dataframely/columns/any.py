@@ -79,13 +79,6 @@ class Any(Column):
             case _:  # pragma: no cover
                 raise NotImplementedError("SQL column cannot have 'Any' type.")
 
-    def pyarrow_field(self, name: str) -> pa.Field:
-        return pa.field(name, self.pyarrow_dtype, nullable=self.nullable)
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.null()
-
     @property
     def _python_type(self) -> AnyType:
         return AnyType

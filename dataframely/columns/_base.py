@@ -220,24 +220,6 @@ class Column(ABC):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         """The :mod:`sqlalchemy` dtype equivalent of this column data type."""
 
-    # ------------------------------------ PYARROW ----------------------------------- #
-
-    def pyarrow_field(self, name: str) -> pa.Field:
-        """Obtain the pyarrow field of this column definition.
-
-        Args:
-            name: The name of the column.
-
-        Returns:
-            The :mod:`pyarrow` field definition.
-        """
-        return pa.field(name, self.pyarrow_dtype, nullable=self.nullable)
-
-    @property
-    @abstractmethod
-    def pyarrow_dtype(self) -> pa.DataType:
-        """The :mod:`pyarrow` dtype equivalent of this column data type."""
-
     # ----------------------------------- PYDANTIC ----------------------------------- #
 
     def pydantic_field(self) -> Any:

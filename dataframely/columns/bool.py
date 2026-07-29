@@ -26,10 +26,6 @@ class Bool(Column):
         return sa.Boolean()
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.bool_()
-
-    @property
     def _python_type(self) -> Any:
         return bool
 

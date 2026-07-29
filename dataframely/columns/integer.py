@@ -186,10 +186,6 @@ class Integer(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Integer()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int64()
-
     @classproperty
     def num_bytes(self) -> int:
         return 8
@@ -209,10 +205,6 @@ class Int8(_BaseInteger):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.SmallInteger()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int8()
 
     @classproperty
     def num_bytes(self) -> int:
@@ -234,10 +226,6 @@ class Int16(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.SmallInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int16()
-
     @classproperty
     def num_bytes(self) -> int:
         return 2
@@ -258,10 +246,6 @@ class Int32(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Integer()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int32()
-
     @classproperty
     def num_bytes(self) -> int:
         return 4
@@ -281,10 +265,6 @@ class Int64(_BaseInteger):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.BigInteger()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int64()
 
     @classproperty
     def num_bytes(self) -> int:
@@ -312,10 +292,6 @@ class UInt8(_BaseInteger):
             case _:
                 return sa.SmallInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint8()
-
     @classproperty
     def num_bytes(self) -> int:
         return 1
@@ -335,10 +311,6 @@ class UInt16(_BaseInteger):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Integer()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint16()
 
     @classproperty
     def num_bytes(self) -> int:
@@ -360,10 +332,6 @@ class UInt32(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.BigInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint32()
-
     @classproperty
     def num_bytes(self) -> int:
         return 4
@@ -383,10 +351,6 @@ class UInt64(_BaseInteger):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.BigInteger()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint64()
 
     @classproperty
     def num_bytes(self) -> int:

@@ -30,10 +30,6 @@ class Binary(Column):
                 return sa.LargeBinary()
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.large_binary()
-
-    @property
     def _python_type(self) -> Any:
         return bytes
 
