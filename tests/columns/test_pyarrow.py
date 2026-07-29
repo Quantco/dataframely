@@ -17,9 +17,6 @@ from dataframely.testing import (
     create_schema,
 )
 
-pytestmark = pytest.mark.with_optionals
-
-
 T = TypeVar("T", bound=dy.Column)
 
 
