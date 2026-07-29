@@ -1,6 +1,6 @@
 use super::as_bool;
 use polars::prelude::*;
-use polars_core::POOL;
+use polars_core::runtime::RAYON;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 pub struct RuleFailure<'a> {
@@ -25,7 +25,7 @@ pub fn compute_rule_failures<'a>(
     if inputs.is_empty() {
         polars_bail!(ComputeError: "cannot check validity of zero rules");
     }
-    POOL.install(|| {
+    RAYON.install(|| {
         inputs
             .par_iter()
             .filter_map(|s| match as_bool(s) {

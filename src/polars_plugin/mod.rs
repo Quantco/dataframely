@@ -4,7 +4,7 @@ mod validation_error;
 
 use polars::prelude::*;
 use polars_arrow::bitmap::Bitmap;
-use polars_core::POOL;
+use polars_core::runtime::RAYON;
 use pyo3_polars::derive::polars_expr;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::Deserialize;
@@ -24,13 +24,13 @@ pub fn all_rules_horizontal(inputs: &[Series]) -> PolarsResult<Series> {
         0 => polars_bail!(ComputeError: "cannot combine zero rules"),
         1 => as_bool(&inputs[0])?.clone(),
         2 => as_bool(&inputs[0])? & as_bool(&inputs[1])?,
-        n if n < POOL.current_num_threads() * 2 => inputs
+        n if n < RAYON.current_num_threads() * 2 => inputs
             .iter()
             .skip(2)
             .try_fold(as_bool(&inputs[0])? & as_bool(&inputs[1])?, |acc, s| {
                 as_bool(s).map(|b| &acc & b)
             })?,
-        _ => POOL.install(|| {
+        _ => RAYON.install(|| {
             inputs
                 .par_iter()
                 .try_fold(
