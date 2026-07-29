@@ -224,7 +224,6 @@ class FailureInfo:
             source,
             storage_options=kwargs.get("storage_options"),
             credential_provider=kwargs.get("credential_provider"),
-            retries=kwargs.get("retries"),
         )
         return cls(
             pl.read_parquet(source, **kwargs).lazy(),
