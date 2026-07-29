@@ -40,6 +40,18 @@ def test_categories_to_polars_physical(
     assert dy.Categories("c", physical=physical).to_polars().physical() == expected
 
 
+@pytest.mark.with_optionals
+@pytest.mark.parametrize("physical", ["u8", "u16", "u32"])
+def test_pyarrow_index_matches_polars(physical: Literal["u8", "u16", "u32"]) -> None:
+    # The pyarrow dictionary index type must match the physical type of the Polars dtype.
+    schema = create_schema(
+        "test", {"a": dy.Categorical(dy.Categories("c", physical=physical))}
+    )
+    actual = schema.to_pyarrow_schema().field("a").type
+    expected = schema.create_empty().to_arrow().schema.field("a").type
+    assert actual == expected
+
+
 @pytest.mark.parametrize(
     "column",
     [

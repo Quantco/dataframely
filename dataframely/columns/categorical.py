@@ -117,7 +117,10 @@ class Categorical(Column):
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        return pa.dictionary(pa.uint32(), pa.large_string())
+        index = {"u8": pa.uint8(), "u16": pa.uint16(), "u32": pa.uint32()}[
+            self.categories.physical if self.categories else "u32"
+        ]
+        return pa.dictionary(index, pa.large_string())
 
     @property
     def _python_type(self) -> Any:
