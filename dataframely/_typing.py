@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Concatenate, Generic, Literal, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Concatenate, Generic, ParamSpec, TypeVar
 
 import polars as pl
 

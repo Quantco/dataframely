@@ -1,7 +1,7 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from ._base import Column
 

@@ -32,6 +32,3 @@ I/O
     FailureInfo.sink_parquet
     FailureInfo.read_parquet
     FailureInfo.scan_parquet
-    FailureInfo.write_delta
-    FailureInfo.read_delta
-    FailureInfo.scan_delta

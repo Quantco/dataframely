@@ -1,26 +1,14 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from pathlib import Path
+
 import polars as pl
 import pytest
-from fsspec import AbstractFileSystem, url_to_fs
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._storage.constants import RULE_METADATA_KEY, SCHEMA_METADATA_KEY
-from dataframely.filter_result import UNKNOWN_SCHEMA_NAME
-from dataframely.testing.storage import (
-    DeltaFailureInfoStorageTester,
-    FailureInfoStorageTester,
-    ParquetFailureInfoStorageTester,
-)
-
-# Only execute these tests with optional dependencies installed
-# The parquet-based tests do not need them, but other storage
-# backends do.
-pytestmark = pytest.mark.with_optionals
-
-# ------------------------------ All storage backends ----------------------------------
+from dataframely.filter_result import FailureInfo
 
 
 class MySchema(dy.Schema):
@@ -28,20 +16,8 @@ class MySchema(dy.Schema):
     b = dy.Integer(nullable=False, is_in=[1, 2, 3, 5, 7, 11])
 
 
-TESTERS = [ParquetFailureInfoStorageTester(), DeltaFailureInfoStorageTester()]
-
-
-@pytest.mark.parametrize("tester", TESTERS)
-@pytest.mark.parametrize("lazy", [True, False])
-@pytest.mark.parametrize(
-    "any_tmp_path",
-    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
-    indirect=True,
-)
-def test_read_write(
-    tester: FailureInfoStorageTester, any_tmp_path: str, lazy: bool
-) -> None:
-    # Arrange
+@pytest.fixture()
+def failure() -> FailureInfo:
     df = pl.DataFrame(
         {
             "a": [4, 5, 6, 6, 7, 8],
@@ -50,132 +26,47 @@ def test_read_write(
     )
     _, failure = MySchema.filter(df)
     assert failure._df.height == 4
+    return failure
+
+
+@pytest.mark.parametrize("lazy", [True, False])
+def test_read_write_parquet(tmp_path: Path, failure: FailureInfo, lazy: bool) -> None:
+    # Arrange
+    path = tmp_path / "failure.parquet"
 
     # Act
-    tester.write_typed(failure, any_tmp_path, lazy=lazy)
-    read = tester.read(any_tmp_path, lazy=lazy)
+    if lazy:
+        failure.sink_parquet(path)
+        read = FailureInfo.scan_parquet(path)
+    else:
+        failure.write_parquet(path)
+        read = FailureInfo.read_parquet(path)
 
     # Assert
     assert_frame_equal(failure._lf, read._lf)
     assert failure._rule_columns == read._rule_columns
-    assert failure.schema.matches(read.schema)
-    assert MySchema.matches(read.schema)
 
 
-@pytest.mark.parametrize("tester", TESTERS)
-@pytest.mark.parametrize("lazy", [True, False])
-@pytest.mark.parametrize(
-    "any_tmp_path",
-    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
-    indirect=True,
-)
-def test_read_write_missing_metadata(
-    tester: FailureInfoStorageTester, any_tmp_path: str, lazy: bool
-) -> None:
-    # Arrange
-    df = pl.DataFrame(
-        {
-            "a": [4, 5, 6, 6, 7, 8],
-            "b": [1, 2, 3, 4, 5, 6],
-        }
-    )
-    _, failure = MySchema.filter(df)
-    assert failure._df.height == 4
-    tester.write_untyped(failure, any_tmp_path, lazy=lazy)
+def test_read_missing_metadata(tmp_path: Path, failure: FailureInfo) -> None:
+    # Arrange: write the raw data frame without the rule-column metadata.
+    path = tmp_path / "failure.parquet"
+    failure._df.write_parquet(path)
 
     # Act / Assert
-    with pytest.raises(
-        ValueError, match=r"required FailureInfo metadata was not found"
-    ):
-        tester.read(any_tmp_path, lazy=lazy)
+    with pytest.raises(KeyError):
+        FailureInfo.read_parquet(path)
 
 
-@pytest.mark.parametrize("tester", TESTERS)
-@pytest.mark.parametrize("lazy", [True, False])
-@pytest.mark.parametrize(
-    "any_tmp_path",
-    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
-    indirect=True,
-)
-def test_invalid_schema_deserialization(
-    tester: FailureInfoStorageTester, any_tmp_path: str, lazy: bool
-) -> None:
+def test_write_parquet_custom_metadata(tmp_path: Path, failure: FailureInfo) -> None:
     # Arrange
-    df = pl.DataFrame(
-        {
-            "a": [4, 5, 6, 6, 7, 8],
-            "b": [1, 2, 3, 4, 5, 6],
-        }
-    )
-    _, failure = MySchema.filter(df)
-    assert failure._df.height == 4
-    tester.write_untyped(failure, any_tmp_path, lazy=lazy)
-    tester.set_metadata(
-        any_tmp_path,
-        metadata={
-            SCHEMA_METADATA_KEY: "{WRONG",
-            RULE_METADATA_KEY: '["b"]',
-        },
-    )
+    path = tmp_path / "failure.parquet"
 
     # Act
-    read = tester.read(any_tmp_path, lazy=lazy)
+    failure.write_parquet(path, metadata={"custom": "test"})
 
     # Assert
-    assert read.schema.__name__ == UNKNOWN_SCHEMA_NAME
-
-
-# ------------------------------------ Parquet -----------------------------------------
-
-
-@pytest.mark.parametrize(
-    "any_tmp_path",
-    ["tmp_path", pytest.param("s3_tmp_path", marks=pytest.mark.s3)],
-    indirect=True,
-)
-@pytest.mark.parametrize("check_non_existent_directory", [True, False])
-def test_write_parquet_custom_metadata(
-    any_tmp_path: str, check_non_existent_directory: bool
-) -> None:
-    # Arrange
-    df = pl.DataFrame(
-        {
-            "a": [4, 5, 6, 6, 7, 8],
-            "b": [1, 2, 3, 4, 5, 6],
-        }
-    )
-    _, failure = MySchema.filter(df)
-    assert failure._df.height == 4
-
-    fs: AbstractFileSystem = url_to_fs(any_tmp_path)[0]
-    path_components = (
-        [any_tmp_path]
-        + (["non_existent_dir"] if check_non_existent_directory else [])
-        + ["failure.parquet"]
-    )
-    p = fs.sep.join(path_components)
-
-    # Act
-    if check_non_existent_directory:
-        failure.write_parquet(p, metadata={"custom": "test"}, mkdir=True)
-    else:
-        failure.write_parquet(p, metadata={"custom": "test"})
-
-    # Assert
-    assert pl.read_parquet_metadata(p)["custom"] == "test"
-
-
-def test_write_parquet_fails_without_mkdir(tmp_path: str) -> None:
-    # Arrange
-    df = pl.DataFrame(
-        {
-            "a": [4, 5, 6, 6, 7, 8],
-            "b": [1, 2, 3, 4, 5, 6],
-        }
-    )
-    _, failure = MySchema.filter(df)
-    p = f"{tmp_path}/non_existent_dir/failure.parquet"
-
-    # Act / Assert
-    with pytest.raises(FileNotFoundError):
-        failure.write_parquet(p)
+    metadata = pl.read_parquet_metadata(path)
+    assert metadata["custom"] == "test"
+    # The rule columns must still be persisted alongside the custom metadata.
+    read = FailureInfo.read_parquet(path)
+    assert read._rule_columns == failure._rule_columns

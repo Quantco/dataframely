@@ -14,7 +14,7 @@ from . import random
 from ._filter import filter
 from ._rule import rule
 from ._typing import DataFrame, LazyFrame
-from .collection import Collection
+from .collection import Collection, CollectionMember
 from .columns import (
     Any,
     Array,
@@ -61,6 +61,7 @@ __all__ = [
     "DataFrame",
     "LazyFrame",
     "Collection",
+    "CollectionMember",
     "Config",
     "FailureInfo",
     "concat_collection_members",

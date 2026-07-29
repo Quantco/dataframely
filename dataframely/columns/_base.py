@@ -9,7 +9,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
-from typing import Annotated, Any, TypeAlias, cast
+from typing import Annotated, Any, TypeAlias
 
 import polars as pl
 

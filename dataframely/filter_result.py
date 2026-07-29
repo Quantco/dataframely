@@ -23,8 +23,6 @@ else:
 if TYPE_CHECKING:  # pragma: no cover
     from .schema import Schema
 
-UNKNOWN_SCHEMA_NAME = "__DATAFRAMELY_UNKNOWN__"
-
 S = TypeVar("S", bound=BaseSchema)
 
 
