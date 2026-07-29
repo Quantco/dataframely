@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+import dataclasses
+from dataclasses import dataclass
+from typing import Any, Literal
 
 import polars as pl
 
@@ -14,12 +16,30 @@ from ._base import Check, Column
 from ._registry import register
 
 
+@dataclass(frozen=True)
+class Categories:
+    """The name, namespace, and physical type of a categorical's global categories.
+
+    Mirrors :class:`polars.Categories`, but is immutable and serializable.
+    """
+
+    name: str | None = None
+    namespace: str = ""
+    physical: Literal["u8", "u16", "u32"] = "u32"
+
+    def to_polars(self) -> pl.Categories:
+        """Convert this object into a :class:`polars.Categories`."""
+        physical = {"u8": pl.UInt8, "u16": pl.UInt16, "u32": pl.UInt32}[self.physical]
+        return pl.Categories(self.name, namespace=self.namespace, physical=physical)
+
+
 @register
 class Categorical(Column):
     """A column of categorical (string) values."""
 
     def __init__(
         self,
+        categories: Categories | None = None,
         *,
         nullable: bool = False,
         primary_key: bool = False,
@@ -31,6 +51,8 @@ class Categorical(Column):
     ):
         """
         Args:
+            categories: The global categories (name, namespace, and physical index type)
+                for this column. If omitted, the default global categories are used.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`
@@ -71,10 +93,24 @@ class Categorical(Column):
             metadata=metadata,
             description=description,
         )
+        self.categories = categories
 
     @property
     def dtype(self) -> pl.DataType:
-        return pl.Categorical()
+        return pl.Categorical(self.categories.to_polars() if self.categories else None)
+
+    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
+        result = super().as_dict(expr)
+        if self.categories is not None:
+            result["categories"] = dataclasses.asdict(self.categories)
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Categorical:
+        data = dict(data)
+        if data.get("categories") is not None:
+            data["categories"] = Categories(**data["categories"])
+        return super().from_dict(data)
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.String()
