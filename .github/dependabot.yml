@@ -25,3 +25,15 @@ updates:
       prefix: build
     cooldown:
       default-days: 7
+  - package-ecosystem: rust-toolchain
+    directory: /
+    schedule:
+      interval: quarterly
+    cooldown:
+      default-days: 7
+    groups:
+      rust-toolchain:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: chore
