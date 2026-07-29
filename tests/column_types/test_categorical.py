@@ -42,7 +42,10 @@ def test_categories_to_polars_physical(
 
 @pytest.mark.parametrize(
     "column",
-    [dy.Categorical(), dy.Categorical(dy.Categories("c", namespace="ns"))],
+    [
+        dy.Categorical(),
+        dy.Categorical(dy.Categories("c", namespace="ns", physical="u16")),
+    ],
 )
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
 def test_valid(
@@ -65,7 +68,10 @@ def test_matches() -> None:
 
 @pytest.mark.parametrize(
     "column",
-    [dy.Categorical(), dy.Categorical(dy.Categories("c", namespace="ns"))],
+    [
+        dy.Categorical(),
+        dy.Categorical(dy.Categories("c", namespace="ns", physical="u16")),
+    ],
 )
 def test_as_dict_from_dict(column: dy.Categorical) -> None:
     restored = dy.Categorical.from_dict(column.as_dict(pl.element()))
@@ -74,7 +80,8 @@ def test_as_dict_from_dict(column: dy.Categorical) -> None:
 
 def test_schema_serialization_roundtrip() -> None:
     schema = create_schema(
-        "test", {"a": dy.Categorical(dy.Categories("c", namespace="ns"))}
+        "test",
+        {"a": dy.Categorical(dy.Categories("c", namespace="ns", physical="u16"))},
     )
     decoded = dy.deserialize_schema(schema.serialize())
     assert schema.matches(decoded)
