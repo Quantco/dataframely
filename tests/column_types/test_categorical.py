@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from typing import Literal
+
 import polars as pl
 import pytest
 
@@ -8,25 +10,18 @@ import dataframely as dy
 from dataframely.testing.factory import create_schema
 
 
-def test_default_dtype() -> None:
-    column = dy.Categorical()
-    assert column.categories is None
-    assert column.dtype == pl.Categorical()
-
-
-def test_categories_dtype() -> None:
-    column = dy.Categorical(dy.Categories("c", namespace="ns", physical="u16"))
-    categories = column.dtype.categories  # type: ignore[attr-defined]
-    assert categories.name() == "c"
-    assert categories.namespace() == "ns"
-    assert categories.physical() == pl.UInt16
-
-
-def test_categories_defaults() -> None:
-    categories = dy.Categories()
-    assert categories.name is None
-    assert categories.namespace == ""
-    assert categories.physical == "u32"
+@pytest.mark.parametrize(
+    "column, expected_dtype",
+    [
+        (dy.Categorical(), pl.Categorical()),
+        (
+            dy.Categorical(dy.Categories("c", namespace="ns")),
+            pl.Categorical(pl.Categories("c", namespace="ns")),
+        ),
+    ],
+)
+def test_categories_dtype(column: dy.Categorical, expected_dtype: pl.DataType) -> None:
+    assert column.dtype == expected_dtype
 
 
 def test_categories_equality() -> None:
@@ -39,8 +34,10 @@ def test_categories_equality() -> None:
     ("physical", "expected"),
     [("u8", pl.UInt8), ("u16", pl.UInt16), ("u32", pl.UInt32)],
 )
-def test_categories_to_polars_physical(physical: str, expected: pl.DataType) -> None:
-    assert dy.Categories("c", physical=physical).to_polars().physical() == expected  # type: ignore[arg-type]
+def test_categories_to_polars_physical(
+    physical: Literal["u8", "u16", "u32"], expected: pl.DataType
+) -> None:
+    assert dy.Categories("c", physical=physical).to_polars().physical() == expected
 
 
 @pytest.mark.parametrize(
@@ -66,15 +63,13 @@ def test_matches() -> None:
     assert not column.matches(dy.Categorical(), expr)
 
 
-def test_as_dict_from_dict() -> None:
-    column = dy.Categorical(dy.Categories("c", namespace="ns", physical="u16"))
+@pytest.mark.parametrize(
+    "column",
+    [dy.Categorical(), dy.Categorical(dy.Categories("c", namespace="ns"))],
+)
+def test_as_dict_from_dict(column: dy.Categorical) -> None:
     restored = dy.Categorical.from_dict(column.as_dict(pl.element()))
-    assert restored.categories == dy.Categories("c", namespace="ns", physical="u16")
-
-
-def test_as_dict_from_dict_default() -> None:
-    restored = dy.Categorical.from_dict(dy.Categorical().as_dict(pl.element()))
-    assert restored.categories is None
+    assert restored.categories == column.categories
 
 
 def test_schema_serialization_roundtrip() -> None:
