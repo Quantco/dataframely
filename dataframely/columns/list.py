@@ -11,7 +11,7 @@ import polars as pl
 from polars.expr.array import ExprArrayNameSpace
 from polars.expr.list import ExprListNameSpace
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 

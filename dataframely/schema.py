@@ -17,7 +17,7 @@ import polars.exceptions as plexc
 from polars._typing import FileSource
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import PartitionSchemeOrSinkDirectory, deltalake, pa, pydantic, sa
+from ._compat import PartitionSchemeOrSinkDirectory, deltalake, pydantic, sa
 from ._deprecation import deprecated
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures

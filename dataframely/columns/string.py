@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 

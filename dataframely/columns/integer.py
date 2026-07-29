@@ -10,7 +10,7 @@ from typing import Any, Literal
 import polars as pl
 from polars.datatypes.group import INTEGER_DTYPES
 
-from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
+from dataframely._compat import sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 

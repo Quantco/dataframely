@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, pydantic, sa, sa_postgresql, sa_TypeEngine
+from dataframely._compat import pydantic, sa, sa_postgresql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 

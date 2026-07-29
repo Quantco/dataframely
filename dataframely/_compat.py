@@ -90,7 +90,6 @@ __all__ = [
     "Dialect",
     "MSDialect_pyodbc",
     "PartitionSchemeOrSinkDirectory",
-    "pa",
     "PGDialect_psycopg2",
     "pydantic_core_schema",
     "pydantic",

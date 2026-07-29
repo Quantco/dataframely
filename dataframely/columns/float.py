@@ -13,7 +13,7 @@ import numpy as np
 import polars as pl
 from polars.datatypes.group import FLOAT_DTYPES
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 

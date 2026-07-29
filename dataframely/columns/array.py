@@ -6,12 +6,11 @@ from __future__ import annotations
 import math
 import sys
 import warnings
-from collections.abc import Sequence
 from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
