@@ -15,9 +15,9 @@ explicitly after reading.
 
 The following methods are available:
 
-| Class                             | Writing                                                                                     | Reading                                                                                   |
-| --------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| {class}`~dataframely.Collection`  | {meth}`~dataframely.Collection.write_parquet`, {meth}`~dataframely.Collection.sink_parquet` | {meth}`~dataframely.Collection.read_parquet`, {meth}`~dataframely.Collection.scan_parquet` |
+| Class                             | Writing                                                                                       | Reading                                                                                      |
+| --------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| {class}`~dataframely.Collection`  | {meth}`~dataframely.Collection.write_parquet`, {meth}`~dataframely.Collection.sink_parquet`   | {meth}`~dataframely.Collection.read_parquet`, {meth}`~dataframely.Collection.scan_parquet`   |
 | {class}`~dataframely.FailureInfo` | {meth}`~dataframely.FailureInfo.write_parquet`, {meth}`~dataframely.FailureInfo.sink_parquet` | {meth}`~dataframely.FailureInfo.read_parquet`, {meth}`~dataframely.FailureInfo.scan_parquet` |
 
 ## Persisting a {class}`~dataframely.Collection`
