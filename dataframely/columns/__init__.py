@@ -7,7 +7,7 @@ from .any import Any
 from .array import Array
 from .binary import Binary
 from .bool import Bool
-from .categorical import Categorical, Categories
+from .categorical import Categorical
 from .datetime import Date, Datetime, Duration, Time
 from .decimal import Decimal
 from .enum import Enum
@@ -26,7 +26,6 @@ __all__ = [
     "Binary",
     "Bool",
     "Categorical",
-    "Categories",
     "Date",
     "Datetime",
     "Decimal",

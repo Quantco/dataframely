@@ -3,11 +3,10 @@
 
 from __future__ import annotations
 
-import dataclasses
-from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 import polars as pl
+from polars.datatypes import DataTypeClass
 
 from dataframely._compat import pa, sa, sa_TypeEngine
 from dataframely.random import Generator
@@ -16,30 +15,13 @@ from ._base import Check, Column
 from ._registry import register
 
 
-@dataclass(frozen=True)
-class Categories:
-    """The name, namespace, and physical type of a categorical's global categories.
-
-    Mirrors :class:`polars.Categories`, but is immutable and serializable.
-    """
-
-    name: str | None = None
-    namespace: str = ""
-    physical: Literal["u8", "u16", "u32"] = "u32"
-
-    def to_polars(self) -> pl.Categories:
-        """Convert this object into a :class:`polars.Categories`."""
-        physical = {"u8": pl.UInt8, "u16": pl.UInt16, "u32": pl.UInt32}[self.physical]
-        return pl.Categories(self.name, namespace=self.namespace, physical=physical)
-
-
 @register
 class Categorical(Column):
     """A column of categorical (string) values."""
 
     def __init__(
         self,
-        categories: Categories | None = None,
+        categories: pl.Categories | pl.DataType | DataTypeClass | None = None,
         *,
         nullable: bool = False,
         primary_key: bool = False,
@@ -51,8 +33,14 @@ class Categorical(Column):
     ):
         """
         Args:
-            categories: The global categories (name, namespace, and physical index type)
-                for this column. If omitted, the default global categories are used.
+            categories: An optional specification for how the categories for this
+                categorical are stored. If `None` is provided (default), the global
+                categories dictionary is used. When an instance of `pl.Categories` is
+                supplied, the categories are stored in the dictionary identified by
+                the name and namespace of the `pl.Categories` instance. When merely
+                a data type is provided, name and namespace are synthesized from the
+                enclosing schema and column name, automatically creating a column-
+                scoped categories dictionary.
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`
@@ -84,6 +72,14 @@ class Categorical(Column):
             metadata: A dictionary of metadata to attach to the column.
             description: A human-readable description of the column.
         """
+        if (
+            isinstance(categories, pl.DataType | DataTypeClass)
+            and categories != pl.UInt8
+            and categories != pl.UInt16
+            and categories != pl.UInt32
+        ):
+            raise ValueError("Category dtype must be one of [UInt8, UInt16, UInt32].")
+
         super().__init__(
             nullable=nullable,
             primary_key=primary_key,
@@ -96,30 +92,71 @@ class Categorical(Column):
         self.categories = categories
 
     @property
+    def _categories(self) -> pl.Categories:
+        return self._resolve_categories(self.categories)
+
+    def _resolve_categories(
+        self, categories: pl.Categories | pl.DataType | DataTypeClass | None
+    ) -> pl.Categories:
+        if isinstance(categories, pl.Categories):
+            return categories
+        if isinstance(categories, pl.DataType | DataTypeClass):
+            return pl.Categories(
+                name=self._name,
+                namespace=self._schema,
+                physical=categories,
+            )
+        return pl.Categories()
+
+    @property
     def dtype(self) -> pl.DataType:
-        return pl.Categorical(self.categories.to_polars() if self.categories else None)
+        return pl.Categorical(self._categories)
 
     def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
         result = super().as_dict(expr)
-        if self.categories is not None:
-            result["categories"] = dataclasses.asdict(self.categories)
+        categories = self._categories
+        result["categories"] = {
+            "name": categories.name(),
+            "namespace": categories.namespace(),
+            "dtype": str(categories.physical()),
+        }
         return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Categorical:
-        data = dict(data)
-        if data.get("categories") is not None:
-            data["categories"] = Categories(**data["categories"])
+        data["categories"] = pl.Categories(
+            name=data["categories"]["name"],
+            namespace=data["categories"]["namespace"],
+            physical=getattr(pl, data["categories"]["dtype"]),
+        )
         return super().from_dict(data)
+
+    def _attributes_match(
+        self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
+    ) -> bool:
+        if name == "categories":
+            # `categories` may be provided as `None`, a data type, or a
+            # `pl.Categories` instance. Compare the resolved categories so that
+            # equivalent specifications (e.g. `None` and the default global
+            # `pl.Categories`) are considered equal.
+            return self._resolve_categories(lhs) == self._resolve_categories(rhs)
+        return super()._attributes_match(lhs, rhs, name, column_expr)
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.String()
 
     @property
     def pyarrow_dtype(self) -> pa.DataType:
-        index = {"u8": pa.uint8(), "u16": pa.uint16(), "u32": pa.uint32()}[
-            self.categories.physical if self.categories else "u32"
-        ]
+        match self._categories.physical():
+            case pl.UInt8:
+                index = pa.uint8()
+            case pl.UInt16:
+                index = pa.uint16()
+            case pl.UInt32:
+                index = pa.uint32()
+            case _:  # pragma: no cover
+                raise
+
         return pa.dictionary(index, pa.large_string())
 
     @property
