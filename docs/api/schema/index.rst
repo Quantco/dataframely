@@ -7,7 +7,6 @@ Schema
     :hidden:
 
     validation
-    io
     generation
     conversion
     metadata

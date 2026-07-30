@@ -112,25 +112,6 @@ class Categorical(Column):
     def dtype(self) -> pl.DataType:
         return pl.Categorical(self._categories)
 
-    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
-        result = super().as_dict(expr)
-        categories = self._categories
-        result["categories"] = {
-            "name": categories.name(),
-            "namespace": categories.namespace(),
-            "dtype": str(categories.physical()),
-        }
-        return result
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Categorical:
-        data["categories"] = pl.Categories(
-            name=data["categories"]["name"],
-            namespace=data["categories"]["namespace"],
-            physical=getattr(pl, data["categories"]["dtype"]),
-        )
-        return super().from_dict(data)
-
     def _attributes_match(
         self, lhs: Any, rhs: Any, name: str, column_expr: pl.Expr
     ) -> bool:
