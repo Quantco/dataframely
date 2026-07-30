@@ -111,7 +111,7 @@ class FailureInfo(Generic[S]):
         rules = schema._validation_rules(with_cast=with_casting_rules)
         lf = pl.LazyFrame(
             schema={
-                **schema.to_polars_schema(),  # type: ignore
+                **pl.Schema(schema),
                 **{rule: pl.Boolean for rule in rules},
             }
         )
