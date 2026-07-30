@@ -62,9 +62,10 @@ def test_read_write_optional(tmp_path: Path, lazy: bool) -> None:
     # Act
     if lazy:
         collection.sink_parquet(tmp_path)
+        out = MyCollection.scan_parquet(tmp_path)
     else:
         collection.write_parquet(tmp_path)
-    out = MyCollection.read_parquet(tmp_path)
+        out = MyCollection.read_parquet(tmp_path)
 
     # Assert
     assert_frame_equal(collection.first, out.first)

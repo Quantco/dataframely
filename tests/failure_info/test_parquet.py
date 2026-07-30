@@ -57,6 +57,16 @@ def test_read_missing_metadata(tmp_path: Path, failure: FailureInfo) -> None:
         FailureInfo.read_parquet(path)
 
 
+def test_scan_missing_metadata(tmp_path: Path, failure: FailureInfo) -> None:
+    # Arrange: write the raw data frame without the rule-column metadata.
+    path = tmp_path / "failure.parquet"
+    failure._df.write_parquet(path)
+
+    # Act / Assert
+    with pytest.raises(ValueError, match="does not provide the `rule_columns` key"):
+        FailureInfo.scan_parquet(path)
+
+
 def test_write_parquet_custom_metadata(tmp_path: Path, failure: FailureInfo) -> None:
     # Arrange
     path = tmp_path / "failure.parquet"
