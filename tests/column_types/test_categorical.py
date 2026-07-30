@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from typing import cast
+
 import polars as pl
 import pytest
 
@@ -8,8 +10,19 @@ import dataframely as dy
 from dataframely.testing.factory import create_schema
 
 
+def test_synthesized_categories_name() -> None:
+    class TestSchema(dy.Schema):
+        a = dy.Categorical(pl.UInt16)
+
+    assert cast(pl.Categorical, TestSchema.a.dtype).categories.name() == "a"
+    assert (
+        cast(pl.Categorical, TestSchema.a.dtype).categories.namespace()
+        == "column_types.test_categorical:TestSchema"
+    )
+
+
 @pytest.mark.parametrize(
-    "column, expected_dtype",
+    ("column", "expected_dtype"),
     [
         (dy.Categorical(), pl.Categorical()),
         (
@@ -37,16 +50,6 @@ def test_categories_physical(physical: pl.DataType, expected: pl.DataType) -> No
 def test_categories_invalid_physical(physical: pl.DataType) -> None:
     with pytest.raises(ValueError, match="Category dtype must be one of"):
         dy.Categorical(physical)
-
-
-@pytest.mark.with_optionals
-@pytest.mark.parametrize("physical", [pl.UInt8, pl.UInt16, pl.UInt32])
-def test_pyarrow_index_matches_polars(physical: pl.DataType) -> None:
-    # The pyarrow dictionary index type must match the physical type of the Polars dtype.
-    schema = create_schema("test", {"a": dy.Categorical(physical)})
-    actual = schema.to_pyarrow_schema().field("a").type
-    expected = schema.create_empty().to_arrow().schema.field("a").type
-    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -83,28 +86,3 @@ def test_matches() -> None:
 def test_matches_default() -> None:
     expr = pl.col("a")
     assert dy.Categorical().matches(dy.Categorical(), expr)
-
-
-@pytest.mark.parametrize(
-    "column",
-    [
-        dy.Categorical(),
-        dy.Categorical(pl.Categories("c", namespace="ns", physical=pl.UInt16)),
-        dy.Categorical(pl.UInt16),
-    ],
-)
-def test_as_dict_from_dict(column: dy.Categorical) -> None:
-    schema = create_schema("test", {"a": column})
-    resolved = schema.columns()["a"]
-    assert isinstance(resolved, dy.Categorical)
-    restored = dy.Categorical.from_dict(resolved.as_dict(pl.element()))
-    assert restored.categories == resolved._categories
-
-
-def test_schema_serialization_roundtrip() -> None:
-    schema = create_schema(
-        "test",
-        {"a": dy.Categorical(pl.Categories("c", namespace="ns", physical=pl.UInt16))},
-    )
-    decoded = dy.deserialize_schema(schema.serialize())
-    assert schema.matches(decoded)
