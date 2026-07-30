@@ -429,7 +429,7 @@ class Collection(BaseCollection, ABC):
             ValidationError: If `lazy=False` and any of the input data frames does not
                 satisfy its schema definition or the filters on this collection result
                 in the removal of at least one row across any of the input data frames.
-                If `lazy=False`, a :class:`~polars.exceptions.ComputeError` is raised
+                If `lazy=True`, a :class:`~polars.exceptions.ComputeError` is raised
                 upon collecting.
 
         Returns:

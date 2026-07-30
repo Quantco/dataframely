@@ -559,7 +559,7 @@ class Schema(BaseSchema, ABC):
 
         Raises:
             SchemaError: If the input data frame is eager and it misses columns or
-                `cast=False` and any data type mismatches the definition in this
+                `cast=False` and any data type mismatches the definition in this schema.
                 Only raised upon collection if the input data frame is lazy.
             ValidationError: If the input data frame is eager and any rule in the schema
                 is violated, i.e. the data does not pass the validation. When the input
