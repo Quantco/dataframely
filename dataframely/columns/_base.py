@@ -489,29 +489,3 @@ def _compare_checks(lhs: Check | None, rhs: Check | None, expr: pl.Expr) -> bool
             return lhs(expr).meta.eq(rhs(expr))
         case _:
             return False
-
-
-def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
-    match check:
-        case None:
-            return None
-        case Sequence():
-            return [c(expr) for c in check]
-        case Mapping():
-            return {key: c(expr) for key, c in check.items()}
-        case _ if callable(check):
-            return check(expr)
-
-
-def _check_from_expr(value: Any) -> Check | None:
-    match value:
-        case None:
-            return None
-        case list():
-            return [lambda _: c for c in value]
-        case dict():
-            return {key: lambda _: c for key, c in value.items()}
-        case pl.Expr():
-            return lambda _: value
-        case _:  # pragma: no cover
-            raise ValueError(f"Invalid type for check: {type(value)}")

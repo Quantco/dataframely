@@ -42,19 +42,6 @@ class Rule:
         """
         return self.expr.meta.eq(other.expr)
 
-    def as_dict(self) -> dict[str, Any]:
-        """Turn the rule into a dictionary."""
-        return {"rule_type": self.__class__.__name__, "expr": self.expr}
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        """Read the rule from a dictionary.
-
-        Args:
-            data: The dictionary that was created via :meth:`asdict`.
-        """
-        return cls(data["expr"])
-
     def __repr__(self) -> str:
         return str(self.expr)
 
@@ -80,13 +67,6 @@ class GroupRule(Rule):
         if not isinstance(other, GroupRule):
             return False
         return super().matches(other) and self.group_columns == other.group_columns
-
-    def as_dict(self) -> dict[str, Any]:
-        return {**super().as_dict(), "group_columns": self.group_columns}
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        return cls(data["expr"], group_columns=data["group_columns"])
 
     def __repr__(self) -> str:
         return f"{super().__repr__()} grouped by {self.group_columns}"
