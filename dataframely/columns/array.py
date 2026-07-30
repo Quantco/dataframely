@@ -124,7 +124,13 @@ class Array(Column):
                 )
 
     def _arrow_nullability(self) -> tuple[bool, list[Any]]:
-        return (self.nullable, [self.inner._arrow_nullability()])
+        # Multi-dimensional arrays are nested fixed-size lists in Arrow, one level per
+        # dimension. Only the innermost field carries the inner column's nullability; the
+        # intermediate dimensions are always nullable (matching polars).
+        nullability = self.inner._arrow_nullability()
+        for _ in range(len(self.shape) - 1):
+            nullability = (True, [nullability])
+        return (self.nullable, [nullability])
 
     def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
