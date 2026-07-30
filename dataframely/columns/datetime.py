@@ -22,13 +22,11 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._mixins import OrdinalMixin
-from ._registry import register
 from ._utils import first_non_null, map_optional
 
 # ------------------------------------------------------------------------------------ #
 
 
-@register
 class Date(OrdinalMixin[dt.date], Column):
     """A column of dates (without time)."""
 
@@ -169,7 +167,6 @@ class Date(OrdinalMixin[dt.date], Column):
         )
 
 
-@register
 class Time(OrdinalMixin[dt.time], Column):
     """A column of times (without date)."""
 
@@ -316,7 +313,6 @@ class Time(OrdinalMixin[dt.time], Column):
         )
 
 
-@register
 class Datetime(OrdinalMixin[dt.datetime], Column):
     """A column of datetimes."""
 
@@ -482,7 +478,6 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         return super()._attributes_match(lhs, rhs, name, column_expr)
 
 
-@register
 class Duration(OrdinalMixin[dt.timedelta], Column):
     """A column of durations."""
 
