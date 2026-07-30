@@ -63,7 +63,11 @@ def test_nullability_information(column_type: type[Column], nullable: bool) -> N
 
 @pytest.mark.parametrize(
     "column",
-    [dy.List(dy.Int64(), nullable=True), dy.Struct({"a": dy.Int64()}, nullable=True)],
+    [
+        dy.List(dy.Int64(), nullable=True),
+        dy.Array(dy.Int64(), shape=2, nullable=True),
+        dy.Struct({"a": dy.Int64()}, nullable=True),
+    ],
 )
 def test_nested_nullability_information(column: dy.Column) -> None:
     # Arrange

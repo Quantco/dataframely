@@ -272,7 +272,10 @@ class SchemaMeta(ABCMeta):
     def __arrow_c_schema__(cls) -> object:
         columns: dict[str, Column] = cls.columns()  # type: ignore[attr-defined]
         return arrow_c_schema(
-            [(name, col.dtype, col.nullable) for name, col in columns.items()]
+            [
+                (name, col.dtype, col._arrow_nullability())
+                for name, col in columns.items()
+            ]
         )
 
     def __repr__(cls) -> str:

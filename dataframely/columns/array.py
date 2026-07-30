@@ -123,6 +123,9 @@ class Array(Column):
                     f"SQL column cannot have 'Array' type for dialect '{dialect}'."
                 )
 
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        return (self.nullable, [self.inner._arrow_nullability()])
+
     def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
             size, *rest = shape

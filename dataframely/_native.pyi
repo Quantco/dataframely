@@ -2,11 +2,16 @@ from typing import Any, overload
 
 import polars as pl
 
-def arrow_c_schema(columns: list[tuple[str, pl.DataType, bool]]) -> Any:
+# The nullability of a column, combined with the nullability of its nested fields (if any).
+Nullability = tuple[bool, list["Nullability"]]
+
+def arrow_c_schema(
+    columns: list[tuple[str, pl.DataType, Nullability]],
+) -> Any:
     """Build an Arrow C schema PyCapsule from a schema's columns.
 
     Args:
-        columns: The columns of the schema as `(name, dtype, nullable)` tuples.
+        columns: The columns of the schema as `(name, dtype, nullability)` tuples.
 
     Returns:
         A PyCapsule implementing the Arrow PyCapsule interface for schemas.
