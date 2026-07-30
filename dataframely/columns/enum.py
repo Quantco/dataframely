@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -129,16 +129,6 @@ class Enum(Column):
         if all(length == category_lengths[0] for length in category_lengths):
             return sa.CHAR(category_lengths[0])
         return sa.String(max(category_lengths))
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        if len(self.categories) <= 2**8 - 1:
-            dtype = pa.uint8()
-        elif len(self.categories) <= 2**16 - 1:
-            dtype = pa.uint16()
-        else:
-            dtype = pa.uint32()
-        return pa.dictionary(dtype, pa.large_string(), ordered=True)
 
     @property
     def _python_type(self) -> Any:

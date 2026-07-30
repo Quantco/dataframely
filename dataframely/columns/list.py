@@ -10,7 +10,7 @@ import polars as pl
 from polars.expr.array import ExprArrayNameSpace
 from polars.expr.list import ExprListNameSpace
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -138,10 +138,8 @@ class List(Column):
                     f"SQL column cannot have 'List' type for dialect '{dialect}'."
                 )
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        # NOTE: Polars uses `large_list`s by default.
-        return pa.large_list(self.inner.pyarrow_field("item"))
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        return (self.nullable, [self.inner._arrow_nullability()])
 
     @property
     def _python_type(self) -> Any:

@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 
@@ -119,10 +119,6 @@ class String(Column):
                     return sa.CHAR(max_length)
                 return sa.String(max_length)
         return sa.String()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.large_string()
 
     @property
     def _python_type(self) -> Any:

@@ -18,10 +18,7 @@ _S = TypeVar("_S", bound=BaseSchema)
 
 
 def _dict_to_df(schema_type: type[BaseSchema], data: dict) -> pl.DataFrame:
-    return pl.from_dict(
-        data,
-        schema=schema_type.to_polars_schema(),  # type: ignore[attr-defined]
-    )
+    return pl.from_dict(data, schema=pl.Schema(schema_type))
 
 
 def _validate_df_schema(schema_type: type[_S], df: pl.DataFrame) -> DataFrame[_S]:
