@@ -5,12 +5,11 @@ from __future__ import annotations
 
 import math
 import warnings
-from collections.abc import Sequence
 from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
@@ -117,17 +116,14 @@ class Array(Column):
                     f"SQL column cannot have 'Array' type for dialect '{dialect}'."
                 )
 
-    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
-        if shape:
-            size, *rest = shape
-            inner_type = self._pyarrow_field_of_shape(rest)
-            return pa.field("item", pa.list_(inner_type, size), nullable=True)
-        else:
-            return self.inner.pyarrow_field("item")
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return self._pyarrow_field_of_shape(self.shape).type
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        # Multi-dimensional arrays are nested fixed-size lists in Arrow, one level per
+        # dimension. Only the innermost field carries the inner column's nullability; the
+        # intermediate dimensions are always nullable (matching polars).
+        nullability = self.inner._arrow_nullability()
+        for _ in range(len(self.shape) - 1):
+            nullability = (True, [nullability])
+        return (self.nullable, [nullability])
 
     @property
     def _python_type(self) -> Any:

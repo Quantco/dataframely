@@ -12,7 +12,7 @@ from typing import Any, Literal, overload
 import polars as pl
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import pa, pydantic, sa
+from ._compat import pydantic, sa
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
@@ -826,15 +826,6 @@ class Schema(BaseSchema, ABC):
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
     @classmethod
-    def to_polars_schema(cls) -> pl.Schema:
-        """Obtain the polars schema for this schema.
-
-        Returns:
-            A :mod:`polars` schema that mirrors the schema defined by this class.
-        """
-        return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
-
-    @classmethod
     def to_sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
         """Obtain the SQLAlchemy column definitions for a particular dialect for this
         schema.
@@ -850,17 +841,6 @@ class Schema(BaseSchema, ABC):
         return [
             col.sqlalchemy_column(name, dialect) for name, col in cls.columns().items()
         ]
-
-    @classmethod
-    def to_pyarrow_schema(cls) -> pa.Schema:
-        """Obtain the pyarrow schema for this schema.
-
-        Returns:
-            A :mod:`pyarrow` schema that mirrors the schema defined by this class.
-        """
-        return pa.schema(
-            [col.pyarrow_field(name) for name, col in cls.columns().items()]
-        )
 
     @classmethod
     def to_pydantic_model(cls, name: str | None = None) -> type[pydantic.BaseModel]:

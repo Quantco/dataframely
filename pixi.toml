@@ -44,6 +44,7 @@ readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html
 mypy = ">=1.13"
 pandas = "*"
 pandas-stubs = "*"
+pyarrow = "*"
 pyodbc = "*"
 pytest = "*"
 pytest-benchmark = "*"
@@ -59,7 +60,6 @@ test-coverage = "pytest --cov=dataframely --cov-report=xml --cov-report=term-mis
 test-no-optional = "pytest -m 'not with_optionals'"
 
 [feature.optionals.dependencies]
-pyarrow = "*"
 pydantic = ">=2.11.9,<3"
 pydantic-core = ">=2.33.2,<3"
 sqlalchemy = ">=2"

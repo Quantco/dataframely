@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, pydantic, sa, sa_postgresql, sa_TypeEngine
+from dataframely._compat import pydantic, sa, sa_postgresql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -119,9 +119,11 @@ class Struct(Column):
             case _:
                 raise NotImplementedError("SQL column cannot have 'Struct' type.")
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.struct([col.pyarrow_field(name) for name, col in self.inner.items()])
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        return (
+            self.nullable,
+            [col._arrow_nullability() for col in self.inner.values()],
+        )
 
     @property
     def _python_type(self) -> Any:
