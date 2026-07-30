@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
@@ -78,10 +78,6 @@ class Categorical(Column):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.String()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.dictionary(pa.uint32(), pa.large_string())
 
     @property
     def _python_type(self) -> Any:

@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Column
@@ -28,10 +28,6 @@ class Binary(Column):
                 return sa.VARBINARY()
             case _:
                 return sa.LargeBinary()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.large_binary()
 
     @property
     def _python_type(self) -> Any:

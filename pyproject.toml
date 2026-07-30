@@ -31,7 +31,6 @@ version = "0.0.0"
 
 [project.optional-dependencies]
 deltalake = ["deltalake"]
-pyarrow = ["pyarrow"]
 pydantic = ["pydantic>=2"]
 s3 = ["s3fs>=2025.9"]
 sqlalchemy = ["sqlalchemy"]
@@ -97,7 +96,7 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["boto3.*", "fsspec.*", "pyarrow.*", "pytest_benchmark.*", "sklearn.*"]
+module = ["boto3.*", "fsspec.*", "pytest_benchmark.*", "sklearn.*"]
 
 [tool.typos.default.extend-identifiers]
 plain_serializer_function_ser_schema = "plain_serializer_function_ser_schema"

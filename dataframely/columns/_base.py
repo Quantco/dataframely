@@ -13,7 +13,7 @@ from typing import Annotated, Any, TypeAlias, cast
 
 import polars as pl
 
-from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
+from dataframely._compat import pydantic, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -223,24 +223,6 @@ class Column(ABC):
     @abstractmethod
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         """The :mod:`sqlalchemy` dtype equivalent of this column data type."""
-
-    # ------------------------------------ PYARROW ----------------------------------- #
-
-    def pyarrow_field(self, name: str) -> pa.Field:
-        """Obtain the pyarrow field of this column definition.
-
-        Args:
-            name: The name of the column.
-
-        Returns:
-            The :mod:`pyarrow` field definition.
-        """
-        return pa.field(name, self.pyarrow_dtype, nullable=self.nullable)
-
-    @property
-    @abstractmethod
-    def pyarrow_dtype(self) -> pa.DataType:
-        """The :mod:`pyarrow` dtype equivalent of this column data type."""
 
     # ----------------------------------- PYDANTIC ----------------------------------- #
 

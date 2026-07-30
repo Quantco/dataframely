@@ -7,7 +7,7 @@ from typing import Any as AnyType
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
+from dataframely._compat import sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -78,13 +78,6 @@ class Any(Column):
                 return sa_mssql.SQL_VARIANT()
             case _:  # pragma: no cover
                 raise NotImplementedError("SQL column cannot have 'Any' type.")
-
-    def pyarrow_field(self, name: str) -> pa.Field:
-        return pa.field(name, self.pyarrow_dtype, nullable=self.nullable)
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.null()
 
     @property
     def _python_type(self) -> AnyType:

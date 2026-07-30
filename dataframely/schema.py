@@ -17,7 +17,7 @@ import polars.exceptions as plexc
 from polars._typing import FileSource
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import PartitionSchemeOrSinkDirectory, deltalake, pa, pydantic, sa
+from ._compat import PartitionSchemeOrSinkDirectory, deltalake, pydantic, sa
 from ._deprecation import deprecated
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
@@ -1401,17 +1401,6 @@ class Schema(BaseSchema, ABC):
         return [
             col.sqlalchemy_column(name, dialect) for name, col in cls.columns().items()
         ]
-
-    @classmethod
-    def to_pyarrow_schema(cls) -> pa.Schema:
-        """Obtain the pyarrow schema for this schema.
-
-        Returns:
-            A :mod:`pyarrow` schema that mirrors the schema defined by this class.
-        """
-        return pa.schema(
-            [col.pyarrow_field(name) for name, col in cls.columns().items()]
-        )
 
     @classmethod
     def to_pydantic_model(cls, name: str | None = None) -> type[pydantic.BaseModel]:

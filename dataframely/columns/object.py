@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
@@ -66,10 +66,6 @@ class Object(Column):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         raise NotImplementedError("SQL column cannot have 'Object' type.")
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        raise NotImplementedError("PyArrow column cannot have 'Object' type.")
 
     @property
     def _python_type(self) -> Any:
