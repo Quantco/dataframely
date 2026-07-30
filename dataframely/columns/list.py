@@ -144,6 +144,9 @@ class List(Column):
                     f"SQL column cannot have 'List' type for dialect '{dialect}'."
                 )
 
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        return (self.nullable, [self.inner._arrow_nullability()])
+
     @property
     def _python_type(self) -> Any:
         inner_type = self.inner.pydantic_field()

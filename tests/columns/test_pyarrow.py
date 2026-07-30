@@ -31,7 +31,7 @@ def _nullable(column_type: type[T]) -> T:
 def test_equal_to_polars_schema(column_type: type[Column]) -> None:
     schema = create_schema("test", {"a": _nullable(column_type)})
     actual = pa.schema(schema)
-    expected = schema.create_empty().to_arrow().schema
+    expected = schema.create_empty().schema.to_arrow()
     assert actual == expected
 
 
@@ -51,7 +51,7 @@ def test_equal_to_polars_schema(column_type: type[Column]) -> None:
 def test_equal_polars_schema_enum(categories: list[str]) -> None:
     schema = create_schema("test", {"a": dy.Enum(categories, nullable=True)})
     actual = pa.schema(schema)
-    expected = schema.create_empty().to_arrow().schema
+    expected = schema.create_empty().schema.to_arrow()
     assert actual == expected
 
 
@@ -65,7 +65,7 @@ def test_equal_polars_schema_enum(categories: list[str]) -> None:
 def test_equal_polars_schema_list(inner: Column) -> None:
     schema = create_schema("test", {"a": dy.List(inner, nullable=True)})
     actual = pa.schema(schema)
-    expected = schema.create_empty().to_arrow().schema
+    expected = schema.create_empty().schema.to_arrow()
     assert actual == expected
 
 
@@ -79,18 +79,11 @@ def test_equal_polars_schema_list(inner: Column) -> None:
         for t in NO_VALIDATION_COLUMN_TYPES
     ],
 )
-@pytest.mark.parametrize(
-    "shape",
-    [
-        1,
-        0,
-        (0, 0),
-    ],
-)
+@pytest.mark.parametrize("shape", [1, 0, (0, 0)])
 def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) -> None:
     schema = create_schema("test", {"a": dy.Array(inner, shape, nullable=True)})
     actual = pa.schema(schema)
-    expected = schema.create_empty().to_arrow().schema
+    expected = schema.create_empty().schema.to_arrow()
     assert actual == expected
 
 
@@ -107,7 +100,7 @@ def test_equal_polars_schema_array(inner: Column, shape: int | tuple[int, ...]) 
 def test_equal_polars_schema_struct(inner: Column) -> None:
     schema = create_schema("test", {"a": dy.Struct({"a": inner}, nullable=True)})
     actual = pa.schema(schema)
-    expected = schema.create_empty().to_arrow().schema
+    expected = schema.create_empty().schema.to_arrow()
     assert actual == expected
 
 

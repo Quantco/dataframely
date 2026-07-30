@@ -242,6 +242,10 @@ df_concat = HouseSchema.cast(pl.concat([df1, df2]))
 Lastly, `dataframely` schemas can be used to integrate with external tools:
 
 - `HouseSchema.create_empty()` creates an empty `dy.DataFrame[HouseSchema]` that can be used for testing
+- `HouseSchema` implements the [Arrow PyCapsule interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrowschema-export),
+  allowing to easily translate the dataframely schema into other packages' schema definitions:
+  - `polars.Schema(HouseSchema)` can be used to construct a polars schema
+  - `pyarrow.schema(HouseSchema)` can be used to construct a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema
 - `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be
   used to
   create SQL tables using types and constraints in line with the schema

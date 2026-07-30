@@ -118,6 +118,10 @@ class Column(ABC):
         """
         return self.dtype == dtype
 
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        """The nullability of this column and its nested fields for Arrow export."""
+        return (self.nullable, [])
+
     # ---------------------------------- VALIDATION ---------------------------------- #
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:

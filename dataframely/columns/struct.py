@@ -125,6 +125,12 @@ class Struct(Column):
             case _:
                 raise NotImplementedError("SQL column cannot have 'Struct' type.")
 
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        return (
+            self.nullable,
+            [col._arrow_nullability() for col in self.inner.values()],
+        )
+
     @property
     def _python_type(self) -> Any:
         fields = {name: col.pydantic_field() for name, col in self.inner.items()}

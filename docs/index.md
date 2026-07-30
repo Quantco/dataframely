@@ -15,7 +15,8 @@ schema information to data frame type hints.
 - Introspect validation failure information for run-time failures
 - Enhanced type hints for validated data frames allowing users to clearly express expectations about inputs and
   outputs (i.e., contracts) in data pipelines
-- Integrate schemas with external tools (e.g., `sqlalchemy`, `pydantic` or `pyarrow`)
+- Integrate schemas with external tools (e.g., `sqlalchemy`, `pydantic`, or via the
+  [Arrow PyCapsule](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrowschema-export))
 - Generate test data that comply with a schema or collection of schemas and its validation rules
 
 ```{toctree}
