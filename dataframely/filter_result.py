@@ -180,7 +180,7 @@ class FailureInfo:
                 :meth:`polars.write_parquet`. `metadata` may only be provided if it
                 is a dictionary.
         """
-        metadata = kwargs.pop("metadata", {})
+        metadata = kwargs.pop("metadata", {}) or {}
         self._df.write_parquet(
             file,
             metadata={**metadata, "rule_columns": json.dumps(self._rule_columns)},
@@ -253,6 +253,10 @@ class FailureInfo:
             storage_options=kwargs.get("storage_options"),
             credential_provider=kwargs.get("credential_provider"),
         )
+        if "rule_columns" not in metadata:
+            raise ValueError(
+                "The parquet metadata does not provide the `rule_columns` key."
+            )
         return cls(
             pl.scan_parquet(source, **kwargs),
             rule_columns=json.loads(metadata["rule_columns"]),

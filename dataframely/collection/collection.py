@@ -921,11 +921,7 @@ class Collection(BaseCollection, ABC):
             lf.sink_parquet(os.path.join(str(directory), f"{member}.parquet"), **kwargs)
 
     @classmethod
-    def read_parquet(
-        cls,
-        directory: str | Path,
-        **kwargs: Any,
-    ) -> Self:
+    def read_parquet(cls, directory: str | Path, **kwargs: Any) -> Self:
         """Read all collection members from parquet files in a directory.
 
         This method searches for files named `<member>.parquet` in the provided
@@ -965,11 +961,7 @@ class Collection(BaseCollection, ABC):
         return cls._init(members)
 
     @classmethod
-    def scan_parquet(
-        cls,
-        directory: str | Path,
-        **kwargs: Any,
-    ) -> Self:
+    def scan_parquet(cls, directory: str | Path, **kwargs: Any) -> Self:
         """Lazily read all collection members from parquet files in a directory.
 
         This method searches for files named `<member>.parquet` in the provided
@@ -990,6 +982,12 @@ class Collection(BaseCollection, ABC):
         Note:
             Members which are defined as eager in the collection will be collected.
 
+        Note:
+            Missing files for required members are not detected eagerly to avoid
+            per-member lookups: they surface with the offending path when the member is
+            collected. Only _optional_ members are probed (footer read only) since
+            their existence determines whether they are included in the collection.
+
         Attention:
             This method does _not_ validate that the scanned parquet files satisfy
             the collection's invariants. It is the user's responsibility to ensure
@@ -997,12 +995,18 @@ class Collection(BaseCollection, ABC):
             recommended to use :meth:`validate` or :meth:`filter`.
         """
         members = {}
-        for member in cls.members():
-            # NOTE: When using `scan_parquet`, we cannot fail if a required member is
-            #  missing.
-            members[member] = pl.scan_parquet(
-                os.path.join(str(directory), f"{member}.parquet"), **kwargs
-            )
+        for member, info in cls.members().items():
+            path = os.path.join(str(directory), f"{member}.parquet")
+            if info.is_optional:
+                try:
+                    pl.read_parquet_metadata(
+                        path,
+                        storage_options=kwargs.get("storage_options"),
+                        credential_provider=kwargs.get("credential_provider"),
+                    )
+                except FileNotFoundError:
+                    continue
+            members[member] = pl.scan_parquet(path, **kwargs)
 
         cls._validate_input_keys(members)
         return cls._init(members)
