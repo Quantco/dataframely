@@ -5,6 +5,7 @@
 :hidden:
 
 v1-v2
+v2-v3
 ```
 
 ## Versioning policy and breaking changes
