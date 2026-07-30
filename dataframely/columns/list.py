@@ -15,11 +15,9 @@ from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import register
 from .struct import Struct
 
 
-@register
 class List(Column):
     """A list column."""
 

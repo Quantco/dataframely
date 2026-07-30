@@ -13,11 +13,9 @@ from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import register
 from .list import _list_primary_key_check
 
 
-@register
 class Array(Column):
     """A fixed-shape array column."""
 

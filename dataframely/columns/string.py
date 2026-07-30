@@ -12,12 +12,10 @@ from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import register
 
 DEFAULT_SAMPLING_REGEX = r"[0-9a-zA-Z]"
 
 
-@register
 class String(Column):
     """A column of strings."""
 
