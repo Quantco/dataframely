@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
+from ._native import arrow_c_schema
 from ._rule import DtypeCastRule, GroupRule, Rule, RuleFactory
 from .columns import Column
 from .exc import ImplementationError
@@ -267,6 +268,12 @@ class SchemaMeta(ABCMeta):
                     )
                 result.rules[attr] = value
         return result
+
+    def __arrow_c_schema__(cls) -> object:
+        columns: dict[str, Column] = cls.columns()  # type: ignore[attr-defined]
+        return arrow_c_schema(
+            [(name, col.dtype, col.nullable) for name, col in columns.items()]
+        )
 
     def __repr__(cls) -> str:
         parts = [f'[Schema "{cls.__name__}"]']

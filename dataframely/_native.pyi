@@ -1,6 +1,16 @@
-from typing import overload
+from typing import Any, overload
 
 import polars as pl
+
+def arrow_c_schema(columns: list[tuple[str, pl.DataType, bool]]) -> Any:
+    """Build an Arrow C schema PyCapsule from a schema's columns.
+
+    Args:
+        columns: The columns of the schema as `(name, dtype, nullable)` tuples.
+
+    Returns:
+        A PyCapsule implementing the Arrow PyCapsule interface for schemas.
+    """
 
 def format_rule_failures(
     failures: list[tuple[str, int]],
