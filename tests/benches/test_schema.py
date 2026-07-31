@@ -108,67 +108,63 @@ def test_multi_primary_key_filter(
     )
 
 
-# ---------------------------------- SINGLE GROUP-BY --------------------------------- #
+# ------------------------------------ SINGLE OVER ----------------------------------- #
 
 
-class SingleGroupBySchema(dy.Schema):
+class SingleOverSchema(dy.Schema):
     elevation = dy.UInt16(nullable=True)
     aspect = dy.UInt16(nullable=True)
     slope = dy.UInt8(nullable=True)
 
-    @dy.rule(group_by=["slope"])
+    @dy.rule()
     def average_elevation_at_least_2500(cls) -> pl.Expr:
-        return pl.col("elevation").mean() > 2500
+        return (pl.col("elevation").mean() > 2500).over("slope")
 
 
-@pytest.mark.benchmark(group="schema-group-by-single")
-def test_single_group_by_validate(
+@pytest.mark.benchmark(group="schema-over-single")
+def test_single_over_validate(
     benchmark: BenchmarkFixture, dataset: pl.DataFrame
 ) -> None:
-    benchmark(SingleGroupBySchema.validate, dataset)
+    benchmark(SingleOverSchema.validate, dataset)
 
 
-@pytest.mark.benchmark(group="schema-group-by-single")
-def test_single_group_by_filter(
-    benchmark: BenchmarkFixture, dataset: pl.DataFrame
-) -> None:
-    benchmark(SingleGroupBySchema.filter, dataset)
+@pytest.mark.benchmark(group="schema-over-single")
+def test_single_over_filter(benchmark: BenchmarkFixture, dataset: pl.DataFrame) -> None:
+    benchmark(SingleOverSchema.filter, dataset)
 
 
-# ---------------------------------- MULTI GROUP-BY ---------------------------------- #
+# ------------------------------------ MULTI OVER ------------------------------------ #
 
 
-class MultiGroupBySchema(dy.Schema):
+class MultiOverSchema(dy.Schema):
     elevation = dy.UInt16(nullable=True)
     aspect = dy.UInt16(nullable=True)
     slope = dy.UInt8(nullable=True)
 
-    @dy.rule(group_by=["slope"])
+    @dy.rule()
     def average_elevation_at_least_2500(cls) -> pl.Expr:
-        return pl.col("elevation").mean() > 2500
+        return (pl.col("elevation").mean() > 2500).over("slope")
 
-    @dy.rule(group_by=["slope"])
+    @dy.rule()
     def at_least_one_elevation_2500(cls) -> pl.Expr:
-        return (pl.col("elevation") > 2500).any()
+        return (pl.col("elevation") > 2500).any().over("slope")
 
-    @dy.rule(group_by=["aspect"])
+    @dy.rule()
     def at_least_50_aspects(cls) -> pl.Expr:
-        return pl.len() > 50
+        return (pl.len() > 50).over("aspect")
 
-    @dy.rule(group_by=["aspect", "slope"])
+    @dy.rule()
     def some_useless_filter(cls) -> pl.Expr:
-        return pl.len() >= 1
+        return (pl.len() >= 1).over("aspect", "slope")
 
 
-@pytest.mark.benchmark(group="schema-group-by-multiple")
-def test_multi_group_by_validate(
+@pytest.mark.benchmark(group="schema-over-multiple")
+def test_multi_over_validate(
     benchmark: BenchmarkFixture, dataset: pl.DataFrame
 ) -> None:
-    benchmark(MultiGroupBySchema.validate, dataset)
+    benchmark(MultiOverSchema.validate, dataset)
 
 
-@pytest.mark.benchmark(group="schema-group-by-multiple")
-def test_multi_group_by_filter(
-    benchmark: BenchmarkFixture, dataset: pl.DataFrame
-) -> None:
-    benchmark(MultiGroupBySchema.filter, dataset)
+@pytest.mark.benchmark(group="schema-over-multiple")
+def test_multi_over_filter(benchmark: BenchmarkFixture, dataset: pl.DataFrame) -> None:
+    benchmark(MultiOverSchema.filter, dataset)

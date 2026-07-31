@@ -9,7 +9,7 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._rule import GroupRule
+from dataframely._rule import Rule
 from dataframely.exc import SchemaError, ValidationError
 from dataframely.random import Generator
 from dataframely.testing import create_schema
@@ -29,9 +29,9 @@ class MyComplexSchema(dy.Schema):
     def b_greater_a(cls) -> pl.Expr:
         return pl.col("b") > pl.col("a")
 
-    @dy.rule(group_by=["a"])
+    @dy.rule()
     def b_unique_within_a(cls) -> pl.Expr:
-        return pl.col("b").n_unique() == 1
+        return (pl.col("b").n_unique() == 1).over("a")
 
 
 class MyComplexSchemaWithLazyRules(dy.Schema):
@@ -42,9 +42,9 @@ class MyComplexSchemaWithLazyRules(dy.Schema):
     def b_greater_a(cls) -> pl.Expr:
         return cls.b.col > cls.a.col
 
-    @dy.rule(group_by=["a"])
+    @dy.rule()
     def b_unique_within_a(cls) -> pl.Expr:
-        return cls.b.col.n_unique() == SOME_CONSTANT_DEFINED_LATER
+        return (cls.b.col.n_unique() == SOME_CONSTANT_DEFINED_LATER).over("a")
 
 
 SOME_CONSTANT_DEFINED_LATER = 1
@@ -213,11 +213,34 @@ def test_group_rule_on_nulls(
     assert not schema.is_valid(df, cast=True)
 
 
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
+def test_dynamic_column_selection_unaffected_by_other_rules(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+) -> None:
+    # Regression test for https://github.com/Quantco/dataframely/issues/332: a rule
+    # relying on dynamic column selection must not "see" the boolean columns produced
+    # by evaluating other rules, regardless of whether other (`over`) rules are present.
+    schema = create_schema(
+        "test",
+        {"x": dy.Bool()},
+        rules={
+            "no_boolean_column_is_true": Rule(~pl.any_horizontal(pl.col(pl.Boolean))),
+            "some_over_rule": Rule(pl.len().over("x") >= 1),
+        },
+    )
+
+    df = df_type({"x": [False]})
+    result = _validate_and_collect(schema, df, eager=eager)
+    assert len(result) == 1
+    assert schema.is_valid(df)
+
+
 def test_validate_maintain_order() -> None:
     schema = create_schema(
         "test",
         {"a": dy.UInt16(), "b": dy.UInt8()},
-        {"at_least_fifty_per_b": GroupRule(lambda: pl.len() >= 2, group_columns=["b"])},
+        {"at_least_fifty_per_b": Rule(lambda: (pl.len() >= 2).over("b"))},
     )
     generator = Generator()
     df = pl.DataFrame(

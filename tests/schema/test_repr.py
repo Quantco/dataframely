@@ -39,9 +39,9 @@ class SchemaWithRules(dy.Schema):
     def my_rule(cls) -> pl.Expr:
         return pl.col("a") < 100
 
-    @dy.rule(group_by=["a"])
+    @dy.rule()
     def my_group_rule(cls) -> pl.Expr:
-        return pl.col("a").sum() > 50
+        return (pl.col("a").sum() > 50).over("a")
 
 
 def test_repr_with_rules() -> None:
@@ -52,7 +52,7 @@ def test_repr_with_rules() -> None:
         - "b2": String(primary_key=True, regex='^[A-Z]{3}$')
       Rules:
         - "my_rule": [(col("a")) < (dyn int: 100)]
-        - "my_group_rule": [(col("a").sum()) > (dyn int: 50)] grouped by ['a']
+        - "my_group_rule": [(col("a").sum()) > (dyn int: 50)].over([col("a")])
     """
     assert repr(SchemaWithRules) == textwrap.dedent(expected)
 
