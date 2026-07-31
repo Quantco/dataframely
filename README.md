@@ -56,9 +56,9 @@ class HouseSchema(dy.Schema):
         ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
         return (ratio >= 1 / 3) & (ratio <= 3)
 
-    @dy.rule(group_by=["zip_code"])
+    @dy.rule()
     def minimum_zip_code_count(cls) -> pl.Expr:
-        return pl.len() >= 2
+        return (pl.len() >= 2).over("zip_code")
 ```
 
 ### Validating data against schema

@@ -7,17 +7,15 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._native import regex_matching_string_length
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import register
 
 DEFAULT_SAMPLING_REGEX = r"[0-9a-zA-Z]"
 
 
-@register
 class String(Column):
     """A column of strings."""
 
@@ -119,10 +117,6 @@ class String(Column):
                     return sa.CHAR(max_length)
                 return sa.String(max_length)
         return sa.String()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.large_string()
 
     @property
     def _python_type(self) -> Any:

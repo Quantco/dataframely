@@ -3,47 +3,27 @@
 
 from __future__ import annotations
 
-import json
 import sys
 import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence
-from json import JSONDecodeError
-from pathlib import Path
-from typing import IO, Any, Literal, overload
+from typing import Any, Literal, overload
 
 import polars as pl
-import polars.exceptions as plexc
-from polars._typing import FileSource
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import PartitionSchemeOrSinkDirectory, deltalake, pa, pydantic, sa
-from ._deprecation import deprecated
+from ._compat import _polars_version_tuple, pydantic, sa
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
 from ._polars import collect_if
-from ._rule import Rule, RuleFactory, rule_from_dict, with_evaluation_rules
-from ._serialization import (
-    SERIALIZATION_FORMAT_VERSION,
-    SchemaJSONDecoder,
-    SchemaJSONEncoder,
-    serialization_versions,
-)
-from ._storage._base import SerializedSchema, StorageBackend
-from ._storage.constants import SCHEMA_METADATA_KEY
-from ._storage.delta import DeltaStorageBackend
-from ._storage.parquet import (
-    ParquetStorageBackend,
-)
-from ._typing import DataFrame, LazyFrame, Validation
-from .columns import Column, column_from_dict
+from ._rule import Rule, with_evaluation_rules
+from ._typing import DataFrame, LazyFrame
+from .columns import Column
 from .config import Config
 from .exc import (
-    DeserializationError,
     SchemaError,
     ValidationError,
-    ValidationRequiredError,
 )
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
@@ -497,11 +477,10 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def validate(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.DataFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[True] = True,
         **kwargs: Any,
     ) -> DataFrame[Self]: ...
 
@@ -509,15 +488,13 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def validate(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.LazyFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[False],
         **kwargs: Any,
     ) -> LazyFrame[Self]: ...
 
-    @overload
     @classmethod
     def validate(
         cls,
@@ -525,18 +502,6 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
-        eager: bool,
-        **kwargs: Any,
-    ) -> DataFrame[Self] | LazyFrame[Self]: ...
-
-    @classmethod
-    def validate(
-        cls,
-        df: pl.DataFrame | pl.LazyFrame,
-        /,
-        *,
-        cast: bool = False,
-        eager: bool = True,
         **kwargs: Any,
     ) -> DataFrame[Self] | LazyFrame[Self]:
         """Validate that a data frame satisfies the schema.
@@ -550,17 +515,8 @@ class Schema(BaseSchema, ABC):
             df: The data frame to validate.
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible.
-            eager: Whether the validation should be performed eagerly and this method
-                should raise upon failure. If `False`, the returned lazy frame will
-                fail to collect if the validation does not pass.
-
-                Note:
-                    If running on the streaming engine, lazy validation will potentially
-                    not surface *all* validation issues as the validation is aborted
-                    once the first failure is encountered. Likewise, the reported
-                    validation failure can be non-deterministic.
             kwargs: Keyword arguments passed directly to :meth:`polars.LazyFrame.collect`
-                when `eager=True`.
+                when the input data frame is eager.
 
         Returns:
             The input eager or lazy frame, wrapped in a generic version of the
@@ -568,20 +524,26 @@ class Schema(BaseSchema, ABC):
             in the schema are removed from the output. This operation is guaranteed
             to maintain input ordering of rows.
 
+        Note:
+            If running on the streaming engine, lazy validation will potentially not
+            surface *all* validation issues as the validation is aborted once the first
+            failure is encountered. Likewise, the reported validation failure can be
+            non-deterministic.
+
         Raises:
-            SchemaError: If `eager=True` and the input data frame misses columns or
-                `cast=False` and any data type mismatches the definition in this
-                schema. Only raised upon collection if `eager=False`.
-            ValidationError: If `eager=True` and in any rule in the schema is
-                violated, i.e. the data does not pass the validation. When
-                `eager=False`, a :class:`~polars.exceptions.ComputeError` is raised
+            SchemaError: If the input data frame is eager and it misses columns or
+                `cast=False` and any data type mismatches the definition in this schema.
+                Only raised upon collection if the input data frame is lazy.
+            ValidationError: If the input data frame is eager and any rule in the schema
+                is violated, i.e. the data does not pass the validation. When the input
+                data frame is lazy, a :class:`~polars.exceptions.ComputeError` is raised
                 upon collecting.
-            InvalidOperationError: If `eager=True`, `cast=True`, and the cast fails
-                for any value in the data. Only raised upon collection if
-                `eager=False`.
+            InvalidOperationError: If the input data frame is eager, `cast=True`, and
+                the cast fails for any value in the data. Only raised upon collection
+                if the input data frame is lazy.
         """
-        if eager:
-            out, failure = cls.filter(df, cast=cast, eager=True, **kwargs)
+        if isinstance(df, pl.DataFrame):
+            out, failure = cls.filter(df, cast=cast, **kwargs)
             if len(failure) > 0:
                 counts = failure.counts()
                 raise ValidationError(
@@ -670,25 +632,22 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def filter(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.DataFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[True] = True,
     ) -> FilterResult[Self]: ...
 
     @overload
     @classmethod
     def filter(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.LazyFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[False],
     ) -> LazyFilterResult[Self]: ...
 
-    @overload
     @classmethod
     def filter(
         cls,
@@ -696,21 +655,9 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
-        eager: bool,
-    ) -> FilterResult[Self] | LazyFilterResult[Self]: ...
-
-    @classmethod
-    def filter(
-        cls,
-        df: pl.DataFrame | pl.LazyFrame,
-        /,
-        *,
-        cast: bool = False,
-        eager: bool = True,
         **kwargs: Any,
     ) -> FilterResult[Self] | LazyFilterResult[Self]:
-        """Filter the data frame by the rules of this schema, returning `(valid,
-        failures)`.
+        """Filter the data frame by the rules of this schema.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
         While :meth:`validate` raises an exception when a row does not adhere to the
@@ -724,10 +671,8 @@ class Schema(BaseSchema, ABC):
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible. Rows for which the
                 cast fails for any column are filtered out.
-            eager: Whether the filter operation should be performed eagerly. If `False`, the
-                returned lazy frame will fail to collect if the validation does not pass.
-            kwargs: Keyword arguments passed directly to :meth:`polars.LazyFrame.collect`
-                when `eager=True`.
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all`
+                if the input data frame is eager.
 
         Returns:
             A tuple of the validated rows in the input data frame (potentially
@@ -764,7 +709,11 @@ class Schema(BaseSchema, ABC):
         )
         if rules := cls._validation_rules(with_cast=cast):
             evaluated = lf.pipe(cls._with_evaluated_rules, rules).pipe(
-                collect_if, eager, **kwargs
+                collect_if,
+                # NOTE: Polars 1.43.0 fixes a bug related to CSPE which allows us to leverage
+                #  the `collect_all` below to perform the entire filtering efficiently.
+                isinstance(df, pl.DataFrame) and _polars_version_tuple < (1, 43),
+                **kwargs,
             )
             filtered = evaluated.filter(pl.col(_COLUMN_VALID)).select(
                 cls.column_names()
@@ -781,12 +730,10 @@ class Schema(BaseSchema, ABC):
             failure_lf = pl.LazyFrame()
 
         # Build the result objects
-        failure_info = FailureInfo(
-            lf=failure_lf, rule_columns=list(rules.keys()), schema=cls
-        )
+        failure_info = FailureInfo(lf=failure_lf, rule_columns=list(rules.keys()))
         result = LazyFilterResult(filtered, failure_info)  # type: ignore
-        if eager:
-            return result.collect_all()
+        if isinstance(df, pl.DataFrame):
+            return result.collect_all(**kwargs)
         return result
 
     @classmethod
@@ -845,554 +792,7 @@ class Schema(BaseSchema, ABC):
             return lf.collect()  # type: ignore
         return lf  # type: ignore
 
-    # --------------------------------- SERIALIZATION -------------------------------- #
-
-    @classmethod
-    def serialize(cls) -> str:
-        """Serialize this schema to a JSON string.
-
-        Returns:
-            The serialized schema.
-
-        Note:
-            Serialization within dataframely itself will remain backwards-compatible
-            at least within a major version. Until further notice, it will also be
-            backwards-compatible across major versions.
-
-        Attention:
-            Serialization of :mod:`polars` expressions is not guaranteed to be stable
-            across versions of polars. This affects schemas that define custom rules
-            or columns with custom checks: a schema serialized with one version of
-            polars may not be deserializable with another version of polars.
-
-        Attention:
-            This functionality is considered unstable. It may be changed at any time
-            without it being considered a breaking change.
-
-        Raises:
-            TypeError: If any column contains metadata that is not JSON-serializable.
-            ValueError: If any column is not a "native" dataframely column type but
-                a custom subclass.
-        """
-        result = {"versions": serialization_versions(), **cls._as_dict()}
-        return json.dumps(result, cls=SchemaJSONEncoder)
-
-    @classmethod
-    def _as_dict(cls) -> dict[str, Any]:
-        """Return a dictionary representation of this schema.
-
-        This method should only be used internally for the purpose of serializing
-        objects referencing schemas.
-        """
-        return {
-            "name": cls.__name__,
-            "columns": {
-                name: col.as_dict(pl.col(name)) for name, col in cls.columns().items()
-            },
-            "rules": {
-                name: rule.as_dict()
-                for name, rule in cls._schema_validation_rules().items()
-            },
-        }
-
-    # ------------------------------------ PARQUET ----------------------------------- #
-
-    @classmethod
-    @deprecated(
-        "`Schema.write_parquet` is deprecated and will be removed in dataframely v3. "
-        "Use `polars.DataFrame.write_parquet` directly instead."
-    )
-    def write_parquet(
-        cls, df: DataFrame[Self], /, file: str | Path | IO[bytes], **kwargs: Any
-    ) -> None:
-        """Write a typed data frame with this schema to a parquet file.
-
-        This method automatically adds a serialization of this schema to the parquet
-        file as metadata. This metadata can be leveraged by :meth:`read_parquet` and
-        :meth:`scan_parquet` for more efficient reading, or by external tools.
-
-        Args:
-            df: The data frame to write to the parquet file.
-            file: The file path or writable file-like object to which to write the
-                parquet file. This should be a path to a directory if writing a
-                partitioned dataset. The `mkdir` kwarg controls whether the directory
-                is created if needed.
-            kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.write_parquet`. `metadata` may only be provided if it
-                is a dictionary.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Use
-            :meth:`polars.DataFrame.write_parquet` directly instead.
-        """
-        cls._write(df=df, backend=ParquetStorageBackend(), file=file, **kwargs)
-
-    @classmethod
-    @deprecated(
-        "`Schema.sink_parquet` is deprecated and will be removed in dataframely v3. "
-        "Use `polars.LazyFrame.sink_parquet` directly instead."
-    )
-    def sink_parquet(
-        cls,
-        lf: LazyFrame[Self],
-        /,
-        file: str | Path | IO[bytes] | PartitionSchemeOrSinkDirectory,
-        **kwargs: Any,
-    ) -> None:
-        """Stream a typed lazy frame with this schema to a parquet file.
-
-        This method automatically adds a serialization of this schema to the parquet
-        file as metadata. This metadata can be leveraged by :meth:`read_parquet` and
-        :meth:`scan_parquet` for more efficient reading, or by external tools.
-
-        Args:
-            lf: The lazy frame to write to the parquet file.
-            file: The file path, writable file-like object, or partitioning scheme to
-                which to write the parquet file.
-            kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.write_parquet`. `metadata` may only be provided if it
-                is a dictionary.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Use
-            :meth:`polars.LazyFrame.sink_parquet` directly instead.
-        """
-        cls._sink(lf=lf, backend=ParquetStorageBackend(), file=file, **kwargs)
-
-    @classmethod
-    @deprecated(
-        "`Schema.read_parquet` is deprecated and will be removed in dataframely v3. "
-        "Use `polars.read_parquet` and call `validate` explicitly instead."
-    )
-    def read_parquet(
-        cls,
-        source: FileSource,
-        *,
-        validation: Validation = "warn",
-        **kwargs: Any,
-    ) -> DataFrame[Self]:
-        """Read a parquet file into a typed data frame with this schema.
-
-        Compared to :meth:`polars.read_parquet`, this method checks the parquet file's
-        metadata and runs validation if necessary to ensure that the data matches this
-        schema.
-
-        Args:
-            source: Path, directory, or file-like object from which to read the data.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the parquet file's metadata. If
-                  the stored schema matches this schema, the data frame is read without
-                  validation. If the stored schema mismatches this schema or no schema
-                  information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the schema stored in the parquet file's metadata matches
-                  this schema.
-                - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. *Use this
-                  option carefully and consider replacing it with
-                  :meth:`polars.read_parquet` to convey the purpose better*.
-
-            kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.read_parquet`.
-
-        Returns:
-            The data frame with this schema.
-
-        Raises:
-            ValidationRequiredError:
-                If no schema information can be read from the
-                source and `validation` is set to `"forbid"`.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Use
-            :meth:`polars.read_parquet` and call :meth:`validate` explicitly instead.
-        """
-        return cls._read(
-            ParquetStorageBackend(),
-            validation=validation,
-            lazy=False,
-            source=source,
-            **kwargs,
-        )
-
-    @classmethod
-    @deprecated(
-        "`Schema.scan_parquet` is deprecated and will be removed in dataframely v3. "
-        "Use `polars.scan_parquet` and call `validate` explicitly instead."
-    )
-    def scan_parquet(
-        cls,
-        source: FileSource,
-        *,
-        validation: Validation = "warn",
-        **kwargs: Any,
-    ) -> LazyFrame[Self]:
-        """Lazily read a parquet file into a typed data frame with this schema.
-
-        Compared to :meth:`polars.scan_parquet`, this method checks the parquet file's
-        metadata and runs validation if necessary to ensure that the data matches this
-        schema.
-
-        Args:
-            source: Path, directory, or file-like object from which to read the data.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the parquet file's metadata. If
-                  the stored schema matches this schema, the data frame is read without
-                  validation. If the stored schema mismatches this schema or no schema
-                  information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the schema stored in the parquet file's metadata matches
-                  this schema.
-                - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. *Use this
-                  option carefully and consider replacing it with
-                  :meth:`polars.scan_parquet` to convey the purpose better*.
-
-            kwargs: Additional keyword arguments passed directly to
-                :meth:`polars.scan_parquet`.
-
-        Returns:
-            The data frame with this schema.
-
-        Raises:
-            ValidationRequiredError:
-                If no schema information can be read from the
-                source and `validation` is set to `"forbid"`.
-
-        Attention:
-            Be aware that this method suffers from the same limitations as
-            :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Use
-            :meth:`polars.scan_parquet` and call :meth:`validate` explicitly instead.
-        """
-        return cls._read(
-            ParquetStorageBackend(),
-            validation=validation,
-            lazy=True,
-            source=source,
-            **kwargs,
-        )
-
-    @classmethod
-    def _requires_validation_for_reading_parquet(
-        cls,
-        deserialized_schema: type[Schema] | None,
-        validation: Validation,
-        source: str,
-    ) -> bool:
-        if validation == "skip":
-            return False
-
-        # First, we check whether the source provides the dataframely schema. If it
-        # does, we check whether it matches this schema. If it does, we assume that the
-        # data adheres to the schema and we do not need to run validation.
-
-        if deserialized_schema is not None:
-            if cls.matches(deserialized_schema):
-                return False
-
-        # Otherwise, we definitely need to run validation. However, we emit different
-        # information to the user depending on the value of `validate`.
-        msg = (
-            "current schema does not match stored schema"
-            if deserialized_schema is not None
-            else "no schema to check validity can be read from the source"
-        )
-        if validation == "forbid":
-            raise ValidationRequiredError(
-                f"Cannot read parquet file from '{source!r}' without validation: {msg}."
-            )
-        if validation == "warn":
-            warnings.warn(
-                f"Reading parquet file from '{source!r}' requires validation: {msg}."
-            )
-        return True
-
-    # --------------------------------- Delta -----------------------------------------#
-    @classmethod
-    @deprecated(
-        "`Schema.write_delta` is deprecated and will be removed in dataframely v3. "
-        "Use `polars.DataFrame.write_delta` directly instead."
-    )
-    def write_delta(
-        cls,
-        df: DataFrame[Self],
-        /,
-        target: str | Path | deltalake.DeltaTable,
-        **kwargs: Any,
-    ) -> None:
-        """Write a typed data frame with this schema to a Delta Lake table.
-
-        This method automatically adds a serialization of this schema to the Delta Lake table as metadata.
-        The metadata can be leveraged by :meth:`read_delta` and :meth:`scan_delta` for efficient reading or by external tools.
-
-        Args:
-            df: The data frame to write to the Delta Lake table.
-            target: The path or DeltaTable object to which to write the data.
-            kwargs: Additional keyword arguments passed directly to :meth:`polars.write_delta`.
-
-        Attention:
-            This method suffers from the same limitations as :meth:`serialize`.
-
-            Schema metadata is stored as custom commit metadata. Only the schema
-            information from the last commit is used, so any table modifications
-            that are not through dataframely will result in losing the metadata.
-
-            Be aware that appending to an existing table via mode="append" may result
-            in violation of group constraints that dataframely cannot catch
-            without re-validating. Only use appends if you are certain that they do not
-            break your schema.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Use
-            :meth:`polars.DataFrame.write_delta` directly instead.
-        """
-        DeltaStorageBackend().write_frame(
-            df=df,
-            serialized_schema=cls.serialize(),
-            target=target,
-        )
-
-    @classmethod
-    @deprecated(
-        "`Schema.scan_delta` is deprecated and will be removed in dataframely v3. "
-        "Use `polars.scan_delta` and call `validate` explicitly instead."
-    )
-    def scan_delta(
-        cls,
-        source: str | Path | deltalake.DeltaTable,
-        *,
-        validation: Validation = "warn",
-        **kwargs: Any,
-    ) -> LazyFrame[Self]:
-        """Lazily read a Delta Lake table into a typed data frame with this schema.
-
-        Compared to :meth:`polars.scan_delta`, this method checks the table's metadata
-        and runs validation if necessary to ensure that the data matches this schema.
-
-        Args:
-            source: Path or DeltaTable object from which to read the data.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the parquet file's metadata. If
-                  the stored schema matches this schema, the data frame is read without
-                  validation. If the stored schema mismatches this schema or no schema
-                  information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the schema stored in the parquet file's metadata matches
-                  this schema.
-                - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. *Use this
-                  option carefully and consider replacing it with
-                  :meth:`polars.scan_delta` to convey the purpose better*.
-
-            kwargs: Additional keyword arguments passed directly to :meth:`polars.scan_delta`.
-
-        Returns:
-            The lazy data frame with this schema.
-
-        Raises:
-            ValidationRequiredError:
-                If no schema information can be read
-                from the source and `validation` is set to `"forbid"`.
-
-        Attention:
-            Schema metadata is stored as custom commit metadata. Only the schema
-            information from the last commit is used, so any table modifications
-            that are not through dataframely will result in losing the metadata.
-
-            This method suffers from the same limitations as :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Use
-            :meth:`polars.scan_delta` and call :meth:`validate` explicitly instead.
-        """
-        return cls._read(
-            DeltaStorageBackend(),
-            validation=validation,
-            lazy=True,
-            source=source,
-            **kwargs,
-        )
-
-    @classmethod
-    @deprecated(
-        "`Schema.read_delta` is deprecated and will be removed in dataframely v3. "
-        "Use `polars.read_delta` and call `validate` explicitly instead."
-    )
-    def read_delta(
-        cls,
-        source: str | Path | deltalake.DeltaTable,
-        *,
-        validation: Validation = "warn",
-        **kwargs: Any,
-    ) -> DataFrame[Self]:
-        """Read a Delta Lake table into a typed data frame with this schema.
-
-        Compared to :meth:`polars.read_delta`, this method checks the table's metadata
-        and runs validation if necessary to ensure that the data matches this schema.
-
-        Args:
-            source: Path or DeltaTable object from which to read the data.
-            validation: The strategy for running validation when reading the data:
-
-                - `"allow"`: The method tries to read the parquet file's metadata. If
-                  the stored schema matches this schema, the data frame is read without
-                  validation. If the stored schema mismatches this schema or no schema
-                  information can be found in the metadata, this method automatically
-                  runs :meth:`validate` with `cast=True`.
-                - `"warn"`: The method behaves similarly to `"allow"`. However,
-                  it prints a warning if validation is necessary.
-                - `"forbid"`: The method never runs validation automatically and only
-                  returns if the schema stored in the parquet file's metadata matches
-                  this schema.
-                - `"skip"`: The method never runs validation and simply reads the
-                  parquet file, entrusting the user that the schema is valid. *Use this
-                  option carefully and consider replacing it with
-                  :meth:`polars.read_delta` to convey the purpose better*.
-
-            kwargs: Additional keyword arguments passed directly to :meth:`polars.read_delta`.
-
-        Returns:
-            The data frame with this schema.
-
-        Raises:
-            ValidationRequiredError:
-                If no schema information can be read from the source
-                and `validation` is set to `"forbid"`.
-
-        Attention:
-            Schema metadata is stored as custom commit metadata. Only the schema
-            information from the last commit is used, so any table modifications
-            that are not through dataframely will result in losing the metadata.
-
-            Be aware that appending to an existing table via mode="append" may result
-            in violation of group constraints that dataframely cannot catch
-            without re-validating. Only use appends if you are certain that they do not
-            break your schema.
-
-            This method suffers from the same limitations as :meth:`serialize`.
-
-        .. deprecated:: 3.0.0
-            This method is deprecated and will be removed in dataframely v3. Use
-            :meth:`polars.read_delta` and call :meth:`validate` explicitly instead.
-        """
-        return cls._read(
-            DeltaStorageBackend(),
-            validation=validation,
-            lazy=False,
-            source=source,
-            **kwargs,
-        )
-
-    # --------------------------------- Storage -------------------------------------- #
-
-    @classmethod
-    def _write(cls, df: pl.DataFrame, backend: StorageBackend, **kwargs: Any) -> None:
-        backend.write_frame(df=df, serialized_schema=cls.serialize(), **kwargs)
-
-    @classmethod
-    def _sink(cls, lf: pl.LazyFrame, backend: StorageBackend, **kwargs: Any) -> None:
-        backend.sink_frame(lf=lf, serialized_schema=cls.serialize(), **kwargs)
-
-    @overload
-    @classmethod
-    def _read(
-        cls,
-        backend: StorageBackend,
-        validation: Validation,
-        lazy: Literal[True],
-        **kwargs: Any,
-    ) -> LazyFrame[Self]: ...
-
-    @overload
-    @classmethod
-    def _read(
-        cls,
-        backend: StorageBackend,
-        validation: Validation,
-        lazy: Literal[False],
-        **kwargs: Any,
-    ) -> DataFrame[Self]: ...
-
-    @classmethod
-    def _read(
-        cls, backend: StorageBackend, validation: Validation, lazy: bool, **kwargs: Any
-    ) -> LazyFrame[Self] | DataFrame[Self]:
-        # Load
-        read: pl.DataFrame | pl.LazyFrame
-        if lazy:
-            read, serialized_schema = backend.scan_frame(**kwargs)
-        else:
-            read, serialized_schema = backend.read_frame(**kwargs)
-
-        return cls._validate_if_needed(
-            df=read,
-            serialized_schema=serialized_schema,
-            validation=validation,
-            source=kwargs["source"],
-        )
-
-    @classmethod
-    def _validate_if_needed(
-        cls,
-        df: pl.DataFrame | pl.LazyFrame,
-        serialized_schema: SerializedSchema | None,
-        validation: Validation,
-        source: str,
-    ) -> DataFrame[Self] | LazyFrame[Self]:
-        # Use strict=False when validation is "allow", "warn" or "skip" to tolerate
-        # deserialization failures from old serialized formats.
-        strict = validation == "forbid"
-        deserialized_schema = (
-            deserialize_schema(serialized_schema, strict=strict)
-            if serialized_schema
-            else None
-        )
-
-        # Smart validation
-        if cls._requires_validation_for_reading_parquet(
-            deserialized_schema, validation, source=source
-        ):
-            return df.pipe(cls.validate, cast=True, eager=isinstance(df, pl.DataFrame))
-
-        return cls.cast(df)
-
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
-
-    @classmethod
-    def to_polars_schema(cls) -> pl.Schema:
-        """Obtain the polars schema for this schema.
-
-        Returns:
-            A :mod:`polars` schema that mirrors the schema defined by this class.
-        """
-        return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
 
     @classmethod
     def to_sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
@@ -1410,17 +810,6 @@ class Schema(BaseSchema, ABC):
         return [
             col.sqlalchemy_column(name, dialect) for name, col in cls.columns().items()
         ]
-
-    @classmethod
-    def to_pyarrow_schema(cls) -> pa.Schema:
-        """Obtain the pyarrow schema for this schema.
-
-        Returns:
-            A :mod:`pyarrow` schema that mirrors the schema defined by this class.
-        """
-        return pa.schema(
-            [col.pyarrow_field(name) for name, col in cls.columns().items()]
-        )
 
     @classmethod
     def to_pydantic_model(cls, name: str | None = None) -> type[pydantic.BaseModel]:
@@ -1477,92 +866,6 @@ class Schema(BaseSchema, ABC):
         return _columns_match(cls.columns(), other.columns()) and _rules_match(
             cls._schema_validation_rules(), other._schema_validation_rules()
         )
-
-
-def read_parquet_metadata_schema(
-    source: str | Path | IO[bytes] | bytes,
-) -> type[Schema] | None:
-    """Read a dataframely schema from the metadata of a parquet file.
-
-    Args:
-        source: Path to a parquet file or a file-like object that contains the metadata.
-
-    Returns:
-        The schema that was serialized to the metadata. `None` if no schema metadata
-        is found or the deserialization fails.
-    """
-    metadata = pl.read_parquet_metadata(source)
-
-    if (schema_metadata := metadata.get(SCHEMA_METADATA_KEY)) is not None:
-        return deserialize_schema(schema_metadata, strict=False)
-    return None
-
-
-@overload
-def deserialize_schema(data: str, strict: Literal[True] = True) -> type[Schema]: ...
-
-
-@overload
-def deserialize_schema(data: str, strict: Literal[False]) -> type[Schema] | None: ...
-
-
-@overload
-def deserialize_schema(data: str, strict: bool) -> type[Schema] | None: ...
-
-
-def deserialize_schema(data: str, strict: bool = True) -> type[Schema] | None:
-    """Deserialize a schema from a JSON string.
-
-    This method allows to dynamically load a schema from its serialization, without
-    having to know the schema to load in advance.
-
-    Args:
-        data: The JSON string created via :meth:`Schema.serialize`.
-        strict: Whether to raise an exception if the schema cannot be deserialized.
-
-    Returns:
-        The schema loaded from the JSON data.
-
-    Raises:
-        ValueError: If the schema format version is not supported and `strict=True`.
-
-    Attention:
-        This functionality is considered unstable. It may be changed at any time
-        without it being considered a breaking change.
-
-    See also:
-        :meth:`Schema.serialize` for additional information on serialization.
-    """
-    try:
-        decoded = json.loads(data, cls=SchemaJSONDecoder)
-        if (format := decoded["versions"]["format"]) != SERIALIZATION_FORMAT_VERSION:
-            raise ValueError(f"Unsupported schema format version: {format}")
-        return _schema_from_dict(decoded)
-    except (ValueError, JSONDecodeError, plexc.ComputeError, TypeError) as e:
-        if strict:
-            raise DeserializationError(
-                "The Schema metadata could not be deserialized"
-            ) from e
-        return None
-
-
-def _schema_from_dict(data: dict[str, Any]) -> type[Schema]:
-    """Create a schema from a dictionary representation.
-
-    This function should only be used internally for the purpose of deserializing
-    objects referencing schemas.
-    """
-    return type(
-        f"{data['name']}_dynamic",
-        (Schema,),
-        {
-            **{name: column_from_dict(col) for name, col in data["columns"].items()},
-            **{
-                name: RuleFactory.from_rule(rule_from_dict(rule))
-                for name, rule in data["rules"].items()
-            },
-        },
-    )
 
 
 def _restore_original_columns(lf: pl.LazyFrame, columns: list[str]) -> pl.LazyFrame:

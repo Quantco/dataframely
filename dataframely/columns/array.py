@@ -4,27 +4,18 @@
 from __future__ import annotations
 
 import math
-import sys
 import warnings
-from collections.abc import Sequence
 from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import column_from_dict, register
 from .list import _list_primary_key_check
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
-
-@register
 class Array(Column):
     """A fixed-shape array column."""
 
@@ -123,17 +114,14 @@ class Array(Column):
                     f"SQL column cannot have 'Array' type for dialect '{dialect}'."
                 )
 
-    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
-        if shape:
-            size, *rest = shape
-            inner_type = self._pyarrow_field_of_shape(rest)
-            return pa.field("item", pa.list_(inner_type, size), nullable=True)
-        else:
-            return self.inner.pyarrow_field("item")
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return self._pyarrow_field_of_shape(self.shape).type
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        # Multi-dimensional arrays are nested fixed-size lists in Arrow, one level per
+        # dimension. Only the innermost field carries the inner column's nullability; the
+        # intermediate dimensions are always nullable (matching polars).
+        nullability = self.inner._arrow_nullability()
+        for _ in range(len(self.shape) - 1):
+            nullability = (True, [nullability])
+        return (self.nullable, [nullability])
 
     @property
     def _python_type(self) -> Any:
@@ -169,13 +157,3 @@ class Array(Column):
         if name == "inner":
             return cast(Column, lhs).matches(cast(Column, rhs), pl.element())
         return super()._attributes_match(lhs, rhs, name, column_expr)
-
-    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
-        result = super().as_dict(expr)
-        result["inner"] = self.inner.as_dict(pl.element())
-        return result
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        data["inner"] = column_from_dict(data["inner"])
-        return super().from_dict(data)

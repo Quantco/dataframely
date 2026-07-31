@@ -125,3 +125,32 @@ def test_member_access_returns_correct_type(
     collection = collection_cls.validate(valid_data)
     for name, expected_type in expected_types.items():
         assert isinstance(getattr(collection, name), expected_type)
+
+
+# ------------------------------------------------------------------------------------ #
+#                              LAZY FILTERING RESTRICTIONS                             #
+# ------------------------------------------------------------------------------------ #
+
+
+@pytest.mark.parametrize("collection_cls", [EagerCollection, MixedCollection])
+def test_filter_lazy_with_eager_members_raises(
+    collection_cls: type[dy.Collection],
+    valid_data: dict[str, pl.DataFrame],
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"Cannot use `lazy=True` on a collection with eager members\.",
+    ):
+        collection_cls.filter(valid_data, lazy=True)
+
+
+@pytest.mark.parametrize("collection_cls", [EagerCollection, MixedCollection])
+def test_validate_lazy_with_eager_members_raises(
+    collection_cls: type[dy.Collection],
+    valid_data: dict[str, pl.DataFrame],
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"Cannot use `lazy=True` on a collection with eager members\.",
+    ):
+        collection_cls.validate(valid_data, lazy=True)

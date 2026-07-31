@@ -9,11 +9,11 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
-from typing import Annotated, Any, TypeAlias, cast
+from typing import Annotated, Any, TypeAlias
 
 import polars as pl
 
-from dataframely._compat import pa, pydantic, sa, sa_TypeEngine
+from dataframely._compat import pydantic, sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
@@ -92,6 +92,9 @@ class Column(ABC):
         self.alias = alias
         self.metadata = metadata
         self.description = description
+
+        # The schema may be overridden by the schema on column access.
+        self._schema = ""
         # The name may be overridden by the schema on column access.
         self._name = ""
 
@@ -117,6 +120,10 @@ class Column(ABC):
             Whether the dtype is valid.
         """
         return self.dtype == dtype
+
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        """The nullability of this column and its nested fields for Arrow export."""
+        return (self.nullable, [])
 
     # ---------------------------------- VALIDATION ---------------------------------- #
 
@@ -219,24 +226,6 @@ class Column(ABC):
     @abstractmethod
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         """The :mod:`sqlalchemy` dtype equivalent of this column data type."""
-
-    # ------------------------------------ PYARROW ----------------------------------- #
-
-    def pyarrow_field(self, name: str) -> pa.Field:
-        """Obtain the pyarrow field of this column definition.
-
-        Args:
-            name: The name of the column.
-
-        Returns:
-            The :mod:`pyarrow` field definition.
-        """
-        return pa.field(name, self.pyarrow_dtype, nullable=self.nullable)
-
-    @property
-    @abstractmethod
-    def pyarrow_dtype(self) -> pa.DataType:
-        """The :mod:`pyarrow` dtype equivalent of this column data type."""
 
     # ----------------------------------- PYDANTIC ----------------------------------- #
 
@@ -413,71 +402,6 @@ class Column(ABC):
         """Private utility for the null probability used during sampling."""
         return 0.1 if self.nullable else 0
 
-    # ----------------------------------- SERIALIZE ---------------------------------- #
-
-    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
-        """Turn the column definition into a dictionary.
-
-        If the column definition references other column definitions, they will be
-        turned into dictionaries recursively.
-
-        Args:
-            expr: An expression referencing the column to turn into a dictionary. This
-                is required to properly encode custom checks.
-
-        Returns:
-            The column definition as dictionary.
-
-        Note:
-            This method stores custom checks as expressions rather than callables to
-            allow for serialization.
-
-        Note:
-            Do NOT use the returned object to evaluate semantic equality of two columns.
-            It may yield different results than :meth:`matches`.
-
-        Attention:
-            This method is only intended for internal use.
-        """
-        from ._registry import _TYPE_MAPPING
-
-        if self.__class__.__name__ not in _TYPE_MAPPING:
-            raise ValueError("Cannot serialize non-native dataframely column types.")
-
-        return {
-            "column_type": self.__class__.__name__,
-            **{
-                param: (
-                    _check_to_expr(getattr(self, param), expr)
-                    if param == "check"
-                    else getattr(self, param)
-                )
-                for param in inspect.signature(self.__class__.__init__).parameters
-                if param not in ("self", "alias", "description")
-            },
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        """Read the column definition from a dictionary.
-
-        Args:
-            data: The dictionary that was created via :meth:`as_dict`.
-
-        Returns:
-            The column definition read from the dictionary.
-
-        Attention:
-            This method is only intended for internal use.
-        """
-        return cls(
-            **{
-                k: (cast(Any, _check_from_expr(v)) if k == "check" else v)
-                for k, v in data.items()
-                if k != "column_type"
-            }
-        )
-
     # ----------------------------------- EQUALITY ----------------------------------- #
 
     def matches(self, other: Column, expr: pl.Expr) -> bool:
@@ -554,29 +478,3 @@ def _compare_checks(lhs: Check | None, rhs: Check | None, expr: pl.Expr) -> bool
             return lhs(expr).meta.eq(rhs(expr))
         case _:
             return False
-
-
-def _check_to_expr(check: Check | None, expr: pl.Expr) -> Any | None:
-    match check:
-        case None:
-            return None
-        case Sequence():
-            return [c(expr) for c in check]
-        case Mapping():
-            return {key: c(expr) for key, c in check.items()}
-        case _ if callable(check):
-            return check(expr)
-
-
-def _check_from_expr(value: Any) -> Check | None:
-    match value:
-        case None:
-            return None
-        case list():
-            return [lambda _: c for c in value]
-        case dict():
-            return {key: lambda _: c for key, c in value.items()}
-        case pl.Expr():
-            return lambda _: value
-        case _:  # pragma: no cover
-            raise ValueError(f"Invalid type for check: {type(value)}")

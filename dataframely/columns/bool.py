@@ -7,14 +7,12 @@ from typing import Any
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Column
-from ._registry import register
 
 
-@register
 class Bool(Column):
     """A column of booleans."""
 
@@ -24,10 +22,6 @@ class Bool(Column):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Boolean()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.bool_()
 
     @property
     def _python_type(self) -> Any:

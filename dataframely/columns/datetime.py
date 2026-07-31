@@ -10,7 +10,7 @@ from typing import Any, cast
 import polars as pl
 from polars._typing import TimeUnit
 
-from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
+from dataframely._compat import sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import (
     EPOCH_DATETIME,
     date_matches_resolution,
@@ -22,13 +22,11 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._mixins import OrdinalMixin
-from ._registry import register
 from ._utils import first_non_null, map_optional
 
 # ------------------------------------------------------------------------------------ #
 
 
-@register
 class Date(OrdinalMixin[dt.date], Column):
     """A column of dates (without time)."""
 
@@ -142,10 +140,6 @@ class Date(OrdinalMixin[dt.date], Column):
                 return sa.Date()
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.date32()
-
-    @property
     def _python_type(self) -> Any:
         return dt.date
 
@@ -173,7 +167,6 @@ class Date(OrdinalMixin[dt.date], Column):
         )
 
 
-@register
 class Time(OrdinalMixin[dt.time], Column):
     """A column of times (without date)."""
 
@@ -293,10 +286,6 @@ class Time(OrdinalMixin[dt.time], Column):
                 return sa.Time()
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.time64("ns")
-
-    @property
     def _python_type(self) -> Any:
         return dt.time
 
@@ -324,7 +313,6 @@ class Time(OrdinalMixin[dt.time], Column):
         )
 
 
-@register
 class Datetime(OrdinalMixin[dt.datetime], Column):
     """A column of datetimes."""
 
@@ -443,15 +431,6 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
                 return sa.DateTime(timezone=timezone_enabled)
 
     @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        time_zone = (
-            self.time_zone.tzname(None)
-            if isinstance(self.time_zone, dt.tzinfo)
-            else self.time_zone
-        )
-        return pa.timestamp(self.time_unit, time_zone)
-
-    @property
     def _python_type(self) -> Any:
         return dt.datetime
 
@@ -499,7 +478,6 @@ class Datetime(OrdinalMixin[dt.datetime], Column):
         return super()._attributes_match(lhs, rhs, name, column_expr)
 
 
-@register
 class Duration(OrdinalMixin[dt.timedelta], Column):
     """A column of durations."""
 
@@ -611,10 +589,6 @@ class Duration(OrdinalMixin[dt.timedelta], Column):
                 return sa_mssql.DATETIME2(6)
             case _:
                 return sa.Interval()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.duration(self.time_unit)
 
     @property
     def _python_type(self) -> Any:

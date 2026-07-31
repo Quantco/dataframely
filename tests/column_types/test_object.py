@@ -43,14 +43,6 @@ def test_validate_dtype(column: Column, dtype: pl.DataType, is_valid: bool) -> N
     assert column.validate_dtype(dtype) == is_valid
 
 
-def test_pyarrow_dtype_raises() -> None:
-    column = dy.Object()
-    with pytest.raises(
-        NotImplementedError, match="PyArrow column cannot have 'Object' type."
-    ):
-        column.pyarrow_dtype
-
-
 def test_sampling_raises() -> None:
     column = dy.Object()
     with pytest.raises(

@@ -64,35 +64,7 @@ The decorator `@dy.rule()` "registers" the function as a rule using its name (i.
 The returned expression provides a boolean value for each row of the data which evaluates to `True` whenever the data
 are valid with respect to this rule.
 
-## Group rules
-
-For defining even more complex rules, the `@dy.rule` decorator allows for a `group_by`
-parameter: this allows to evaluate a rule across _rows_.
-For our housing data, this allows us to specify, for example, that we want to observe at least two houses per zip code:
-
-```python
-import dataframely as dy
-
-
-class HouseSchema(dy.Schema):
-    zip_code = dy.String(nullable=False, min_length=3)
-    num_bedrooms = dy.UInt8(nullable=False)
-    num_bathrooms = dy.UInt8(nullable=False)
-    price = dy.Float64(nullable=False)
-
-    @dy.rule()
-    def reasonable_bathroom_to_bedroom_ratio(cls) -> pl.Expr:
-        ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
-        return (ratio >= 1 / 3) & (ratio <= 3)
-
-    @dy.rule(group_by=["zip_code"])
-    def minimum_zip_code_count(cls) -> pl.Expr:
-        return pl.len() >= 2
-```
-
-When defining rules on groups, we have to take care to use some kind of "aggregate function"
-in order to produce exactly one value per group:
-in group rules, the "input" that the expression is evaluated on is a set of rows.
+Note that, for more complex rules that should evaluate across _rows_, you can simply use an `over` expression.
 
 ````{note}
 If you are using [`ruff`](https://docs.astral.sh/ruff/) to lint your code, you'll need to tell `ruff` to treat rules like classmethods. To this end, you can add the following to your `pyproject.toml`:
@@ -242,11 +214,13 @@ df_concat = HouseSchema.cast(pl.concat([df1, df2]))
 Lastly, `dataframely` schemas can be used to integrate with external tools:
 
 - `HouseSchema.create_empty()` creates an empty `dy.DataFrame[HouseSchema]` that can be used for testing
+- `HouseSchema` implements the [Arrow PyCapsule interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrowschema-export),
+  allowing to easily translate the dataframely schema into other packages' schema definitions:
+  - `polars.Schema(HouseSchema)` can be used to construct a polars schema
+  - `pyarrow.schema(HouseSchema)` can be used to construct a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema
 - `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be
   used to
   create SQL tables using types and constraints in line with the schema
-- `HouseSchema.to_pyarrow_schema()` provides a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema with
-  appropriate column dtypes and nullability information
 - You can use `dy.DataFrame[HouseSchema]` (or the `LazyFrame` equivalent) as fields in
   [pydantic](https://pydantic.dev) models, including support for validation and serialization. Integration with
   pydantic is unstable.

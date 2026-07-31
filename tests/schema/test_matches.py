@@ -5,7 +5,7 @@ import polars as pl
 import pytest
 
 import dataframely as dy
-from dataframely._rule import GroupRule, Rule
+from dataframely._rule import Rule
 from dataframely.testing import create_schema
 
 
@@ -94,47 +94,7 @@ def test_reflexivity() -> None:
             ),
             False,
         ),
-        (  # equal group rules
-            create_schema(
-                "test1",
-                columns={"a": dy.Int16()},
-                rules={
-                    "rule1": Rule(pl.col("a") > 0),
-                    "rule2": GroupRule(pl.len() > 2, group_columns=["a"]),
-                },
-            ),
-            create_schema(
-                "test2",
-                columns={"a": dy.Int16()},
-                rules={
-                    "rule1": Rule(pl.col("a") > 0),
-                    "rule2": GroupRule(pl.len() > 2, group_columns=["a"]),
-                },
-            ),
-            True,
-        ),
-        (  # dfifferent group columns
-            create_schema(
-                "test1",
-                columns={"a": dy.Int16(), "b": dy.Int32()},
-                rules={
-                    "rule2": GroupRule(pl.len() > 2, group_columns=["a"]),
-                },
-            ),
-            create_schema(
-                "test2",
-                columns={"a": dy.Int16(), "b": dy.Int32()},
-                rules={
-                    "rule2": GroupRule(pl.len() > 2, group_columns=["a", "b"]),
-                },
-            ),
-            False,
-        ),
     ],
 )
 def test_matches(lhs: type[dy.Schema], rhs: type[dy.Schema], expected: bool) -> None:
     assert lhs.matches(rhs) == expected
-
-
-def test_group_rule_inequality_type_mismatch() -> None:
-    assert not GroupRule(pl.len() > 2, group_columns=["a"]).matches(Rule(pl.len() > 2))

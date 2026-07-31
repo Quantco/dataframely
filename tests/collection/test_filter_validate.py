@@ -86,17 +86,17 @@ def data_with_filter_with_rule_violation() -> tuple[pl.LazyFrame, pl.LazyFrame]:
 # -------------------------------------- FILTER -------------------------------------- #
 
 
-@pytest.mark.parametrize("eager", [True, False])
+@pytest.mark.parametrize("lazy", [False, True])
 def test_filter_without_filter_without_rule_violation(
     data_without_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-    eager: bool,
+    lazy: bool,
 ) -> None:
     out, failure = SimpleCollection.filter(
         {
             "first": data_without_filter_without_rule_violation[0],
             "second": data_without_filter_without_rule_violation[1],
         },
-        eager=eager,
+        lazy=lazy,
     )
 
     assert isinstance(out, SimpleCollection)
@@ -106,17 +106,17 @@ def test_filter_without_filter_without_rule_violation(
     assert len(failure["second"]) == 0
 
 
-@pytest.mark.parametrize("eager", [True, False])
+@pytest.mark.parametrize("lazy", [False, True])
 def test_filter_without_filter_with_rule_violation(
     data_without_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-    eager: bool,
+    lazy: bool,
 ) -> None:
     out, failure = SimpleCollection.filter(
         {
             "first": data_without_filter_with_rule_violation[0],
             "second": data_without_filter_with_rule_violation[1],
         },
-        eager=eager,
+        lazy=lazy,
     )
 
     assert isinstance(out, SimpleCollection)
@@ -126,17 +126,17 @@ def test_filter_without_filter_with_rule_violation(
     assert failure["second"].counts() == {"b|min": 1}
 
 
-@pytest.mark.parametrize("eager", [True, False])
+@pytest.mark.parametrize("lazy", [False, True])
 def test_filter_with_filter_without_rule_violation(
     data_with_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-    eager: bool,
+    lazy: bool,
 ) -> None:
     out, failure = MyCollection.filter(
         {
             "first": data_with_filter_without_rule_violation[0],
             "second": data_with_filter_without_rule_violation[1],
         },
-        eager=eager,
+        lazy=lazy,
     )
 
     assert isinstance(out, MyCollection)
@@ -152,17 +152,17 @@ def test_filter_with_filter_without_rule_violation(
     }
 
 
-@pytest.mark.parametrize("eager", [True, False])
+@pytest.mark.parametrize("lazy", [False, True])
 def test_filter_with_filter_with_rule_violation(
     data_with_filter_with_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-    eager: bool,
+    lazy: bool,
 ) -> None:
     out, failure = MyCollection.filter(
         {
             "first": data_with_filter_with_rule_violation[0],
             "second": data_with_filter_with_rule_violation[1],
         },
-        eager=eager,
+        lazy=lazy,
     )
 
     assert isinstance(out, MyCollection)
@@ -175,17 +175,17 @@ def test_filter_with_filter_with_rule_violation(
 # -------------------------------- VALIDATE WITH DATA -------------------------------- #
 
 
-@pytest.mark.parametrize("eager", [True, False])
+@pytest.mark.parametrize("lazy", [False, True])
 def test_validate_without_filter_without_rule_violation(
     data_without_filter_without_rule_violation: tuple[pl.LazyFrame, pl.LazyFrame],
-    eager: bool,
+    lazy: bool,
 ) -> None:
     data = {
         "first": data_without_filter_without_rule_violation[0],
         "second": data_without_filter_without_rule_violation[1],
     }
     assert SimpleCollection.is_valid(data)
-    out = SimpleCollection.validate(data, eager=eager)
+    out = SimpleCollection.validate(data, lazy=lazy)
 
     assert isinstance(out, SimpleCollection)
     assert_frame_equal(out.first, data_without_filter_without_rule_violation[0])
@@ -235,7 +235,7 @@ def test_validate_without_filter_with_rule_violation_lazy(
     }
     assert not SimpleCollection.is_valid(data)
 
-    validated = SimpleCollection.validate(data, eager=False)
+    validated = SimpleCollection.validate(data, lazy=True)
     with pytest.raises(plexc.ComputeError):
         validated.collect_all()
 
@@ -268,7 +268,7 @@ def test_validate_with_filter_without_rule_violation_lazy(
     }
     assert not MyCollection.is_valid(data)
 
-    validated = MyCollection.validate(data, eager=False)
+    validated = MyCollection.validate(data, lazy=True)
     with pytest.raises(plexc.ComputeError):
         validated.collect_all()
 
@@ -300,7 +300,7 @@ def test_validate_with_filter_with_rule_violation_lazy(
     }
     assert not MyCollection.is_valid(data)
 
-    validated = MyCollection.validate(data, eager=False)
+    validated = MyCollection.validate(data, lazy=True)
     with pytest.raises(plexc.ComputeError):
         validated.collect_all()
 
