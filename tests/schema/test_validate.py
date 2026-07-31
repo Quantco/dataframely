@@ -225,7 +225,8 @@ def test_dynamic_column_selection_unaffected_by_other_rules(
         "test",
         {"x": dy.Bool()},
         rules={
-            "no_boolean_column_is_true": Rule(~pl.any_horizontal(pl.col(pl.Boolean)))
+            "no_boolean_column_is_true": Rule(~pl.any_horizontal(pl.col(pl.Boolean))),
+            "some_over_rule": Rule(pl.len().over("x") >= 1),
         },
     )
 

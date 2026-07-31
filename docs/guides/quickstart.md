@@ -64,7 +64,7 @@ The decorator `@dy.rule()` "registers" the function as a rule using its name (i.
 The returned expression provides a boolean value for each row of the data which evaluates to `True` whenever the data
 are valid with respect to this rule.
 
-Note that, for more complex rules, that should evaluate across _rows_, you can simply use an `over` expression.
+Note that, for more complex rules that should evaluate across _rows_, you can simply use an `over` expression.
 
 ````{note}
 If you are using [`ruff`](https://docs.astral.sh/ruff/) to lint your code, you'll need to tell `ruff` to treat rules like classmethods. To this end, you can add the following to your `pyproject.toml`:
