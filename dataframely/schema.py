@@ -12,7 +12,7 @@ from typing import Any, Literal, overload
 import polars as pl
 
 from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
-from ._compat import pydantic, sa
+from ._compat import _polars_version_tuple, pydantic, sa
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
 from ._plugin import all_rules, all_rules_horizontal, all_rules_required
@@ -477,11 +477,10 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def validate(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.DataFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[True] = True,
         **kwargs: Any,
     ) -> DataFrame[Self]: ...
 
@@ -489,15 +488,13 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def validate(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.LazyFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[False],
         **kwargs: Any,
     ) -> LazyFrame[Self]: ...
 
-    @overload
     @classmethod
     def validate(
         cls,
@@ -505,18 +502,6 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
-        eager: bool,
-        **kwargs: Any,
-    ) -> DataFrame[Self] | LazyFrame[Self]: ...
-
-    @classmethod
-    def validate(
-        cls,
-        df: pl.DataFrame | pl.LazyFrame,
-        /,
-        *,
-        cast: bool = False,
-        eager: bool = True,
         **kwargs: Any,
     ) -> DataFrame[Self] | LazyFrame[Self]:
         """Validate that a data frame satisfies the schema.
@@ -530,17 +515,8 @@ class Schema(BaseSchema, ABC):
             df: The data frame to validate.
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible.
-            eager: Whether the validation should be performed eagerly and this method
-                should raise upon failure. If `False`, the returned lazy frame will
-                fail to collect if the validation does not pass.
-
-                Note:
-                    If running on the streaming engine, lazy validation will potentially
-                    not surface *all* validation issues as the validation is aborted
-                    once the first failure is encountered. Likewise, the reported
-                    validation failure can be non-deterministic.
             kwargs: Keyword arguments passed directly to :meth:`polars.LazyFrame.collect`
-                when `eager=True`.
+                when the input data frame is eager.
 
         Returns:
             The input eager or lazy frame, wrapped in a generic version of the
@@ -548,20 +524,26 @@ class Schema(BaseSchema, ABC):
             in the schema are removed from the output. This operation is guaranteed
             to maintain input ordering of rows.
 
+        Note:
+            If running on the streaming engine, lazy validation will potentially not
+            surface *all* validation issues as the validation is aborted once the first
+            failure is encountered. Likewise, the reported validation failure can be
+            non-deterministic.
+
         Raises:
-            SchemaError: If `eager=True` and the input data frame misses columns or
-                `cast=False` and any data type mismatches the definition in this
-                schema. Only raised upon collection if `eager=False`.
-            ValidationError: If `eager=True` and in any rule in the schema is
-                violated, i.e. the data does not pass the validation. When
-                `eager=False`, a :class:`~polars.exceptions.ComputeError` is raised
+            SchemaError: If the input data frame is eager and it misses columns or
+                `cast=False` and any data type mismatches the definition in this schema.
+                Only raised upon collection if the input data frame is lazy.
+            ValidationError: If the input data frame is eager and any rule in the schema
+                is violated, i.e. the data does not pass the validation. When the input
+                data frame is lazy, a :class:`~polars.exceptions.ComputeError` is raised
                 upon collecting.
-            InvalidOperationError: If `eager=True`, `cast=True`, and the cast fails
-                for any value in the data. Only raised upon collection if
-                `eager=False`.
+            InvalidOperationError: If the input data frame is eager, `cast=True`, and
+                the cast fails for any value in the data. Only raised upon collection
+                if the input data frame is lazy.
         """
-        if eager:
-            out, failure = cls.filter(df, cast=cast, eager=True, **kwargs)
+        if isinstance(df, pl.DataFrame):
+            out, failure = cls.filter(df, cast=cast, **kwargs)
             if len(failure) > 0:
                 counts = failure.counts()
                 raise ValidationError(
@@ -650,25 +632,22 @@ class Schema(BaseSchema, ABC):
     @classmethod
     def filter(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.DataFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[True] = True,
     ) -> FilterResult[Self]: ...
 
     @overload
     @classmethod
     def filter(
         cls,
-        df: pl.DataFrame | pl.LazyFrame,
+        df: pl.LazyFrame,
         /,
         *,
         cast: bool = False,
-        eager: Literal[False],
     ) -> LazyFilterResult[Self]: ...
 
-    @overload
     @classmethod
     def filter(
         cls,
@@ -676,21 +655,9 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
-        eager: bool,
-    ) -> FilterResult[Self] | LazyFilterResult[Self]: ...
-
-    @classmethod
-    def filter(
-        cls,
-        df: pl.DataFrame | pl.LazyFrame,
-        /,
-        *,
-        cast: bool = False,
-        eager: bool = True,
         **kwargs: Any,
     ) -> FilterResult[Self] | LazyFilterResult[Self]:
-        """Filter the data frame by the rules of this schema, returning `(valid,
-        failures)`.
+        """Filter the data frame by the rules of this schema.
 
         This method can be thought of as a "soft alternative" to :meth:`validate`.
         While :meth:`validate` raises an exception when a row does not adhere to the
@@ -704,10 +671,8 @@ class Schema(BaseSchema, ABC):
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible. Rows for which the
                 cast fails for any column are filtered out.
-            eager: Whether the filter operation should be performed eagerly. If `False`, the
-                returned lazy frame will fail to collect if the validation does not pass.
-            kwargs: Keyword arguments passed directly to :meth:`polars.LazyFrame.collect`
-                when `eager=True`.
+            kwargs: Keyword arguments passed directly to :meth:`polars.collect_all`
+                if the input data frame is eager.
 
         Returns:
             A tuple of the validated rows in the input data frame (potentially
@@ -744,7 +709,11 @@ class Schema(BaseSchema, ABC):
         )
         if rules := cls._validation_rules(with_cast=cast):
             evaluated = lf.pipe(cls._with_evaluated_rules, rules).pipe(
-                collect_if, eager, **kwargs
+                collect_if,
+                # NOTE: Polars 1.43.0 fixes a bug related to CSPE which allows us to leverage
+                #  the `collect_all` below to perform the entire filtering efficiently.
+                isinstance(df, pl.DataFrame) and _polars_version_tuple < (1, 43),
+                **kwargs,
             )
             filtered = evaluated.filter(pl.col(_COLUMN_VALID)).select(
                 cls.column_names()
@@ -763,8 +732,8 @@ class Schema(BaseSchema, ABC):
         # Build the result objects
         failure_info = FailureInfo(lf=failure_lf, rule_columns=list(rules.keys()))
         result = LazyFilterResult(filtered, failure_info)  # type: ignore
-        if eager:
-            return result.collect_all()
+        if isinstance(df, pl.DataFrame):
+            return result.collect_all(**kwargs)
         return result
 
     @classmethod

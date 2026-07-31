@@ -49,14 +49,14 @@ def test_validate_skip_member_validation_lazy(
         Collection.validate(
             {"first": first, "second": second},  # type: ignore
             cast=True,
-            eager=False,
+            lazy=True,
         ).collect_all()
 
     Collection.validate(
         {"first": first, "second": second},  # type: ignore
         cast=True,
         skip_member_validation=True,
-        eager=False,
+        lazy=True,
     ).collect_all()
 
 
@@ -93,7 +93,7 @@ def test_filter_skip_member_validation_lazy(
     _, failure_info = Collection.filter(
         {"first": first, "second": second},  # type: ignore
         cast=True,
-        eager=False,
+        lazy=True,
     )
     assert failure_info["first"].counts() == {"a|min": 2}
     assert failure_info["second"].counts() == {}
@@ -102,7 +102,7 @@ def test_filter_skip_member_validation_lazy(
         {"first": first, "second": second},  # type: ignore
         cast=True,
         skip_member_validation=True,
-        eager=False,
+        lazy=True,
     )
     assert failure_info["first"].counts() == {}
     assert failure_info["second"].counts() == {}
