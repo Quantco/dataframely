@@ -3,25 +3,17 @@
 
 from __future__ import annotations
 
-import sys
 from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, pydantic, sa, sa_postgresql, sa_TypeEngine
+from dataframely._compat import pydantic, sa, sa_postgresql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import column_from_dict, register
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
-@register
 class Struct(Column):
     """A struct column."""
 
@@ -125,9 +117,11 @@ class Struct(Column):
             case _:
                 raise NotImplementedError("SQL column cannot have 'Struct' type.")
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.struct([col.pyarrow_field(name) for name, col in self.inner.items()])
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        return (
+            self.nullable,
+            [col._arrow_nullability() for col in self.inner.values()],
+        )
 
     @property
     def _python_type(self) -> Any:
@@ -158,18 +152,3 @@ class Struct(Column):
                 for field in lhs
             )
         return super()._attributes_match(lhs, rhs, name, column_expr)
-
-    def as_dict(self, expr: pl.Expr) -> dict[str, Any]:
-        result = super().as_dict(expr)
-        result["inner"] = {
-            name: col.as_dict(expr.struct.field(name))
-            for name, col in self.inner.items()
-        }
-        return result
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        data["inner"] = {
-            name: column_from_dict(col) for name, col in data["inner"].items()
-        }
-        return super().from_dict(data)

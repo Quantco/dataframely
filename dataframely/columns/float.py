@@ -13,13 +13,12 @@ import numpy as np
 import polars as pl
 from polars.datatypes.group import FLOAT_DTYPES
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._mixins import OrdinalMixin
-from ._registry import register
 from ._utils import classproperty, first_non_null, map_optional
 
 
@@ -179,7 +178,6 @@ class _BaseFloat(OrdinalMixin[float], Column):
 # ------------------------------------------------------------------------------------ #
 
 
-@register
 class Float(_BaseFloat):
     """A column of floats (with any number of bytes)."""
 
@@ -193,10 +191,6 @@ class Float(_BaseFloat):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Float()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.float64()
-
     @classproperty
     def max_value(self) -> float:
         return float(np.finfo(np.float64).max)
@@ -206,7 +200,6 @@ class Float(_BaseFloat):
         return float(np.finfo(np.float64).min)
 
 
-@register
 class Float32(_BaseFloat):
     """A column of float32 ("float") values."""
 
@@ -217,10 +210,6 @@ class Float32(_BaseFloat):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.REAL()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.float32()
-
     @classproperty
     def max_value(self) -> float:
         return float(np.finfo(np.float32).max)
@@ -230,7 +219,6 @@ class Float32(_BaseFloat):
         return float(np.finfo(np.float32).min)
 
 
-@register
 class Float64(_BaseFloat):
     """A column of float64 ("double") values."""
 
@@ -240,10 +228,6 @@ class Float64(_BaseFloat):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Float()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.float64()
 
     @classproperty
     def max_value(self) -> float:

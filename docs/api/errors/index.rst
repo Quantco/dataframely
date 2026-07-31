@@ -12,4 +12,3 @@ Errors
     ~exc.ValidationError
     ~exc.ImplementationError
     ~exc.AnnotationImplementationError
-    ~exc.ValidationRequiredError

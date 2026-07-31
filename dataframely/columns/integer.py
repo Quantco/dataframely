@@ -10,13 +10,12 @@ from typing import Any, Literal
 import polars as pl
 from polars.datatypes.group import INTEGER_DTYPES
 
-from dataframely._compat import pa, sa, sa_mssql, sa_TypeEngine
+from dataframely._compat import sa, sa_mssql, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._mixins import IsInMixin, OrdinalMixin
-from ._registry import register
 from ._utils import classproperty, first_non_null, map_optional
 
 
@@ -172,7 +171,6 @@ class _BaseInteger(IsInMixin[int], OrdinalMixin[int], Column):
 # ------------------------------------------------------------------------------------ #
 
 
-@register
 class Integer(_BaseInteger):
     """A column of integers (with any number of bytes)."""
 
@@ -186,10 +184,6 @@ class Integer(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Integer()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int64()
-
     @classproperty
     def num_bytes(self) -> int:
         return 8
@@ -199,7 +193,6 @@ class Integer(_BaseInteger):
         return False
 
 
-@register
 class Int8(_BaseInteger):
     """A column of int8 values."""
 
@@ -210,10 +203,6 @@ class Int8(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.SmallInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int8()
-
     @classproperty
     def num_bytes(self) -> int:
         return 1
@@ -223,7 +212,6 @@ class Int8(_BaseInteger):
         return False
 
 
-@register
 class Int16(_BaseInteger):
     """A column of int16 values."""
 
@@ -234,10 +222,6 @@ class Int16(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.SmallInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int16()
-
     @classproperty
     def num_bytes(self) -> int:
         return 2
@@ -247,7 +231,6 @@ class Int16(_BaseInteger):
         return False
 
 
-@register
 class Int32(_BaseInteger):
     """A column of int32 values."""
 
@@ -258,10 +241,6 @@ class Int32(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Integer()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int32()
-
     @classproperty
     def num_bytes(self) -> int:
         return 4
@@ -271,7 +250,6 @@ class Int32(_BaseInteger):
         return False
 
 
-@register
 class Int64(_BaseInteger):
     """A column of int64 values."""
 
@@ -282,10 +260,6 @@ class Int64(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.BigInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.int64()
-
     @classproperty
     def num_bytes(self) -> int:
         return 8
@@ -295,7 +269,6 @@ class Int64(_BaseInteger):
         return False
 
 
-@register
 class UInt8(_BaseInteger):
     """A column of uint8 values."""
 
@@ -312,10 +285,6 @@ class UInt8(_BaseInteger):
             case _:
                 return sa.SmallInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint8()
-
     @classproperty
     def num_bytes(self) -> int:
         return 1
@@ -325,7 +294,6 @@ class UInt8(_BaseInteger):
         return True
 
 
-@register
 class UInt16(_BaseInteger):
     """A column of uint16 values."""
 
@@ -336,10 +304,6 @@ class UInt16(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.Integer()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint16()
-
     @classproperty
     def num_bytes(self) -> int:
         return 2
@@ -349,7 +313,6 @@ class UInt16(_BaseInteger):
         return True
 
 
-@register
 class UInt32(_BaseInteger):
     """A column of uint32 values."""
 
@@ -360,10 +323,6 @@ class UInt32(_BaseInteger):
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.BigInteger()
 
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint32()
-
     @classproperty
     def num_bytes(self) -> int:
         return 4
@@ -373,7 +332,6 @@ class UInt32(_BaseInteger):
         return True
 
 
-@register
 class UInt64(_BaseInteger):
     """A column of uint64 values."""
 
@@ -383,10 +341,6 @@ class UInt64(_BaseInteger):
 
     def sqlalchemy_dtype(self, dialect: sa.Dialect) -> sa_TypeEngine:
         return sa.BigInteger()
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return pa.uint64()
 
     @classproperty
     def num_bytes(self) -> int:

@@ -163,14 +163,12 @@ def test_sqlalchemy_enum_name_without_use_enum_raises() -> None:
         dy.Enum(["a", "b"], sqlalchemy_enum_name="my_enum")
 
 
-def test_as_dict_from_dict_sqlalchemy_enum_flags() -> None:
+def test_sqlalchemy_enum_flags() -> None:
     column = dy.Enum(
         ["a", "b"],
         sqlalchemy_use_enum=True,
         sqlalchemy_enum_name="my_enum",
     )
-    data = column.as_dict(pl.element())
-    restored = dy.Enum.from_dict(data)
-    assert restored.sqlalchemy_use_enum is True
-    assert restored.sqlalchemy_enum_name == "my_enum"
-    assert restored.categories == ["a", "b"]
+    assert column.sqlalchemy_use_enum is True
+    assert column.sqlalchemy_enum_name == "my_enum"
+    assert column.categories == ["a", "b"]

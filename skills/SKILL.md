@@ -67,8 +67,7 @@ about the column contents.
           return cls.col1.col > cls.col2.col
   ```
 
-- Use group rules (i.e. methods decorated with `@dy.rule(group_by=...)`) for cross-row constraints beyond primary key
-  checks.
+- Use rules with an `over` expression for cross-row constraints beyond primary key checks.
 
 ### Referencing Columns
 
@@ -223,14 +222,6 @@ Synthetic data for collections should be generated as follows:
   - Values for individual collection members must be provided in nested dictionaries under the keys corresponding to
     the collection member names.
 - Always use `MyCollection.create_empty()` instead of sampling with empty overrides when an empty collection is needed.
-
-## I/O Conventions
-
-When writing typed data frames to disk, prefer using `MySchema.write_...` instead of using `write_...` directly on the
-data frame. This ensures that schema metadata is persisted alongside the data and can be leveraged when reading the
-data back in.
-
-When reading typed data frames from disk, prefer using `MySchema.read_...` instead of using `pl.read_...` directly from
 
 # Getting more information
 

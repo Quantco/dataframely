@@ -10,7 +10,7 @@ from polars.datatypes import DataTypeClass
 from polars.testing import assert_frame_equal
 
 import dataframely as dy
-from dataframely._rule import GroupRule
+from dataframely._rule import Rule
 from dataframely.exc import SchemaError
 from dataframely.filter_result import FilterResult
 from dataframely.random import Generator
@@ -225,11 +225,7 @@ def test_filter_maintain_order() -> None:
     schema = create_schema(
         "test",
         {"a": dy.UInt16(), "b": dy.UInt8()},
-        {
-            "at_least_fifty_per_b": GroupRule(
-                lambda: pl.len() >= 50, group_columns=["b"]
-            )
-        },
+        {"at_least_fifty_per_b": Rule(lambda: (pl.len() >= 50).over("b"))},
     )
     generator = Generator()
     df = pl.DataFrame(

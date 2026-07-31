@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
-from ._rule import DtypeCastRule, GroupRule, Rule, RuleFactory
+from ._native import arrow_c_schema
+from ._rule import DtypeCastRule, Rule, RuleFactory
 from .columns import Column
 from .exc import ImplementationError
 
@@ -141,21 +142,7 @@ class SchemaMeta(ABCMeta):
                 f"{len(common_names)} overlaps: {common_list}."
             )
 
-        # 2) Check that the columns referenced in the group rules exist.
-        for rule_name, rule in rules.items():
-            if isinstance(rule, GroupRule):
-                missing_columns = set(rule.group_columns) - set(result.columns)
-                if len(missing_columns) > 0:
-                    missing_list = ", ".join(
-                        sorted(f"'{col}'" for col in missing_columns)
-                    )
-                    raise ImplementationError(
-                        f"Group validation rule '{rule_name}' has been implemented "
-                        f"incorrectly. It references {len(missing_columns)} columns "
-                        f"which are not in the schema: {missing_list}."
-                    )
-
-        # 3) Check that all members are non-pathological (i.e., user errors).
+        # 2) Check that all members are non-pathological (i.e., user errors).
         for attr, value in namespace.items():
             if attr.startswith("__"):
                 continue
@@ -201,7 +188,9 @@ class SchemaMeta(ABCMeta):
         def __getattribute__(cls, name: str) -> Any:
             val = super().__getattribute__(name)
             # Dynamically set the name of the column if it is a `Column` instance.
+            # Also, we "register" the name of the schema that set the name.
             if isinstance(val, Column):
+                val._schema = f"{cls.__module__}:{cls.__name__}"
                 val._name = val.alias or name
             return val
 
@@ -268,6 +257,15 @@ class SchemaMeta(ABCMeta):
                 result.rules[attr] = value
         return result
 
+    def __arrow_c_schema__(cls) -> object:
+        columns: dict[str, Column] = cls.columns()  # type: ignore[attr-defined]
+        return arrow_c_schema(
+            [
+                (name, col.dtype, col._arrow_nullability())
+                for name, col in columns.items()
+            ]
+        )
+
     def __repr__(cls) -> str:
         parts = [f'[Schema "{cls.__name__}"]']
         parts.append(textwrap.indent("Columns:", prefix=" " * 2))
@@ -295,7 +293,8 @@ class BaseSchema(metaclass=SchemaMeta):
         """The column definitions of this schema."""
         columns: dict[str, Column] = getattr(cls, _COLUMN_ATTR)
         for name in columns.keys():
-            # Dynamically set the name of the columns.
+            # Dynamically set the name and source schema of the columns.
+            columns[name]._schema = f"{cls.__module__}:{cls.__name__}"
             columns[name]._name = name
         return columns
 

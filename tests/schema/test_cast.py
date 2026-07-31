@@ -28,7 +28,7 @@ def test_cast_valid(
     df = df_type(data)
     out = MySchema.cast(df)
     assert isinstance(out, df_type)
-    assert out.lazy().collect_schema() == MySchema.to_polars_schema()
+    assert out.lazy().collect_schema() == pl.Schema(MySchema)
 
 
 def test_cast_invalid_schema_eager() -> None:

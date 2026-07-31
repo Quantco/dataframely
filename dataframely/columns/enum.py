@@ -10,15 +10,13 @@ from typing import Any, Literal
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely._polars import PolarsDataType
 from dataframely.random import Generator
 
 from ._base import Check, Column
-from ._registry import register
 
 
-@register
 class Enum(Column):
     """A column of enum (string) values."""
 
@@ -100,8 +98,8 @@ class Enum(Column):
             # If the user passed an Enum type, we want to determine a default name
             # based on the Enum class name, which is also what sqlalchemy does.
             # One could instead keep a reference to the Enum class around and pass it
-            # to sqlalchemy later on, but that will interfere with the base-class implementations
-            # of `matches` and `to_dict` / `from_dict`.
+            # to sqlalchemy later on, but that will interfere with the base-class
+            # implementation of `matches`.
             if self.sqlalchemy_use_enum:
                 self.sqlalchemy_enum_name = (
                     self.sqlalchemy_enum_name or categories.__name__.lower()
@@ -129,16 +127,6 @@ class Enum(Column):
         if all(length == category_lengths[0] for length in category_lengths):
             return sa.CHAR(category_lengths[0])
         return sa.String(max(category_lengths))
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        if len(self.categories) <= 2**8 - 1:
-            dtype = pa.uint8()
-        elif len(self.categories) <= 2**16 - 1:
-            dtype = pa.uint16()
-        else:
-            dtype = pa.uint32()
-        return pa.dictionary(dtype, pa.large_string(), ordered=True)
 
     @property
     def _python_type(self) -> Any:
