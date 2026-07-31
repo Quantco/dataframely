@@ -92,6 +92,9 @@ class Column(ABC):
         self.alias = alias
         self.metadata = metadata
         self.description = description
+
+        # The schema may be overridden by the schema on column access.
+        self._schema = ""
         # The name may be overridden by the schema on column access.
         self._name = ""
 
