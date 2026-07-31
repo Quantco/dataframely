@@ -34,17 +34,3 @@ class AnnotationImplementationError(ImplementationError):
                 "`from __future__ import annotations` in the file that defines the collection."
             )
         super().__init__(message)
-
-
-# ---------------------------------------- IO ---------------------------------------- #
-
-
-class ValidationRequiredError(Exception):
-    """Error raised when validation is required when reading a parquet file."""
-
-
-# ---------------------------------- DESERIALIZATION --------------------------------- #
-
-
-class DeserializationError(Exception):
-    """Error raised when deserialization of a schema or collection fails."""

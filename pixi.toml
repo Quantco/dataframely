@@ -11,7 +11,6 @@ postinstall-release = "pip install --no-build-isolation --no-deps --disable-pip-
 [dependencies]
 python = ">=3.10"
 
-fsspec = ">=2025.9"
 numpy = "*"
 
 # NOTE: This is the oldest supported polars version.
@@ -42,8 +41,6 @@ docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" +
 readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
 
 [feature.test.dependencies]
-boto3 = "*"
-moto = "*"
 mypy = ">=1.13"
 pandas = "*"
 pandas-stubs = "*"
@@ -54,7 +51,6 @@ pytest-benchmark = "*"
 pytest-cov = "*"
 pytest-md = "*"
 pytest-mock = ">=3.14.1,<4"
-s3fs = ">=2025.9"
 scikit-learn = "*"
 
 [feature.test.tasks]
@@ -64,7 +60,6 @@ test-coverage = "pytest --cov=dataframely --cov-report=xml --cov-report=term-mis
 test-no-optional = "pytest -m 'not with_optionals'"
 
 [feature.optionals.dependencies]
-deltalake = "*"
 pydantic = ">=2.11.9,<3"
 pydantic-core = ">=2.33.2,<3"
 sqlalchemy = ">=2"

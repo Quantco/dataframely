@@ -11,10 +11,8 @@ from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Column
-from ._registry import register
 
 
-@register
 class Bool(Column):
     """A column of booleans."""
 

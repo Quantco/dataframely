@@ -19,7 +19,6 @@ from dataframely.random import Generator
 
 from ._base import Check, Column
 from ._mixins import OrdinalMixin
-from ._registry import register
 from ._utils import classproperty, first_non_null, map_optional
 
 
@@ -179,7 +178,6 @@ class _BaseFloat(OrdinalMixin[float], Column):
 # ------------------------------------------------------------------------------------ #
 
 
-@register
 class Float(_BaseFloat):
     """A column of floats (with any number of bytes)."""
 
@@ -202,7 +200,6 @@ class Float(_BaseFloat):
         return float(np.finfo(np.float64).min)
 
 
-@register
 class Float32(_BaseFloat):
     """A column of float32 ("float") values."""
 
@@ -222,7 +219,6 @@ class Float32(_BaseFloat):
         return float(np.finfo(np.float32).min)
 
 
-@register
 class Float64(_BaseFloat):
     """A column of float64 ("double") values."""
 
