@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+import polars as pl
 
 import dataframely as dy
 
@@ -23,7 +24,7 @@ class MyCollection(dy.Collection):
 def test_create_empty() -> None:
     collection = MyCollection.create_empty()
     assert collection.first.collect().height == 0
-    assert collection.first.collect_schema() == MyFirstSchema.to_polars_schema()
+    assert collection.first.collect_schema() == pl.Schema(MyFirstSchema)
     assert collection.second is not None
     assert collection.second.collect().height == 0
-    assert collection.second.collect_schema() == MySecondSchema.to_polars_schema()
+    assert collection.second.collect_schema() == pl.Schema(MySecondSchema)

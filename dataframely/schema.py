@@ -1386,15 +1386,6 @@ class Schema(BaseSchema, ABC):
     # ----------------------------- THIRD-PARTY PACKAGES ----------------------------- #
 
     @classmethod
-    def to_polars_schema(cls) -> pl.Schema:
-        """Obtain the polars schema for this schema.
-
-        Returns:
-            A :mod:`polars` schema that mirrors the schema defined by this class.
-        """
-        return pl.Schema({name: col.dtype for name, col in cls.columns().items()})
-
-    @classmethod
     def to_sqlalchemy_columns(cls, dialect: sa.Dialect) -> list[sa.Column]:
         """Obtain the SQLAlchemy column definitions for a particular dialect for this
         schema.
