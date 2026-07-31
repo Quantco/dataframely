@@ -213,6 +213,28 @@ def test_group_rule_on_nulls(
     assert not schema.is_valid(df, cast=True)
 
 
+@pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
+@pytest.mark.parametrize("eager", [True, False])
+def test_dynamic_column_selection_unaffected_by_other_rules(
+    df_type: type[pl.DataFrame] | type[pl.LazyFrame], eager: bool
+) -> None:
+    # Regression test for https://github.com/Quantco/dataframely/issues/332: a rule
+    # relying on dynamic column selection must not "see" the boolean columns produced
+    # by evaluating other rules, regardless of whether other (`over`) rules are present.
+    schema = create_schema(
+        "test",
+        {"x": dy.Bool()},
+        rules={
+            "no_boolean_column_is_true": Rule(~pl.any_horizontal(pl.col(pl.Boolean)))
+        },
+    )
+
+    df = df_type({"x": [False]})
+    result = _validate_and_collect(schema, df, eager=eager)
+    assert len(result) == 1
+    assert schema.is_valid(df)
+
+
 def test_validate_maintain_order() -> None:
     schema = create_schema(
         "test",
