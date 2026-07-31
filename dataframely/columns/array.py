@@ -6,12 +6,11 @@ from __future__ import annotations
 import math
 import sys
 import warnings
-from collections.abc import Sequence
 from typing import Any, cast
 
 import polars as pl
 
-from dataframely._compat import pa, sa, sa_TypeEngine
+from dataframely._compat import sa, sa_TypeEngine
 from dataframely.random import Generator
 
 from ._base import Check, Column
@@ -131,18 +130,6 @@ class Array(Column):
         for _ in range(len(self.shape) - 1):
             nullability = (True, [nullability])
         return (self.nullable, [nullability])
-
-    def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
-        if shape:
-            size, *rest = shape
-            inner_type = self._pyarrow_field_of_shape(rest)
-            return pa.field("item", pa.list_(inner_type, size), nullable=True)
-        else:
-            return self.inner.pyarrow_field("item")
-
-    @property
-    def pyarrow_dtype(self) -> pa.DataType:
-        return self._pyarrow_field_of_shape(self.shape).type
 
     @property
     def _python_type(self) -> Any:

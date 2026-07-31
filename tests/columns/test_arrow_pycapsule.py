@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+import pyarrow as pa
 import pytest
 
 import dataframely as dy
@@ -11,10 +12,6 @@ from dataframely.testing import (
     SUPERTYPE_COLUMN_TYPES,
     create_schema,
 )
-
-pa = pytest.importorskip("pyarrow")
-
-pytestmark = pytest.mark.with_optionals
 
 
 @pytest.mark.parametrize(
