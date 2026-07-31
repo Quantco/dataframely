@@ -39,9 +39,9 @@ class ComplexSchema(dy.Schema):
     def a_greater_b(cls) -> pl.Expr:
         return pl.col("a") > pl.col("b")
 
-    @dy.rule(group_by=["a"])
+    @dy.rule()
     def minimum_two_per_a(cls) -> pl.Expr:
-        return pl.len() >= 2
+        return (pl.len() >= 2).over("a")
 
 
 class LimitedComplexSchema(dy.Schema):
@@ -52,10 +52,10 @@ class LimitedComplexSchema(dy.Schema):
     def a_greater_b(cls) -> pl.Expr:
         return pl.col("a") > pl.col("b")
 
-    @dy.rule(group_by=["a"])
+    @dy.rule()
     def minimum_two_per_a(cls) -> pl.Expr:
         # We cannot generate more than 768 rows with this rule
-        return pl.len() <= 3
+        return (pl.len() <= 3).over("a")
 
 
 class OrderedSchema(dy.Schema):

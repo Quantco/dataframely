@@ -67,8 +67,7 @@ about the column contents.
           return cls.col1.col > cls.col2.col
   ```
 
-- Use group rules (i.e. methods decorated with `@dy.rule(group_by=...)`) for cross-row constraints beyond primary key
-  checks.
+- Use rules with an `over` expression for cross-row constraints beyond primary key checks.
 
 ### Referencing Columns
 
