@@ -144,6 +144,9 @@ class List(Column):
                     f"SQL column cannot have 'List' type for dialect '{dialect}'."
                 )
 
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        return (self.nullable, [self.inner._arrow_nullability()])
+
     @property
     def pyarrow_dtype(self) -> pa.DataType:
         # NOTE: Polars uses `large_list`s by default.

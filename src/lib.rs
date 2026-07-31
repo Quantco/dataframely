@@ -1,3 +1,4 @@
+mod arrow;
 pub mod polars_plugin;
 mod regex;
 use pyo3::prelude::*;
@@ -11,5 +12,6 @@ fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(regex::regex_matching_string_length, m)?)?;
     m.add_function(wrap_pyfunction!(regex::regex_sample, m)?)?;
     m.add_function(wrap_pyfunction!(polars_plugin::format_rule_failures, m)?)?;
+    m.add_function(wrap_pyfunction!(arrow::arrow_c_schema, m)?)?;
     Ok(())
 }

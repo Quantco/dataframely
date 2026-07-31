@@ -123,6 +123,15 @@ class Array(Column):
                     f"SQL column cannot have 'Array' type for dialect '{dialect}'."
                 )
 
+    def _arrow_nullability(self) -> tuple[bool, list[Any]]:
+        # Multi-dimensional arrays are nested fixed-size lists in Arrow, one level per
+        # dimension. Only the innermost field carries the inner column's nullability; the
+        # intermediate dimensions are always nullable (matching polars).
+        nullability = self.inner._arrow_nullability()
+        for _ in range(len(self.shape) - 1):
+            nullability = (True, [nullability])
+        return (self.nullable, [nullability])
+
     def _pyarrow_field_of_shape(self, shape: Sequence[int]) -> pa.Field:
         if shape:
             size, *rest = shape
