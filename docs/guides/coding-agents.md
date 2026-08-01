@@ -9,13 +9,13 @@ Coding agents like [Claude Code](https://code.claude.com/), [Codex](https://open
 When writing data processing logic, `dataframely` helps to fulfill these criteria.
 
 To help your coding agent write idiomatic `dataframely` code, we provide a `dataframely`
-[skill](https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/SKILL.md) following the
+[skill](https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/skills/SKILL.md) following the
 [`agentskills.io` spec](https://agentskills.io/specification). You can install it by placing it where your agent can
 find it. For example, if you are using Claude Code:
 
 ```bash
 mkdir -p .claude/skills/dataframely/
-curl -o .claude/skills/dataframely/SKILL.md https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/skills/SKILL.md
+curl -fLo .claude/skills/dataframely/SKILL.md https://raw.githubusercontent.com/Quantco/dataframely/refs/heads/main/skills/SKILL.md
 ```
 
 or if you are using [skills.sh](https://skills.sh/) to manage your skills:
