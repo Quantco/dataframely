@@ -21,7 +21,7 @@ pre-commit:
             run: pixi {run} ruff format --force-exclude
           - name: mypy
             glob: "*.py"
-            run: pixi {run} mypy {staged_files}
+            run: pixi {run} -e default-py310 mypy {staged_files}
           - name: prettier
             glob: "*.{md,yml,yaml}"
             run: pixi {run} prettier --write --no-error-on-unmatched-pattern --list-different --ignore-unknown {staged_files}
