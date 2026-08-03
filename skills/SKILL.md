@@ -186,15 +186,19 @@ from polars.testing import assert_frame_equal
 
 
 def test_grouped_sum():
-    df = pl.DataFrame({
-        "col1": [1, 2, 3],
-        "col2": ["a", "a", "b"],
-    }).pipe(MyInputSchema.validate, cast=True)
+    df = pl.DataFrame(
+        {
+            "col1": [1, 2, 3],
+            "col2": ["a", "a", "b"],
+        }
+    ).pipe(MyInputSchema.validate, cast=True)
 
-    expected = pl.DataFrame({
-        "col1": ["a", "b"],
-        "col2": [3, 3],
-    })
+    expected = pl.DataFrame(
+        {
+            "col1": ["a", "b"],
+            "col2": [3, 3],
+        }
+    )
 
     result = my_code(df)
 

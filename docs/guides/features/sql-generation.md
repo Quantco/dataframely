@@ -56,11 +56,7 @@ Uploading data can then be handled by {meth}`polars.DataFrame.write_database`:
 ```python
 df: dy.DataFrame[MySchema]
 
-df.write_database(
-    connection=engine,
-    table_name=my_table.name,
-    if_table_exists="append"
-)
+df.write_database(connection=engine, table_name=my_table.name, if_table_exists="append")
 ```
 
 ```{note}

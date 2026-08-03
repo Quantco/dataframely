@@ -45,6 +45,7 @@ pip install dataframely
 import dataframely as dy
 import polars as pl
 
+
 class HouseSchema(dy.Schema):
     zip_code = dy.String(nullable=False, min_length=3)
     num_bedrooms = dy.UInt8(nullable=False)
@@ -64,15 +65,16 @@ class HouseSchema(dy.Schema):
 ### Validating data against schema
 
 ```python
-
 import polars as pl
 
-df = pl.DataFrame({
-    "zip_code": ["01234", "01234", "1", "213", "123", "213"],
-    "num_bedrooms": [2, 2, 1, None, None, 2],
-    "num_bathrooms": [1, 2, 1, 1, 0, 8],
-    "price": [100_000, 110_000, 50_000, 80_000, 60_000, 160_000]
-})
+df = pl.DataFrame(
+    {
+        "zip_code": ["01234", "01234", "1", "213", "123", "213"],
+        "num_bedrooms": [2, 2, 1, None, None, 2],
+        "num_bathrooms": [1, 2, 1, 1, 0, 8],
+        "price": [100_000, 110_000, 50_000, 80_000, 60_000, 160_000],
+    }
+)
 
 # Validate the data and cast columns to expected types
 validated_df: dy.DataFrame[HouseSchema] = HouseSchema.validate(df, cast=True)
