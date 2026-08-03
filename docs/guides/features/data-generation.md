@@ -17,6 +17,7 @@ class InvoiceSchema(dy.Schema):
     discharge_date = dy.Date(nullable=False)
     amount = dy.Decimal(nullable=False)
 
+
 # Get data frame with correct type hint.
 df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.create_empty()
 ```
@@ -33,6 +34,7 @@ class InvoiceSchema(dy.Schema):
     admission_date = dy.Date(nullable=False)
     discharge_date = dy.Date(nullable=False)
     amount = dy.Decimal(nullable=False)
+
 
 df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(num_rows=100)
 ```
@@ -53,6 +55,7 @@ class InvoiceSchema(dy.Schema):
     @dy.rule()
     def discharge_after_admission(cls) -> pl.Expr:
         return InvoiceSchema.discharge_date.col >= InvoiceSchema.admission_date.col
+
 
 # `@dy.rule`s will be respected as well for data generation.
 df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(num_rows=100)
@@ -79,25 +82,30 @@ The column-wise specification specifies an iterable of values for each specified
 from datetime import date
 
 # Override values for specific columns.
-df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(overrides={
-    # Use either <schema>.<column>.name or just the column name as a string.
-    InvoiceSchema.invoice_id.name: ["1234567890", "2345678901", "3456789012"],
-    # Dataframely will automatically infer the number of rows based on the longest given
-    # sequence of values and broadcast all other columns to that shape.
-    "admission_date": date(2025, 1, 1),
-})
+df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(
+    overrides={
+        # Use either <schema>.<column>.name or just the column name as a string.
+        InvoiceSchema.invoice_id.name: ["1234567890", "2345678901", "3456789012"],
+        # Dataframely will automatically infer the number of rows based on the longest given
+        # sequence of values and broadcast all other columns to that shape.
+        "admission_date": date(2025, 1, 1),
+    }
+)
 ```
 
 The row-wise specification implements an iterable of mappings for the rows that should be sampled. It is particularly helpful if you want to make it easy to understand how values will be combined in specific rows (e.g., when each row represents one object).
 
 ```python
 from datetime import date
+
 # Override values for specific columns.
-df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(overrides=[
-    {"invoice_id": "1234567890", "admission_date": date(2025, 1, 1)},
-    {"invoice_id": "2345678901", "admission_date": date(2025, 1, 1)},
-    {"invoice_id": "3456789012", "admission_date": date(2025, 1, 1)},
-])
+df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(
+    overrides=[
+        {"invoice_id": "1234567890", "admission_date": date(2025, 1, 1)},
+        {"invoice_id": "2345678901", "admission_date": date(2025, 1, 1)},
+        {"invoice_id": "3456789012", "admission_date": date(2025, 1, 1)},
+    ]
+)
 ```
 
 ### Providing custom column overrides
@@ -107,6 +115,8 @@ Complex validation rules (such as dependencies between columns or ordering crite
 ```python
 import polars as pl
 import dataframely as dy
+
+
 class OrderedSchema(dy.Schema):
     """A schema that requires `iter` to be ordered with respect to `a` and `b`."""
 
@@ -116,13 +126,16 @@ class OrderedSchema(dy.Schema):
 
     @dy.rule()
     def iter_order_correct(cls) -> pl.Expr:
-        return pl.col("iter").rank(method="ordinal") == pl.struct(pl.col("a"), pl.col("b")).rank(method="ordinal")
+        return pl.col("iter").rank(method="ordinal") == pl.struct(
+            pl.col("a"), pl.col("b")
+        ).rank(method="ordinal")
 
     @classmethod
     def _sampling_overrides(cls) -> dict[str, pl.Expr]:
         return {
             "iter": pl.struct(pl.col("a"), pl.col("b")).rank(method="ordinal"),
         }
+
 
 result = OrderedSchema.sample(100)
 ```
@@ -137,9 +150,11 @@ class DiagnosisSchema(dy.Schema):
     invoice_id = dy.String(primary_key=True)
     code = dy.String(nullable=False, regex=r"[A-Z][0-9]{2,4}")
 
+
 class HospitalInvoiceData(dy.Collection):
     invoice: dy.LazyFrame[InvoiceSchema]
     diagnosis: dy.LazyFrame[DiagnosisSchema]
+
 
 invoice_data: HospitalInvoiceData = HospitalInvoiceData.sample(num_rows=10)
 ```
@@ -152,6 +167,7 @@ Say, for instance, `code` was part of the primary key for `DiagnosisSchema`, and
 class DiagnosisSchema(dy.Schema):
     invoice_id = dy.String(primary_key=True)
     code = dy.String(primary_key=True, regex=r"[A-Z][0-9]{2,4}")
+
 
 class HospitalInvoiceData(dy.Collection):
     invoice: dy.LazyFrame[InvoiceSchema]
@@ -190,7 +206,9 @@ class HospitalInvoiceData(dy.Collection):
 
     @classmethod
     @override
-    def _preprocess_sample(cls, sample: dict[str, Any], index: int, generator: Generator):
+    def _preprocess_sample(
+        cls, sample: dict[str, Any], index: int, generator: Generator
+    ):
         # Set common primary key.
         if "invoice_id" not in sample:
             sample["invoice_id"] = str(index)

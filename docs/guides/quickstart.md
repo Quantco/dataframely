@@ -3,14 +3,15 @@
 For the purpose of this guide, let's assume that we're working with data that we use to predict housing prices.
 To this end, we want to ensure that all the data we're using meets several expectations.
 As a running example, consider the following data set:
-| `zip_code` | `num_bedrooms` | `num_bathrooms` | `price`|
-|-------|--------------|--------------|----------|
-| "01234" | 2 | 1 | 100,000 |
-| "01234" | 2 | 2 | 110,000 |
-| "1" | 1 | 1 | 50,000 |
-| "213" | NULL | 1 | 80,000 |
-| "123" | NULL | 0 | 60,000 |
-| "213" | 2 | 8 | 160,000
+
+| `zip_code` | `num_bedrooms` | `num_bathrooms` | `price` |
+| ---------- | -------------- | --------------- | ------- |
+| "01234"    | 2              | 1               | 100,000 |
+| "01234"    | 2              | 2               | 110,000 |
+| "1"        | 1              | 1               | 50,000  |
+| "213"      | NULL           | 1               | 80,000  |
+| "123"      | NULL           | 0               | 60,000  |
+| "213"      | 2              | 8               | 160,000 |
 
 ## Creating a {class}`~dataframely.Schema` class
 
@@ -85,12 +86,14 @@ the data set above as follows:
 ```python
 import polars as pl
 
-df = pl.DataFrame({
-    "zip_code": ["01234", "01234", "1", "213", "123", "213"],
-    "num_bedrooms": [2, 2, 1, None, None, 2],
-    "num_bathrooms": [1, 2, 1, 1, 0, 8],
-    "price": [100_000, 110_000, 50_000, 80_000, 60_000, 160_000]
-})
+df = pl.DataFrame(
+    {
+        "zip_code": ["01234", "01234", "1", "213", "123", "213"],
+        "num_bedrooms": [2, 2, 1, None, None, 2],
+        "num_bathrooms": [1, 2, 1, 1, 0, 8],
+        "price": [100_000, 110_000, 50_000, 80_000, 60_000, 160_000],
+    }
+)
 
 # Validate the data and cast columns to expected types
 validated_df = HouseSchema.validate(df, cast=True)
@@ -113,8 +116,7 @@ The generic data frame types allow for more readable function signatures to expr
 expectations on the schema of the data frame, e.g.:
 
 ```python
-def train_model(df: dy.DataFrame[HouseSchema]) -> None:
-    ...
+def train_model(df: dy.DataFrame[HouseSchema]) -> None: ...
 ```
 
 The type checker (typically `mypy`) then ensures that it is actually a

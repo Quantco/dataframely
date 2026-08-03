@@ -36,15 +36,15 @@ right time.
 For example:
 
 ```python
-def preprocess(raw: dy.LazyFrame[MyRawSchema]) -> dy.DataFrame[MyPreprocessedSchema]:
-    ...
+def preprocess(
+    raw: dy.LazyFrame[MyRawSchema],
+) -> dy.DataFrame[MyPreprocessedSchema]: ...
 ```
 
 gives a coding agent much more information than the schema-less alternative:
 
 ```python
-def load_data(raw: pl.LazyFrame) -> pl.DataFrame:
-    ...
+def load_data(raw: pl.LazyFrame) -> pl.DataFrame: ...
 ```
 
 This convention also makes your code more readable and maintainable for human developers.
