@@ -87,7 +87,6 @@ jobs:
           command: build
           args: --out dist --release -i python3.10
           manylinux: auto
-          sccache: ${{ github.event_name != 'release' }}
           # NOTE: We also need to set up cargo-auditable inside the docker container
           # where the linux build is performed.
           docker-options: ${{ case(github.event_name == 'release', format('-e CARGO={0}', env.CARGO), '') }}
