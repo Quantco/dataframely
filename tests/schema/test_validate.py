@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from pathlib import Path
+from typing import Literal
 
 import polars as pl
 import polars.exceptions as plexc
@@ -55,6 +56,7 @@ def _validate_and_collect(
     df: pl.DataFrame | pl.LazyFrame,
     *,
     cast: bool = False,
+    engine: Literal["auto", "in-memory"] = "auto",
 ) -> pl.DataFrame:
     # Whether validation is performed eagerly is now determined by the input type: an
     # eager data frame raises within `validate`, a lazy frame raises upon collection.
@@ -64,7 +66,7 @@ def _validate_and_collect(
         return result
     else:
         assert isinstance(result, pl.LazyFrame)
-        return result.collect()
+        return result.collect(engine=engine)
 
 
 # -------------------------------------- SCHEMA -------------------------------------- #
@@ -146,7 +148,8 @@ def test_invalid_primary_key_with_examples(
             ValidationError if eager else plexc.ComputeError,
             match=r"'primary_key' failed for 2 rows; examples: \[\{'a': 1\}\]",
         ):
-            _validate_and_collect(MySchema, df)
+            # Streaming validation fails fast and may only count the first batch.
+            _validate_and_collect(MySchema, df, engine="in-memory")
 
 
 @pytest.mark.parametrize("df_type", [pl.DataFrame, pl.LazyFrame])
