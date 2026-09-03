@@ -148,7 +148,7 @@ def test_invalid_primary_key_with_examples(
             ValidationError if eager else plexc.ComputeError,
             match=r"'primary_key' failed for 2 rows; examples: \[\{'a': 1\}\]",
         ):
-            # Streaming validation fails fast and may only count the first batch.
+            # For lazy validation, Polars' streaming engine can fail fast and may only count the first batch.
             _validate_and_collect(MySchema, df, engine="in-memory")
 
 
