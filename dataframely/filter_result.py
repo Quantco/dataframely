@@ -173,7 +173,7 @@ class FailureInfo:
         self,
         file: str | Path | IO[bytes],
         *,
-        only_invalid_rules: bool = False,
+        only_failing_rules: bool = False,
         **kwargs: Any,
     ) -> None:
         """Write the failure info to a single parquet file.
@@ -182,14 +182,10 @@ class FailureInfo:
         which validation rules failed. Unlike :meth:`invalid`, this includes columns
         for each rule by default, where ``False`` indicates the rule failed for that row.
 
-        Setting ``only_invalid_rules`` produces a reduced, intentionally lossy
-        representation that omits rule columns containing only successful or unknown
-        outcomes.
-
         Args:
             file: The file path or writable file-like object to which to write the
                 parquet file.
-            only_invalid_rules: Whether to write only rule columns containing at least
+            only_failing_rules: Whether to write only rule columns containing at least
                 one validation failure.
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.write_parquet`. `metadata` may only be provided if it
@@ -198,7 +194,7 @@ class FailureInfo:
         metadata = kwargs.pop("metadata", {}) or {}
         df = self._df
         rule_columns = self._rule_columns
-        if only_invalid_rules:
+        if only_failing_rules:
             counts = _compute_counts(df, self._rule_columns)
             rule_columns = [column for column in self._rule_columns if column in counts]
             df = df.drop(

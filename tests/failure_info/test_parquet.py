@@ -115,7 +115,7 @@ def test_write_parquet_custom_metadata(tmp_path: Path, failure: FailureInfo) -> 
 
 
 @pytest.mark.parametrize("lazy", [True, False])
-def test_write_parquet_only_invalid_rules(
+def test_write_parquet_only_failing_rules(
     tmp_path: Path, reducible_failure: FailureInfo, lazy: bool
 ) -> None:
     # Arrange
@@ -128,7 +128,7 @@ def test_write_parquet_only_invalid_rules(
     # Act
     reducible_failure.write_parquet(
         path,
-        only_invalid_rules=True,
+        only_failing_rules=True,
         metadata={"custom": "test"},
     )
     read = FailureInfo.scan_parquet(path) if lazy else FailureInfo.read_parquet(path)
@@ -150,7 +150,7 @@ def test_write_parquet_only_invalid_rules(
 
 
 @pytest.mark.parametrize("lazy", [True, False])
-def test_write_parquet_only_invalid_rules_empty(
+def test_write_parquet_only_failing_rules_empty(
     tmp_path: Path, empty_failure: FailureInfo, lazy: bool
 ) -> None:
     # Arrange
@@ -158,7 +158,7 @@ def test_write_parquet_only_invalid_rules_empty(
     expected = pl.DataFrame(schema={"a": pl.Int64})
 
     # Act
-    empty_failure.write_parquet(path, only_invalid_rules=True)
+    empty_failure.write_parquet(path, only_failing_rules=True)
     read = FailureInfo.scan_parquet(path) if lazy else FailureInfo.read_parquet(path)
 
     # Assert
@@ -173,18 +173,18 @@ def test_write_parquet_only_invalid_rules_empty(
 
 
 @pytest.mark.parametrize("lazy", [True, False])
-def test_write_parquet_only_invalid_rules_repeated_empty(
+def test_write_parquet_only_failing_rules_repeated_empty(
     tmp_path: Path, empty_failure: FailureInfo, lazy: bool
 ) -> None:
     # Arrange
     first_path = tmp_path / "first.parquet"
     second_path = tmp_path / "second.parquet"
     expected = pl.DataFrame(schema={"a": pl.Int64})
-    empty_failure.write_parquet(first_path, only_invalid_rules=True)
+    empty_failure.write_parquet(first_path, only_failing_rules=True)
     reduced = FailureInfo.read_parquet(first_path)
 
     # Act
-    reduced.write_parquet(second_path, only_invalid_rules=True)
+    reduced.write_parquet(second_path, only_failing_rules=True)
     read = (
         FailureInfo.scan_parquet(second_path)
         if lazy

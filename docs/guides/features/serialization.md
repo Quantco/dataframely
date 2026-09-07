@@ -70,7 +70,7 @@ By default, all rule-output columns are persisted. To create a narrower parquet 
 for debugging, keep only rule columns that contain at least one validation failure:
 
 ```python
-failure.write_parquet("failures.parquet", only_invalid_rules=True)
+failure.write_parquet("failures.parquet", only_failing_rules=True)
 ```
 
 All data columns present in the failure information are still written. This reduced
