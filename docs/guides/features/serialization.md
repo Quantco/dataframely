@@ -65,3 +65,14 @@ failure.write_parquet("failures.parquet")
 # ...and read it back.
 failure = dy.FailureInfo.read_parquet("failures.parquet")
 ```
+
+By default, all rule-output columns are persisted. To create a narrower parquet file
+for debugging, keep only rule columns that contain at least one validation failure:
+
+```python
+failure.write_parquet("failures.parquet", only_failing_rules=True)
+```
+
+All data columns present in the failure information are still written. This reduced
+representation is intentionally lossy: rule columns containing only successful or
+unknown outcomes are omitted and unavailable after reading the file.

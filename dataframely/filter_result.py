@@ -128,6 +128,9 @@ class FailureInfo:
         filters in addition to member-level rules, or when calling :meth:`Schema.filter`
         with `cast=True` and dtype-casting fails for a value.
         """
+        if len(self._rule_columns) == 0:
+            return self.invalid()
+
         return self._df.select(
             pl.exclude(self._rule_columns),
             pl.col(*self._rule_columns).replace_strict(
@@ -166,24 +169,41 @@ class FailureInfo:
 
     # ---------------------------------- PERSISTENCE --------------------------------- #
 
-    def write_parquet(self, file: str | Path | IO[bytes], **kwargs: Any) -> None:
+    def write_parquet(
+        self,
+        file: str | Path | IO[bytes],
+        *,
+        only_failing_rules: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """Write the failure info to a single parquet file.
 
         Writes the invalid rows along with additional boolean rule columns indicating
         which validation rules failed. Unlike :meth:`invalid`, this includes columns
-        for each rule, where ``False`` indicates the rule failed for that row.
+        for each rule by default, where ``False`` indicates the rule failed for that row.
 
         Args:
             file: The file path or writable file-like object to which to write the
                 parquet file.
+            only_failing_rules: Whether to write only rule columns containing at least
+                one validation failure.
             kwargs: Additional keyword arguments passed directly to
                 :meth:`polars.write_parquet`. `metadata` may only be provided if it
                 is a dictionary.
         """
         metadata = kwargs.pop("metadata", {}) or {}
-        self._df.write_parquet(
+        df = self._df
+        rule_columns = self._rule_columns
+        if only_failing_rules:
+            counts = _compute_counts(df, self._rule_columns)
+            rule_columns = [column for column in self._rule_columns if column in counts]
+            df = df.drop(
+                column for column in self._rule_columns if column not in counts
+            )
+
+        df.write_parquet(
             file,
-            metadata={**metadata, "rule_columns": json.dumps(self._rule_columns)},
+            metadata={**metadata, "rule_columns": json.dumps(rule_columns)},
             **kwargs,
         )
 
