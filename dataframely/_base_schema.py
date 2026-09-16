@@ -190,8 +190,7 @@ class SchemaMeta(ABCMeta):
             # Dynamically set the name of the column if it is a `Column` instance.
             # Also, we "register" the name of the schema that set the name.
             if isinstance(val, Column):
-                val._schema = f"{cls.__module__}:{cls.__name__}"
-                val._name = val.alias or name
+                val._bind(f"{cls.__module__}:{cls.__name__}", val.alias or name)
             return val
 
     @staticmethod
@@ -294,8 +293,7 @@ class BaseSchema(metaclass=SchemaMeta):
         columns: dict[str, Column] = getattr(cls, _COLUMN_ATTR)
         for name in columns.keys():
             # Dynamically set the name and source schema of the columns.
-            columns[name]._schema = f"{cls.__module__}:{cls.__name__}"
-            columns[name]._name = name
+            columns[name]._bind(f"{cls.__module__}:{cls.__name__}", name)
         return columns
 
     @classmethod

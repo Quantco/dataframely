@@ -39,6 +39,9 @@ class Categorical(Column):
                 a data type is provided, name and namespace are synthesized from the
                 enclosing schema and column name, automatically creating a column-
                 scoped categories dictionary.
+                List and array elements append `.inner` to the containing column's
+                name; struct fields append their field names with dots (for example,
+                `items.inner.kind` for a field in a list of structs).
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
                 In a future release, `nullable=False` will be the default if `nullable`

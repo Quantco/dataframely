@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from copy import copy
 from itertools import chain
 from typing import Any, cast
 
@@ -84,6 +85,11 @@ class List(Column):
         self.inner = inner
         self.min_length = min_length
         self.max_length = max_length
+
+    def _bind(self, schema: str, name: str) -> None:
+        super()._bind(schema, name)
+        self.inner = copy(self.inner)
+        self.inner._bind(schema, f"{name}.inner")
 
     @property
     def dtype(self) -> pl.DataType:

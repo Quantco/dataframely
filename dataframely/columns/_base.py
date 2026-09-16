@@ -276,6 +276,11 @@ class Column(ABC):
 
     # ------------------------------------ HELPER ------------------------------------ #
 
+    def _bind(self, schema: str, name: str) -> None:
+        """Set the schema and column path used by schema-scoped data types."""
+        self._schema = schema
+        self._name = name
+
     @property
     def name(self) -> str:
         """Get the name of the column in a schema."""
