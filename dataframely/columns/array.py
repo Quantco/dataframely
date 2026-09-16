@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 import warnings
+from copy import copy
 from typing import Any, cast
 
 import polars as pl
@@ -74,6 +75,11 @@ class Array(Column):
         )
         self.inner = inner
         self.shape = shape if isinstance(shape, tuple) else (shape,)
+
+    def _bind(self, schema: str, name: str) -> None:
+        super()._bind(schema, name)
+        self.inner = copy(self.inner)
+        self.inner._bind(schema, f"{name}.inner")
 
     @property
     def dtype(self) -> pl.DataType:

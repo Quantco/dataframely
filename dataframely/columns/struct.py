@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from copy import copy
 from typing import Any, cast
 
 import polars as pl
@@ -75,6 +76,12 @@ class Struct(Column):
             description=description,
         )
         self.inner = inner
+
+    def _bind(self, schema: str, name: str) -> None:
+        super()._bind(schema, name)
+        self.inner = {field: copy(col) for field, col in self.inner.items()}
+        for field, col in self.inner.items():
+            col._bind(schema, f"{name}.{field}")
 
     @property
     def dtype(self) -> pl.DataType:

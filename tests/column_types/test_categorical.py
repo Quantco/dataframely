@@ -7,18 +7,40 @@ import polars as pl
 import pytest
 
 import dataframely as dy
+from dataframely._polars import PolarsDataType
 from dataframely.testing.factory import create_schema
 
 
-def test_synthesized_categories_name() -> None:
+@pytest.mark.parametrize(
+    ("column", "expected_name"),
+    [
+        (dy.Categorical(pl.UInt16), "a"),
+        (dy.List(dy.Categorical(pl.UInt16)), "a.inner"),
+        (dy.Array(dy.Categorical(pl.UInt16), 2), "a.inner"),
+        (dy.Struct({"x": dy.Categorical(pl.UInt16)}), "a.x"),
+        (
+            dy.List(dy.Array(dy.List(dy.Categorical(pl.UInt16)), 2)),
+            "a.inner.inner.inner",
+        ),
+        (
+            dy.List(dy.Struct({"x": dy.List(dy.Categorical(pl.UInt16))})),
+            "a.inner.x.inner",
+        ),
+    ],
+)
+def test_synthesized_categories_name(column: dy.Column, expected_name: str) -> None:
     class TestSchema(dy.Schema):
-        a = dy.Categorical(pl.UInt16)
+        a = column
 
-    assert cast(pl.Categorical, TestSchema.a.dtype).categories.name() == "a"
-    assert (
-        cast(pl.Categorical, TestSchema.a.dtype).categories.namespace()
-        == "column_types.test_categorical:TestSchema"
-    )
+    for bound_column in (TestSchema.a, TestSchema.columns()["a"]):
+        dtype: PolarsDataType = bound_column.dtype
+        while isinstance(dtype, pl.List | pl.Array | pl.Struct):
+            dtype = (
+                dtype.fields[0].dtype if isinstance(dtype, pl.Struct) else dtype.inner
+            )
+        categories = cast(pl.Categorical, dtype).categories
+        assert categories.name() == expected_name
+        assert categories.namespace() == f"{__name__}:TestSchema"
 
 
 @pytest.mark.parametrize(
