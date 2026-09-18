@@ -175,6 +175,31 @@ def test_sample_enum(generator: Generator) -> None:
     assert set(samples) == {"a", "b", "c"}
 
 
+@pytest.mark.parametrize("physical", [pl.UInt8, pl.UInt16, pl.UInt32])
+@pytest.mark.parametrize("explicit_categories", [False, True])
+@pytest.mark.parametrize("nullable", [False, True])
+@pytest.mark.parametrize("n", [0, 10_000])
+def test_sample_categorical(
+    physical: type[pl.DataType],
+    explicit_categories: bool,
+    nullable: bool,
+    n: int,
+    generator: Generator,
+) -> None:
+    categories = (
+        pl.Categories("sample", physical=physical) if explicit_categories else physical
+    )
+    schema = create_schema("test", {"a": dy.Categorical(categories, nullable=nullable)})
+    column = schema.columns()["a"]
+    samples = sample_and_validate(column, generator, n=n)
+    assert len(samples) == n
+    assert samples.dtype == column.dtype
+    assert samples.to_physical().dtype == physical
+    assert samples.drop_nulls().n_unique() <= (256 if physical == pl.UInt8 else 702)
+    if n:
+        assert samples.is_null().any() == nullable
+
+
 def test_sample_list(generator: Generator) -> None:
     column = dy.List(
         dy.String(regex="[abc]"), nullable=True, min_length=5, max_length=10

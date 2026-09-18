@@ -132,7 +132,10 @@ class Categorical(Column):
         return str
 
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
-        # We simply sample low-cardinality strings here
+        # Two-letter strings allow 702 categories, exceeding UInt8's capacity.
+        max_length = 1 if self._categories.physical() == pl.UInt8 else 2
         return generator.sample_string(
-            n, regex=r"[a-z]{1,2}", null_probability=self._null_probability
+            n,
+            regex=rf"[a-z]{{1,{max_length}}}",
+            null_probability=self._null_probability,
         ).cast(self.dtype)
