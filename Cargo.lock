@@ -156,10 +156,39 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "aws-lc-rs"
+version = "1.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b281d307588d634de920874890732659e2e7672f72b5e10e81badc1a8a83621e"
+dependencies = [
+ "aws-lc-sys",
+ "zeroize",
+]
+
+[[package]]
+name = "aws-lc-sys"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bff6c3b54fad79a2e60b8102caf565819711497c1f5f092f49508e2f5c31b27"
+dependencies = [
+ "cc",
+ "cmake",
+ "dunce",
+ "fs_extra",
+ "pkg-config",
+]
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
+name = "base64"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "bincode"
@@ -327,6 +356,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmake"
+version = "0.1.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0f78a02292a74a88ac736019ab962ece0bc380e3f977bf72e376c5d78ff0678"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "combine"
+version = "4.6.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfc320937d09e6de266b31b9afb480f197d7a861be86be7cb2ea7e5d1bfffc5e"
+dependencies = [
+ "bytes",
+ "memchr",
+]
+
+[[package]]
 name = "compact_str"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -361,6 +409,16 @@ name = "constant_time_eq"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+
+[[package]]
+name = "core-foundation"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91e195e091a93c46f7102ec7818a2aa394e1e1771c3ab4825963fa03e45afb8f"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
+]
 
 [[package]]
 name = "core-foundation"
@@ -458,7 +516,7 @@ dependencies = [
 name = "dataframely"
 version = "0.1.0"
 dependencies = [
- "itertools",
+ "itertools 0.14.0",
  "num-format",
  "polars",
  "polars-arrow",
@@ -510,6 +568,12 @@ dependencies = [
  "quote",
  "syn 2.0.117",
 ]
+
+[[package]]
+name = "dunce"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
 
 [[package]]
 name = "dyn-clone"
@@ -601,6 +665,7 @@ checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
+ "zlib-rs",
 ]
 
 [[package]]
@@ -648,6 +713,12 @@ dependencies = [
  "rustix",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "fs_extra"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
 
 [[package]]
 name = "futures"
@@ -975,7 +1046,6 @@ dependencies = [
  "hyper",
  "hyper-util",
  "rustls",
- "rustls-native-certs",
  "tokio",
  "tokio-rustls",
  "tower-service",
@@ -987,7 +1057,7 @@ version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bytes",
  "futures-channel",
  "futures-util",
@@ -999,9 +1069,11 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "socket2",
+ "system-configuration",
  "tokio",
  "tower-service",
  "tracing",
+ "windows-registry",
 ]
 
 [[package]]
@@ -1171,10 +1243,68 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+
+[[package]]
+name = "jni"
+version = "0.22.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5efd9a482cf3a427f00d6b35f14332adc7902ce91efb778580e180ff90fa3498"
+dependencies = [
+ "cfg-if",
+ "combine",
+ "jni-macros",
+ "jni-sys",
+ "log",
+ "simd_cesu8",
+ "thiserror",
+ "walkdir",
+ "windows-link",
+]
+
+[[package]]
+name = "jni-macros"
+version = "0.22.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a00109accc170f0bdb141fed3e393c565b6f5e072365c3bd58f5b062591560a3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "simd_cesu8",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "jni-sys"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6377a88cb3910bee9b0fa88d4f42e1d2da8e79915598f65fb0c7ee14c878af2"
+dependencies = [
+ "jni-sys-macros",
+]
+
+[[package]]
+name = "jni-sys-macros"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38c0b942f458fe50cdac086d2f946512305e5631e720728f2a61aabcd47a6264"
+dependencies = [
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "jobserver"
@@ -1315,6 +1445,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "murmur3"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9252111cf132ba0929b6f8e030cac2a24b507f3a4d6db6fb2896f27b354c714b"
+
+[[package]]
 name = "ndarray"
 version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1327,6 +1463,18 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "rawpointer",
+]
+
+[[package]]
+name = "nix"
+version = "0.31.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+dependencies = [
+ "bitflags",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
 ]
 
 [[package]]
@@ -1453,12 +1601,13 @@ dependencies = [
 
 [[package]]
 name = "object_store"
-version = "0.13.2"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "622acbc9100d3c10e2ee15804b0caa40e55c933d5aa53814cd520805b7958a49"
+checksum = "f1796bc93603f78c5760a69f2d58badc9618d22adade0a95385bb2adbae4eb94"
 dependencies = [
  "async-trait",
- "base64",
+ "aws-lc-rs",
+ "base64 0.23.1",
  "bytes",
  "chrono",
  "form_urlencoded",
@@ -1469,13 +1618,14 @@ dependencies = [
  "http-body-util",
  "humantime",
  "hyper",
- "itertools",
+ "itertools 0.15.0",
+ "nix",
  "parking_lot",
  "percent-encoding",
  "quick-xml",
  "rand 0.10.1",
  "reqwest",
- "ring",
+ "rustls-pki-types",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -1486,6 +1636,7 @@ dependencies = [
  "walkdir",
  "wasm-bindgen-futures",
  "web-time",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1577,8 +1728,8 @@ dependencies = [
 
 [[package]]
 name = "polars"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "getrandom 0.2.17",
  "getrandom 0.4.2",
@@ -1586,7 +1737,9 @@ dependencies = [
  "polars-buffer",
  "polars-compute",
  "polars-core",
+ "polars-defs",
  "polars-error",
+ "polars-expr",
  "polars-io",
  "polars-lazy",
  "polars-ops",
@@ -1599,8 +1752,8 @@ dependencies = [
 
 [[package]]
 name = "polars-arrow"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "atoi_simd",
  "bitflags",
@@ -1643,8 +1796,8 @@ dependencies = [
 
 [[package]]
 name = "polars-async"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "atomic-waker",
  "crossbeam-channel",
@@ -1662,8 +1815,8 @@ dependencies = [
 
 [[package]]
 name = "polars-buffer"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "bytemuck",
  "either",
@@ -1674,13 +1827,12 @@ dependencies = [
 
 [[package]]
 name = "polars-compute"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "atoi_simd",
  "bytemuck",
  "chrono",
- "either",
  "fast-float2",
  "half",
  "hashbrown 0.17.1",
@@ -1700,8 +1852,8 @@ dependencies = [
 
 [[package]]
 name = "polars-config"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "polars-error",
  "serde",
@@ -1709,9 +1861,10 @@ dependencies = [
 
 [[package]]
 name = "polars-core"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
+ "atoi_simd",
  "bitflags",
  "boxcar",
  "bytemuck",
@@ -1747,9 +1900,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "polars-defs"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
+dependencies = [
+ "chrono",
+ "chrono-tz",
+ "polars-arrow",
+ "polars-compute",
+ "polars-core",
+ "polars-error",
+ "polars-utils",
+ "serde",
+ "strum_macros",
+]
+
+[[package]]
+name = "polars-descriptions"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
+dependencies = [
+ "serde",
+ "strum_macros",
+]
+
+[[package]]
 name = "polars-dtype"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "boxcar",
  "hashbrown 0.17.1",
@@ -1762,8 +1940,8 @@ dependencies = [
 
 [[package]]
 name = "polars-error"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "object_store",
  "parking_lot",
@@ -1776,8 +1954,8 @@ dependencies = [
 
 [[package]]
 name = "polars-expr"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "bitflags",
  "hashbrown 0.17.1",
@@ -1786,6 +1964,7 @@ dependencies = [
  "polars-buffer",
  "polars-compute",
  "polars-core",
+ "polars-defs",
  "polars-io",
  "polars-ops",
  "polars-plan",
@@ -1801,8 +1980,8 @@ dependencies = [
 
 [[package]]
 name = "polars-ffi"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "polars-arrow",
  "polars-core",
@@ -1810,8 +1989,8 @@ dependencies = [
 
 [[package]]
 name = "polars-io"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "async-trait",
  "atoi_simd",
@@ -1821,12 +2000,14 @@ dependencies = [
  "crossbeam-queue",
  "fast-float2",
  "fastrand",
+ "flate2",
  "fs4",
  "futures",
  "glob",
  "hashbrown 0.17.1",
  "home",
  "itoa",
+ "libc",
  "memchr",
  "memmap2",
  "num-traits",
@@ -1842,7 +2023,6 @@ dependencies = [
  "polars-json",
  "polars-parquet",
  "polars-schema",
- "polars-time",
  "polars-utils",
  "rand 0.10.1",
  "rayon",
@@ -1851,14 +2031,17 @@ dependencies = [
  "serde",
  "serde_json",
  "simdutf8",
+ "strum",
+ "strum_macros",
  "tokio",
  "zmij",
+ "zstd",
 ]
 
 [[package]]
 name = "polars-json"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "chrono",
  "fallible-streaming-iterator",
@@ -1877,8 +2060,8 @@ dependencies = [
 
 [[package]]
 name = "polars-lazy"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "bitflags",
  "chrono",
@@ -1889,9 +2072,11 @@ dependencies = [
  "polars-compute",
  "polars-config",
  "polars-core",
+ "polars-defs",
  "polars-expr",
  "polars-io",
  "polars-mem-engine",
+ "polars-observer",
  "polars-ops",
  "polars-plan",
  "polars-stream",
@@ -1903,12 +2088,14 @@ dependencies = [
 
 [[package]]
 name = "polars-mem-engine"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "memmap2",
  "polars-arrow",
+ "polars-config",
  "polars-core",
+ "polars-defs",
  "polars-error",
  "polars-expr",
  "polars-io",
@@ -1921,9 +2108,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "polars-observer"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
+dependencies = [
+ "parking_lot",
+ "polars-descriptions",
+ "polars-error",
+]
+
+[[package]]
 name = "polars-ooc"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "async-trait",
  "boxcar",
@@ -1943,14 +2140,13 @@ dependencies = [
 
 [[package]]
 name = "polars-ops"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "argminmax",
- "base64",
+ "base64 0.22.1",
  "bytemuck",
  "chrono",
- "chrono-tz",
  "either",
  "hashbrown 0.17.1",
  "hex",
@@ -1962,13 +2158,13 @@ dependencies = [
  "polars-buffer",
  "polars-compute",
  "polars-core",
+ "polars-defs",
  "polars-error",
  "polars-schema",
  "polars-utils",
  "rayon",
  "regex",
  "regex-syntax",
- "serde",
  "strum_macros",
  "unicode-normalization",
  "unicode-reverse",
@@ -1977,11 +2173,11 @@ dependencies = [
 
 [[package]]
 name = "polars-parquet"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "async-stream",
- "base64",
+ "base64 0.22.1",
  "bytemuck",
  "ethnum",
  "futures",
@@ -2012,8 +2208,8 @@ dependencies = [
 
 [[package]]
 name = "polars-plan"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "bitflags",
  "blake3",
@@ -2028,6 +2224,7 @@ dependencies = [
  "hex",
  "indexmap",
  "memmap2",
+ "murmur3",
  "num-traits",
  "percent-encoding",
  "polars-arrow",
@@ -2035,17 +2232,18 @@ dependencies = [
  "polars-compute",
  "polars-config",
  "polars-core",
+ "polars-defs",
+ "polars-descriptions",
  "polars-error",
  "polars-ffi",
  "polars-io",
- "polars-ops",
- "polars-time",
  "polars-utils",
  "pyo3",
  "rayon",
  "recursive",
  "regex",
  "serde",
+ "serde_json",
  "sha2",
  "slotmap",
  "strum_macros",
@@ -2055,8 +2253,8 @@ dependencies = [
 
 [[package]]
 name = "polars-row"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -2070,8 +2268,8 @@ dependencies = [
 
 [[package]]
 name = "polars-schema"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "indexmap",
  "polars-error",
@@ -2082,17 +2280,19 @@ dependencies = [
 
 [[package]]
 name = "polars-sql"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "bitflags",
  "hex",
+ "polars-compute",
  "polars-core",
+ "polars-defs",
  "polars-error",
  "polars-lazy",
  "polars-ops",
  "polars-plan",
- "polars-time",
+ "polars-testing",
  "polars-utils",
  "regex",
  "serde",
@@ -2101,8 +2301,8 @@ dependencies = [
 
 [[package]]
 name = "polars-stream"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -2123,10 +2323,13 @@ dependencies = [
  "polars-compute",
  "polars-config",
  "polars-core",
+ "polars-defs",
+ "polars-descriptions",
  "polars-error",
  "polars-expr",
  "polars-io",
  "polars-mem-engine",
+ "polars-observer",
  "polars-ooc",
  "polars-ops",
  "polars-parquet",
@@ -2136,17 +2339,26 @@ dependencies = [
  "rayon",
  "recursive",
  "slotmap",
+ "strum_macros",
  "tokio",
  "uuid",
  "version_check",
 ]
 
 [[package]]
-name = "polars-time"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+name = "polars-testing"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
- "atoi_simd",
+ "polars-core",
+ "polars-ops",
+]
+
+[[package]]
+name = "polars-time"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
+dependencies = [
  "bytemuck",
  "chrono",
  "chrono-tz",
@@ -2155,19 +2367,19 @@ dependencies = [
  "polars-arrow",
  "polars-compute",
  "polars-core",
+ "polars-defs",
  "polars-error",
  "polars-ops",
  "polars-utils",
  "rayon",
  "regex",
- "serde",
  "strum_macros",
 ]
 
 [[package]]
 name = "polars-utils"
-version = "0.54.4"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.55.1"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "argminmax",
  "bincode",
@@ -2335,8 +2547,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-polars"
-version = "0.27.0"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.28.0"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "libc",
  "once_cell",
@@ -2356,8 +2568,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-polars-derive"
-version = "0.21.0"
-source = "git+https://github.com/borchero/polars?rev=80c5e6b4d828e7c1fb1eb357bc8647697938e885#80c5e6b4d828e7c1fb1eb357bc8647697938e885"
+version = "0.22.0"
+source = "git+https://github.com/borchero/polars?rev=639ac9605b5d725e656fbba574402930dd47df50#639ac9605b5d725e656fbba574402930dd47df50"
 dependencies = [
  "polars-arrow",
  "polars-core",
@@ -2370,9 +2582,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.39.4"
+version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdcc8dd4e2f670d309a5f0e83fe36dfdc05af317008fea29144da1a2ac858e5e"
+checksum = "e660451e55124f798a69a5af3f49ccfbefbd41910eefd25caf2393e1f3473ec1"
 dependencies = [
  "memchr",
  "serde",
@@ -2404,6 +2616,7 @@ version = "0.11.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f4bfc015262b9df63c8845072ce59068853ff5872180c2ce2f13038b970e560"
 dependencies = [
+ "aws-lc-rs",
  "bytes",
  "getrandom 0.4.2",
  "lru-slab",
@@ -2641,11 +2854,11 @@ checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
 name = "reqwest"
-version = "0.12.28"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
+checksum = "16a1cfa75cc186dd73d5818e510e042e40927bccc9c236b061cea97e1eb08029"
 dependencies = [
- "base64",
+ "base64 0.23.1",
  "bytes",
  "futures-core",
  "futures-util",
@@ -2662,8 +2875,8 @@ dependencies = [
  "pin-project-lite",
  "quinn",
  "rustls",
- "rustls-native-certs",
  "rustls-pki-types",
+ "rustls-platform-verifier",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -2777,8 +2990,8 @@ version = "0.23.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef86cd5876211988985292b91c96a8f2d298df24e75989a43a3c73f2d4d8168b"
 dependencies = [
+ "aws-lc-rs",
  "once_cell",
- "ring",
  "rustls-pki-types",
  "rustls-webpki",
  "subtle",
@@ -2808,11 +3021,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-platform-verifier"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26d1e2536ce4f35f4846aa13bff16bd0ff40157cdb14cc056c7b14ba41233ba0"
+dependencies = [
+ "core-foundation 0.10.1",
+ "core-foundation-sys",
+ "jni",
+ "log",
+ "once_cell",
+ "rustls",
+ "rustls-native-certs",
+ "rustls-platform-verifier-android",
+ "rustls-webpki",
+ "security-framework",
+ "security-framework-sys",
+ "webpki-root-certs",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "rustls-platform-verifier-android"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f87165f0995f63a9fbeea62b64d10b4d9d8e78ec6d7d51fb2125fda7bb36788f"
+
+[[package]]
 name = "rustls-webpki"
 version = "0.103.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e"
 dependencies = [
+ "aws-lc-rs",
  "ring",
  "rustls-pki-types",
  "untrusted",
@@ -2861,7 +3102,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d"
 dependencies = [
  "bitflags",
- "core-foundation",
+ "core-foundation 0.10.1",
  "core-foundation-sys",
  "libc",
  "security-framework-sys",
@@ -3022,6 +3263,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "simd_cesu8"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11031e251abf8611c80f460e19dbdeb54a66db918e49c65a7065b46ac7aec520"
+dependencies = [
+ "rustc_version",
+ "simdutf8",
+]
+
+[[package]]
 name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3134,6 +3385,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
 
 [[package]]
+name = "strum"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
+
+[[package]]
 name = "strum_macros"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3205,6 +3462,27 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-io-kit",
  "windows",
+]
+
+[[package]]
+name = "system-configuration"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a13f3d0daba03132c0aa9767f98351b3488edc2c100cda2d2ec2b04f3d8d3c8b"
+dependencies = [
+ "bitflags",
+ "core-foundation 0.9.4",
+ "system-configuration-sys",
+]
+
+[[package]]
+name = "system-configuration-sys"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e1d1b10ced5ca923a1fcb8d03e96b8d3268065d724548c0211415ff6ac6bac4"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
 ]
 
 [[package]]
@@ -3658,9 +3936,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-streams"
-version = "0.4.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
+checksum = "9d1ec4f6517c9e11ae630e200b2b65d193279042e28edd4a2cda233e46670bbb"
 dependencies = [
  "futures-util",
  "js-sys",
@@ -3699,6 +3977,15 @@ checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "webpki-root-certs"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b96554aa2acc8ccdb7e1c9a58a7a68dd5d13bccc69cd124cb09406db612a1c9b"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]
@@ -3813,6 +4100,17 @@ checksum = "6e2e40844ac143cdb44aead537bbf727de9b044e107a0f1220392177d15b0f26"
 dependencies = [
  "windows-core",
  "windows-link",
+]
+
+[[package]]
+name = "windows-registry"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02752bf7fbdcce7f2a27a742f798510f3e5ad88dbe84871e5168e2120c3d5720"
+dependencies = [
+ "windows-link",
+ "windows-result",
+ "windows-strings",
 ]
 
 [[package]]
@@ -4215,6 +4513,12 @@ dependencies = [
  "quote",
  "syn 2.0.117",
 ]
+
+[[package]]
+name = "zlib-rs"
+version = "0.6.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b268e58e7c693d7c271f93ffc4ba3b380412554231c85bf61ca7af91042a4112"
 
 [[package]]
 name = "zmij"
