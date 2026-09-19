@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -15,7 +16,16 @@ from dataframely.testing import (
 
 
 @pytest.mark.parametrize(
-    "column", [dy.Categorical(nullable=True), dy.Enum(["a", "b"], nullable=True)]
+    "column",
+    [
+        dy.Categorical(nullable=True),
+        dy.Categorical(
+            pl.Categories("category", namespace="test", physical=pl.UInt16),
+            nullable=True,
+        ),
+        dy.Categorical(pl.UInt8, nullable=True),
+        dy.Enum(["a", "b"], nullable=True),
+    ],
 )
 def test_field_metadata_preserved(column: dy.Column) -> None:
     # Arrange

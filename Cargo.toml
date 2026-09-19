@@ -24,12 +24,13 @@ regex-syntax = "0.8"
 serde = "*"
 thiserror = "2.0"
 
-# FIXME: Temporarily override polars with fork until https://github.com/pola-rs/polars/pull/28598 is released
+# Keep the Polars crates on the same revision as pyo3-polars for compatible Rust types.
 [patch.crates-io]
-polars = { git = "https://github.com/borchero/polars", rev = "80c5e6b4d828e7c1fb1eb357bc8647697938e885" }
-polars-arrow = { git = "https://github.com/borchero/polars", rev = "80c5e6b4d828e7c1fb1eb357bc8647697938e885" }
-polars-core = { git = "https://github.com/borchero/polars", rev = "80c5e6b4d828e7c1fb1eb357bc8647697938e885" }
-pyo3-polars = { git = "https://github.com/borchero/polars", rev = "80c5e6b4d828e7c1fb1eb357bc8647697938e885" }
+polars = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
+polars-arrow = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
+polars-core = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
+# FIXME: Switch back to a pyo3-polars release once https://github.com/pola-rs/polars/pull/29385 is released.
+pyo3-polars = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
 
 [dev-dependencies]
 rstest = "*"
