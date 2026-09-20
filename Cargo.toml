@@ -26,11 +26,11 @@ thiserror = "2.0"
 
 # Keep the Polars crates on the same revision as pyo3-polars for compatible Rust types.
 [patch.crates-io]
-polars = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
-polars-arrow = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
-polars-core = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
+polars = { git = "https://github.com/pola-rs/polars", rev = "01271f1039e0a0665942231879e6aa6bf817d3da" }
+polars-arrow = { git = "https://github.com/pola-rs/polars", rev = "01271f1039e0a0665942231879e6aa6bf817d3da" }
+polars-core = { git = "https://github.com/pola-rs/polars", rev = "01271f1039e0a0665942231879e6aa6bf817d3da" }
 # FIXME: Switch back to a pyo3-polars release once https://github.com/pola-rs/polars/pull/29385 is released.
-pyo3-polars = { git = "https://github.com/borchero/polars", rev = "639ac9605b5d725e656fbba574402930dd47df50" }
+pyo3-polars = { git = "https://github.com/pola-rs/polars", rev = "01271f1039e0a0665942231879e6aa6bf817d3da" }
 
 [dev-dependencies]
 rstest = "*"
