@@ -4,19 +4,13 @@
 from __future__ import annotations
 
 import itertools
-import sys
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, NamedTuple, TypeVar
 
 import polars as pl
 
 from dataframely.filter_result import FailureInfo
 
 from ._base import BaseCollection
-
-if sys.version_info >= (3, 11):
-    from typing import NamedTuple
-else:
-    from typing_extensions import NamedTuple
 
 C = TypeVar("C", bound=BaseCollection)
 

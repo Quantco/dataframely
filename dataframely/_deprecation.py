@@ -37,22 +37,19 @@ def issue_deprecation_warning(message: str, *, version: str = "") -> None:
 if sys.version_info >= (3, 13):
     from warnings import deprecated
 else:
-    try:
-        from typing_extensions import deprecated
-    except ImportError:  # pragma: no cover
 
-        def deprecated(  # type: ignore[no-redef]
-            message: str,
-        ) -> Callable[[Callable[P, T]], Callable[P, T]]:
-            """Fallback for :func:`warnings.deprecated` without :pep:`702` support."""
+    def deprecated(  # type: ignore[no-redef]
+        message: str,
+    ) -> Callable[[Callable[P, T]], Callable[P, T]]:
+        """Fallback for :func:`warnings.deprecated` without :pep:`702` support."""
 
-            def decorate(function: Callable[P, T]) -> Callable[P, T]:
-                @wraps(function)
-                def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-                    issue_deprecation_warning(message)
-                    return function(*args, **kwargs)
+        def decorate(function: Callable[P, T]) -> Callable[P, T]:
+            @wraps(function)
+            def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+                issue_deprecation_warning(message)
+                return function(*args, **kwargs)
 
-                wrapper.__deprecated__ = message  # type: ignore[attr-defined]
-                return wrapper
+            wrapper.__deprecated__ = message  # type: ignore[attr-defined]
+            return wrapper
 
-            return decorate
+        return decorate

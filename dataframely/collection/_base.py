@@ -9,7 +9,7 @@ import typing
 from abc import ABCMeta
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Annotated, Any, cast, get_args, get_origin
+from typing import Annotated, Any, Self, cast, get_args, get_origin
 
 import polars as pl
 
@@ -19,11 +19,6 @@ from dataframely._typing import DataFrame as TypedDataFrame
 from dataframely._typing import LazyFrame as TypedLazyFrame
 from dataframely.exc import AnnotationImplementationError, ImplementationError
 from dataframely.schema import Schema
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if sys.version_info >= (3, 14):
     from annotationlib import Format

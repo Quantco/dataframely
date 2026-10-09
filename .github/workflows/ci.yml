@@ -26,7 +26,7 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
-          environments: default default-py310
+          environments: default default-py311
       - name: Install Rust
         run: rustup show
       - name: Cache Rust dependencies
@@ -44,7 +44,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        environment: [py310, py311, py312, py313, py314]
+        environment: [py311, py311, py312, py313, py314]
         with_optionals: [false]
         include:
           # Test with optional dependencies across OSes

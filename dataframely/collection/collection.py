@@ -4,13 +4,12 @@
 from __future__ import annotations
 
 import os
-import sys
 import textwrap
 from abc import ABC
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
+from typing import Any, Concatenate, Literal, ParamSpec, Self, TypeVar, cast
 
 import polars as pl
 
@@ -24,11 +23,6 @@ from dataframely.random import Generator
 
 from ._base import BaseCollection
 from .filter_result import CollectionFilterResult
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 _FILTER_COLUMN_PREFIX = "__DATAFRAMELY_FILTER_COLUMN__"
 

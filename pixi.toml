@@ -9,7 +9,7 @@ postinstall = "maturin develop"
 postinstall-release = "pip install --no-build-isolation --no-deps --disable-pip-version-check -v -e ."
 
 [dependencies]
-python = ">=3.10"
+python = ">=3.11"
 
 numpy = "*"
 
@@ -92,10 +92,6 @@ zizmor = "*"
 lint = "lefthook run pre-commit --all-files"
 pre-commit-install = "lefthook install"
 
-[feature.py310.dependencies]
-python = "3.10.*"
-typing-extensions = "*"
-
 [feature.py311.dependencies]
 python = "3.11.*"
 
@@ -122,13 +118,12 @@ install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :a
 [environments]
 build = ["build"]
 default = ["dev", "lint", "optionals", "polars-latest", "py314", "test"]
-default-py310 = ["dev", "lint", "optionals", "polars-latest", "py310", "test"]
+default-py311 = ["dev", "lint", "optionals", "polars-latest", "py311", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]
 
 # Different python versions with the latest polars
-py310 = ["polars-latest", "py310", "test"]
 py311 = ["polars-latest", "py311", "test"]
 py312 = ["polars-latest", "py312", "test"]
 py313 = ["polars-latest", "py313", "test"]

@@ -3,14 +3,8 @@
 
 import contextlib
 import os
-import sys
 from types import TracebackType
-from typing import Any, TypedDict, cast, get_type_hints
-
-if sys.version_info >= (3, 11):
-    from typing import Unpack
-else:
-    from typing_extensions import Unpack
+from typing import Any, TypedDict, Unpack, cast, get_type_hints
 
 
 class Options(TypedDict, total=False):

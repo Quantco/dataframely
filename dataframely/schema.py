@@ -3,11 +3,10 @@
 
 from __future__ import annotations
 
-import sys
 import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, overload
+from typing import Any, Literal, Self, overload
 
 import polars as pl
 
@@ -27,11 +26,6 @@ from .exc import (
 )
 from .filter_result import FailureInfo, FilterResult, LazyFilterResult
 from .random import Generator
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 _COLUMN_VALID = "__DATAFRAMELY_VALID__"
 

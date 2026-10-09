@@ -15,7 +15,7 @@ polars = { version = ">=0.50", default-features = false, features = [
 ] }
 polars-arrow = ">=0.50"
 polars-core = ">=0.50"
-pyo3 = { version = ">=0.25", features = ["abi3-py310", "extension-module"] }
+pyo3 = { version = ">=0.25", features = ["abi3-py311", "extension-module"] }
 pyo3-polars = { version = ">=0.23.1", features = ["derive", "dtype-full"] }
 rand = { version = "0.9", features = ["std_rng"] }
 rayon = "*"
