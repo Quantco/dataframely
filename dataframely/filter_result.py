@@ -4,21 +4,15 @@
 from __future__ import annotations
 
 import json
-import sys
 from functools import cached_property
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Generic, TypeVar
+from typing import IO, TYPE_CHECKING, Any, Generic, NamedTuple, TypeVar
 
 import polars as pl
 
 from dataframely._base_schema import BaseSchema
 
 from ._typing import DataFrame, LazyFrame
-
-if sys.version_info >= (3, 11):
-    from typing import NamedTuple
-else:
-    from typing_extensions import NamedTuple
 
 if TYPE_CHECKING:  # pragma: no cover
     from .schema import Schema

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import enum
 from collections.abc import Iterable
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 import polars as pl
@@ -66,7 +66,7 @@ def test_different_sequences(type1: type, type2: type) -> None:
 
 
 def test_enum_of_enum_136() -> None:
-    class Categories(str, Enum):
+    class Categories(StrEnum):
         a = "a"
         b = "b"
 
@@ -122,7 +122,7 @@ def test_matches_sqlalchemy_use_enum() -> None:
 
 
 def test_matches_sqlalchemy_use_enum_fails_on_internal_name_mismatch() -> None:
-    class MyEnum(str, Enum):
+    class MyEnum(StrEnum):
         x = "x"
 
     assert not dy.Enum(MyEnum, sqlalchemy_use_enum=True).matches(

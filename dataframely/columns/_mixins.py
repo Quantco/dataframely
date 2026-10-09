@@ -1,9 +1,8 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
-import sys
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, Self, TypeVar
 
 import polars as pl
 
@@ -14,10 +13,6 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     Base = object
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 # ----------------------------------- ORDINAL MIXIN ---------------------------------- #
 

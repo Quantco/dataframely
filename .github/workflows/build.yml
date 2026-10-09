@@ -85,7 +85,7 @@ jobs:
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0 # zizmor: ignore[cache-poisoning]
         with:
           command: build
-          args: --out dist --release -i python3.10
+          args: --out dist --release -i python3.11
           manylinux: auto
           # NOTE: We also need to set up cargo-auditable inside the docker container
           # where the linux build is performed.
