@@ -9,7 +9,7 @@ pre-commit:
     - assets/**/*
   jobs:
     - name: pixi-install
-      run: pixi install
+      run: pixi install -e default -e default-py311
     - group:
         parallel: true
         jobs:
