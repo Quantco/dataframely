@@ -44,7 +44,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        environment: [py311, py311, py312, py313, py314]
+        environment: [py311, py312, py313, py314]
         with_optionals: [false]
         include:
           # Test with optional dependencies across OSes
