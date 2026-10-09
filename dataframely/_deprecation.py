@@ -38,7 +38,7 @@ if sys.version_info >= (3, 13):
     from warnings import deprecated
 else:
 
-    def deprecated(  # type: ignore[no-redef]
+    def deprecated(
         message: str,
     ) -> Callable[[Callable[P, T]], Callable[P, T]]:
         """Fallback for :func:`warnings.deprecated` without :pep:`702` support."""

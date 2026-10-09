@@ -201,7 +201,7 @@ class Generator:
             norm_weights = norm_weights / norm_weights.sum()
 
         samples = self.numpy_generator.choice(
-            choices,  # type: ignore
+            choices,
             size=n,
             replace=True,
             p=norm_weights,
