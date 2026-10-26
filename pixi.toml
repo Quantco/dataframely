@@ -69,6 +69,7 @@ python-build = "*"
 setuptools-scm = "*"
 twine = ">=6"
 wheel = "*"
+
 [feature.build.target.unix.dependencies]
 sed = "*"
 
@@ -84,7 +85,7 @@ lefthook = "*"
 pre-commit-hooks = "*"
 prettier = "*"
 ruff = "*"
-taplo = "*"
+tombi = "*"
 typos = "*"
 zizmor = "*"
 
@@ -142,3 +143,6 @@ default-polars-minimal = [
   "test",
 ]
 polars-minimal = ["polars-minimal", "py314", "test"]
+
+[feature.py315.dependencies]
+python = "3.15.*"

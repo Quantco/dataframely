@@ -14,6 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
 ]
 dependencies = ["numpy", "polars>=1.35"]
 description = "A declarative, polars-native data frame validation library"
@@ -47,9 +48,20 @@ line-length = 88
 
 [tool.ruff.lint]
 ignore = [
+<<<<<<< before updating
   "E501", # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
   "N803", # https://docs.astral.sh/ruff/rules/invalid-argument-name
   "N806", # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
+||||||| last update
+  "N803", # https://docs.astral.sh/ruff/rules/invalid-argument-name
+  "N806", # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
+  "E501", # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
+=======
+  "N803",  # https://docs.astral.sh/ruff/rules/invalid-argument-name
+  "N806",  # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
+  "E501",  # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
+  "D1",  # https://docs.astral.sh/ruff/rules/#pydocstyle-d
+>>>>>>> after updating
 ]
 select = [
   # pyflakes
@@ -63,6 +75,8 @@ select = [
   "N",
   # pyupgrade
   "UP",
+  # pydocstyle
+  "D",
 ]
 
 [tool.ruff.lint.pep8-naming]
@@ -82,7 +96,7 @@ exclude = ["docs/"]
 explicit_package_bases = true
 no_implicit_optional = true
 plugins = ["pydantic.mypy"]
-python_version = '3.11'
+python_version = "3.11"
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
@@ -107,3 +121,9 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 omit = ["dataframely/testing/generate.py"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.tombi]
+schema.enabled = false
