@@ -18,13 +18,13 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch
+      - name: Check out branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # needed for 'pre-commit-mirrors-insert-license'
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           environments: default default-py311
       - name: Install Rust
@@ -44,7 +44,12 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        environment: [py311, py312, py313, py314]
+        environment:
+          - py311
+          - py312
+          - py313
+          - py314
+          - py315
         with_optionals: [false]
         include:
           # Test with optional dependencies across OSes
@@ -65,7 +70,7 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           environments: ${{ matrix.environment }}
           # FIXME: Remove when `s3_server` fixture does not start a process anymore

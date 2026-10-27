@@ -49,8 +49,7 @@ class Config(contextlib.ContextDecorator):
 
     @staticmethod
     def set_max_sampling_iterations(iterations: int) -> None:
-        """Set the maximum number of sampling iterations to use on
-        :meth:`Schema.sample`."""
+        """Set the maximum number of sampling iterations to use on :meth:`Schema.sample`."""
         Config.options["max_sampling_iterations"] = iterations
 
     @staticmethod

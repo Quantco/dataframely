@@ -30,7 +30,8 @@ class Struct(Column):
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             inner: The dictionary of struct fields. Struct fields may have
                 `primary_key=True` set but this setting only takes effect if the

@@ -45,7 +45,8 @@ class Column(ABC):
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             nullable: Whether this column may contain null values.
                 Explicitly set `nullable=True` if you want your column to be nullable.
@@ -122,8 +123,7 @@ class Column(ABC):
     # ---------------------------------- VALIDATION ---------------------------------- #
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
-        """A set of rules evaluating whether a data frame column satisfies the column's
-        constraints.
+        """A set of rules evaluating whether a data frame column satisfies the column's constraints.
 
         Args:
             expr: An expression referencing the column of the data frame, i.e. an
@@ -393,8 +393,7 @@ class Column(ABC):
 
     @abstractmethod
     def _sample_unchecked(self, generator: Generator, n: int) -> pl.Series:
-        """Private method sampling random elements without checking for custom
-        checks."""
+        """Private method sampling random elements without checking for custom checks."""
 
     @property
     def _null_probability(self) -> float:

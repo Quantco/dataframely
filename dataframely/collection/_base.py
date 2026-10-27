@@ -313,8 +313,7 @@ class CollectionMeta(ABCMeta):
 
 
 class BaseCollection(metaclass=CollectionMeta):
-    """Internal utility abstraction to reference collections without introducing
-    cyclical dependencies."""
+    """Internal utility abstraction to reference collections without introducing cyclical dependencies."""
 
     @classmethod
     def members(cls) -> dict[str, MemberInfo]:
@@ -347,8 +346,7 @@ class BaseCollection(metaclass=CollectionMeta):
 
     @classmethod
     def non_ignored_members(cls) -> set[str]:
-        """The names of all members of the collection that are not ignored in filters
-        (default)."""
+        """The names of all members of the collection that are not ignored in filters (default)."""
         return {
             name
             for name, member in cls.members().items()
@@ -367,8 +365,7 @@ class BaseCollection(metaclass=CollectionMeta):
 
     @classmethod
     def _failure_propagating_members(cls) -> set[str]:
-        """The names of all members of the collection that propagate individual row
-        failures to the collection."""
+        """The names of all members of the collection that propagate individual row failures to the collection."""
         return {
             name
             for name, member in cls.members().items()

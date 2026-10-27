@@ -25,9 +25,7 @@ def format_rule_failures(
     primary_key_columns: list[str],
     max_examples: int,
 ) -> str:
-    """
-    Format rule failures with the same logic that produces validation errors from the
-    polars plugin.
+    """Format rule failures with the same logic that produces validation errors from the polars plugin.
 
     Args:
         failures: The name of the failures and their counts. This should only include
@@ -46,8 +44,7 @@ def format_rule_failures(
     """
 
 def regex_matching_string_length(regex: str) -> tuple[int, int | None]:
-    """
-    Compute the minimum and maximum length (if available) of strings matching a regular expression.
+    """Compute the minimum and maximum length (if available) of strings matching a regular expression.
 
     Args:
         regex: The regular expression to analyze. The regular expression must not
@@ -66,8 +63,7 @@ def regex_matching_string_length(regex: str) -> tuple[int, int | None]:
 def regex_sample(
     regex: str, n: int, max_repetitions: int = 16, seed: int | None = None
 ) -> list[str]:
-    """
-    Sample a random (set of) string(s) matching the provided regular expression.
+    """Sample a random (set of) string(s) matching the provided regular expression.
 
     Args:
         regex: The regular expression generated strings must match. The regular

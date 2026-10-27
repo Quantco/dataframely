@@ -16,8 +16,7 @@ def match_to_schema(
     *,
     casting: Literal["none", "lenient", "strict"],
 ) -> pl.LazyFrame:
-    """Ensure that a lazy frame contains the columns of the schema with the dtypes
-    specified by the schema."""
+    """Ensure that a lazy frame contains the columns of the schema with the dtypes specified by the schema."""
 
     def cast_none(lf: pl.LazyFrame, schema: pl.Schema) -> pl.LazyFrame:
         _validate_columns_exist(schema, target)

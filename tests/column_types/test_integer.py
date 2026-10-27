@@ -100,8 +100,7 @@ def test_validate_max(column_type: type[_BaseInteger], inclusive: bool) -> None:
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
 @pytest.mark.parametrize("inclusive", [True, False])
 def test_validate_min_zero(column_type: type[_BaseInteger], inclusive: bool) -> None:
-    """Specific edge case where the minimum is `0`, which can lead to python bugs if we
-    use `if value` instead of `if value is not None` somewhere."""
+    """Specific edge case where the minimum is `0`, which can lead to python bugs if we use `if value` instead of `if value is not None` somewhere."""
     key = "min" if inclusive else "min_exclusive"
     kwargs = {key: 0, "nullable": True}
     column = column_type(**kwargs)  # type: ignore
@@ -114,8 +113,7 @@ def test_validate_min_zero(column_type: type[_BaseInteger], inclusive: bool) -> 
 @pytest.mark.parametrize("column_type", INTEGER_COLUMN_TYPES)
 @pytest.mark.parametrize("inclusive", [True, False])
 def test_validate_max_zero(column_type: type[_BaseInteger], inclusive: bool) -> None:
-    """Specific edge case where the maximum is `0`, which can lead to python bugs if we
-    use `if value` instead of `if value is not None` somewhere."""
+    """Specific edge case where the maximum is `0`, which can lead to python bugs if we use `if value` instead of `if value is not None` somewhere."""
     key = "max" if inclusive else "max_exclusive"
     kwargs = {key: 0, "nullable": True}
     column = column_type(**kwargs)  # type: ignore

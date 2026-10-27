@@ -36,7 +36,8 @@ class List(Column):
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             inner: The inner column type. If this type has `primary_key=True` set, all
                 list items are required to be unique. If the inner type is a struct and
@@ -70,6 +71,8 @@ class List(Column):
                 name that is not a valid Python identifier. Especially note that setting
                 this option does _not_ allow to refer to the column with two different
                 names, the specified alias is the only valid name.
+            min_length: The minimum number of elements required in each list.
+            max_length: The maximum number of elements allowed in each list.
             metadata: A dictionary of metadata to attach to the column.
             description: A human-readable description of the column.
         """

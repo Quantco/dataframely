@@ -750,9 +750,7 @@ class Collection(BaseCollection, ABC):
         how: Literal["semi", "anti"] = "semi",
         maintain_order: Literal["none", "left"] = "none",
     ) -> Self:
-        """Filter the collection by joining onto a data frame containing entries for the
-        common primary key columns whose respective rows should be kept or removed in
-        the collection members.
+        """Filter the collection by joining onto a data frame containing entries for the common primary key columns whose respective rows should be kept or removed in the collection members.
 
         Args:
             primary_keys: The data frame to join on. Must contain the common primary key

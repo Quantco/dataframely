@@ -34,7 +34,8 @@ class Enum(Column):
         sqlalchemy_use_enum: bool = False,
         sqlalchemy_enum_name: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             categories: The set of valid categories for the enum, or an existing Python
                 string-valued enum.

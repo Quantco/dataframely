@@ -69,6 +69,7 @@ python-build = "*"
 setuptools-scm = "*"
 twine = ">=6"
 wheel = "*"
+
 [feature.build.target.unix.dependencies]
 sed = "*"
 
@@ -84,7 +85,7 @@ lefthook = "*"
 pre-commit-hooks = "*"
 prettier = "*"
 ruff = "*"
-taplo = "*"
+tombi = "*"
 typos = "*"
 zizmor = "*"
 
@@ -115,6 +116,11 @@ polars = "1.43.*"
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
+[feature.py315.dependencies]
+python = "3.15.*"
+# Polars 2 fixes expression dispatch on Python 3.15.
+polars = ">=2,<3"
+
 [environments]
 build = ["build"]
 default = ["dev", "lint", "optionals", "polars-latest", "py314", "test"]
@@ -123,11 +129,12 @@ docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
 nightly = ["nightly", "optionals", "test"]
 
-# Different python versions with the latest polars
+# Different Python versions with compatible Polars releases
 py311 = ["polars-latest", "py311", "test"]
 py312 = ["polars-latest", "py312", "test"]
 py313 = ["polars-latest", "py313", "test"]
 py314 = ["polars-latest", "py314", "test"]
+py315 = ["py315", "test"]
 
 # Test with optional dependencies
 py314-optionals = ["optionals", "polars-latest", "py314", "test"]

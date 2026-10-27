@@ -45,6 +45,7 @@ Starting from this definition, you can then refine the schema by adding addition
 
 Our CI automatically tests `dataframely` for a minimal supported version of `polars`, which is currently `1.35.*`,
 and the latest stable version.
+Python 3.15 and later require `polars>=2` for Python 3.15 compatibility.
 We aim to extend support for new `polars` versions as they are released.
 
 If your `polars` version is not in the range of supported versions, `dataframely` may still work, but you may

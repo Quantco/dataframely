@@ -20,8 +20,7 @@ def test_collection_matches_itself() -> None:
 
 
 def test_collection_matches_different_members() -> None:
-    """Collections should count as different if they have members with different
-    names."""
+    """Collections should count as different if they have members with different names."""
 
     class MySchema(dy.Schema):
         foo = dy.Integer()
@@ -62,8 +61,7 @@ def test_collection_matches_different_schemas() -> None:
 
 
 def test_collection_matches_different_filter_names() -> None:
-    """Collections should count as different if they have the same members but different
-    names."""
+    """Collections should count as different if they have the same members but different names."""
 
     class MyIntSchema(dy.Schema):
         foo = dy.Integer(primary_key=True)
@@ -81,8 +79,7 @@ def test_collection_matches_different_filter_names() -> None:
 
 
 def test_collection_matches_different_filter_logc() -> None:
-    """Collections should count as different if they have the same members but different
-    filter logic."""
+    """Collections should count as different if they have the same members but different filter logic."""
 
     class MyIntSchema(dy.Schema):
         foo = dy.Integer(primary_key=True)
@@ -104,8 +101,7 @@ def test_collection_matches_different_filter_logc() -> None:
 
 
 def test_collection_matches_different_optional() -> None:
-    """Collections should count as different if their members differ in whether they are
-    optional or not."""
+    """Collections should count as different if their members differ in whether they are optional or not."""
 
     class FooSchema(dy.Schema):
         x = dy.Integer()
