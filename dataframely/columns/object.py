@@ -25,7 +25,8 @@ class Object(Column):
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             nullable: Whether this column may contain null values.
             check: A custom rule or multiple rules to run for this column. This can be:

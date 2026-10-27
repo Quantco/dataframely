@@ -31,6 +31,8 @@ sqlalchemy = ["sqlalchemy"]
 Documentation = "https://dataframely.readthedocs.io/"
 Repository = "https://github.com/quantco/dataframely"
 
+[project.scripts]
+
 [tool.maturin]
 module-name = "dataframely._native"
 
@@ -38,30 +40,18 @@ module-name = "dataframely._native"
 include = ["dataframely"]
 namespaces = false
 
-[project.scripts]
-
 [tool.docformatter]
-black = true # only sets the style options to the default values of black
+black = true  # only sets the style options to the default values of black
 
 [tool.ruff]
 line-length = 88
 
 [tool.ruff.lint]
 ignore = [
-<<<<<<< before updating
-  "E501", # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
-  "N803", # https://docs.astral.sh/ruff/rules/invalid-argument-name
-  "N806", # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
-||||||| last update
-  "N803", # https://docs.astral.sh/ruff/rules/invalid-argument-name
-  "N806", # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
-  "E501", # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
-=======
   "N803",  # https://docs.astral.sh/ruff/rules/invalid-argument-name
   "N806",  # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
   "E501",  # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
   "D1",  # https://docs.astral.sh/ruff/rules/#pydocstyle-d
->>>>>>> after updating
 ]
 select = [
   # pyflakes
@@ -84,6 +74,9 @@ classmethod-decorators = ["dataframely.rule"]
 
 [tool.ruff.lint.per-file-ignores]
 "docs/guides/examples/real-world.ipynb" = ["F811"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.format]
 indent-style = "space"
@@ -121,9 +114,6 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 omit = ["dataframely/testing/generate.py"]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
 
 [tool.tombi]
 schema.enabled = false

@@ -37,7 +37,8 @@ class Decimal(OrdinalMixin[decimal.Decimal], Column):
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             precision: Maximum number of digits in each number.
             scale: Number of digits to the right of the decimal point in each number.

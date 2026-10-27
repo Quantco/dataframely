@@ -29,7 +29,8 @@ class Categorical(Column):
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             categories: An optional specification for how the categories for this
                 categorical are stored. If `None` is provided (default), the global

@@ -116,6 +116,9 @@ polars = "1.43.*"
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
+[feature.py315.dependencies]
+python = "3.15.*"
+
 [environments]
 build = ["build"]
 default = ["dev", "lint", "optionals", "polars-latest", "py314", "test"]
@@ -129,6 +132,7 @@ py311 = ["polars-latest", "py311", "test"]
 py312 = ["polars-latest", "py312", "test"]
 py313 = ["polars-latest", "py313", "test"]
 py314 = ["polars-latest", "py314", "test"]
+py315 = ["polars-latest", "py315", "test"]
 
 # Test with optional dependencies
 py314-optionals = ["optionals", "polars-latest", "py314", "test"]
@@ -143,6 +147,3 @@ default-polars-minimal = [
   "test",
 ]
 polars-minimal = ["polars-minimal", "py314", "test"]
-
-[feature.py315.dependencies]
-python = "3.15.*"

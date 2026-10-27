@@ -34,7 +34,8 @@ class Generator:
     """
 
     def __init__(self, seed: int | None = None) -> None:
-        """
+        """Initialize the random number generator.
+
         Args:
             seed: The seed to use for initializing the random number generator used
                 for all sampling methods.

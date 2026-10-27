@@ -273,8 +273,7 @@ class SchemaMeta(ABCMeta):
 
 
 class BaseSchema(metaclass=SchemaMeta):
-    """Internal utility abstraction to reference schemas without introducing cyclical
-    dependencies."""
+    """Internal utility abstraction to reference schemas without introducing cyclical dependencies."""
 
     @classmethod
     def column_names(cls) -> list[str]:

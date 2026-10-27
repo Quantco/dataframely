@@ -33,7 +33,8 @@ class Array(Column):
         metadata: dict[str, Any] | None = None,
         description: str | None = None,
     ):
-        """
+        """Initialize the column and its validation constraints.
+
         Args:
             inner: The inner column type.
             shape: The shape of the array.

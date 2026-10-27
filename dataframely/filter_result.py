@@ -71,8 +71,7 @@ class LazyFilterResult(NamedTuple, Generic[S]):
 
 
 class FailureInfo:
-    """A container carrying information about rows failing validation in
-    :meth:`Schema.filter`."""
+    """A container carrying information about rows failing validation in :meth:`Schema.filter`."""
 
     #: The subset of the input data frame containing the *invalid* rows along with
     #: all boolean columns used for validation. Each of these boolean columns describes
@@ -108,8 +107,7 @@ class FailureInfo:
         return self._df.drop(self._rule_columns)
 
     def details(self) -> pl.DataFrame:
-        """Same as :meth:`invalid` but with additional columns indicating the results of
-        each individual rule.
+        """Same as :meth:`invalid` but with additional columns indicating the results of each individual rule.
 
         For each row, this includes:
             1. All columns of the original data frame.
