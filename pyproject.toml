@@ -16,7 +16,11 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3.15",
 ]
-dependencies = ["numpy", "polars>=1.35"]
+dependencies = [
+  "numpy",
+  "polars>=1.35; python_version < '3.15'",
+  "polars>=2; python_version >= '3.15'",
+]
 description = "A declarative, polars-native data frame validation library"
 name = "dataframely"
 readme = "README.md"
