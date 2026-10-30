@@ -25,10 +25,8 @@ class MyHouseSchema(dy.Schema):
 
     street = dy.String(primary_key=True)
     number = dy.UInt16(primary_key=True)
-    #: Description on the number of rooms.
-    rooms = dy.UInt8()
-    #: Description on the area of the house.
-    area = dy.UInt16()
+    rooms = dy.UInt8(description="Number of rooms")
+    area = dy.UInt16(description="Area of the house")
 ```
 
 The schema can be used in type hints via `dy.DataFrame[MyHouseSchema]` and `dy.LazyFrame[MyHouseSchema]` to express
@@ -41,8 +39,9 @@ runtime.
 
 ### Defining Constraints
 
-Persist all implicit assumptions on the data as constraints in the schema. Use docstrings purely to answer the "what"
-about the column contents.
+Persist all implicit assumptions on the data as constraints in the schema. Prefer using the `description` argument to
+answer the "what" about the column contents, while comments can be used to specify details that are not strictly
+schema-related or relevant only to a specific data interface.
 
 - Use the most specific type possible for each column (e.g. `dy.Enum` instead of `dy.String` when applicable).
 - Use pre-defined arguments (e.g. `nullable`, `min`, `regex`) for column-level constraints if possible.
