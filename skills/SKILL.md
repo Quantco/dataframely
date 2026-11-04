@@ -154,6 +154,11 @@ Both `.validate` and `.filter` enforce the schema at runtime. Pass `cast=True` f
   - `failure.details()` provides the data frame of invalid rows with additional columns providing information on which
     rules were violated
 
+Columns that the schema does not define are dropped from the output by default. Set `extra_columns="keep"` (keep
+them, unvalidated, after the schema's columns) or `extra_columns="raise"` (raise a `SchemaError`) as a class keyword,
+e.g. `class MySchema(dy.Schema, extra_columns="keep")`, or pass `extra_columns=...` to `validate`, `filter`, `is_valid`
+or `cast` to override it for one call.
+
 When performing validation or filtering, prefer using `pipe` to clarify the flow of data:
 
 ```python

@@ -8,7 +8,7 @@ from abc import ABCMeta
 from collections.abc import Mapping
 from copy import copy
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Literal, Self, get_args
 
 import polars as pl
 
@@ -19,11 +19,28 @@ from .exc import ImplementationError
 
 _COLUMN_ATTR = "__dataframely_columns__"
 _RULE_ATTR = "__dataframely_rules__"
+_EXTRA_COLUMNS_ATTR = "__dataframely_extra_columns__"
+
+ExtraColumns = Literal["drop", "raise", "keep"]
+"""How columns that are not defined in a schema are treated:
+
+- ``"drop"``: Remove them from the output.
+- ``"raise"``: Raise a :class:`~dataframely.SchemaError`.
+- ``"keep"``: Keep them in the output, after the schema's columns, without validating
+  them.
+"""
 
 ORIGINAL_COLUMN_PREFIX = "__DATAFRAMELY_ORIGINAL__"
 
 
 # --------------------------------------- UTILS -------------------------------------- #
+
+
+def _check_extra_columns(value: Any) -> ExtraColumns:
+    if value not in get_args(ExtraColumns):
+        options = ", ".join(f"'{o}'" for o in get_args(ExtraColumns))
+        raise ValueError(f"`extra_columns` must be one of {options}, got {value!r}.")
+    return value
 
 
 def _build_rules(
@@ -110,10 +127,13 @@ class SchemaMeta(ABCMeta):
         bases: tuple[type[object], ...],
         namespace: dict[str, Any],
         *args: Any,
+        extra_columns: ExtraColumns | None = None,
         **kwargs: Any,
     ) -> SchemaMeta:
         result = mcs._collect_metadata(bases, namespace)
         namespace[_COLUMN_ATTR] = result.columns
+        if extra_columns is not None:
+            namespace[_EXTRA_COLUMNS_ATTR] = _check_extra_columns(extra_columns)
         cls = super().__new__(mcs, name, bases, namespace, *args, **kwargs)
 
         # Assign rules retroactively as we only encounter rule factories in the result
@@ -293,6 +313,20 @@ class BaseSchema(metaclass=SchemaMeta):
     def primary_key(cls) -> list[str]:
         """The primary key columns in this schema (possibly empty)."""
         return _primary_key(cls.columns())
+
+    @classmethod
+    def extra_columns(cls) -> ExtraColumns:
+        """How this schema treats columns that it does not define.
+
+        Configured via the ``extra_columns`` class keyword and inherited by subclasses.
+        Schemas that do not set it drop extra columns:
+
+        .. code-block:: python
+
+            class FeatureSchema(dy.Schema, extra_columns="keep"):
+                id = dy.Int64(primary_key=True)
+        """
+        return getattr(cls, _EXTRA_COLUMNS_ATTR, "drop")
 
     @classmethod
     def _validation_rules(cls, *, with_cast: bool) -> dict[str, Rule]:
