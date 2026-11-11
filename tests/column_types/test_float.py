@@ -13,7 +13,12 @@ from polars.testing import assert_frame_equal
 
 import dataframely as dy
 from dataframely.columns.float import _BaseFloat
-from dataframely.testing import FLOAT_COLUMN_TYPES, evaluate_rules, rules_from_exprs
+from dataframely.testing import (
+    FLOAT_COLUMN_TYPES,
+    create_schema,
+    evaluate_rules,
+    rules_from_exprs,
+)
 
 
 class IntegerSchema(dy.Schema):
@@ -184,6 +189,100 @@ def test_validate_allow_inf_nan(inf: Any, nan: Any) -> None:
     assert len(actual.collect_schema().names()) == 0, (
         "There should be no validation rules"
     )
+
+
+@pytest.mark.parametrize("column_type", FLOAT_COLUMN_TYPES)
+@pytest.mark.parametrize(
+    ("bound", "threshold", "inside", "outside"),
+    [
+        ("min", 0.0, 1.0, -1.0),
+        ("min_exclusive", 0.0, 1.0, 0.0),
+        ("max", 10.0, 1.0, 11.0),
+        ("max_exclusive", 10.0, 1.0, 10.0),
+    ],
+)
+@pytest.mark.parametrize("allow_nan", [True, False])
+def test_validate_nan_with_bounds(
+    column_type: type[_BaseFloat],
+    bound: str,
+    threshold: float,
+    inside: float,
+    outside: float,
+    allow_nan: bool,
+) -> None:
+    # Arrange
+    kwargs: dict[str, Any] = {
+        bound: threshold,
+        "allow_nan": allow_nan,
+        "nullable": True,
+    }
+    column = column_type(**kwargs)
+    values = pl.Series([float("nan"), inside, outside, None], dtype=pl.Float64).cast(
+        column.dtype
+    )
+    lf = pl.LazyFrame({"a": values})
+    schema = create_schema("test", {"a": column})
+
+    # Act
+    actual = evaluate_rules(
+        lf, rules_from_exprs(column.validation_rules(pl.col("a")))
+    ).collect()
+    good, failure = schema.filter(lf.collect())
+
+    # Assert
+    assert actual[bound].to_list()[1:] == [True, False, True]
+    if allow_nan:
+        assert actual[bound][0] is True
+        assert "nan" not in actual.columns
+        assert good.height == 3
+        assert good.get_column("a").is_nan().sum() == 1
+        assert failure.counts() == {f"a|{bound}": 1}
+    else:
+        assert actual["nan"].to_list() == [False, True, True, True]
+        assert good.height == 2
+        assert good.get_column("a").is_nan().sum() == 0
+        assert failure.counts()["a|nan"] == 1
+        assert failure.counts()[f"a|{bound}"] >= 1
+
+
+@pytest.mark.parametrize("column_type", FLOAT_COLUMN_TYPES)
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"min": 0.0},
+        {"min_exclusive": 0.0},
+        {"max": 10.0},
+        {"max_exclusive": 10.0},
+        {"min": 0.0, "max": 10.0},
+    ],
+)
+def test_sample_nan_with_bounds_is_valid(
+    column_type: type[_BaseFloat], kwargs: dict[str, Any]
+) -> None:
+    # Arrange
+    column = column_type(**kwargs, allow_nan=True)
+    schema = create_schema("test", {"a": column})
+
+    # Act
+    sampled = schema.sample(10_000, generator=dy.random.Generator(0))
+
+    # Assert
+    nan_count = sampled.get_column("a").is_nan().sum()
+    assert 0.01 * sampled.height < nan_count < 0.1 * sampled.height
+    schema.validate(sampled)
+
+
+def test_list_float_nan_with_max() -> None:
+    # Arrange
+    schema = create_schema("test", {"a": dy.List(dy.Float64(max=10.0, allow_nan=True))})
+    df = pl.DataFrame({"a": [[1.0, float("nan")], [1.0, 11.0], [float("nan")]]})
+
+    # Act
+    good, failure = schema.filter(df)
+
+    # Assert
+    assert good.height == 2
+    assert failure.counts() == {"a|inner_max": 1}
 
 
 def test_sample_unchecked_min_0() -> None:
