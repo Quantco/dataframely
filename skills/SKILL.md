@@ -45,9 +45,9 @@ Persist all implicit assumptions on the data as constraints in the schema. Use d
 about the column contents.
 
 - Use the most specific type possible for each column (e.g. `dy.Enum` instead of `dy.String` when applicable).
-- Use pre-defined arguments (e.g. `nullable`, `min`, `regex`) for column-level constraints if possible.
+- Use pre-defined arguments (e.g. `nullable`, `unique`, `min`, `regex`) for column-level constraints if possible.
 - Use the `check` argument for non-standard column-level constraints that cannot be expressed using pre-defined
-  arguments. Prefer the defining the check as a dictionary with keys describing the type of check:
+  arguments. Prefer defining the check as a dictionary with keys describing the type of check:
 
   ```python
   class MySchema(dy.Schema):
@@ -116,11 +116,13 @@ collection.
       streets: dy.LazyFrame[MyStreetSchema]
 
       @dy.filter()
-      def all_houses_on_known_streets(cls) -> pl.LazyFrame:
+      def all_houses_on_known_streets(self) -> pl.LazyFrame:
           return dy.functional.require_relationship_one_to_at_least_one(
-              cls.streets, cls.houses, on="street"
+              self.streets, self.houses, on="street"
           )
   ```
+
+  Filters receive an instance of the collection, so use `self` to refer to its members.
 
 # Usage Conventions
 
@@ -154,12 +156,26 @@ Both `.validate` and `.filter` enforce the schema at runtime. Pass `cast=True` f
   - `failure.details()` provides the data frame of invalid rows with additional columns providing information on which
     rules were violated
 
+- **`Schema.is_valid`** — returns a boolean. Use when only the validity of a data frame is of interest.
+
 When performing validation or filtering, prefer using `pipe` to clarify the flow of data:
 
 ```python
 result = df.pipe(MySchema.validate)
 out, failures = df.pipe(MySchema.filter)
 ```
+
+Validation and filtering follow polars' "eager-in-eager-out" and "lazy-in-lazy-out" semantics: passing a
+`pl.DataFrame` returns eager results (and `.validate` raises immediately), passing a `pl.LazyFrame` returns lazy
+results (and `.validate` only raises once the result is collected). Use lazy frames to let polars optimize validation
+together with the surrounding query.
+
+### Collections
+
+`Collection.validate`, `Collection.filter` and `Collection.is_valid` work analogously, taking a mapping from member
+names to data frames. They additionally enforce the collection's filters. `Collection.validate` and
+`Collection.filter` collect their results by default; pass `lazy=True` to keep them lazy. `Collection.is_valid` always
+evaluates eagerly and returns a boolean. `Collection.filter` returns one `FailureInfo` per member.
 
 ### Pure Casting
 
@@ -188,19 +204,19 @@ from polars.testing import assert_frame_equal
 def test_grouped_sum():
     df = pl.DataFrame(
         {
-            "col1": [1, 2, 3],
-            "col2": ["a", "a", "b"],
+            "group": ["a", "a", "b"],
+            "value": [1, 2, 3],
         }
     ).pipe(MyInputSchema.validate, cast=True)
 
     expected = pl.DataFrame(
         {
-            "col1": ["a", "b"],
-            "col2": [3, 3],
+            "group": ["a", "b"],
+            "value": [3, 3],
         }
     )
 
-    result = my_code(df)
+    result = grouped_sum(df)
 
     assert_frame_equal(expected, result)
 ```
@@ -223,8 +239,11 @@ Synthetic data for collections should be generated as follows:
 - Use `MyCollection.sample(overrides=...)` to generate random data where certain values of the collection members
   matter. Use lists of dicts for providing overrides as "objects" spanning the collection members.
   - Values for shared primary keys must be provided at the root of the dictionaries
-  - Values for individual collection members must be provided in nested dictionaries under the keys corresponding to
-    the collection member names.
+  - Values for individual collection members must be provided under the keys corresponding to the collection member
+    names: as a nested dictionary for members sharing exactly the common primary key, and as a list of nested
+    dictionaries for members whose primary key extends the common primary key (i.e. multiple rows per sample).
+  - Values for members annotated with `inline_for_sampling=True` (via `dy.CollectionMember`) may be provided at the
+    root of the dictionaries.
 - Always use `MyCollection.create_empty()` instead of sampling with empty overrides when an empty collection is needed.
 
 # Getting more information

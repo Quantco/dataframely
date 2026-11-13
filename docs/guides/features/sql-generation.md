@@ -64,15 +64,15 @@ df.write_database(connection=engine, table_name=my_table.name, if_table_exists="
 ```
 
 ```{note}
-**Implementation:** The choice of `sqlalchemy` type is implemented in {meth}`~dataframely.Column.sqlalchemy_dtype`, which is overwritten by each of the subtypes of {class}`~dataframely.Column`. For example, the implementation for {class}`~dataframely.Date` is {meth}`~dataframely.Date.sqlalchemy_dtype`.
+**Implementation:** The choice of `sqlalchemy` type is implemented in `Column.sqlalchemy_dtype`, which is overwritten by each of the subtypes of {class}`~dataframely.Column`. For example, the implementation for {class}`~dataframely.Date` is `Date.sqlalchemy_dtype`.
 ```
 
 ```{note}
-**Constraints:** The nullability and primary key constraints you define in `dataframely` are translated to SQL. Custom filters and rules are not.
+**Constraints:** The nullability, primary key and `unique` constraints you define in `dataframely` are translated to SQL. Custom filters and rules are not.
 ```
 
 ```{note}
-**Length of string columns:** For string columns, `dataframely` will attempt to pass information about the maximal length into the SQL definition. This is trivial if `max_length` is set. Otherwise, if a `regex` is provided,
+**Length of string columns:** For string columns, `dataframely` will attempt to pass information about the maximal length into the SQL definition. This is trivial if `max_length` is set. Otherwise, if a fully anchored `regex` (i.e. starting with `^` and ending with `$`) is provided,
 the maximal length of the string is inferred from the regular expression if possible. Note that having inferable
 maximal lengths can be particularly important for primary key columns. Some database systems, such as Microsoft SQL Server, do not allow `VARCHAR(max)` columns (unbounded strings) to be used as primary keys.
 ```
@@ -126,5 +126,5 @@ for name, dy_schema in MyCollection.member_schemas().items():
         meta,
         *dy_schema.to_sqlalchemy_columns(dialect=engine.dialect),
     )
-meta.create_all()
+meta.create_all(engine)
 ```

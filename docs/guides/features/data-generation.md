@@ -54,7 +54,7 @@ class InvoiceSchema(dy.Schema):
 
     @dy.rule()
     def discharge_after_admission(cls) -> pl.Expr:
-        return InvoiceSchema.discharge_date.col >= InvoiceSchema.admission_date.col
+        return cls.discharge_date.col >= cls.admission_date.col
 
 
 # `@dy.rule`s will be respected as well for data generation.
@@ -86,8 +86,8 @@ df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(
     overrides={
         # Use either <schema>.<column>.name or just the column name as a string.
         InvoiceSchema.invoice_id.name: ["1234567890", "2345678901", "3456789012"],
-        # Dataframely will automatically infer the number of rows based on the longest given
-        # sequence of values and broadcast all other columns to that shape.
+        # Dataframely will automatically infer the number of rows based on the length of the
+        # given sequences of values and broadcast scalar values to that shape.
         "admission_date": date(2025, 1, 1),
     }
 )
@@ -110,7 +110,7 @@ df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(
 
 ### Providing custom column overrides
 
-Complex validation rules (such as dependencies between columns or ordering criteria) can cause sampling to run excessively long or fail. Specifying additional `overrides` individually in such cases can be tedious. Instead, the {meth}`~dataframely.Schema._sampling_overrides` hook on a schema can be used to specify polars expressions for columns in the schema that will be applied before generated data is filtered during sampling.
+Complex validation rules (such as dependencies between columns or ordering criteria) can cause sampling to run excessively long or fail. Specifying additional `overrides` individually in such cases can be tedious. Instead, the `Schema._sampling_overrides` hook on a schema can be used to specify polars expressions for columns in the schema that will be applied before generated data is filtered during sampling.
 
 ```python
 import polars as pl
@@ -174,16 +174,16 @@ class HospitalInvoiceData(dy.Collection):
     diagnosis: dy.LazyFrame[DiagnosisSchema]
 
     @dy.filter()
-    def at_least_one_diagnosis(cls) -> pl.Expr:
+    def at_least_one_diagnosis(self) -> pl.LazyFrame:
         return dy.functional.require_relationship_one_to_at_least_one(
-            cls.invoice,
-            cls.diagnosis,
+            self.invoice,
+            self.diagnosis,
             on="invoice_id",
         )
 ```
 
 In this case, calling {meth}`~dataframely.Collection.sample` will fail, because dataframely does not parse the body of `at_least_one_diagnosis` which may contain arbitrary polars expressions.
-To address the problem, one can override {meth}`~dataframely.Collection._preprocess_sample` to generate a random number of diagnoses per invoice:
+To address the problem, one can override `Collection._preprocess_sample` to generate a random number of diagnoses per invoice:
 
 ```python
 from random import random
@@ -197,10 +197,10 @@ class HospitalInvoiceData(dy.Collection):
     diagnosis: dy.LazyFrame[DiagnosisSchema]
 
     @dy.filter()
-    def at_least_one_diagnosis(cls) -> pl.Expr:
+    def at_least_one_diagnosis(self) -> pl.LazyFrame:
         return dy.functional.require_relationship_one_to_at_least_one(
-            cls.invoice,
-            cls.diagnosis,
+            self.invoice,
+            self.diagnosis,
             on="invoice_id",
         )
 
@@ -240,7 +240,7 @@ class OutputSchema(dy.Schema):
 
 # function under test
 def get_diabetes_invoice_amounts(
-    invoice_data: HospitalClaims,
+    invoice_data: HospitalInvoiceData,
 ) -> dy.LazyFrame[OutputSchema]:
     return OutputSchema.cast(
         invoice_data.diagnosis.filter(DiagnosisSchema.code.col.str.starts_with("E11"))
