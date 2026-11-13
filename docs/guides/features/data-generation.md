@@ -110,7 +110,7 @@ df: dy.DataFrame[InvoiceSchema] = InvoiceSchema.sample(
 
 ### Providing custom column overrides
 
-Complex validation rules (such as dependencies between columns or ordering criteria) can cause sampling to run excessively long or fail. Specifying additional `overrides` individually in such cases can be tedious. Instead, the {meth}`~dataframely.Schema._sampling_overrides` hook on a schema can be used to specify polars expressions for columns in the schema that will be applied before generated data is filtered during sampling.
+Complex validation rules (such as dependencies between columns or ordering criteria) can cause sampling to run excessively long or fail. Specifying additional `overrides` individually in such cases can be tedious. Instead, the `Schema._sampling_overrides` hook on a schema can be used to specify polars expressions for columns in the schema that will be applied before generated data is filtered during sampling.
 
 ```python
 import polars as pl
@@ -183,7 +183,7 @@ class HospitalInvoiceData(dy.Collection):
 ```
 
 In this case, calling {meth}`~dataframely.Collection.sample` will fail, because dataframely does not parse the body of `at_least_one_diagnosis` which may contain arbitrary polars expressions.
-To address the problem, one can override {meth}`~dataframely.Collection._preprocess_sample` to generate a random number of diagnoses per invoice:
+To address the problem, one can override `Collection._preprocess_sample` to generate a random number of diagnoses per invoice:
 
 ```python
 from random import random
