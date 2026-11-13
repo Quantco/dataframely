@@ -67,19 +67,7 @@ about the column contents.
           return cls.col1.col > cls.col2.col
   ```
 
-- Use rules with an `over` expression for cross-row constraints beyond primary key checks:
-
-  ```python
-  class MySchema(dy.Schema):
-      group = dy.String()
-
-      @dy.rule()
-      def at_least_two_rows_per_group(cls) -> pl.Expr:
-          return (pl.len() >= 2).over(cls.group.col)
-  ```
-
-- Use the `description` argument if a human-readable column description should be accessible programmatically
-  (e.g. `MySchema.col.description`).
+- Use rules with an `over` expression for cross-row constraints beyond primary key checks.
 
 ### Referencing Columns
 
@@ -186,15 +174,7 @@ together with the surrounding query.
 
 `Collection.validate`, `Collection.filter` and `Collection.is_valid` work analogously, taking a mapping from member
 names to data frames. They additionally enforce the collection's filters. Results are collected by default; pass
-`lazy=True` to keep them lazy. `Collection.filter` returns one `FailureInfo` per member:
-
-```python
-collection = MyCollection.validate({"houses": houses, "streets": streets}, cast=True)
-collection, failures = MyCollection.filter(
-    {"houses": houses, "streets": streets}, cast=True
-)
-failures["houses"].counts()
-```
+`lazy=True` to keep them lazy. `Collection.filter` returns one `FailureInfo` per member.
 
 ### Pure Casting
 
@@ -221,12 +201,12 @@ from polars.testing import assert_frame_equal
 
 
 def test_grouped_sum():
-    df = MyInputSchema.sample(
-        overrides={
+    df = pl.DataFrame(
+        {
             "group": ["a", "a", "b"],
             "value": [1, 2, 3],
         }
-    )
+    ).pipe(MyInputSchema.validate, cast=True)
 
     expected = pl.DataFrame(
         {
