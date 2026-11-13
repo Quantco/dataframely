@@ -45,6 +45,8 @@ bedrooms should not be too high.
 In `dataframely`, we can do this by adding a custom rule to our schema:
 
 ```python
+import polars as pl
+
 import dataframely as dy
 
 
@@ -69,6 +71,8 @@ For defining even more complex rules that should evaluate across _rows_, you can
 For our housing data, this allows us to specify, for example, that we want to observe at least two houses per zip code:
 
 ```python
+import polars as pl
+
 import dataframely as dy
 
 

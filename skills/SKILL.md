@@ -173,8 +173,9 @@ together with the surrounding query.
 ### Collections
 
 `Collection.validate`, `Collection.filter` and `Collection.is_valid` work analogously, taking a mapping from member
-names to data frames. They additionally enforce the collection's filters. Results are collected by default; pass
-`lazy=True` to keep them lazy. `Collection.filter` returns one `FailureInfo` per member.
+names to data frames. They additionally enforce the collection's filters. `Collection.validate` and
+`Collection.filter` collect their results by default; pass `lazy=True` to keep them lazy. `Collection.is_valid` always
+evaluates eagerly and returns a boolean. `Collection.filter` returns one `FailureInfo` per member.
 
 ### Pure Casting
 
