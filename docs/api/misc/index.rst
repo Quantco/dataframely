@@ -7,6 +7,7 @@ Miscellaneous
     :toctree: _gen/
     :nosignatures:
 
+    CollectionMember
     Config
     random.Generator
     testing.create_schema

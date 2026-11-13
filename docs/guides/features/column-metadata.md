@@ -26,6 +26,18 @@ class UserSchema(dy.Schema):
 Metadata are never read by `dataframely` and merely enable users to provide custom information
 in a structured way.
 
+For human-readable column descriptions, all column types additionally provide a dedicated `description` parameter:
+
+```python
+class UserSchema(dy.Schema):
+    id = dy.String(primary_key=True, description="The unique identifier of the user.")
+```
+
+```python
+>>> print(UserSchema.id.description)
+The unique identifier of the user.
+```
+
 ```{note}
 User-provided metadata can be useful for code generation. For instance, one could specify metadata for columns, such as database column types or constraints, and override the built-in SQLAlchemy generation for more tailored SQL output.
 ```
