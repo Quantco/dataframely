@@ -10,7 +10,7 @@ from typing import Any, Literal, Self, overload
 
 import polars as pl
 
-from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema
+from ._base_schema import ORIGINAL_COLUMN_PREFIX, BaseSchema, ExtraColumns
 from ._compat import _polars_version_tuple, pydantic, sa
 from ._match_to_schema import match_to_schema
 from ._native import format_rule_failures
@@ -475,6 +475,7 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
+        extra_columns: ExtraColumns | None = None,
         **kwargs: Any,
     ) -> DataFrame[Self]: ...
 
@@ -486,6 +487,7 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
+        extra_columns: ExtraColumns | None = None,
         **kwargs: Any,
     ) -> LazyFrame[Self]: ...
 
@@ -496,6 +498,7 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
+        extra_columns: ExtraColumns | None = None,
         **kwargs: Any,
     ) -> DataFrame[Self] | LazyFrame[Self]:
         """Validate that a data frame satisfies the schema.
@@ -509,14 +512,19 @@ class Schema(BaseSchema, ABC):
             df: The data frame to validate.
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible.
+            extra_columns: How columns that are not defined in the schema are treated:
+                ``"drop"`` removes them, ``"raise"`` raises a
+                :class:`~dataframely.SchemaError`, and ``"keep"`` keeps them, unvalidated,
+                after the schema's columns. If not provided, the schema's
+                :meth:`extra_columns` setting is used.
             kwargs: Keyword arguments passed directly to :meth:`polars.LazyFrame.collect`
                 when the input data frame is eager.
 
         Returns:
             The input eager or lazy frame, wrapped in a generic version of the
             input's data frame type to reflect schema adherence. Columns not defined
-            in the schema are removed from the output. This operation is guaranteed
-            to maintain input ordering of rows.
+            in the schema are removed from the output unless `extra_columns` is
+            ``"keep"``. This operation is guaranteed to maintain input ordering of rows.
 
         Note:
             If running on the streaming engine, lazy validation will potentially not
@@ -525,7 +533,8 @@ class Schema(BaseSchema, ABC):
             non-deterministic.
 
         Raises:
-            SchemaError: If the input data frame is eager and it misses columns or
+            SchemaError: If the input data frame is eager and it misses columns,
+                has extra columns while `extra_columns` is ``"raise"``, or
                 `cast=False` and any data type mismatches the definition in this schema.
                 Only raised upon collection if the input data frame is lazy.
             ValidationError: If the input data frame is eager and any rule in the schema
@@ -537,7 +546,9 @@ class Schema(BaseSchema, ABC):
                 if the input data frame is lazy.
         """
         if isinstance(df, pl.DataFrame):
-            out, failure = cls.filter(df, cast=cast, **kwargs)
+            out, failure = cls.filter(
+                df, cast=cast, extra_columns=extra_columns, **kwargs
+            )
             if len(failure) > 0:
                 counts = failure.counts()
                 raise ValidationError(
@@ -552,7 +563,10 @@ class Schema(BaseSchema, ABC):
             return out
         else:
             lf = df.lazy().pipe(
-                match_to_schema, cls, casting=("strict" if cast else "none")
+                match_to_schema,
+                cls,
+                casting=("strict" if cast else "none"),
+                extra_columns=extra_columns,
             )
             if rules := cls._validation_rules(with_cast=False):
                 lf = (
@@ -571,7 +585,13 @@ class Schema(BaseSchema, ABC):
 
     @classmethod
     def is_valid(
-        cls, df: pl.DataFrame | pl.LazyFrame, /, *, cast: bool = False, **kwargs: Any
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        cast: bool = False,
+        extra_columns: ExtraColumns | None = None,
+        **kwargs: Any,
     ) -> bool:
         """Check whether a data frame satisfies the schema.
 
@@ -590,6 +610,11 @@ class Schema(BaseSchema, ABC):
                 cast to the schema's defined data type before running validation. If set
                 to `False`, a wrong data type will result in a return value of
                 `False`.
+            extra_columns: How columns that are not defined in the schema are treated:
+                ``"drop"`` removes them, ``"raise"`` raises a
+                :class:`~dataframely.SchemaError`, and ``"keep"`` keeps them, unvalidated,
+                after the schema's columns. If not provided, the schema's
+                :meth:`extra_columns` setting is used.
             kwargs: Keyword arguments passed directly to :meth:`polars.LazyFrame.collect`.
 
         Returns:
@@ -603,7 +628,10 @@ class Schema(BaseSchema, ABC):
         # NOTE: We need to perform "lenient" casting to catch issues resulting from
         #  invalid target data types where casting fails for the data.
         lf = df.lazy().pipe(
-            match_to_schema, cls, casting=("lenient" if cast else "none")
+            match_to_schema,
+            cls,
+            casting=("lenient" if cast else "none"),
+            extra_columns=extra_columns,
         )
         try:
             if rules := cls._validation_rules(with_cast=cast):
@@ -630,6 +658,7 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
+        extra_columns: ExtraColumns | None = None,
     ) -> FilterResult[Self]: ...
 
     @overload
@@ -640,6 +669,7 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
+        extra_columns: ExtraColumns | None = None,
     ) -> LazyFilterResult[Self]: ...
 
     @classmethod
@@ -649,6 +679,7 @@ class Schema(BaseSchema, ABC):
         /,
         *,
         cast: bool = False,
+        extra_columns: ExtraColumns | None = None,
         **kwargs: Any,
     ) -> FilterResult[Self] | LazyFilterResult[Self]:
         """Filter the data frame by the rules of this schema.
@@ -665,6 +696,11 @@ class Schema(BaseSchema, ABC):
             cast: Whether columns with a wrong data type in the input data frame are
                 cast to the schema's defined data type if possible. Rows for which the
                 cast fails for any column are filtered out.
+            extra_columns: How columns that are not defined in the schema are treated:
+                ``"drop"`` removes them, ``"raise"`` raises a
+                :class:`~dataframely.SchemaError`, and ``"keep"`` keeps them, unvalidated,
+                after the schema's columns. If not provided, the schema's
+                :meth:`extra_columns` setting is used.
             kwargs: Keyword arguments passed directly to :meth:`polars.collect_all`
                 if the input data frame is eager.
 
@@ -672,14 +708,16 @@ class Schema(BaseSchema, ABC):
             A tuple of the validated rows in the input data frame (potentially
             empty) and a simple dataclass carrying information about the rows of the
             data frame which could not be validated successfully. Columns not defined
-            in the schema are removed from the output. Just like in polars'
+            in the schema are removed from the output unless `extra_columns` is
+            ``"keep"``. Just like in polars'
             native :meth:`~polars.DataFrame.filter`, the order of rows in the returned
             data frame is maintained.
 
         Raises:
             ValidationError: If the columns of the input data frame are invalid. This
-                happens only if the data frame misses a column defined in the schema or
-                a column has an invalid dtype while `cast` is set to `False`.
+                happens only if the data frame misses a column defined in the schema,
+                has extra columns while `extra_columns` is ``"raise"``, or a column has
+                an invalid dtype while `cast` is set to `False`.
 
         Note:
             This method preserves the ordering of the input data frame.
@@ -699,7 +737,10 @@ class Schema(BaseSchema, ABC):
                 print(failed_df)
         """
         lf = df.lazy().pipe(
-            match_to_schema, cls, casting=("lenient" if cast else "none")
+            match_to_schema,
+            cls,
+            casting=("lenient" if cast else "none"),
+            extra_columns=extra_columns,
         )
         if rules := cls._validation_rules(with_cast=cast):
             evaluated = lf.pipe(cls._with_evaluated_rules, rules).pipe(
@@ -709,9 +750,14 @@ class Schema(BaseSchema, ABC):
                 isinstance(df, pl.DataFrame) and _polars_version_tuple < (1, 43),
                 **kwargs,
             )
-            filtered = evaluated.filter(pl.col(_COLUMN_VALID)).select(
-                cls.column_names()
-            )
+            # NOTE: Drop the internal columns rather than selecting the schema's
+            #  columns to retain extra columns that are kept.
+            internal_columns = [*rules.keys(), _COLUMN_VALID]
+            if cast:
+                internal_columns += [
+                    f"{ORIGINAL_COLUMN_PREFIX}{name}" for name in cls.column_names()
+                ]
+            filtered = evaluated.filter(pl.col(_COLUMN_VALID)).drop(internal_columns)
             failure_lf = evaluated.filter(~pl.col(_COLUMN_VALID)).drop(_COLUMN_VALID)
             if cast:
                 # If we cast, we kept the original values around. In the failure info,
@@ -749,24 +795,41 @@ class Schema(BaseSchema, ABC):
 
     @overload
     @classmethod
-    def cast(cls, df: pl.DataFrame, /) -> DataFrame[Self]: ...  # pragma: no cover
+    def cast(
+        cls, df: pl.DataFrame, /, *, extra_columns: ExtraColumns | None = None
+    ) -> DataFrame[Self]: ...  # pragma: no cover
 
     @overload
     @classmethod
-    def cast(cls, df: pl.LazyFrame, /) -> LazyFrame[Self]: ...  # pragma: no cover
+    def cast(
+        cls, df: pl.LazyFrame, /, *, extra_columns: ExtraColumns | None = None
+    ) -> LazyFrame[Self]: ...  # pragma: no cover
 
     @classmethod
     def cast(
-        cls, df: pl.DataFrame | pl.LazyFrame, /
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        /,
+        *,
+        extra_columns: ExtraColumns | None = None,
     ) -> DataFrame[Self] | LazyFrame[Self]:
         """Cast a data frame to match the schema.
 
-        This method removes superfluous columns and casts all schema columns to the
-        correct dtypes. However, it does **not** introspect the data frame contents.
+        This method removes superfluous columns (as configured by `extra_columns`) and
+        casts all schema columns to the correct dtypes. However, it does **not**
+        introspect the data frame contents.
 
         Hence, this method should be used with care and :meth:`validate` should
         generally be preferred. It is advised to *only* use this method if `df` is
         surely known to adhere to the schema.
+
+        Args:
+            df: The data frame to cast.
+            extra_columns: How columns that are not defined in the schema are treated:
+                ``"drop"`` removes them, ``"raise"`` raises a
+                :class:`~dataframely.SchemaError`, and ``"keep"`` keeps them, unvalidated,
+                after the schema's columns. If not provided, the schema's
+                :meth:`extra_columns` setting is used.
 
         Returns:
             The input data frame, wrapped in a generic version of the input's data
@@ -781,7 +844,9 @@ class Schema(BaseSchema, ABC):
             the lazy frame's schema but also means that a call to :meth:`polars.LazyFrame.collect`
             further down the line might fail because of the cast and/or missing columns.
         """
-        lf = match_to_schema(df.lazy(), cls, casting="strict")
+        lf = match_to_schema(
+            df.lazy(), cls, casting="strict", extra_columns=extra_columns
+        )
         if isinstance(df, pl.DataFrame):
             return lf.collect()  # type: ignore
         return lf  # type: ignore

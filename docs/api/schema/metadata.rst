@@ -9,4 +9,5 @@ Metadata
     Schema.column_names
     Schema.columns
     Schema.primary_key
+    Schema.extra_columns
     Schema.matches
