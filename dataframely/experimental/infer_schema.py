@@ -123,19 +123,34 @@ def _make_valid_identifier(name: str, col_index: int) -> str:
     return valid_identifier
 
 
+def _string_literal(value: str) -> str:
+    """Render a string as a safely escaped Python string literal.
+
+    Double quotes are preferred for consistency with the generated code style, but
+    the escaping itself is delegated to :func:`repr` to guarantee that arbitrary
+    (potentially untrusted) input cannot break out of the literal.
+    """
+    literal = repr(value)
+    if literal.startswith("'") and '"' not in value and "'" not in value:
+        # `repr` only escapes the quote character it uses as delimiter. If the value
+        # contains no quotes at all, the inner part can be re-delimited verbatim.
+        return f'"{literal[1:-1]}"'
+    return literal
+
+
 def _get_dtype_args(dtype: pl.DataType, series: pl.Series) -> list[str]:
     """Get extra arguments for parameterized types."""
     if isinstance(dtype, pl.Datetime):
         args = []
         if dtype.time_zone is not None:
-            args.append(f'time_zone="{dtype.time_zone}"')
+            args.append(f"time_zone={_string_literal(dtype.time_zone)}")
         if dtype.time_unit != "us":
-            args.append(f'time_unit="{dtype.time_unit}"')
+            args.append(f"time_unit={_string_literal(dtype.time_unit)}")
         return args
 
     if isinstance(dtype, pl.Duration):
         if dtype.time_unit != "us":  # us is the default
-            return [f'time_unit="{dtype.time_unit}"']
+            return [f"time_unit={_string_literal(dtype.time_unit)}"]
 
     if isinstance(dtype, pl.Decimal):
         args = []
@@ -165,7 +180,7 @@ def _get_dtype_args(dtype: pl.DataType, series: pl.Series) -> list[str]:
         fields_parts = []
         for field in dtype.fields:
             field_code = _dtype_to_column_code(series.struct.field(field.name))
-            fields_parts.append(f'"{field.name}": {field_code}')
+            fields_parts.append(f"{_string_literal(field.name)}: {field_code}")
         return ["{" + ", ".join(fields_parts) + "}"]
 
     return []
@@ -177,7 +192,7 @@ def _format_args(*args: str, nullable: bool = False, alias: str | None = None) -
     if nullable:
         all_args.append("nullable=True")
     if alias is not None:
-        all_args.append(f'alias="{alias}"')
+        all_args.append(f"alias={_string_literal(alias)}")
     return ", ".join(all_args)
 
 
