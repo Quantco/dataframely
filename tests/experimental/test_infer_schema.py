@@ -393,6 +393,18 @@ def test_column_sanitization_conflict_with_existing() -> None:
         # Nullable inner types
         pl.DataFrame({"list_with_nulls": [["a"], [None]]}),
         pl.DataFrame({"struct_with_nulls": [{"key": "value"}, {"key": None}]}),
+        # Names requiring escaping
+        pl.DataFrame(
+            {
+                'a"b': ["test"],
+                "a'b": ["test"],
+                "a'\"b": ["test"],
+                "a\\b": ["test"],
+                "a\nb": ["test"],
+                "a\\": ["test"],
+            }
+        ),
+        pl.DataFrame({"s": [{'a"b': "x", "a\\nb\n": "y"}]}),
     ],
 )
 def test_inferred_schema_validates_dataframe(df: pl.DataFrame) -> None:
@@ -401,3 +413,33 @@ def test_inferred_schema_validates_dataframe(df: pl.DataFrame) -> None:
     exec(code, namespace)  # noqa: S102
     schema = namespace["TestSchema"]
     assert schema.is_valid(df)
+
+
+_INJECTION_PAYLOAD = 'x")\n    INJECTED = True  #'
+
+
+@pytest.mark.parametrize(
+    "df",
+    [
+        pl.DataFrame({_INJECTION_PAYLOAD: ["test"]}),
+        pl.DataFrame({"s": [{_INJECTION_PAYLOAD: "test"}]}),
+    ],
+)
+def test_no_code_injection_via_names(df: pl.DataFrame) -> None:
+    code = infer_schema(df, "TestSchema")
+    namespace: dict = {"dy": dy}
+    exec(code, namespace)  # noqa: S102
+    schema = namespace["TestSchema"]
+    assert not hasattr(schema, "INJECTED")
+    assert schema.is_valid(df)
+
+
+def test_escaped_alias_formatting() -> None:
+    df = pl.DataFrame({'a"b': ["test"], "a'b": ["test"], "a\nb": ["test"]})
+    result = infer_schema(df, schema_name="EscapeSchema")
+    expected = textwrap.dedent("""\
+        class EscapeSchema(dy.Schema):
+            a_b = dy.String(alias='a"b')
+            a_b_1 = dy.String(alias="a'b")
+            a_b_2 = dy.String(alias="a\\nb")""")
+    assert result == expected
