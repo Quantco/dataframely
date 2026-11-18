@@ -10,6 +10,8 @@ Metadata
     Collection.member_schemas
     Collection.required_members
     Collection.optional_members
+    Collection.lazy_members
+    Collection.eager_members
     Collection.non_ignored_members
     Collection.ignored_members
     Collection.common_primary_key

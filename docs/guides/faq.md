@@ -5,24 +5,18 @@ thinking, please add it here.
 
 ## How do I define additional unique keys in a {class}`~dataframely.Schema`?
 
-By default, `dataframely` only supports defining a single non-nullable (composite) primary key in {class}
-`~dataframely.Schema`.
-However, in some scenarios it may be useful to define additional unique keys (which support nullable fields and/or which
-are additionally unique).
+`dataframely` only supports defining a single non-nullable (composite) primary key in {class}`~dataframely.Schema`.
+However, in some scenarios it may be useful to define additional unique keys.
 
-Consider the following example, which demonstrates two rules: one for validating that a field is entirely unique, and
-another for validating that a field, when provided, is unique.
+For individual columns, set `unique=True` to require that the column's values are unique. Note that multiple `null`
+values are considered duplicates. To require uniqueness only for non-null values, or uniqueness across a combination of
+columns, use a custom rule instead:
 
 ```python
 class UserSchema(dy.Schema):
-    user_id = dy.UInt64(primary_key=True, nullable=False)
-    username = dy.String(nullable=False)
+    user_id = dy.UInt64(primary_key=True)
+    username = dy.String(unique=True)
     email = dy.String(nullable=True)  # Must be unique, or null.
-
-    @dy.rule()
-    def unique_username(cls) -> pl.Expr:
-        """Username, a non-nullable field, must be total unique."""
-        return (pl.len() == 1).over("username")
 
     @dy.rule()
     def unique_email_or_null(cls) -> pl.Expr:
@@ -32,7 +26,7 @@ class UserSchema(dy.Schema):
 
 ## How do I fix the ruff error `First argument of a method should be named self`?
 
-See our documentation on [group rules](./quickstart.md#group-rules).
+See our documentation on [custom rules](./quickstart.md#custom-rules).
 
 ## How do I get a {class}`~dataframely.Schema` for my dataframe?
 

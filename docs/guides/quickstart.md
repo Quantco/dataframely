@@ -38,13 +38,15 @@ This translates into the following expectations on our data:
 ## Custom rules
 
 While parameters in the column-initializers allow for defining expectations on a single column (e.g. `min_length` for
-string columns), this might not always by sufficient.
+string columns), this might not always be sufficient.
 In many cases, we want to check expectations across columns: for example, the ratio between the number of bathrooms and
 bedrooms should not be too high.
 
 In `dataframely`, we can do this by adding a custom rule to our schema:
 
 ```python
+import polars as pl
+
 import dataframely as dy
 
 
@@ -65,7 +67,30 @@ The decorator `@dy.rule()` "registers" the function as a rule using its name (i.
 The returned expression provides a boolean value for each row of the data which evaluates to `True` whenever the data
 are valid with respect to this rule.
 
-Note that, for more complex rules that should evaluate across _rows_, you can simply use an `over` expression.
+For defining even more complex rules that should evaluate across _rows_, you can simply use an `over` expression.
+For our housing data, this allows us to specify, for example, that we want to observe at least two houses per zip code:
+
+```python
+import polars as pl
+
+import dataframely as dy
+
+
+class HouseSchema(dy.Schema):
+    zip_code = dy.String(nullable=False, min_length=3)
+    num_bedrooms = dy.UInt8(nullable=False)
+    num_bathrooms = dy.UInt8(nullable=False)
+    price = dy.Float64(nullable=False)
+
+    @dy.rule()
+    def reasonable_bathroom_to_bedroom_ratio(cls) -> pl.Expr:
+        ratio = pl.col("num_bathrooms") / pl.col("num_bedrooms")
+        return (ratio >= 1 / 3) & (ratio <= 3)
+
+    @dy.rule()
+    def minimum_zip_code_count(cls) -> pl.Expr:
+        return (pl.len() >= 2).over("zip_code")
+```
 
 ````{note}
 If you are using [`ruff`](https://docs.astral.sh/ruff/) to lint your code, you'll need to tell `ruff` to treat rules like classmethods. To this end, you can add the following to your `pyproject.toml`:
@@ -101,17 +126,20 @@ validated_df = HouseSchema.validate(df, cast=True)
 
 If any row in `df` is invalid, i.e., any rule defined on individual columns or the entire schema evaluates to
 `False`, a validation exception is raised.
-Here, we have invalid data in the `num_bedrooms` and `zip_code` columns.
+Here, we have invalid data in the `num_bedrooms` and `zip_code` columns, and some rows violate the custom rules.
 
-    RuleValidationError: 2 rules failed validation:
-    * Column 'num_bedrooms' failed validation for 1 rules:
-    - 'nullability' failed for 2 rows
-    * Column 'zip_code' failed validation for 1 rules:
-    - 'min_length' failed for 1 rows
+    ValidationError: 4 rules failed validation:
+     - 'reasonable_bathroom_to_bedroom_ratio' failed for 1 rows
+     - 'minimum_zip_code_count' failed for 2 rows
+     * Column 'num_bedrooms' failed validation for 1 rules:
+       - 'nullability' failed for 2 rows
+     * Column 'zip_code' failed validation for 1 rules:
+       - 'min_length' failed for 1 rows
 
 Otherwise, if all rows in `df` are valid, `validate` returns a validated data frame of type
 `dy.DataFrame[HouseSchema]`.
-The same applies when a `pl.LazyFrame` is passed to `validate`.
+When a `pl.LazyFrame` is passed to `validate`, a `dy.LazyFrame[HouseSchema]` is returned instead and validation only
+runs once the lazy frame is collected (see [lazy validation](features/lazy-validation.md)).
 The generic data frame types allow for more readable function signatures to express
 expectations on the schema of the data frame, e.g.:
 
@@ -220,9 +248,8 @@ Lastly, `dataframely` schemas can be used to integrate with external tools:
   allowing to easily translate the dataframely schema into other packages' schema definitions:
   - `polars.Schema(HouseSchema)` can be used to construct a polars schema
   - `pyarrow.schema(HouseSchema)` can be used to construct a [pyarrow](https://arrow.apache.org/docs/python/index.html) schema
-- `HouseSchema.to_sqlalchemy_columns()` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns that can be
-  used to
-  create SQL tables using types and constraints in line with the schema
+- `HouseSchema.to_sqlalchemy_columns(dialect)` provides a list of [sqlalchemy](https://www.sqlalchemy.org) columns
+  that can be used to create SQL tables using types and constraints in line with the schema
 - You can use `dy.DataFrame[HouseSchema]` (or the `LazyFrame` equivalent) as fields in
   [pydantic](https://pydantic.dev) models, including support for validation and serialization. Integration with
   pydantic is unstable.

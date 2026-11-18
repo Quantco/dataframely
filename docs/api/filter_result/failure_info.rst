@@ -18,6 +18,7 @@ Inspection
     :toctree: _gen/
 
     FailureInfo.invalid
+    FailureInfo.details
     FailureInfo.counts
     FailureInfo.cooccurrence_counts
     FailureInfo.__len__

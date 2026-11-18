@@ -12,6 +12,7 @@ Columns
     Binary
     Bool
     Categorical
+    Column
     Date
     Datetime
     Decimal

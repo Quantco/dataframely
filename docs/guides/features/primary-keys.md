@@ -42,6 +42,18 @@ class LineItemSchema(dy.Schema):
 
 Validation will now ensure that all pairs of (`invoice_id`, `item_id`) are unique.
 
+### Unique columns
+
+In addition to the primary key, individual columns can be required to be unique by setting `unique=True`. Unlike
+`primary_key=True`, setting `unique=True` on multiple columns does not form a composite constraint: each column is
+checked for uniqueness independently.
+
+```python
+class UserSchema(dy.Schema):
+    id = dy.String(primary_key=True)
+    email = dy.String(unique=True)
+```
+
 ## Primary keys in {class}`~dataframely.Collection`
 
 The central idea behind {class}`~dataframely.Collection` is to unify multiple tables relating to the same set of
