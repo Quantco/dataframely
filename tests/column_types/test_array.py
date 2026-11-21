@@ -188,21 +188,32 @@ def test_multidimensional_array_with_rules(column: Column, prefix: str) -> None:
 
 
 def test_multidimensional_array_with_numeric_rules() -> None:
+    # Arrange
     schema = create_schema("test", {"a": dy.Array(dy.Int64(min=0), (2, 3))})
     df = pl.DataFrame(
         {"a": [[[0, 1, 2], [3, 4, 5]], [[0, 1, 2], [3, -4, 5]]]},
         schema={"a": pl.Array(pl.Int64, (2, 3))},
     )
+
+    # Act
     _, failures = schema.filter(df)
+
+    # Assert
     assert validation_mask(df, failures).to_list() == [True, False]
     assert failures.counts() == {"a|inner_min": 1}
 
 
 def test_multidimensional_array_sample_is_valid() -> None:
+    # Arrange
     schema = create_schema(
         "test", {"a": dy.Array(dy.String(min_length=1, max_length=3), (2, 2))}
     )
-    assert schema.is_valid(schema.sample(50))
+
+    # Act
+    df = schema.sample(50)
+
+    # Assert
+    assert schema.is_valid(df)
 
 
 def test_array_with_pk() -> None:
