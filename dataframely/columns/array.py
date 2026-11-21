@@ -87,8 +87,16 @@ class Array(Column):
         return pl.Array(self.inner.dtype, self.shape)
 
     def validation_rules(self, expr: pl.Expr) -> dict[str, pl.Expr]:
+        def all_elements(inner_expr: pl.Expr) -> pl.Expr:
+            # The elements of a multi-dimensional array are arrays themselves, so the
+            # inner rules must be applied one dimension further down for every extra
+            # dimension. This matches the behavior of nested `dy.Array` columns.
+            for _ in range(len(self.shape) - 1):
+                inner_expr = pl.element().arr.eval(inner_expr).arr.all()
+            return expr.arr.eval(inner_expr).arr.all()
+
         inner_rules = {
-            f"inner_{rule_name}": expr.arr.eval(inner_expr).arr.all()
+            f"inner_{rule_name}": all_elements(inner_expr)
             for rule_name, inner_expr in self.inner.validation_rules(
                 pl.element()
             ).items()

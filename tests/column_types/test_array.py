@@ -145,6 +145,61 @@ def test_array_with_rules() -> None:
     assert failures.counts() == {"a|inner_nullability": 1, "a|inner_min_length": 1}
 
 
+@pytest.mark.parametrize(
+    ("column", "prefix"),
+    [
+        (
+            dy.Array(dy.String(min_length=2, nullable=False), (2, 2), nullable=True),
+            "inner",
+        ),
+        # A multi-dimensional array must behave like the equivalent nested arrays
+        (
+            dy.Array(
+                dy.Array(dy.String(min_length=2, nullable=False), 2), 2, nullable=True
+            ),
+            "inner_inner",
+        ),
+    ],
+)
+def test_multidimensional_array_with_rules(column: Column, prefix: str) -> None:
+    schema = create_schema("test", {"a": column})
+    df = pl.DataFrame(
+        {
+            "a": [
+                [["ab", "cd"], ["ef", "gh"]],
+                [["ab", "c"], ["ef", "gh"]],
+                [["ab", "cd"], [None, "gh"]],
+                None,
+            ]
+        },
+        schema={"a": pl.Array(pl.String, (2, 2))},
+    )
+    _, failures = schema.filter(df)
+    assert validation_mask(df, failures).to_list() == [True, False, False, True]
+    assert failures.counts() == {
+        f"a|{prefix}_nullability": 1,
+        f"a|{prefix}_min_length": 1,
+    }
+
+
+def test_multidimensional_array_with_numeric_rules() -> None:
+    schema = create_schema("test", {"a": dy.Array(dy.Int64(min=0), (2, 3))})
+    df = pl.DataFrame(
+        {"a": [[[0, 1, 2], [3, 4, 5]], [[0, 1, 2], [3, -4, 5]]]},
+        schema={"a": pl.Array(pl.Int64, (2, 3))},
+    )
+    _, failures = schema.filter(df)
+    assert validation_mask(df, failures).to_list() == [True, False]
+    assert failures.counts() == {"a|inner_min": 1}
+
+
+def test_multidimensional_array_sample_is_valid() -> None:
+    schema = create_schema(
+        "test", {"a": dy.Array(dy.String(min_length=1, max_length=3), (2, 2))}
+    )
+    assert schema.is_valid(schema.sample(50))
+
+
 def test_array_with_pk() -> None:
     schema = create_schema(
         "test",
