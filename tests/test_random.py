@@ -4,6 +4,7 @@
 import datetime as dt
 import math
 from collections.abc import Callable
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import polars as pl
@@ -143,6 +144,20 @@ def test_sample_binary(generator: Generator) -> None:
     assert (
         samples.to_frame("s").select(pl.col("s").bin.size("b") <= 10).to_series().all()
     )
+
+
+@pytest.mark.parametrize("time_zone", ["Europe/Berlin", "America/New_York", "UTC"])
+def test_sample_datetime_time_zone_aware_bounds(
+    generator: Generator, time_zone: str
+) -> None:
+    tz = ZoneInfo(time_zone)
+    lower = dt.datetime(2020, 1, 1, tzinfo=tz)
+    upper = dt.datetime(2020, 1, 1, 1, tzinfo=tz)
+    samples = generator.sample_datetime(
+        1_000, min=lower, max=upper, time_zone=time_zone
+    )
+    assert samples.min() >= lower
+    assert samples.max() < upper
 
 
 def test_sample_choice(generator: Generator) -> None:

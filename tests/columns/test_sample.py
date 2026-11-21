@@ -5,6 +5,7 @@ import datetime as dt
 import decimal
 import math
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
@@ -151,6 +152,19 @@ def test_sample_datetime(generator: Generator) -> None:
     samples = sample_and_validate(column, generator, n=100_000)
     assert samples.min() == dt.datetime(2020, 1, 1)
     assert samples.max() == dt.datetime(2021, 12, 31)
+
+
+def test_sample_datetime_time_zone(generator: Generator) -> None:
+    berlin = ZoneInfo("Europe/Berlin")
+    column = dy.Datetime(
+        min=dt.datetime(2020, 1, 1, tzinfo=berlin),
+        max_exclusive=dt.datetime(2020, 1, 1, 1, tzinfo=berlin),
+        resolution="1m",
+        time_zone="Europe/Berlin",
+    )
+    samples = sample_and_validate(column, generator, n=10_000)
+    assert samples.min() == dt.datetime(2020, 1, 1, tzinfo=berlin)
+    assert samples.max() == dt.datetime(2020, 1, 1, 0, 59, tzinfo=berlin)
 
 
 def test_sample_time(generator: Generator) -> None:
