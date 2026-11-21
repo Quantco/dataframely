@@ -162,6 +162,7 @@ def test_array_with_rules() -> None:
     ],
 )
 def test_multidimensional_array_with_rules(column: Column, prefix: str) -> None:
+    # Arrange
     schema = create_schema("test", {"a": column})
     df = pl.DataFrame(
         {
@@ -174,7 +175,11 @@ def test_multidimensional_array_with_rules(column: Column, prefix: str) -> None:
         },
         schema={"a": pl.Array(pl.String, (2, 2))},
     )
+
+    # Act
     _, failures = schema.filter(df)
+
+    # Assert
     assert validation_mask(df, failures).to_list() == [True, False, False, True]
     assert failures.counts() == {
         f"a|{prefix}_nullability": 1,
