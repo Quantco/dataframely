@@ -155,6 +155,7 @@ def test_sample_datetime(generator: Generator) -> None:
 
 
 def test_sample_datetime_time_zone(generator: Generator) -> None:
+    # Arrange
     berlin = ZoneInfo("Europe/Berlin")
     column = dy.Datetime(
         min=dt.datetime(2020, 1, 1, tzinfo=berlin),
@@ -162,7 +163,11 @@ def test_sample_datetime_time_zone(generator: Generator) -> None:
         resolution="1m",
         time_zone="Europe/Berlin",
     )
+
+    # Act
     samples = sample_and_validate(column, generator, n=10_000)
+
+    # Assert
     assert samples.min() == dt.datetime(2020, 1, 1, tzinfo=berlin)
     assert samples.max() == dt.datetime(2020, 1, 1, 0, 59, tzinfo=berlin)
 

@@ -150,14 +150,19 @@ def test_sample_binary(generator: Generator) -> None:
 def test_sample_datetime_time_zone_aware_bounds(
     generator: Generator, time_zone: str
 ) -> None:
+    # Arrange
     tz = ZoneInfo(time_zone)
     lower = dt.datetime(2020, 1, 1, tzinfo=tz)
     upper = dt.datetime(2020, 1, 1, 1, tzinfo=tz)
+
+    # Act
     samples = generator.sample_datetime(
         1_000, min=lower, max=upper, time_zone=time_zone
     )
-    assert samples.min() >= lower
-    assert samples.max() < upper
+
+    # Assert
+    assert samples.min() >= lower  # type: ignore
+    assert samples.max() < upper  # type: ignore
 
 
 @pytest.mark.parametrize(
@@ -169,6 +174,12 @@ def test_sample_datetime_time_zone_aware_bounds(
             dt.datetime(9999, 12, 31, 23, tzinfo=ZoneInfo("America/New_York")),
             "America/New_York",
         ),
+        # The default upper bound is '10000-01-01' in the output time zone.
+        (
+            dt.datetime(9999, 12, 31, 20, tzinfo=ZoneInfo("America/New_York")),
+            None,
+            "America/New_York",
+        ),
         # Both bounds are before `datetime.min` in UTC.
         (
             dt.datetime(1, 1, 1, 0, tzinfo=dt.timezone(dt.timedelta(hours=5))),
@@ -178,20 +189,29 @@ def test_sample_datetime_time_zone_aware_bounds(
     ],
 )
 def test_sample_datetime_time_zone_aware_bounds_near_limits(
-    generator: Generator, lower: dt.datetime, upper: dt.datetime, time_zone: str
+    generator: Generator,
+    lower: dt.datetime,
+    upper: dt.datetime | None,
+    time_zone: str,
 ) -> None:
+    # Arrange
+    # Build the bounds in polars: they are outside the range of Python datetimes in UTC.
+    def local(value: dt.datetime) -> pl.Expr:
+        return pl.lit(value.replace(tzinfo=None)).dt.replace_time_zone(time_zone)
+
+    upper_bound = (
+        pl.col("c") < local(upper)
+        if upper is not None
+        else pl.col("c") <= local(dt.datetime(9999, 12, 31, 23, 59, 59, 999999))
+    )
+
+    # Act
     samples = generator.sample_datetime(
         1_000, min=lower, max=upper, time_zone=time_zone
     ).to_frame("c")
 
-    # Build the bounds in polars: they are outside the range of Python datetimes in UTC.
-    def bound(value: dt.datetime) -> pl.Expr:
-        return pl.lit(value.replace(tzinfo=None)).dt.replace_time_zone(time_zone)
-
-    in_bounds = samples.select(
-        (pl.col("c") >= bound(lower)).all() & (pl.col("c") < bound(upper)).all()
-    ).item()
-    assert in_bounds
+    # Assert
+    assert samples.select(((pl.col("c") >= local(lower)) & upper_bound).all()).item()
 
 
 def test_sample_choice(generator: Generator) -> None:

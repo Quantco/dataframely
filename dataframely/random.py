@@ -352,10 +352,7 @@ class Generator:
         max_datetime = (
             _datetime_to_microseconds(max)
             if max is not None
-            else (
-                _datetime_to_microseconds(dt.datetime(9999, 12, 31, 23, 59, 59, 999999))
-                + 1
-            )
+            else _default_max_datetime_microseconds(time_zone)
         )
         result = (
             self.sample_int(
@@ -451,3 +448,12 @@ def _datetime_to_microseconds(value: dt.datetime) -> int:
         # overflow for bounds close to `datetime.min` or `datetime.max`.
         microseconds -= offset // dt.timedelta(microseconds=1)
     return microseconds
+
+
+def _default_max_datetime_microseconds(time_zone: str | dt.tzinfo | None) -> int:
+    # The default exclusive upper bound is '10000-01-01' in the output time zone. polars
+    # resolves the time zone and returns an integer, so this does not overflow either.
+    last = pl.Series([dt.datetime(9999, 12, 31, 23, 59, 59, 999999)])
+    last = last.dt.replace_time_zone(pl.Datetime(time_zone=time_zone).time_zone)
+    epoch_microseconds = last.dt.epoch("us").item()
+    return epoch_microseconds + _datetime_to_microseconds(EPOCH_DATETIME) + 1
