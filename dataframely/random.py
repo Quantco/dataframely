@@ -442,10 +442,12 @@ def _time_to_microseconds(t: dt.time) -> int:
 
 
 def _datetime_to_microseconds(value: dt.datetime) -> int:
-    if value.tzinfo is not None:
+    microseconds = value.date().toordinal() * SECONDS_PER_DAY * 10**6
+    microseconds += _time_to_microseconds(value.time())
+    if (offset := value.utcoffset()) is not None:
         # Polars stores time zone-aware datetimes as UTC timestamps, so a time
         # zone-aware bound must be counted from its UTC time, not its local time.
-        value = value.astimezone(dt.UTC).replace(tzinfo=None)
-    return value.date().toordinal() * SECONDS_PER_DAY * 10**6 + _time_to_microseconds(
-        value.time()
-    )
+        # Subtract the offset as an integer: converting the datetime to UTC would
+        # overflow for bounds close to `datetime.min` or `datetime.max`.
+        microseconds -= offset // dt.timedelta(microseconds=1)
+    return microseconds

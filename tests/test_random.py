@@ -160,6 +160,40 @@ def test_sample_datetime_time_zone_aware_bounds(
     assert samples.max() < upper
 
 
+@pytest.mark.parametrize(
+    ("lower", "upper", "time_zone"),
+    [
+        # Both bounds are past `datetime.max` in UTC.
+        (
+            dt.datetime(9999, 12, 31, 20, tzinfo=ZoneInfo("America/New_York")),
+            dt.datetime(9999, 12, 31, 23, tzinfo=ZoneInfo("America/New_York")),
+            "America/New_York",
+        ),
+        # Both bounds are before `datetime.min` in UTC.
+        (
+            dt.datetime(1, 1, 1, 0, tzinfo=dt.timezone(dt.timedelta(hours=5))),
+            dt.datetime(1, 1, 1, 3, tzinfo=dt.timezone(dt.timedelta(hours=5))),
+            "Etc/GMT-5",
+        ),
+    ],
+)
+def test_sample_datetime_time_zone_aware_bounds_near_limits(
+    generator: Generator, lower: dt.datetime, upper: dt.datetime, time_zone: str
+) -> None:
+    samples = generator.sample_datetime(
+        1_000, min=lower, max=upper, time_zone=time_zone
+    ).to_frame("c")
+
+    # Build the bounds in polars: they are outside the range of Python datetimes in UTC.
+    def bound(value: dt.datetime) -> pl.Expr:
+        return pl.lit(value.replace(tzinfo=None)).dt.replace_time_zone(time_zone)
+
+    in_bounds = samples.select(
+        (pl.col("c") >= bound(lower)).all() & (pl.col("c") < bound(upper)).all()
+    ).item()
+    assert in_bounds
+
+
 def test_sample_choice(generator: Generator) -> None:
     samples = generator.sample_choice(100_000, choices=[1, 2, 3])
     assert np.allclose(
