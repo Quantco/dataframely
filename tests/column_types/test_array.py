@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from typing import Any
+
 import polars as pl
 import pytest
 
@@ -187,13 +189,26 @@ def test_multidimensional_array_with_rules(column: Column, prefix: str) -> None:
     }
 
 
-def test_multidimensional_array_with_numeric_rules() -> None:
+@pytest.mark.parametrize(
+    ("shape", "data"),
+    [
+        ((2, 3), [[[0, 1, 2], [3, 4, 5]], [[0, 1, 2], [3, -4, 5]]]),
+        # Three dimensions wrap the inner rule twice.
+        (
+            (2, 2, 2),
+            [
+                [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
+                [[[0, 1], [2, 3]], [[4, 5], [6, -7]]],
+            ],
+        ),
+    ],
+)
+def test_multidimensional_array_with_numeric_rules(
+    shape: tuple[int, ...], data: list[Any]
+) -> None:
     # Arrange
-    schema = create_schema("test", {"a": dy.Array(dy.Int64(min=0), (2, 3))})
-    df = pl.DataFrame(
-        {"a": [[[0, 1, 2], [3, 4, 5]], [[0, 1, 2], [3, -4, 5]]]},
-        schema={"a": pl.Array(pl.Int64, (2, 3))},
-    )
+    schema = create_schema("test", {"a": dy.Array(dy.Int64(min=0), shape)})
+    df = pl.DataFrame({"a": data}, schema={"a": pl.Array(pl.Int64, shape)})
 
     # Act
     _, failures = schema.filter(df)
