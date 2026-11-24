@@ -1,6 +1,8 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from typing import Any
+
 import polars as pl
 import pytest
 
@@ -143,6 +145,90 @@ def test_array_with_rules() -> None:
     _, failures = schema.filter(df)
     assert validation_mask(df, failures).to_list() == [True, False, False]
     assert failures.counts() == {"a|inner_nullability": 1, "a|inner_min_length": 1}
+
+
+@pytest.mark.parametrize(
+    ("column", "prefix"),
+    [
+        (
+            dy.Array(dy.String(min_length=2, nullable=False), (2, 2), nullable=True),
+            "inner",
+        ),
+        # A multi-dimensional array must behave like the equivalent nested arrays
+        (
+            dy.Array(
+                dy.Array(dy.String(min_length=2, nullable=False), 2), 2, nullable=True
+            ),
+            "inner_inner",
+        ),
+    ],
+)
+def test_multidimensional_array_with_rules(column: Column, prefix: str) -> None:
+    # Arrange
+    schema = create_schema("test", {"a": column})
+    df = pl.DataFrame(
+        {
+            "a": [
+                [["ab", "cd"], ["ef", "gh"]],
+                [["ab", "c"], ["ef", "gh"]],
+                [["ab", "cd"], [None, "gh"]],
+                None,
+            ]
+        },
+        schema={"a": pl.Array(pl.String, (2, 2))},
+    )
+
+    # Act
+    _, failures = schema.filter(df)
+
+    # Assert
+    assert validation_mask(df, failures).to_list() == [True, False, False, True]
+    assert failures.counts() == {
+        f"a|{prefix}_nullability": 1,
+        f"a|{prefix}_min_length": 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("shape", "data"),
+    [
+        ((2, 3), [[[0, 1, 2], [3, 4, 5]], [[0, 1, 2], [3, -4, 5]]]),
+        # Three dimensions wrap the inner rule twice.
+        (
+            (2, 2, 2),
+            [
+                [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
+                [[[0, 1], [2, 3]], [[4, 5], [6, -7]]],
+            ],
+        ),
+    ],
+)
+def test_multidimensional_array_with_numeric_rules(
+    shape: tuple[int, ...], data: list[Any]
+) -> None:
+    # Arrange
+    schema = create_schema("test", {"a": dy.Array(dy.Int64(min=0), shape)})
+    df = pl.DataFrame({"a": data}, schema={"a": pl.Array(pl.Int64, shape)})
+
+    # Act
+    _, failures = schema.filter(df)
+
+    # Assert
+    assert validation_mask(df, failures).to_list() == [True, False]
+    assert failures.counts() == {"a|inner_min": 1}
+
+
+def test_multidimensional_array_sample_is_valid() -> None:
+    # Arrange
+    schema = create_schema(
+        "test", {"a": dy.Array(dy.String(min_length=1, max_length=3), (2, 2))}
+    )
+
+    # Act
+    df = schema.sample(50)
+
+    # Assert
+    assert schema.is_valid(df)
 
 
 def test_array_with_pk() -> None:
