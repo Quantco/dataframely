@@ -4,6 +4,7 @@
 import datetime as dt
 import math
 from collections.abc import Callable
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import polars as pl
@@ -143,6 +144,64 @@ def test_sample_binary(generator: Generator) -> None:
     assert (
         samples.to_frame("s").select(pl.col("s").bin.size("b") <= 10).to_series().all()
     )
+
+
+@pytest.mark.parametrize(
+    ("lower", "upper", "time_zone"),
+    [
+        *[
+            (
+                dt.datetime(2020, 1, 1, tzinfo=ZoneInfo(time_zone)),
+                dt.datetime(2020, 1, 1, 1, tzinfo=ZoneInfo(time_zone)),
+                time_zone,
+            )
+            for time_zone in ["Europe/Berlin", "America/New_York", "UTC"]
+        ],
+        # Both bounds are past `datetime.max` in UTC.
+        (
+            dt.datetime(9999, 12, 31, 20, tzinfo=ZoneInfo("America/New_York")),
+            dt.datetime(9999, 12, 31, 23, tzinfo=ZoneInfo("America/New_York")),
+            "America/New_York",
+        ),
+        # The default upper bound is '10000-01-01' in the output time zone.
+        (
+            dt.datetime(9999, 12, 31, 20, tzinfo=ZoneInfo("America/New_York")),
+            None,
+            "America/New_York",
+        ),
+        # Both bounds are before `datetime.min` in UTC.
+        (
+            dt.datetime(1, 1, 1, 0, tzinfo=dt.timezone(dt.timedelta(hours=5))),
+            dt.datetime(1, 1, 1, 3, tzinfo=dt.timezone(dt.timedelta(hours=5))),
+            "Etc/GMT-5",
+        ),
+    ],
+)
+def test_sample_datetime_time_zone_aware_bounds(
+    generator: Generator,
+    lower: dt.datetime,
+    upper: dt.datetime | None,
+    time_zone: str,
+) -> None:
+    # Arrange
+    # Build the bounds in polars: near the limits, they are outside the range of
+    # Python datetimes in UTC.
+    def local(value: dt.datetime) -> pl.Expr:
+        return pl.lit(value.replace(tzinfo=None)).dt.replace_time_zone(time_zone)
+
+    upper_bound = (
+        pl.col("c") < local(upper)
+        if upper is not None
+        else pl.col("c") <= local(dt.datetime(9999, 12, 31, 23, 59, 59, 999999))
+    )
+
+    # Act
+    samples = generator.sample_datetime(
+        1_000, min=lower, max=upper, time_zone=time_zone
+    ).to_frame("c")
+
+    # Assert
+    assert samples.select(((pl.col("c") >= local(lower)) & upper_bound).all()).item()
 
 
 def test_sample_choice(generator: Generator) -> None:
